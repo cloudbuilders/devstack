@@ -105,18 +105,9 @@ exists, fetch and checkout remote master</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;install&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-    <span class="c">#apt-get install -y python-software-properties</span>
 </pre></div></td></tr><tr><td class=docs>
 
-<p>FIXME: do we still need this?
-DELETEME: add-apt-repository ppa:nova-core/trunk
-DELETEME: apt-get update -qq</p>
-
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-
-<p>fixme: do we need: python-boto</p>
+<p>install apt requirements</p>
 
 </td><td class=code><div class=highlight><pre>
     apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$DIR</span>/apts/*<span class="sb">`</span>
@@ -157,14 +148,13 @@ DELETEME: apt-get update -qq</p>
     <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard; python setup.py develop
 </pre></div></td></tr><tr><td class=docs>
 
-<p>dash currently imports quantum even if you aren't using it</p>
+<p>HACK: dash currently imports quantum even if you aren't using it</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
     mkdir quantum
     touch quantum/__init__.py
     touch quantum/client.py
-
 
 </pre></div></td></tr><tr><td class=docs>
 
@@ -182,11 +172,6 @@ DELETEME: apt-get update -qq</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
     cp <span class="nb">local</span>/local_settings.py.example <span class="nb">local</span>/local_settings.py
-</pre></div></td></tr><tr><td class=docs>
-
-<p>python tools/install_venv.py</p>
-
-</td><td class=code><div class=highlight><pre>
     dashboard/manage.py syncdb
 </pre></div></td></tr><tr><td class=docs>
 
@@ -195,27 +180,9 @@ DELETEME: apt-get update -qq</p>
 </td><td class=code><div class=highlight><pre>
     mkdir <span class="nv">$DASH_DIR</span>/.blackhole
 
-</pre></div></td></tr><tr><td class=docs>
-
-<p>cat > $DASH_DIR/openstack-dashboard/dashboard/wsgi/local.wsgi &lt;<EOF</p>
-
-</td><td class=code><div class=highlight><pre>
-<span class="c">#import sys</span>
-<span class="c">#sys.path.append(&#39;/$DASH_DIR/openstack-dashboard/.dashboard-venv/lib/python2.6/site-packages/&#39;)</span>
-<span class="c">#sys.path.append(&#39;/$DASH_DIR/openstack-dashboard/.dashboard-venv/lib/python2.7/site-packages/&#39;)</span>
-<span class="c">#sys.path.append(&#39;/$DASH_DIR/openstack-dashboard/&#39;)</span>
-<span class="c">#sys.path.append(&#39;/$DASH_DIR/django-openstack/&#39;)</span>
-<span class="c">#sys.path.append(&#39;/$API_DIR&#39;)</span>
-<span class="c">#sys.path.append(&#39;/$DASH_DIR/openstack-dashboard/.dashboard-venv/src/openstack&#39;)</span>
-</pre></div></td></tr><tr><td class=docs>
-
-</td><td class=code><div class=highlight><pre>
-<span class="c">#EOF</span>
-    cat <span class="nv">$DASH_DIR</span>/openstack-dashboard/dashboard/wsgi/django.wsgi &gt;&gt; <span class="nv">$DASH_DIR</span>/openstack-dashboard/dashboard/wsgi/local.wsgi
-
     cat &gt; /etc/apache2/sites-enabled/000-default <span class="s">&lt;&lt;EOF</span>
 <span class="s">&lt;VirtualHost *:80&gt;</span>
-<span class="s">    WSGIScriptAlias / $DASH_DIR/openstack-dashboard/dashboard/wsgi/local.wsgi</span>
+<span class="s">    WSGIScriptAlias / $DASH_DIR/openstack-dashboard/dashboard/wsgi/django.wsgi</span>
 <span class="s">    WSGIDaemonProcess dashboard user=www-data group=www-data processes=3 threads=10</span>
 <span class="s">    WSGIProcessGroup dashboard</span>
 
@@ -356,9 +323,8 @@ so send the start command by forcing text into the window.</p>
     screen_it net <span class="s2">&quot;$NOVA_DIR/bin/nova-network&quot;</span>
     screen_it sched <span class="s2">&quot;$NOVA_DIR/bin/nova-scheduler&quot;</span>
     screen_it key <span class="s2">&quot;$KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_DIR/etc/keystone.conf&quot;</span>
-    screen_it dash <span class="s2">&quot;/etc/init.d/apache2 restart; tail -f /var/log/apache2/error.log&quot;</span>
     screen_it vnc <span class="s2">&quot;$NOVA_DIR/bin/nova-vncproxy&quot;</span>
-    screen_it <span class="nb">test</span> <span class="s2">&quot;&quot;</span>
+    screen_it dash <span class="s2">&quot;/etc/init.d/apache2 restart; tail -f /var/log/apache2/error.log&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
