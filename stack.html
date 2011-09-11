@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
+    <title>stack.sh</title>
+    <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
+</head>
+<body>
+<div id=container>
+    <div id=background></div>
+    <table cellspacing=0 cellpadding=0>
+    <thead>
+      <tr>
+        <th class=docs><h1>stack.sh</h1></th>
+        <th class=code></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr><td class='docs'>Usage: markdown INPUTFILE [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -f OUTPUT_FILE, --file=OUTPUT_FILE
+                        write output to OUTPUT_FILE
+  -e ENCODING, --encoding=ENCODING
+                        encoding for input and output files
+  -q, --quiet           suppress all messages
+  -v, --verbose         print info messages
+  -s SAFE_MODE, --safe=SAFE_MODE
+                        safe mode ('replace', 'remove' or 'escape'  user's
+                        HTML tag)
+  -o OUTPUT_FORMAT, --output_format=OUTPUT_FORMAT
+                        Format of output. One of 'xhtml1' (default) or
+                        'html4'.
+  --noisy               print debug messages
+  -x EXTENSION, --extension=EXTENSION
+                        load extension EXTENSION
+</td><td class=code><div class=highlight><pre>
+<span class="c">#!/usr/bin/env bash</span>
+
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o xtrace
+
+<span class="nv">DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
+<span class="nv">DEST</span><span class="o">=</span>/opt
+<span class="nv">CMD</span><span class="o">=</span><span class="nv">$1</span>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">NOVA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
+<span class="nv">DASH_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/dash
+<span class="nv">GLANCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance
+<span class="nv">KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/keystone
+<span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
+<span class="nv">API_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstackx
+<span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -n <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="sb">`</span><span class="nv">LC_ALL</span><span class="o">=</span>C ifconfig  | grep -m 1 <span class="s1">&#39;inet addr:&#39;</span>| cut -d: -f2 | awk <span class="s1">&#39;{print $1}&#39;</span><span class="sb">`</span>
+<span class="k">fi</span>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.6.0.0/27</span><span class="k">}</span>
+<span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
+<span class="nv">LIBVIRT_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_TYPE</span><span class="k">:-</span><span class="nv">qemu</span><span class="k">}</span>
+<span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">VlanManager</span><span class="k">}</span>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nv">SQL_CONN</span><span class="o">=</span>sqlite:///<span class="nv">$NOVA_DIR</span>/nova.sqlite
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>clone_or_up <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[</span> -d <span class="nv">$2</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">cd</span> <span class="nv">$2</span>
+        git fetch origin
+        git checkout origin/master
+    <span class="k">else</span>
+<span class="k">        </span>git clone <span class="nv">$1</span> <span class="nv">$2</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;install&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+    <span class="c">#apt-get install -y python-software-properties</span>
+</td><td class=code><div class=highlight><pre>
+
+</td><td class=code><div class=highlight><pre>
+    apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$DIR</span>/apts/*<span class="sb">`</span>
+
+</td><td class=code><div class=highlight><pre>
+    pip install -r <span class="nv">$DIR</span>/pips/dash
+
+</td><td class=code><div class=highlight><pre>
+    clone_or_up https://github.com/cloudbuilders/nova.git <span class="nv">$NOVA_DIR</span>
+    clone_or_up https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_DIR</span>
+    clone_or_up https://github.com/cloudbuilders/noVNC.git <span class="nv">$NOVNC_DIR</span>
+    clone_or_up https://github.com/cloudbuilders/openstack-dashboard.git <span class="nv">$DASH_DIR</span>
+    clone_or_up https://github.com/cloudbuilders/python-novaclient.git <span class="nv">$NOVACLIENT_DIR</span>
+    clone_or_up https://github.com/cloudbuilders/keystone.git <span class="nv">$KEYSTONE_DIR</span>
+    clone_or_up https://github.com/cloudbuilders/glance.git <span class="nv">$GLANCE_DIR</span>
+
+    mkdir -p <span class="nv">$NOVA_DIR</span>/instances
+    mkdir -p <span class="nv">$NOVA_DIR</span>/networks
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; python setup.py develop
+    <span class="nb">cd</span> <span class="nv">$KEYSTONE_DIR</span>; python setup.py develop
+    <span class="nb">cd</span> <span class="nv">$GLANCE_DIR</span>; python setup.py develop
+    <span class="nb">cd</span> <span class="nv">$API_DIR</span>; python setup.py develop
+    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/django-openstack; python setup.py develop
+    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard; python setup.py develop
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
+    mkdir quantum
+    touch quantum/__init__.py
+    touch quantum/client.py
+
+
+</td><td class=code><div class=highlight><pre>
+    modprobe kvm <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>modprobe nbd <span class="o">||</span> <span class="nb">true</span>
+    /etc/init.d/libvirt-bin restart
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
+    cp <span class="nb">local</span>/local_settings.py.example <span class="nb">local</span>/local_settings.py
+</td><td class=code><div class=highlight><pre>
+    dashboard/manage.py syncdb
+</td><td class=code><div class=highlight><pre>
+    mkdir <span class="nv">$DASH_DIR</span>/.blackhole
+
+</td><td class=code><div class=highlight><pre>
+<span class="c">#import sys</span>
+<span class="c">#sys.path.append(&#39;/$DASH_DIR/openstack-dashboard/.dashboard-venv/lib/python2.6/site-packages/&#39;)</span>
+<span class="c">#sys.path.append(&#39;/$DASH_DIR/openstack-dashboard/.dashboard-venv/lib/python2.7/site-packages/&#39;)</span>
+<span class="c">#sys.path.append(&#39;/$DASH_DIR/openstack-dashboard/&#39;)</span>
+<span class="c">#sys.path.append(&#39;/$DASH_DIR/django-openstack/&#39;)</span>
+<span class="c">#sys.path.append(&#39;/$API_DIR&#39;)</span>
+<span class="c">#sys.path.append(&#39;/$DASH_DIR/openstack-dashboard/.dashboard-venv/src/openstack&#39;)</span>
+</td><td class=code><div class=highlight><pre>
+<span class="c">#EOF</span>
+    cat <span class="nv">$DASH_DIR</span>/openstack-dashboard/dashboard/wsgi/django.wsgi &gt;&gt; <span class="nv">$DASH_DIR</span>/openstack-dashboard/dashboard/wsgi/local.wsgi
+
+    cat &gt; /etc/apache2/sites-enabled/000-default <span class="s">&lt;&lt;EOF</span>
+<span class="s">&lt;VirtualHost *:80&gt;</span>
+<span class="s">    WSGIScriptAlias / $DASH_DIR/openstack-dashboard/dashboard/wsgi/local.wsgi</span>
+<span class="s">    WSGIDaemonProcess dashboard user=www-data group=www-data processes=3 threads=10</span>
+<span class="s">    WSGIProcessGroup dashboard</span>
+
+<span class="s">    DocumentRoot $DASH_DIR/.blackhole/</span>
+<span class="s">    Alias /media $DASH_DIR/openstack-dashboard/media</span>
+
+<span class="s">    &lt;Directory /&gt;</span>
+<span class="s">        Options FollowSymLinks</span>
+<span class="s">        AllowOverride None</span>
+<span class="s">    &lt;/Directory&gt;</span>
+
+<span class="s">    &lt;Directory $DASH_DIR/&gt;</span>
+<span class="s">        Options Indexes FollowSymLinks MultiViews</span>
+<span class="s">        AllowOverride None</span>
+<span class="s">        Order allow,deny</span>
+<span class="s">        allow from all</span>
+<span class="s">    &lt;/Directory&gt;</span>
+
+<span class="s">    ErrorLog /var/log/apache2/error.log</span>
+<span class="s">    LogLevel warn</span>
+<span class="s">    CustomLog /var/log/apache2/access.log combined</span>
+<span class="s">&lt;/VirtualHost&gt;</span>
+<span class="s">EOF</span>
+
+    chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
+
+    mkdir -p /var/log/glance
+
+    mkdir -p <span class="nv">$DEST</span>/images
+    wget -c http://images.ansolabs.com/tty.tgz
+    tar -C <span class="nv">$DEST</span>/images -zxf tty.tgz
+    <span class="nb">exit</span>
+<span class="k">fi</span>
+
+</td><td class=code><div class=highlight><pre>
+cat &gt;~/.screenrc <span class="s">&lt;&lt;EOF</span>
+<span class="s">hardstatus on</span>
+<span class="s">hardstatus alwayslastline</span>
+<span class="s">hardstatus string &quot;%{.bW}%-w%{.rW}%n %t%{-}%+w %=%{..G}%H %{..Y}%d/%m %c&quot;</span>
+
+<span class="s">defscrollback 1024</span>
+
+<span class="s">vbell off</span>
+<span class="s">startup_message off</span>
+<span class="s">EOF</span>
+
+<span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
+
+<span class="k">function </span>screen_it <span class="o">{</span>
+    screen -S nova -X screen -t <span class="nv">$1</span>
+    screen -S nova -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
+<span class="o">}</span>
+
+<span class="k">function </span>add_nova_flag <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_DIR</span>/bin/nova.conf
+<span class="o">}</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run&quot;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run_detached&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+
+<span class="k">    </span>rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
+
+    add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
+    add_nova_flag <span class="s2">&quot;--nodaemon&quot;</span>
+    add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
+    add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
+    add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
+    add_nova_flag <span class="s2">&quot;--public_interface=$INTERFACE&quot;</span>
+    add_nova_flag <span class="s2">&quot;--vlan_interface=$INTERFACE&quot;</span>
+    add_nova_flag <span class="s2">&quot;--sql_connection=$SQL_CONN&quot;</span>
+    add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
+    add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
+    add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
+    add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/noVNC/noVNC&quot;</span>
+
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
+    add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
+
+    killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>screen -d -m -S nova -t nova
+    sleep 1
+    rm -f <span class="nv">$NOVA_DIR</span>/nova.sqlite
+    rm -rf <span class="nv">$NOVA_DIR</span>/instances
+    mkdir -p <span class="nv">$NOVA_DIR</span>/instances
+    rm -rf <span class="nv">$NOVA_DIR</span>/networks
+    mkdir -p <span class="nv">$NOVA_DIR</span>/networks
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
+    rm -f keystone.db
+</td><td class=code><div class=highlight><pre>
+    curl -OL https://raw.github.com/cloudbuilders/deploy.sh/master/initial_data.sh
+    <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash initial_data.sh
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 32
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+
+</td><td class=code><div class=highlight><pre>
+
+    rm -rf /var/lib/glance/images/*
+    rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
+
+    screen_it n-api <span class="s2">&quot;$NOVA_DIR/bin/nova-api&quot;</span>
+    screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
+    screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
+    screen_it cpu <span class="s2">&quot;$NOVA_DIR/bin/nova-compute&quot;</span>
+    screen_it net <span class="s2">&quot;$NOVA_DIR/bin/nova-network&quot;</span>
+    screen_it sched <span class="s2">&quot;$NOVA_DIR/bin/nova-scheduler&quot;</span>
+    screen_it key <span class="s2">&quot;$KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_DIR/etc/keystone.conf&quot;</span>
+    screen_it dash <span class="s2">&quot;/etc/init.d/apache2 restart; tail -f /var/log/apache2/error.log&quot;</span>
+    screen_it vnc <span class="s2">&quot;$NOVA_DIR/bin/nova-vncproxy&quot;</span>
+    screen_it <span class="nb">test</span> <span class="s2">&quot;&quot;</span>
+
+</td><td class=code><div class=highlight><pre>
+    rm -rf <span class="nv">$DIR</span>/images/<span class="o">[</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">]</span>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage image convert <span class="nv">$DIR</span>/images
+
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> !<span class="o">=</span> <span class="s2">&quot;run_detached&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">      </span>screen -S nova -x
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run&quot;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;terminate&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>virsh list | grep i- | awk <span class="s1">&#39;{print $1}&#39;</span> | xargs -n1 virsh destroy
+    <span class="nv">$NOVA_DIR</span>/tools/clean-vlans
+    <span class="nb">echo</span> <span class="s2">&quot;FIXME: clean networks?&quot;</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run&quot;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;clean&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>screen -S nova -X quit
+    rm -f *.pid*
+<span class="k">fi</span>
+
+
+
+</td><td class=code><div class=highlight><pre>
+</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
+    </tbody>
+    </table>
+</div>
+</body>
+</html>
