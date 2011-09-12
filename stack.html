@@ -91,9 +91,14 @@ exists, fetch and checkout remote master</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>clone_or_up <span class="o">{</span>
     <span class="k">if</span> <span class="o">[</span> -d <span class="nv">$2</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">cd</span> <span class="nv">$2</span>
-        git fetch origin
-        git checkout origin/master
+<span class="k">        </span><span class="nb">echo </span>commenting out update <span class="k">for </span>now <span class="k">for </span>speed
+</pre></div></td></tr><tr><td class=docs>
+
+<p>cd $2
+git fetch origin
+git checkout origin/master</p>
+
+</td><td class=code><div class=highlight><pre>
     <span class="k">else</span>
 <span class="k">        </span>git clone <span class="nv">$1</span> <span class="nv">$2</span>
     <span class="k">fi</span>
@@ -110,14 +115,14 @@ exists, fetch and checkout remote master</p>
 <p>install apt requirements</p>
 
 </td><td class=code><div class=highlight><pre>
-    apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$DIR</span>/apts/*<span class="sb">`</span>
+    apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$DIR</span>/apts/* | cut -d<span class="se">\#</span> -f1<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>install python requirements</p>
 
 </td><td class=code><div class=highlight><pre>
-    pip install -r <span class="nv">$DIR</span>/pips/dash
+    pip install <span class="sb">`</span>cat <span class="nv">$DIR</span>/pips/*<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
@@ -180,58 +185,32 @@ exists, fetch and checkout remote master</p>
 </td><td class=code><div class=highlight><pre>
     mkdir <span class="nv">$DASH_DIR</span>/.blackhole
 
-    cat &gt; /etc/apache2/sites-enabled/000-default <span class="s">&lt;&lt;EOF</span>
-<span class="s">&lt;VirtualHost *:80&gt;</span>
-<span class="s">    WSGIScriptAlias / $DASH_DIR/openstack-dashboard/dashboard/wsgi/django.wsgi</span>
-<span class="s">    WSGIDaemonProcess dashboard user=www-data group=www-data processes=3 threads=10</span>
-<span class="s">    WSGIProcessGroup dashboard</span>
+</pre></div></td></tr><tr><td class=docs>
 
-<span class="s">    DocumentRoot $DASH_DIR/.blackhole/</span>
-<span class="s">    Alias /media $DASH_DIR/openstack-dashboard/media</span>
+<p>FIXME(ja): can't figure out how to make $DASH_DIR work in sed, also install to available/a2e it </p>
 
-<span class="s">    &lt;Directory /&gt;</span>
-<span class="s">        Options FollowSymLinks</span>
-<span class="s">        AllowOverride None</span>
-<span class="s">    &lt;/Directory&gt;</span>
-
-<span class="s">    &lt;Directory $DASH_DIR/&gt;</span>
-<span class="s">        Options Indexes FollowSymLinks MultiViews</span>
-<span class="s">        AllowOverride None</span>
-<span class="s">        Order allow,deny</span>
-<span class="s">        allow from all</span>
-<span class="s">    &lt;/Directory&gt;</span>
-
-<span class="s">    ErrorLog /var/log/apache2/error.log</span>
-<span class="s">    LogLevel warn</span>
-<span class="s">    CustomLog /var/log/apache2/access.log combined</span>
-<span class="s">&lt;/VirtualHost&gt;</span>
-<span class="s">EOF</span>
+</td><td class=code><div class=highlight><pre>
+    cat <span class="nv">$DIR</span>/files/000-default.template | sed <span class="s2">&quot;s/%DASH_DIR%/\/opt\/dash/g&quot;</span> &gt; /etc/apache2/sites-enabled/000-default
 
     chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
 
     mkdir -p /var/log/glance
 
-    mkdir -p <span class="nv">$DEST</span>/images
-    wget -c http://images.ansolabs.com/tty.tgz
-    tar -C <span class="nv">$DEST</span>/images -zxf tty.tgz
-    <span class="nb">exit</span>
-<span class="k">fi</span>
+    <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$DEST</span>/tty.tgz <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>wget -c http://images.ansolabs.com/tty.tgz -O <span class="nv">$DEST</span>/tty.tgz
+    <span class="k">fi</span>
+
+<span class="k">    </span>mkdir -p <span class="nv">$DEST</span>/images
+    tar -C <span class="nv">$DEST</span>/images -zxf <span class="nv">$DEST</span>/tty.tgz
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>Configure screen</p>
+<p>add useful screenrc</p>
 
 </td><td class=code><div class=highlight><pre>
-cat &gt;~/.screenrc <span class="s">&lt;&lt;EOF</span>
-<span class="s">hardstatus on</span>
-<span class="s">hardstatus alwayslastline</span>
-<span class="s">hardstatus string &quot;%{.bW}%-w%{.rW}%n %t%{-}%+w %=%{..G}%H %{..Y}%d/%m %c&quot;</span>
-
-<span class="s">defscrollback 1024</span>
-
-<span class="s">vbell off</span>
-<span class="s">startup_message off</span>
-<span class="s">EOF</span>
+    cp <span class="nv">$DIR</span>/files/screenrc ~/.screenrc
+    <span class="nb">exit</span>
+<span class="k">fi</span>
 
 <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
 
@@ -272,9 +251,18 @@ cat &gt;~/.screenrc <span class="s">&lt;&lt;EOF</span>
 <span class="nb">    </span>screen -d -m -S nova -t nova
     sleep 1
     rm -f <span class="nv">$NOVA_DIR</span>/nova.sqlite
-    rm -rf <span class="nv">$NOVA_DIR</span>/instances
+    rm -rf <span class="nv">$NOVA_DIR</span>/instances/*
     mkdir -p <span class="nv">$NOVA_DIR</span>/instances
-    rm -rf <span class="nv">$NOVA_DIR</span>/networks
+</pre></div></td></tr><tr><td class=docs>
+
+<p>if there is a partition labeled nova-instances use it (ext filesystems
+can be labeled via e2label)</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -L /dev/disk/by-label/nova-instances <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>mount -L nova-instances /<span class="nv">$NOVA_DIR</span>/instances
+    <span class="k">fi</span>
+<span class="k">    </span>rm -rf <span class="nv">$NOVA_DIR</span>/networks
     mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 
 </pre></div></td></tr><tr><td class=docs>
@@ -306,16 +294,15 @@ cat &gt;~/.screenrc <span class="s">&lt;&lt;EOF</span>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 
+    rm -rf /var/lib/glance/images/*
+    rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
+
 </pre></div></td></tr><tr><td class=docs>
 
 <p>nova api crashes if we start it with a regular screen command,
 so send the start command by forcing text into the window.</p>
 
 </td><td class=code><div class=highlight><pre>
-
-    rm -rf /var/lib/glance/images/*
-    rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
-
     screen_it n-api <span class="s2">&quot;$NOVA_DIR/bin/nova-api&quot;</span>
     screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
     screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
