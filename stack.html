@@ -16,7 +16,7 @@
       </tr>
     </thead>
     <tbody>
-        <tr><td class='docs'><p><strong>stack.sh</strong> is rackspace cloudbuilder's opinionated openstack installation.</p>
+        <tr><td class='docs'><p><strong>stack.sh</strong> is rackspace cloudbuilder's opinionated openstack dev installation.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
@@ -42,7 +42,7 @@
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>Set hte destination directories for openstack projects</p>
+<p>Set the destination directories for openstack projects</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
@@ -85,23 +85,11 @@ FLAT_INTERFACE=eth0</p>
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>clone a git repository to a location, or if it already
-exists, fetch and checkout remote master</p>
+<p>clone a git repository to a location</p>
 
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>clone_or_up <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[</span> -d <span class="nv">$2</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo </span>commenting out update <span class="k">for </span>now <span class="k">for </span>speed
-</pre></div></td></tr><tr><td class=docs>
-
-<p>cd $2
-git fetch origin
-git checkout origin/master</p>
-
-</td><td class=code><div class=highlight><pre>
-    <span class="k">else</span>
-<span class="k">        </span>git clone <span class="nv">$1</span> <span class="nv">$2</span>
-    <span class="k">fi</span>
+<span class="k">function </span>ginstall <span class="o">{</span>
+    git clone <span class="nv">$1</span> <span class="nv">$2</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -126,23 +114,52 @@ git checkout origin/master</p>
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>TODO: kill openstackx</p>
+<p>vm service</p>
 
 </td><td class=code><div class=highlight><pre>
-    clone_or_up https://github.com/cloudbuilders/nova.git <span class="nv">$NOVA_DIR</span>
-    clone_or_up https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_DIR</span>
-    clone_or_up https://github.com/cloudbuilders/noVNC.git <span class="nv">$NOVNC_DIR</span>
-    clone_or_up https://github.com/cloudbuilders/openstack-dashboard.git <span class="nv">$DASH_DIR</span>
-    clone_or_up https://github.com/cloudbuilders/python-novaclient.git <span class="nv">$NOVACLIENT_DIR</span>
-    clone_or_up https://github.com/cloudbuilders/keystone.git <span class="nv">$KEYSTONE_DIR</span>
-    clone_or_up https://github.com/cloudbuilders/glance.git <span class="nv">$GLANCE_DIR</span>
+    ginstall https://github.com/cloudbuilders/nova.git <span class="nv">$NOVA_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
 
-    mkdir -p <span class="nv">$NOVA_DIR</span>/instances
-    mkdir -p <span class="nv">$NOVA_DIR</span>/networks
+<p>a websockets/html5 or flash powered VNC console for vm instances</p>
+
+</td><td class=code><div class=highlight><pre>
+    ginstall https://github.com/cloudbuilders/noVNC.git <span class="nv">$NOVNC_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>django powered web control panel for openstack</p>
+
+</td><td class=code><div class=highlight><pre>
+    ginstall https://github.com/cloudbuilders/openstack-dashboard.git <span class="nv">$DASH_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>python client library to nova that dashboard (and others) use</p>
+
+</td><td class=code><div class=highlight><pre>
+    ginstall https://github.com/cloudbuilders/python-novaclient.git <span class="nv">$NOVACLIENT_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>unified auth system (manages accounts/tokens)</p>
+
+</td><td class=code><div class=highlight><pre>
+    ginstall https://github.com/cloudbuilders/keystone.git <span class="nv">$KEYSTONE_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>image catalog</p>
+
+</td><td class=code><div class=highlight><pre>
+    ginstall https://github.com/cloudbuilders/glance.git <span class="nv">$GLANCE_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>openstackx is a collection of extensions to openstack.compute &amp; nova 
+that is <em>deprecated</em>.  The code is being moved into python-novaclient &amp; nova.</p>
+
+</td><td class=code><div class=highlight><pre>
+    ginstall https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>these components are imported into each other...</p>
+<p>setup our checkouts so they are installed into python path
+allowing <code>import nova</code> or <code>import glance.client</code></p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; python setup.py develop
@@ -151,40 +168,71 @@ git checkout origin/master</p>
     <span class="nb">cd</span> <span class="nv">$API_DIR</span>; python setup.py develop
     <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/django-openstack; python setup.py develop
     <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard; python setup.py develop
-</pre></div></td></tr><tr><td class=docs>
-
-<p>HACK: dash currently imports quantum even if you aren't using it</p>
-
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
-    mkdir quantum
-    touch quantum/__init__.py
-    touch quantum/client.py
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>attempt to load kvm and nbd modules</p>
+<p>attempt to load modules: kvm (hardware virt) and nbd (network block 
+device - used to manage qcow images)</p>
 
 </td><td class=code><div class=highlight><pre>
-    modprobe kvm <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>modprobe nbd <span class="o">||</span> <span class="nb">true</span>
+    modprobe nbd <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>modprobe kvm <span class="o">||</span> <span class="nb">true</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>if kvm wasn't running before we need to restart libvirt to enable it</p>
+
+</td><td class=code><div class=highlight><pre>
     /etc/init.d/libvirt-bin restart
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>install dashboard</p>
+<p>setup nova instance directory</p>
+
+</td><td class=code><div class=highlight><pre>
+    mkdir -p <span class="nv">$NOVA_DIR</span>/instances
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>if there is a partition labeled nova-instances use it (ext filesystems
+can be labeled via e2label)</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -L /dev/disk/by-label/nova-instances <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>mount -L nova-instances /<span class="nv">$NOVA_DIR</span>/instances
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p><em>Dashboard</em>: setup django application to serve via apache/wsgi</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Dash currently imports quantum even if you aren't using it.  Instead 
+of installing quantum we can create a simple module that will pass the 
+initial imports</p>
+
+</td><td class=code><div class=highlight><pre>
+    mkdir <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum
+    touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/__init__.py
+    touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/client.py
+</pre></div></td></tr><tr><td class=docs>
+
+<p>local_settings has </p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
     cp <span class="nb">local</span>/local_settings.py.example <span class="nb">local</span>/local_settings.py
     dashboard/manage.py syncdb
+
 </pre></div></td></tr><tr><td class=docs>
 
-<p>setup apache</p>
+<p><em>Setup Apache</em>
+create an empty directory to use as our </p>
 
 </td><td class=code><div class=highlight><pre>
     mkdir <span class="nv">$DASH_DIR</span>/.blackhole
-
 </pre></div></td></tr><tr><td class=docs>
 
 <p>FIXME(ja): can't figure out how to make $DASH_DIR work in sed, also install to available/a2e it </p>
@@ -196,6 +244,11 @@ git checkout origin/master</p>
 
     mkdir -p /var/log/glance
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>prepare initial images for loading into glance</p>
+
+</td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$DEST</span>/tty.tgz <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>wget -c http://images.ansolabs.com/tty.tgz -O <span class="nv">$DEST</span>/tty.tgz
     <span class="k">fi</span>
@@ -215,6 +268,12 @@ git checkout origin/master</p>
 <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
 
 <span class="k">function </span>screen_it <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>nova api crashes if we start it with a regular screen command,
+so send the start command by forcing text into the window.</p>
+
+</td><td class=code><div class=highlight><pre>
     screen -S nova -X screen -t <span class="nv">$1</span>
     screen -S nova -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
 <span class="o">}</span>
@@ -225,8 +284,12 @@ git checkout origin/master</p>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run&quot;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run_detached&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 
-<span class="k">    </span>rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
+</pre></div></td></tr><tr><td class=docs>
 
+<p>(re)create nova.conf</p>
+
+</td><td class=code><div class=highlight><pre>
+    rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
     add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
     add_nova_flag <span class="s2">&quot;--nodaemon&quot;</span>
     add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
@@ -239,44 +302,51 @@ git checkout origin/master</p>
     add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
     add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
     add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/noVNC/noVNC&quot;</span>
-
+    add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
+    add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
     <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
     <span class="k">fi</span>
 
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
-    add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
-
-    killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>screen -d -m -S nova -t nova
-    sleep 1
-    rm -f <span class="nv">$NOVA_DIR</span>/nova.sqlite
-    rm -rf <span class="nv">$NOVA_DIR</span>/instances/*
-    mkdir -p <span class="nv">$NOVA_DIR</span>/instances
 </pre></div></td></tr><tr><td class=docs>
 
-<p>if there is a partition labeled nova-instances use it (ext filesystems
-can be labeled via e2label)</p>
+<p>create a new named screen to store things in</p>
 
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> -L /dev/disk/by-label/nova-instances <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>mount -L nova-instances /<span class="nv">$NOVA_DIR</span>/instances
-    <span class="k">fi</span>
-<span class="k">    </span>rm -rf <span class="nv">$NOVA_DIR</span>/networks
+    screen -d -m -S nova -t nova
+    sleep 1
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Clean out the instances directory</p>
+
+</td><td class=code><div class=highlight><pre>
+    rm -rf <span class="nv">$NOVA_DIR</span>/instances/*
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>delete traces of nova networks from prior runs</p>
+
+</td><td class=code><div class=highlight><pre>
+    killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>rm -rf <span class="nv">$NOVA_DIR</span>/networks
     mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>create the database</p>
+<p>(re)create nova database</p>
 
 </td><td class=code><div class=highlight><pre>
+    rm -f <span class="nv">$NOVA_DIR</span>/nova.sqlite
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
-    rm -f keystone.db
+
 </pre></div></td></tr><tr><td class=docs>
 
-<p>add default data</p>
+<p>initialize keystone with default users/endpoints
+FIXME(ja): move initial_data.sh into this script</p>
 
 </td><td class=code><div class=highlight><pre>
+    rm -f /opt/keystone/keystone.db
     curl -OL https://raw.github.com/cloudbuilders/deploy.sh/master/initial_data.sh
     <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash initial_data.sh
 
@@ -294,15 +364,15 @@ can be labeled via e2label)</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>delete existing glance images/database.  Glance will recreate the db
+when it is ran.</p>
+
+</td><td class=code><div class=highlight><pre>
     rm -rf /var/lib/glance/images/*
     rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
 
-</pre></div></td></tr><tr><td class=docs>
-
-<p>nova api crashes if we start it with a regular screen command,
-so send the start command by forcing text into the window.</p>
-
-</td><td class=code><div class=highlight><pre>
     screen_it n-api <span class="s2">&quot;$NOVA_DIR/bin/nova-api&quot;</span>
     screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
     screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
