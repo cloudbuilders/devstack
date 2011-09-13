@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
+    <title>build_lxc.sh</title>
+    <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
+</head>
+<body>
+<div id=container>
+    <div id=background></div>
+    <table cellspacing=0 cellpadding=0>
+    <thead>
+      <tr>
+        <th class=docs><h1>build_lxc.sh</h1></th>
+        <th class=code></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr><td class='docs'><p>Configurable params</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="c">#!/bin/bash</span>
+<span class="nv">BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">BRIDGE</span><span class="k">:-</span><span class="nv">br0</span><span class="k">}</span>
+<span class="nv">CONTAINER</span><span class="o">=</span><span class="k">${</span><span class="nv">CONTAINER</span><span class="k">:-</span><span class="nv">TESTER</span><span class="k">}</span>
+<span class="nv">CONTAINER_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">CONTAINER_IP</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.50</span><span class="k">}</span>
+<span class="nv">CONTAINER_CIDR</span><span class="o">=</span><span class="k">${</span><span class="nv">CONTAINER_CIDR</span><span class="k">:-</span><span class="nv">$CONTAINER_IP</span><span class="p">/24</span><span class="k">}</span>
+<span class="nv">CONTAINER_NETMASK</span><span class="o">=</span><span class="k">${</span><span class="nv">CONTAINER_NETMASK</span><span class="k">:-</span><span class="nv">255</span><span class="p">.255.255.0</span><span class="k">}</span>
+<span class="nv">CONTAINER_GATEWAY</span><span class="o">=</span><span class="k">${</span><span class="nv">CONTAINER_GATEWAY</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.1</span><span class="k">}</span>
+<span class="nv">NAMESERVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NAMESERVER</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.1</span><span class="k">}</span>
+<span class="nv">COPYENV</span><span class="o">=</span><span class="k">${</span><span class="nv">COPYENV</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Destroy any existing container</p>
+
+</td><td class=code><div class=highlight><pre>
+lxc-stop -n <span class="nv">$CONTAINER</span>
+lxc-destroy -n <span class="nv">$CONTAINER</span>
+
+<span class="nv">FSTAB</span><span class="o">=</span>/tmp/fstab
+cat &gt; <span class="nv">$FSTAB</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">none /var/lib/lxc/$CONTAINER/dev/pts devpts defaults 0 0</span>
+<span class="s">none /var/lib/lxc/$CONTAINER/proc proc defaults 0 0</span>
+<span class="s">none /var/lib/lxc/$CONTAINER/sys sysfs defaults 0 0</span>
+<span class="s">none /var/lib/lxc/$CONTAINER/var/lock tmpfs defaults 0 0</span>
+<span class="s">none /var/lib/lxc/$CONTAINER/var/run tmpfs defaults 0 0</span>
+<span class="s">/var/cache/apt/ $APTCACHEDIR none bind 0 0</span>
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create network configuration</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">NET_CONF</span><span class="o">=</span>/tmp/net.conf
+cat &gt; <span class="nv">$NET_CONF</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">lxc.network.type = veth</span>
+<span class="s">lxc.network.link = $BRIDGE</span>
+<span class="s">lxc.network.flags = up</span>
+<span class="s">lxc.network.ipv4 = $CONTAINER_CIDR</span>
+<span class="s">lxc.mount = $FSTAB</span>
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure the network</p>
+
+</td><td class=code><div class=highlight><pre>
+lxc-create -n <span class="nv">$CONTAINER</span> -t natty -f <span class="nv">$NET_CONF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Where our container lives</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ROOTFS</span><span class="o">=</span>/var/lib/lxc/<span class="nv">$CONTAINER</span>/rootfs/
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Copy over your ssh keys if desired</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$COPYENV</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>cp -pr ~/.ssh <span class="nv">$ROOTFS</span>/root/.ssh
+    cp -pr ~/.gitconfig <span class="nv">$ROOTFS</span>/root/.gitconfig
+    cp -pr ~/.vimrc <span class="nv">$ROOTFS</span>/root/.vimrc
+    cp -pr ~/.bashrc <span class="nv">$ROOTFS</span>/root/.bashrc
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure instance network</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">INTERFACES</span><span class="o">=</span><span class="nv">$ROOTFS</span>/etc/network/interfaces
+cat &gt; <span class="nv">$INTERFACES</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">auto lo</span>
+<span class="s">iface lo inet loopback</span>
+
+<span class="s">auto eth0</span>
+<span class="s">iface eth0 inet static</span>
+<span class="s">        address $CONTAINER_IP</span>
+<span class="s">        netmask $CONTAINER_NETMASK</span>
+<span class="s">        gateway $CONTAINER_GATEWAY</span>
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure the first run installer</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">INSTALL_SH</span><span class="o">=</span><span class="nv">$ROOTFS</span>/root/install.sh
+cat &gt; <span class="nv">$INSTALL_SH</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">#!/bin/bash</span>
+<span class="s">echo &quot;nameserver $NAMESERVER&quot; | resolvconf -a eth0</span>
+<span class="s">sleep 1</span>
+<span class="s">apt-get update</span>
+<span class="s">apt-get -y --force-yes install git-core vim-nox sudo</span>
+<span class="s">git clone git://github.com/cloudbuilders/nfs-stack.git /root/nfs-stack</span>
+<span class="s">EOF</span>
+
+chmod 700 <span class="nv">$INSTALL_SH</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Make installer run on boot</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">RC_LOCAL</span><span class="o">=</span><span class="nv">$ROOTFS</span>/etc/rc.local
+cat &gt; <span class="nv">$RC_LOCAL</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">#!/bin/sh -e</span>
+<span class="s">/root/install.sh</span>
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Setup apt cache
+FIXME - use proper fstab mount</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">CWD</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
+<span class="nv">APTCACHEDIR</span><span class="o">=</span><span class="nv">$CWD</span>/cache/apt
+mkdir -p <span class="nv">$APTCACHEDIR</span>
+cp -pr <span class="nv">$APTCACHEDIR</span>/* <span class="nv">$ROOTFS</span>/var/cache/apt/
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure cgroup directory</p>
+
+</td><td class=code><div class=highlight><pre>
+mkdir -p /cgroup
+mount none -t cgroup /cgroup
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Start our container</p>
+
+</td><td class=code><div class=highlight><pre>
+lxc-start -d -n <span class="nv">$CONTAINER</span>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs></td><td class='code'></td></tr>
+    </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -24,6 +24,12 @@
 
 </pre></div></td></tr><tr><td class=docs>
 
+<p>FIXME: commands should be: stack.sh should allow specifying a subset of services</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
 <p>Quit script on error</p>
 
 </td><td class=code><div class=highlight><pre>
@@ -38,7 +44,6 @@
 
 <span class="nv">DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
 <span class="nv">DEST</span><span class="o">=</span>/opt
-<span class="nv">CMD</span><span class="o">=</span><span class="nv">$1</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
@@ -64,7 +69,7 @@
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>NOVA CONFIGURATION</p>
+<p>NOVA network / hypervisor configuration</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
@@ -81,71 +86,98 @@ FLAT_INTERFACE=eth0</p>
 
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">SQL_CONN</span><span class="o">=</span>sqlite:///<span class="nv">$NOVA_DIR</span>/nova.sqlite
+</pre></div></td></tr><tr><td class=docs>
+
+<p>TODO: switch to mysql for all services</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MYSQL_PASS</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_PASS</span><span class="k">:-</span><span class="nv">nova</span><span class="k">}</span>
+<span class="nv">SQL_CONN</span><span class="o">=</span><span class="k">${</span><span class="nv">SQL_CONN</span><span class="k">:-</span><span class="nv">mysql</span><span class="p">://root:</span><span class="nv">$MYSQL_PASS</span><span class="p">@localhost/nova</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>TODO: set rabbitmq conn string explicitly as well</p>
+
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>You should only have to run this once</p>
+<p>seed configuration with mysql password</p>
 
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;install&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+cat <span class="s">&lt;&lt;MYSQL_PRESEED | sudo debconf-set-selections</span>
+<span class="s">mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS</span>
+<span class="s">mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS</span>
+<span class="s">mysql-server-5.1 mysql-server/start_on_boot boolean true</span>
+<span class="s">MYSQL_PRESEED</span>
+
 </pre></div></td></tr><tr><td class=docs>
 
 <p>install apt requirements</p>
 
 </td><td class=code><div class=highlight><pre>
-    apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$DIR</span>/apts/* | cut -d<span class="se">\#</span> -f1<span class="sb">`</span>
+sudo apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$DIR</span>/apts/* | cut -d<span class="se">\#</span> -f1<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>install python requirements</p>
 
 </td><td class=code><div class=highlight><pre>
-    pip install <span class="sb">`</span>cat <span class="nv">$DIR</span>/pips/*<span class="sb">`</span>
+sudo <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span>/var/cache/pip pip install <span class="sb">`</span>cat <span class="nv">$DIR</span>/pips/*<span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>git clone only if directory doesn't exist already</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>git_clone <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$2</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>git clone <span class="nv">$1</span> <span class="nv">$2</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>compute service</p>
 
 </td><td class=code><div class=highlight><pre>
-    git clone https://github.com/cloudbuilders/nova.git <span class="nv">$NOVA_DIR</span>
+git_clone https://github.com/cloudbuilders/nova.git <span class="nv">$NOVA_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 
 <p>image catalog service</p>
 
 </td><td class=code><div class=highlight><pre>
-    git clone https://github.com/cloudbuilders/glance.git <span class="nv">$GLANCE_DIR</span>
+git_clone https://github.com/cloudbuilders/glance.git <span class="nv">$GLANCE_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 
 <p>unified auth system (manages accounts/tokens)</p>
 
 </td><td class=code><div class=highlight><pre>
-    git clone https://github.com/cloudbuilders/keystone.git <span class="nv">$KEYSTONE_DIR</span>
+git_clone https://github.com/cloudbuilders/keystone.git <span class="nv">$KEYSTONE_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 
 <p>a websockets/html5 or flash powered VNC console for vm instances</p>
 
 </td><td class=code><div class=highlight><pre>
-    git clone https://github.com/cloudbuilders/noVNC.git <span class="nv">$NOVNC_DIR</span>
+git_clone https://github.com/cloudbuilders/noVNC.git <span class="nv">$NOVNC_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 
 <p>django powered web control panel for openstack</p>
 
 </td><td class=code><div class=highlight><pre>
-    git clone https://github.com/cloudbuilders/openstack-dashboard.git <span class="nv">$DASH_DIR</span>
+git_clone https://github.com/cloudbuilders/openstack-dashboard.git <span class="nv">$DASH_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 
 <p>python client library to nova that dashboard (and others) use</p>
 
 </td><td class=code><div class=highlight><pre>
-    git clone https://github.com/cloudbuilders/python-novaclient.git <span class="nv">$NOVACLIENT_DIR</span>
+git_clone https://github.com/cloudbuilders/python-novaclient.git <span class="nv">$NOVACLIENT_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 
 <p>openstackx is a collection of extensions to openstack.compute &amp; nova 
 that is <em>deprecated</em>.  The code is being moved into python-novaclient &amp; nova.</p>
 
 </td><td class=code><div class=highlight><pre>
-    git clone https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_DIR</span>
+git_clone https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
@@ -153,12 +185,12 @@ that is <em>deprecated</em>.  The code is being moved into python-novaclient &am
 allowing <code>import nova</code> or <code>import glance.client</code></p>
 
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; python setup.py develop
-    <span class="nb">cd</span> <span class="nv">$KEYSTONE_DIR</span>; python setup.py develop
-    <span class="nb">cd</span> <span class="nv">$GLANCE_DIR</span>; python setup.py develop
-    <span class="nb">cd</span> <span class="nv">$API_DIR</span>; python setup.py develop
-    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/django-openstack; python setup.py develop
-    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard; python setup.py develop
+<span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$KEYSTONE_DIR</span>; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$GLANCE_DIR</span>; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$API_DIR</span>; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/django-openstack; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard; sudo python setup.py develop
 
 </pre></div></td></tr><tr><td class=docs>
 
@@ -166,31 +198,45 @@ allowing <code>import nova</code> or <code>import glance.client</code></p>
 device - used to manage qcow images)</p>
 
 </td><td class=code><div class=highlight><pre>
-    modprobe nbd <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>modprobe kvm <span class="o">||</span> <span class="nb">true</span>
+sudo modprobe nbd <span class="o">||</span> <span class="nb">true</span>
+sudo modprobe kvm <span class="o">||</span> <span class="nb">true</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>user needs to be member of libvirtd group for nova-compute to use libvirt</p>
+
+</td><td class=code><div class=highlight><pre>
+sudo usermod -a -G libvirtd <span class="sb">`</span>whoami<span class="sb">`</span>
 </pre></div></td></tr><tr><td class=docs>
 
 <p>if kvm wasn't running before we need to restart libvirt to enable it</p>
 
 </td><td class=code><div class=highlight><pre>
-    /etc/init.d/libvirt-bin restart
+sudo /etc/init.d/libvirt-bin restart
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>FIXME(ja): should LIBVIRT_TYPE be kvm if kvm module is loaded?</p>
+
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>setup nova instance directory</p>
 
 </td><td class=code><div class=highlight><pre>
-    mkdir -p <span class="nv">$NOVA_DIR</span>/instances
+mkdir -p <span class="nv">$NOVA_DIR</span>/instances
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>if there is a partition labeled nova-instances use it (ext filesystems
-can be labeled via e2label)</p>
+can be labeled via e2label)
+FIXME: if already mounted this blows up...</p>
 
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> -L /dev/disk/by-label/nova-instances <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>mount -L nova-instances /<span class="nv">$NOVA_DIR</span>/instances
-    <span class="k">fi</span>
+<span class="k">if</span> <span class="o">[</span> -L /dev/disk/by-label/nova-instances <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>sudo mount -L nova-instances <span class="nv">$NOVA_DIR</span>/instances
+    sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$NOVA_DIR</span>/instances
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
@@ -205,200 +251,220 @@ of installing quantum we can create a simple module that will pass the
 initial imports</p>
 
 </td><td class=code><div class=highlight><pre>
-    mkdir <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum
-    touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/__init__.py
-    touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/client.py
-</pre></div></td></tr><tr><td class=docs>
+mkdir <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum <span class="o">||</span> <span class="nb">true</span>
+touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/__init__.py
+touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/client.py
 
-<p>local_settings has </p>
-
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
-    cp <span class="nb">local</span>/local_settings.py.example <span class="nb">local</span>/local_settings.py
-    dashboard/manage.py syncdb
+<span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
+cp <span class="nb">local</span>/local_settings.py.example <span class="nb">local</span>/local_settings.py
+dashboard/manage.py syncdb
 
 </pre></div></td></tr><tr><td class=docs>
 
-<h1>Setup Apache</h1>
-
-<p>create an empty directory to use as our </p>
+<p>---- Setup Apache ----
+create an empty directory to use as our </p>
 
 </td><td class=code><div class=highlight><pre>
-    mkdir <span class="nv">$DASH_DIR</span>/.blackhole
+mkdir <span class="nv">$DASH_DIR</span>/.blackhole
+
 </pre></div></td></tr><tr><td class=docs>
 
 <p>FIXME(ja): can't figure out how to make $DASH_DIR work in sed, also install to available/a2e it </p>
 
 </td><td class=code><div class=highlight><pre>
-    cat <span class="nv">$DIR</span>/files/000-default.template | sed <span class="s2">&quot;s/%DASH_DIR%/\/opt\/dash/g&quot;</span> &gt; /etc/apache2/sites-enabled/000-default
-
-    chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
-
-    mkdir -p /var/log/glance
+cat <span class="nv">$DIR</span>/files/000-default.template | sed <span class="s1">&#39;s/%DASH_DIR%/\/opt\/dash/g&#39;</span> &gt; /tmp/000-default
+sudo mv /tmp/000-default /etc/apache2/sites-enabled
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>prepare initial images for loading into glance</p>
+<p><code>python setup.py develop</code> left some files owned by root in $DASH_DIR and
+others by the original owner.  We need to change the owner to apache so
+dashboard can run</p>
 
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$DEST</span>/tty.tgz <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>wget -c http://images.ansolabs.com/tty.tgz -O <span class="nv">$DEST</span>/tty.tgz
-    <span class="k">fi</span>
+sudo chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
 
-<span class="k">    </span>mkdir -p <span class="nv">$DEST</span>/images
-    tar -C <span class="nv">$DEST</span>/images -zxf <span class="nv">$DEST</span>/tty.tgz
+sudo mkdir -p /var/log/glance
+sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> /var/log/glance 
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>add useful screenrc</p>
 
 </td><td class=code><div class=highlight><pre>
-    cp <span class="nv">$DIR</span>/files/screenrc ~/.screenrc
-    <span class="nb">exit</span>
-<span class="k">fi</span>
+cp <span class="nv">$DIR</span>/files/screenrc ~/.screenrc
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>TODO: update current user to allow sudo for all commands in files/sudo/*</p>
+
+</td><td class=code><div class=highlight><pre>
 
 <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
 
-<span class="k">function </span>screen_it <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-
-<p>nova api crashes if we start it with a regular screen command,
-so send the start command by forcing text into the window.</p>
-
-</td><td class=code><div class=highlight><pre>
-    screen -S nova -X screen -t <span class="nv">$1</span>
-    screen -S nova -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
-<span class="o">}</span>
 
 <span class="k">function </span>add_nova_flag <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_DIR</span>/bin/nova.conf
 <span class="o">}</span>
-
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run&quot;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run_detached&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>(re)create nova.conf</p>
 
 </td><td class=code><div class=highlight><pre>
-    rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
-    add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
-    add_nova_flag <span class="s2">&quot;--nodaemon&quot;</span>
-    add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
-    add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
-    add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
-    add_nova_flag <span class="s2">&quot;--public_interface=$INTERFACE&quot;</span>
-    add_nova_flag <span class="s2">&quot;--vlan_interface=$INTERFACE&quot;</span>
-    add_nova_flag <span class="s2">&quot;--sql_connection=$SQL_CONN&quot;</span>
-    add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
-    add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
-    add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
-    add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/noVNC/noVNC&quot;</span>
-    add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
-    add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
-    <span class="k">fi</span>
+rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
+add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
+add_nova_flag <span class="s2">&quot;--nodaemon&quot;</span>
+add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
+add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
+add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
+add_nova_flag <span class="s2">&quot;--public_interface=$INTERFACE&quot;</span>
+add_nova_flag <span class="s2">&quot;--vlan_interface=$INTERFACE&quot;</span>
+add_nova_flag <span class="s2">&quot;--sql_connection=$SQL_CONN&quot;</span>
+add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
+add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
+add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
+add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/noVNC/noVNC&quot;</span>
+add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
+add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
+<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>create a new named screen to store things in</p>
 
 </td><td class=code><div class=highlight><pre>
-    screen -d -m -S nova -t nova
-    sleep 1
+screen -d -m -S nova -t nova
+sleep 1
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>Clean out the instances directory</p>
 
 </td><td class=code><div class=highlight><pre>
-    rm -rf <span class="nv">$NOVA_DIR</span>/instances/*
+rm -rf <span class="nv">$NOVA_DIR</span>/instances/*
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>delete traces of nova networks from prior runs</p>
 
 </td><td class=code><div class=highlight><pre>
-    killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>rm -rf <span class="nv">$NOVA_DIR</span>/networks
-    mkdir -p <span class="nv">$NOVA_DIR</span>/networks
+killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
+rm -rf <span class="nv">$NOVA_DIR</span>/networks
+mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>(re)create nova database</p>
 
 </td><td class=code><div class=highlight><pre>
-    rm -f <span class="nv">$NOVA_DIR</span>/nova.sqlite
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
+mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE nova;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
+mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
+<span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>initialize keystone with default users/endpoints
-FIXME(ja): move initial_data.sh into this script</p>
+<p>initialize keystone with default users/endpoints</p>
 
 </td><td class=code><div class=highlight><pre>
-    rm -f /opt/keystone/keystone.db
-    curl -OL https://raw.github.com/cloudbuilders/deploy.sh/master/initial_data.sh
-    <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash initial_data.sh
+rm -f /opt/keystone/keystone.db
+</pre></div></td></tr><tr><td class=docs>
+
+<p>FIXME keystone creates a keystone.log wherever you run it from (bugify)</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">cd</span> /tmp
+<span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$DIR</span>/files/keystone_data.sh
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>create a small network</p>
 
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 32
+<span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 32
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>create some floating ips</p>
 
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+<span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 
 </pre></div></td></tr><tr><td class=docs>
 
 <p>delete existing glance images/database.  Glance will recreate the db
-when it is ran.</p>
+when it is ran.
+FIXME: configure glance not to shove files in /var/lib/glance?</p>
 
 </td><td class=code><div class=highlight><pre>
-    rm -rf /var/lib/glance/images/*
-    rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
-
-    screen_it n-api <span class="s2">&quot;$NOVA_DIR/bin/nova-api&quot;</span>
-    screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
-    screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
-    screen_it cpu <span class="s2">&quot;$NOVA_DIR/bin/nova-compute&quot;</span>
-    screen_it net <span class="s2">&quot;$NOVA_DIR/bin/nova-network&quot;</span>
-    screen_it sched <span class="s2">&quot;$NOVA_DIR/bin/nova-scheduler&quot;</span>
-    screen_it key <span class="s2">&quot;$KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_DIR/etc/keystone.conf&quot;</span>
-    screen_it vnc <span class="s2">&quot;$NOVA_DIR/bin/nova-vncproxy&quot;</span>
-    screen_it dash <span class="s2">&quot;/etc/init.d/apache2 restart; tail -f /var/log/apache2/error.log&quot;</span>
+sudo mkdir -p /var/lib/glance
+sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> /var/lib/glance
+rm -rf /var/lib/glance/images/*
+rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>FIXME: switch to just importing images
-remove previously converted images</p>
+<p>nova api crashes if we start it with a regular screen command,
+so send the start command by forcing text into the window.</p>
 
 </td><td class=code><div class=highlight><pre>
-    rm -rf <span class="nv">$DIR</span>/images/<span class="o">[</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">][</span>0-9a-f<span class="o">]</span>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage image convert <span class="nv">$DIR</span>/images
+<span class="k">function </span>screen_it <span class="o">{</span>
+    screen -S nova -X screen -t <span class="nv">$1</span>
+    screen -S nova -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
+<span class="o">}</span>
 
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> !<span class="o">=</span> <span class="s2">&quot;run_detached&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">      </span>screen -S nova -x
-    <span class="k">fi</span>
+screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
+screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>keystone drops a keystone.log where if it is run, so change the path to
+where it can write</p>
+
+</td><td class=code><div class=highlight><pre>
+screen_it key <span class="s2">&quot;cd /tmp; $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_DIR/etc/keystone.conf&quot;</span>
+screen_it n-api <span class="s2">&quot;$NOVA_DIR/bin/nova-api&quot;</span>
+screen_it n-cpu <span class="s2">&quot;$NOVA_DIR/bin/nova-compute&quot;</span>
+screen_it n-net <span class="s2">&quot;$NOVA_DIR/bin/nova-network&quot;</span>
+screen_it n-sch <span class="s2">&quot;$NOVA_DIR/bin/nova-scheduler&quot;</span>
+screen_it n-vnc <span class="s2">&quot;$NOVA_DIR/bin/nova-vncproxy&quot;</span>
+screen_it dash <span class="s2">&quot;sudo /etc/init.d/apache2 restart; tail -f /var/log/apache2/error.log&quot;</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>---- download an install images ----</p>
+
+</td><td class=code><div class=highlight><pre>
+
+mkdir -p <span class="nv">$DEST</span>/images
+<span class="nb">cd</span> <span class="nv">$DEST</span>/images
+</pre></div></td></tr><tr><td class=docs>
+
+<p>prepare initial images for loading into glance</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$DEST</span>/tty.tgz <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>wget -c http://images.ansolabs.com/tty.tgz -O <span class="nv">$DEST</span>/tty.tgz
 <span class="k">fi</span>
 
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run&quot;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;terminate&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>virsh list | grep i- | awk <span class="s1">&#39;{print $1}&#39;</span> | xargs -n1 virsh destroy
-    <span class="nv">$NOVA_DIR</span>/tools/clean-vlans
-    <span class="nb">echo</span> <span class="s2">&quot;FIXME: clean networks?&quot;</span>
-<span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
 
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;run&quot;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CMD&quot;</span> <span class="o">==</span> <span class="s2">&quot;clean&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>screen -S nova -X quit
-    rm -f *.pid*
-<span class="k">fi</span>
+<p>extract ami-tty/image, aki-tty/image &amp; ari-tty/image</p>
+
+</td><td class=code><div class=highlight><pre>
+tar -zxf <span class="nv">$DEST</span>/tty.tgz
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>add images to glance 
+FIXME: kernel/ramdisk is hardcoded - use return result from add</p>
+
+</td><td class=code><div class=highlight><pre>
+glance add <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; aki-tty/image 
+glance add <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; ari-tty/image 
+glance add <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span>1 <span class="nv">ramdisk_id</span><span class="o">=</span>2 &lt; ami-tty/image
 
 
 
