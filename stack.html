@@ -342,7 +342,7 @@ ul.auto-toc {
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="settings-options">
-<h1>Settings/Options</h1>
+<h2>Settings/Options</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -384,6 +384,7 @@ where we are installing openstack.</p>
 <span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
 <span class="nv">API_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstackx
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
+<span class="nv">ENABLED_SERVICES</span><span class="o">=</span>g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Use the first IP unless an explicit is set by <tt class="docutils literal">HOST_IP</tt> environment variable</p>
@@ -425,7 +426,7 @@ FLAT_INTERFACE=eth0</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="install-packages">
-<h1>Install Packages</h1>
+<h2>Install Packages</h2>
 <p>Openstack uses a fair number of other projects.</p>
 </td><td class=code><div class=highlight><pre>
 
@@ -491,7 +492,7 @@ git_clone https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="initialization">
-<h1>Initialization</h1>
+<h2>Initialization</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -541,7 +542,7 @@ FIXME: if already mounted this blows up...</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="dashboard">
-<h2>Dashboard</h2>
+<h3>Dashboard</h3>
 <p>Setup the django application to serve via apache/wsgi</p>
 </td><td class=code><div class=highlight><pre>
 
@@ -580,7 +581,7 @@ sudo chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="glance">
-<h2>Glance</h2>
+<h3>Glance</h3>
 </td><td class=code><div class=highlight><pre>
 
 sudo mkdir -p /var/log/glance
@@ -598,7 +599,7 @@ cp <span class="nv">$DIR</span>/files/screenrc ~/.screenrc
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="nova">
-<h2>Nova</h2>
+<h3>Nova</h3>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
@@ -623,7 +624,7 @@ add_nova_flag <span class="s2">&quot;--sql_connection=$SQL_CONN&quot;</span>
 add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
 add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
 add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
-add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/noVNC/noVNC&quot;</span>
+add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/&quot;</span>
 add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
 add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -653,16 +654,19 @@ mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 </td><td class=code><div class=highlight><pre>
 mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE nova;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
 mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
+mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE keystone;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
+mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
 <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
+
+</pre></div></td></tr><tr><td class=docs>
+<p>FIXME (anthony) keystone should use keystone.conf.example</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
+cp <span class="nv">$DIR</span>/files/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>initialize keystone with default users/endpoints</p>
 </td><td class=code><div class=highlight><pre>
-rm -f /opt/keystone/keystone.db
-</pre></div></td></tr><tr><td class=docs>
-<p>FIXME keystone creates a keystone.log wherever you run it from (bugify)</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">cd</span> /tmp
 <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$DIR</span>/files/keystone_data.sh
 
 </pre></div></td></tr><tr><td class=docs>
@@ -689,7 +693,7 @@ rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
 </div>
 </div>
 <div class="section" id="launch-services">
-<h1>Launch Services</h1>
+<h2>Launch Services</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -697,8 +701,13 @@ rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
 so send the start command by forcing text into the window.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>screen_it <span class="o">{</span>
-    screen -S nova -X screen -t <span class="nv">$1</span>
-    screen -S nova -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>only run the services specified in $ENABLED_SERVICES</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;$1&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>screen -S nova -X screen -t <span class="nv">$1</span>
+        screen -S nova -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
@@ -707,18 +716,21 @@ screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --con
 <p>keystone drops a keystone.log where if it is run, so change the path to
 where it can write</p>
 </td><td class=code><div class=highlight><pre>
-screen_it key <span class="s2">&quot;cd /tmp; $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_DIR/etc/keystone.conf&quot;</span>
+screen_it key <span class="s2">&quot;cd /tmp; $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF&quot;</span>
 screen_it n-api <span class="s2">&quot;$NOVA_DIR/bin/nova-api&quot;</span>
 screen_it n-cpu <span class="s2">&quot;$NOVA_DIR/bin/nova-compute&quot;</span>
 screen_it n-net <span class="s2">&quot;$NOVA_DIR/bin/nova-network&quot;</span>
 screen_it n-sch <span class="s2">&quot;$NOVA_DIR/bin/nova-scheduler&quot;</span>
-screen_it n-vnc <span class="s2">&quot;$NOVA_DIR/bin/nova-vncproxy&quot;</span>
-screen_it dash <span class="s2">&quot;sudo /etc/init.d/apache2 restart; tail -f /var/log/apache2/error.log&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>nova-vncproxy binds a privileged port, and so needs sudo</p>
+</td><td class=code><div class=highlight><pre>
+screen_it n-vnc <span class="s2">&quot;sudo $NOVA_DIR/bin/nova-vncproxy&quot;</span>
+screen_it dash <span class="s2">&quot;sudo /etc/init.d/apache2 restart; sudo tail -f /var/log/apache2/error.log&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="install-images">
-<h1>Install Images</h1>
+<h2>Install Images</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
