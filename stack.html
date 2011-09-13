@@ -30,6 +30,12 @@
 
 </pre></div></td></tr><tr><td class=docs>
 
+<h2>Settings/Options</h2>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
 <p>Quit script on error</p>
 
 </td><td class=code><div class=highlight><pre>
@@ -42,6 +48,12 @@
 </td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o xtrace
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Important paths: <code>DIR</code> is where we are executing from and <code>DEST</code> is where we 
+are installing openstack.</p>
+
+</td><td class=code><div class=highlight><pre>
 <span class="nv">DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
 <span class="nv">DEST</span><span class="o">=</span>/opt
 
@@ -77,6 +89,7 @@
 <span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">LIBVIRT_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_TYPE</span><span class="k">:-</span><span class="nv">qemu</span><span class="k">}</span>
 <span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">VlanManager</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 
 <p>NOTE(vish): If you are using FlatDHCP on multiple hosts, set the interface
@@ -96,6 +109,14 @@ FLAT_INTERFACE=eth0</p>
 </pre></div></td></tr><tr><td class=docs>
 
 <p>TODO: set rabbitmq conn string explicitly as well</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Install Packages</h2>
+
+<p>Openstack uses a fair number of other projects.</p>
 
 </td><td class=code><div class=highlight><pre>
 
@@ -181,6 +202,12 @@ git_clone https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_
 
 </pre></div></td></tr><tr><td class=docs>
 
+<h2>Initialization</h2>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
 <p>setup our checkouts so they are installed into python path
 allowing <code>import nova</code> or <code>import glance.client</code></p>
 
@@ -261,7 +288,7 @@ dashboard/manage.py syncdb
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>---- Setup Apache ----
+<p>setup apache
 create an empty directory to use as our </p>
 
 </td><td class=code><div class=highlight><pre>
@@ -406,6 +433,12 @@ rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
 
 </pre></div></td></tr><tr><td class=docs>
 
+<h2>Launching Services</h2>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
 <p>nova api crashes if we start it with a regular screen command,
 so send the start command by forcing text into the window.</p>
 
@@ -431,20 +464,21 @@ screen_it n-sch <span class="s2">&quot;$NOVA_DIR/bin/nova-scheduler&quot;</span>
 screen_it n-vnc <span class="s2">&quot;$NOVA_DIR/bin/nova-vncproxy&quot;</span>
 screen_it dash <span class="s2">&quot;sudo /etc/init.d/apache2 restart; tail -f /var/log/apache2/error.log&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Installing Images</h2>
+
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 
-<p>---- download an install images ----</p>
+<p>Downloads a tty image (ami/aki/ari style), then extracts it.  Upon extraction 
+we upload to glance with the glance cli tool.</p>
 
 </td><td class=code><div class=highlight><pre>
 
 mkdir -p <span class="nv">$DEST</span>/images
 <span class="nb">cd</span> <span class="nv">$DEST</span>/images
-</pre></div></td></tr><tr><td class=docs>
-
-<p>prepare initial images for loading into glance</p>
-
-</td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$DEST</span>/tty.tgz <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>wget -c http://images.ansolabs.com/tty.tgz -O <span class="nv">$DEST</span>/tty.tgz
 <span class="k">fi</span>
