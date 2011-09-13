@@ -521,24 +521,17 @@ sudo usermod -a -G libvirtd <span class="sb">`</span>whoami<span class="sb">`</s
 </td><td class=code><div class=highlight><pre>
 sudo /etc/init.d/libvirt-bin restart
 
-</pre></div></td></tr><tr><td class=docs>
-<p>FIXME(ja): should LIBVIRT_TYPE be kvm if kvm module is loaded?</p>
-</td><td class=code><div class=highlight><pre>
+<span class="c">## FIXME(ja): should LIBVIRT_TYPE be kvm if kvm module is loaded?</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>setup nova instance directory</p>
+<p>add useful screenrc</p>
 </td><td class=code><div class=highlight><pre>
-mkdir -p <span class="nv">$NOVA_DIR</span>/instances
+cp <span class="nv">$DIR</span>/files/screenrc ~/.screenrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>if there is a partition labeled nova-instances use it (ext filesystems
-can be labeled via e2label)
-FIXME: if already mounted this blows up...</p>
+<p>TODO: update current user to allow sudo for all commands in files/sudo/*</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> -L /dev/disk/by-label/nova-instances <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>sudo mount -L nova-instances <span class="nv">$NOVA_DIR</span>/instances
-    sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$NOVA_DIR</span>/instances
-<span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="dashboard">
@@ -560,23 +553,21 @@ cp <span class="nb">local</span>/local_settings.py.example <span class="nb">loca
 dashboard/manage.py syncdb
 
 </pre></div></td></tr><tr><td class=docs>
-<p>setup apache
-create an empty directory to use as our</p>
+<p>create an empty directory that apache uses as docroot</p>
 </td><td class=code><div class=highlight><pre>
 mkdir <span class="nv">$DASH_DIR</span>/.blackhole
 
-</pre></div></td></tr><tr><td class=docs>
-<p>FIXME(ja): can't figure out how to make $DASH_DIR work in sed, also install to available/a2e it</p>
-</td><td class=code><div class=highlight><pre>
+<span class="c">## FIXME(ja): can&#39;t figure out how to make $DASH_DIR work in sed, also install to available/a2e it </span>
 cat <span class="nv">$DIR</span>/files/000-default.template | sed <span class="s1">&#39;s/%DASH_DIR%/\/opt\/dash/g&#39;</span> &gt; /tmp/000-default
 sudo mv /tmp/000-default /etc/apache2/sites-enabled
 
 </pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">python setup.py develop</tt> left some files owned by root in $DASH_DIR and
+<p><tt class="docutils literal">python setup.py develop</tt> left some files owned by root in <tt class="docutils literal">DASH_DIR</tt> and
 others by the original owner.  We need to change the owner to apache so
 dashboard can run</p>
 </td><td class=code><div class=highlight><pre>
 sudo chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -584,26 +575,27 @@ sudo chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
 <h3>Glance</h3>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Glance uses <tt class="docutils literal">/var/lib/glance</tt> and <tt class="docutils literal">/var/log/glance</tt> by default, so
+we need to insure that our user has permissions to use them.</p>
+</td><td class=code><div class=highlight><pre>
 sudo mkdir -p /var/log/glance
-sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> /var/log/glance 
+sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> /var/log/glance 
+sudo mkdir -p /var/lib/glance
+sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> /var/lib/glance
 
 </pre></div></td></tr><tr><td class=docs>
-<p>add useful screenrc</p>
+<p>Delete existing images/database as glance will recreate the db on startup</p>
 </td><td class=code><div class=highlight><pre>
-cp <span class="nv">$DIR</span>/files/screenrc ~/.screenrc
+rm -rf /var/lib/glance/images/*
+rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
 
-</pre></div></td></tr><tr><td class=docs>
-<p>TODO: update current user to allow sudo for all commands in files/sudo/*</p>
-</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="nova">
 <h3>Nova</h3>
 </td><td class=code><div class=highlight><pre>
-
-<span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
-
 
 <span class="k">function </span>add_nova_flag <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_DIR</span>/bin/nova.conf
@@ -638,6 +630,21 @@ screen -d -m -S nova -t nova
 sleep 1
 
 </pre></div></td></tr><tr><td class=docs>
+<p>setup nova instance directory</p>
+</td><td class=code><div class=highlight><pre>
+mkdir -p <span class="nv">$NOVA_DIR</span>/instances
+
+</pre></div></td></tr><tr><td class=docs>
+<p>if there is a partition labeled nova-instances use it (ext filesystems
+can be labeled via e2label)</p>
+</td><td class=code><div class=highlight><pre>
+<span class="c">## FIXME: if already mounted this blows up...</span>
+<span class="k">if</span> <span class="o">[</span> -L /dev/disk/by-label/nova-instances <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>sudo mount -L nova-instances <span class="nv">$NOVA_DIR</span>/instances
+    sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$NOVA_DIR</span>/instances
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Clean out the instances directory</p>
 </td><td class=code><div class=highlight><pre>
 rm -rf <span class="nv">$NOVA_DIR</span>/instances/*
@@ -654,20 +661,7 @@ mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 </td><td class=code><div class=highlight><pre>
 mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE nova;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
 mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
-mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE keystone;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
-mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
 <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
-
-</pre></div></td></tr><tr><td class=docs>
-<p>FIXME (anthony) keystone should use keystone.conf.example</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
-cp <span class="nv">$DIR</span>/files/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>initialize keystone with default users/endpoints</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$DIR</span>/files/keystone_data.sh
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create a small network</p>
@@ -680,14 +674,28 @@ cp <span class="nv">$DIR</span>/files/keystone.conf <span class="nv">$KEYSTONE_C
 <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>delete existing glance images/database.  Glance will recreate the db
-when it is ran.
-FIXME: configure glance not to shove files in /var/lib/glance?</p>
+</div>
+<div class="section" id="keystone">
+<h3>Keystone</h3>
 </td><td class=code><div class=highlight><pre>
-sudo mkdir -p /var/lib/glance
-sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> /var/lib/glance
-rm -rf /var/lib/glance/images/*
-rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
+
+</pre></div></td></tr><tr><td class=docs>
+<p>(re)create keystone database</p>
+</td><td class=code><div class=highlight><pre>
+mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE keystone;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
+mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>FIXME (anthony) keystone should use keystone.conf.example</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
+cp <span class="nv">$DIR</span>/files/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>initialize keystone with default users/endpoints</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$DIR</span>/files/keystone_data.sh
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -698,12 +706,13 @@ rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
 
 </pre></div></td></tr><tr><td class=docs>
 <p>nova api crashes if we start it with a regular screen command,
-so send the start command by forcing text into the window.</p>
+so send the start command by forcing text into the window.
+Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES</tt></p>
 </td><td class=code><div class=highlight><pre>
+
+<span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
+
 <span class="k">function </span>screen_it <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>only run the services specified in $ENABLED_SERVICES</p>
-</td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;$1&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>screen -S nova -X screen -t <span class="nv">$1</span>
         screen -S nova -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
