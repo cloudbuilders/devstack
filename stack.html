@@ -385,17 +385,18 @@ where we are installing openstack.</p>
 <span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
 <span class="nv">API_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstackx
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
+<span class="nv">MUNIN_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstack-munin
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Specify which services to launch.  These generally correspond to screen tabs</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">ENABLED_SERVICES</span><span class="o">=</span>g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash
+<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Use the first IP unless an explicit is set by <tt class="docutils literal">HOST_IP</tt> environment variable</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -n <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="sb">`</span><span class="nv">LC_ALL</span><span class="o">=</span>C ifconfig  | grep -m 1 <span class="s1">&#39;inet addr:&#39;</span>| cut -d: -f2 | awk <span class="s1">&#39;{print $1}&#39;</span><span class="sb">`</span>
+<span class="k">    </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="sb">`</span><span class="nv">LC_ALL</span><span class="o">=</span>C /sbin/ifconfig  | grep -m 1 <span class="s1">&#39;inet addr:&#39;</span>| cut -d: -f2 | awk <span class="s1">&#39;{print $1}&#39;</span><span class="sb">`</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -434,6 +435,11 @@ FLAT_INTERFACE=eth0</p>
 <p>Rabbit connection info</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Glance connection info.  Note the port must be specified.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">0</span><span class="p">.0.0.0:</span><span class="nv">9292</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -500,6 +506,10 @@ git_clone https://github.com/cloudbuilders/python-novaclient.git <span class="nv
 that is <em>deprecated</em>.  The code is being moved into python-novaclient &amp; nova.</p>
 </td><td class=code><div class=highlight><pre>
 git_clone https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>openstack-munin is a collection of munin plugins for monitoring the stack</p>
+</td><td class=code><div class=highlight><pre>
+git_clone https://github.com/cloudbuilders/openstack-munin.git <span class="nv">$MUNIN_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -511,6 +521,7 @@ git_clone https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_
 <p>setup our checkouts so they are installed into python path
 allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils literal">import glance.client</tt></p>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">cd</span> <span class="nv">$NOVA_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$KEYSTONE_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$GLANCE_DIR</span>; sudo python setup.py develop
@@ -580,6 +591,47 @@ dashboard can run</p>
 </td><td class=code><div class=highlight><pre>
 sudo chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Update the DB to give user ‘$MYSQL_USER’&#64;’%’ full control of the all databases:</p>
+</td><td class=code><div class=highlight><pre>
+sudo mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s2">&quot;GRANT ALL PRIVILEGES ON *.* TO &#39;$MYSQL_USER&#39;@&#39;%&#39; identified by &#39;$MYSQL_PASS&#39;;&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Edit /etc/mysql/my.cnf to change ‘bind-address’ from localhost (127.0.0.1) to any (0.0.0.0) and restart the mysql service:</p>
+</td><td class=code><div class=highlight><pre>
+sudo sed -i <span class="s1">&#39;s/127.0.0.1/0.0.0.0/g&#39;</span> /etc/mysql/my.cnf
+sudo service mysql restart
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="munin">
+<h3>Munin</h3>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>allow connections from other hosts</p>
+</td><td class=code><div class=highlight><pre>
+sudo sed -i -e <span class="s1">&#39;/Allow from localhost/s/localhost.*$/all/&#39;</span> /etc/munin/apache.conf
+
+cat &gt;/tmp/nova <span class="s">&lt;&lt;EOF</span>
+<span class="s">[keystone_*]</span>
+<span class="s">user `whoami`</span>
+
+<span class="s">[nova_*]</span>
+<span class="s">user `whoami`</span>
+<span class="s">EOF</span>
+sudo mv /tmp/nova /etc/munin/plugin-conf.d/nova
+
+</pre></div></td></tr><tr><td class=docs>
+<p>configure Munin for Nova plugins</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">PLUGINS</span><span class="o">=</span><span class="s2">&quot;keystone_stats nova_floating_ips nova_instance_launched nova_instance_ nova_instance_timing nova_services&quot;</span>
+<span class="k">for </span>i in <span class="nv">$PLUGINS</span>; <span class="k">do</span>
+<span class="k">  </span>sudo cp -p <span class="nv">$MUNIN_DIR</span>/<span class="nv">$i</span> /usr/share/munin/plugins
+  sudo ln -sf /usr/share/munin/plugins/<span class="nv">$i</span> /etc/munin/plugins
+<span class="k">done</span>
+sudo mv /etc/munin/plugins/nova_instance_ /etc/munin/plugins/nova_instance_launched
+sudo restart munin-node
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -640,9 +692,9 @@ add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</
 add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/&quot;</span>
 add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
 add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
-add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
 add_nova_flag <span class="s2">&quot;--ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
 add_nova_flag <span class="s2">&quot;--rabbit_host=$RABBIT_HOST&quot;</span>
+add_nova_flag <span class="s2">&quot;--glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
 <span class="k">fi</span>
