@@ -352,7 +352,8 @@ want to override a setting you can either:</p>
 export MYSQL_PASS=anothersecret
 ./stack.sh
 </pre>
-<p>or run on a single line <tt class="docutils literal">MYSQL_PASS=simple ./stack.sh</tt></p>
+<p>or run on a single line <tt class="docutils literal">MYSQL_PASS=simple ./stack.sh</tt>
+or simply <tt class="docutils literal">./stack.sh</tt></p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -384,6 +385,10 @@ where we are installing openstack.</p>
 <span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
 <span class="nv">API_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstackx
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Specify which services to launch.  These generally correspond to screen tabs</p>
+</td><td class=code><div class=highlight><pre>
 <span class="nv">ENABLED_SERVICES</span><span class="o">=</span>g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash
 
 </pre></div></td></tr><tr><td class=docs>
@@ -400,6 +405,7 @@ where we are installing openstack.</p>
 <span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.6.0.0/27</span><span class="k">}</span>
 <span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">VlanManager</span><span class="k">}</span>
+<span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If you are using FlatDHCP on multiple hosts, set the <tt class="docutils literal">FLAT_INTERFACE</tt>
@@ -413,15 +419,21 @@ FLAT_INTERFACE=eth0</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">LIBVIRT_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_TYPE</span><span class="k">:-</span><span class="nv">qemu</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Mysql connection info</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MYSQL_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_USER</span><span class="k">:-</span><span class="nv">root</span><span class="k">}</span>
+<span class="nv">MYSQL_PASS</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_PASS</span><span class="k">:-</span><span class="nv">nova</span><span class="k">}</span>
+<span class="nv">MYSQL_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>don't specify /db in this string, so we can use it for multiple services</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">BASE_SQL_CONN</span><span class="o">=</span><span class="k">${</span><span class="nv">BASE_SQL_CONN</span><span class="k">:-</span><span class="nv">mysql</span><span class="p">://</span><span class="nv">$MYSQL_USER</span><span class="p">:</span><span class="nv">$MYSQL_PASS</span><span class="p">@</span><span class="nv">$MYSQL_HOST</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>TODO: switch to mysql for all services</p>
+<p>Rabbit connection info</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">MYSQL_PASS</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_PASS</span><span class="k">:-</span><span class="nv">nova</span><span class="k">}</span>
-<span class="nv">SQL_CONN</span><span class="o">=</span><span class="k">${</span><span class="nv">SQL_CONN</span><span class="k">:-</span><span class="nv">mysql</span><span class="p">://root:</span><span class="nv">$MYSQL_PASS</span><span class="p">@localhost/nova</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>TODO: set rabbitmq conn string explicitly as well</p>
-</td><td class=code><div class=highlight><pre>
+<span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -544,22 +556,22 @@ cp <span class="nv">$DIR</span>/files/screenrc ~/.screenrc
 of installing quantum we can create a simple module that will pass the
 initial imports</p>
 </td><td class=code><div class=highlight><pre>
-mkdir <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum <span class="o">||</span> <span class="nb">true</span>
-touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/__init__.py
-touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/client.py
+sudo mkdir -p  <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum <span class="o">||</span> <span class="nb">true</span>
+sudo touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/__init__.py
+sudo touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/client.py
 
 <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
-cp <span class="nb">local</span>/local_settings.py.example <span class="nb">local</span>/local_settings.py
+sudo cp <span class="nb">local</span>/local_settings.py.example <span class="nb">local</span>/local_settings.py
 dashboard/manage.py syncdb
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create an empty directory that apache uses as docroot</p>
 </td><td class=code><div class=highlight><pre>
-mkdir <span class="nv">$DASH_DIR</span>/.blackhole
+sudo mkdir -p <span class="nv">$DASH_DIR</span>/.blackhole
 
-<span class="c">## FIXME(ja): can&#39;t figure out how to make $DASH_DIR work in sed, also install to available/a2e it </span>
-cat <span class="nv">$DIR</span>/files/000-default.template | sed <span class="s1">&#39;s/%DASH_DIR%/\/opt\/dash/g&#39;</span> &gt; /tmp/000-default
-sudo mv /tmp/000-default /etc/apache2/sites-enabled
+<span class="c">## Configure apache&#39;s 000-default to run dashboard</span>
+sudo cp <span class="nv">$DIR</span>/files/000-default.template /etc/apache2/sites-enabled/000-default
+sudo sed -e <span class="s2">&quot;s,%DASH_DIR%,$DASH_DIR,g&quot;</span> -i /etc/apache2/sites-enabled/000-default
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">python setup.py develop</tt> left some files owned by root in <tt class="docutils literal">DASH_DIR</tt> and
@@ -588,8 +600,17 @@ sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> /var/lib/
 <p>Delete existing images/database as glance will recreate the db on startup</p>
 </td><td class=code><div class=highlight><pre>
 rm -rf /var/lib/glance/images/*
-rm -f <span class="nv">$GLANCE_DIR</span>/glance.sqlite
-
+</pre></div></td></tr><tr><td class=docs>
+<p>(re)create glance database</p>
+</td><td class=code><div class=highlight><pre>
+mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE glance;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
+mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE glance;&#39;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Copy over our glance-registry.conf</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">GLANCE_CONF</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-registry.conf
+cp <span class="nv">$DIR</span>/files/glance-registry.conf <span class="nv">$GLANCE_CONF</span>
+sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/glance,g&quot;</span> -i <span class="nv">$GLANCE_CONF</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -612,13 +633,16 @@ add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET
 add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
 add_nova_flag <span class="s2">&quot;--public_interface=$INTERFACE&quot;</span>
 add_nova_flag <span class="s2">&quot;--vlan_interface=$INTERFACE&quot;</span>
-add_nova_flag <span class="s2">&quot;--sql_connection=$SQL_CONN&quot;</span>
+add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
 add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
 add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
 add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
 add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/&quot;</span>
 add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
 add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
+add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
+add_nova_flag <span class="s2">&quot;--ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
+add_nova_flag <span class="s2">&quot;--rabbit_host=$RABBIT_HOST&quot;</span>
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
 <span class="k">fi</span>
@@ -659,8 +683,8 @@ mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create nova database</p>
 </td><td class=code><div class=highlight><pre>
-mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE nova;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
-mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
+mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE nova;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
+mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
 <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
 
 </pre></div></td></tr><tr><td class=docs>
@@ -682,14 +706,15 @@ mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREA
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create keystone database</p>
 </td><td class=code><div class=highlight><pre>
-mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE keystone;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
-mysql -uroot -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
+mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE keystone;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
+mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>FIXME (anthony) keystone should use keystone.conf.example</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
 cp <span class="nv">$DIR</span>/files/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
+sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>initialize keystone with default users/endpoints</p>
@@ -765,7 +790,6 @@ FIXME: kernel/ramdisk is hardcoded - use return result from add</p>
 glance add <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; aki-tty/image 
 glance add <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; ari-tty/image 
 glance add <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span>1 <span class="nv">ramdisk_id</span><span class="o">=</span>2 &lt; ami-tty/image
-
 
 
 </td><td class=code><div class=highlight><pre>

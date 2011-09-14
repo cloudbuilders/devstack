@@ -337,7 +337,7 @@ ul.auto-toc {
 
 <p>Configurable params</p>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/bin/bash</span>
+<span class="c">#!/usr/bin/env bash</span>
 <span class="nv">BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">BRIDGE</span><span class="k">:-</span><span class="nv">br0</span><span class="k">}</span>
 <span class="nv">CONTAINER</span><span class="o">=</span><span class="k">${</span><span class="nv">CONTAINER</span><span class="k">:-</span><span class="nv">STACK</span><span class="k">}</span>
 <span class="nv">CONTAINER_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">CONTAINER_IP</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.50</span><span class="k">}</span>
@@ -346,6 +346,18 @@ ul.auto-toc {
 <span class="nv">CONTAINER_GATEWAY</span><span class="o">=</span><span class="k">${</span><span class="nv">CONTAINER_GATEWAY</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.1</span><span class="k">}</span>
 <span class="nv">NAMESERVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NAMESERVER</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.1</span><span class="k">}</span>
 <span class="nv">COPYENV</span><span class="o">=</span><span class="k">${</span><span class="nv">COPYENV</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Param string to pass to stack.sh.  Like &quot;EC2_DMZ_HOST=192.168.1.1 MYSQL_USER=nova&quot;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">STACKSH_PARAMS</span><span class="o">=</span><span class="k">${</span><span class="nv">STACKSH_PARAMS</span><span class="k">:-}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Install cgroup-bin if we don't have it yet</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! which cgdelete | grep -q cgdelete; <span class="k">then</span>
+<span class="k">    </span>apt-get install cgroup-bin
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create lxc configuration</p>
@@ -368,10 +380,12 @@ lxc-stop -n <span class="nv">$CONTAINER</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Shutdown any existing container</p>
 </td><td class=code><div class=highlight><pre>
-cgdelete -r cpu,net_cls:<span class="nv">$CONTAINER</span>
+<span class="k">if</span> <span class="o">[</span> -d /cgroup/<span class="nv">$CONTAINER</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>cgdelete -r cpu,net_cls:<span class="nv">$CONTAINER</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This prevents zombie containers</p>
+<p>This kills zombie containers</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">CACHEDIR</span><span class="o">=</span>/var/cache/lxc/natty/rootfs-amd64
 <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$CACHEDIR</span> <span class="o">]</span>; <span class="k">then</span>
@@ -416,16 +430,22 @@ is able to interact with libvirt.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;stack ALL=(ALL) NOPASSWD: ALL&quot;</span> &gt;&gt; <span class="nv">$ROOTFS</span>/etc/sudoers
 
+<span class="k">function </span>cp_it <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[</span> -e <span class="nv">$1</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> -d <span class="nv">$1</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>cp -pr <span class="nv">$1</span> <span class="nv">$2</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>and has sudo ability (in the future this should be limited to only what
 stack requires)</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$COPYENV&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>cp -pr ~/.ssh <span class="nv">$ROOTFS</span>/opt/.ssh
-    cp -p ~/.ssh/id_rsa.pub <span class="nv">$ROOTFS</span>/opt/.ssh/authorized_keys
-    cp -pr ~/.gitconfig <span class="nv">$ROOTFS</span>/opt/.gitconfig
-    cp -pr ~/.vimrc <span class="nv">$ROOTFS</span>/opt/.vimrc
-    cp -pr ~/.bashrc <span class="nv">$ROOTFS</span>/opt/.bashrc
+<span class="k">    </span>cp_it ~/.ssh <span class="nv">$ROOTFS</span>/opt/.ssh
+    cp_it ~/.ssh/id_rsa.pub <span class="nv">$ROOTFS</span>/opt/.ssh/authorized_keys
+    cp_it ~/.gitconfig <span class="nv">$ROOTFS</span>/opt/.gitconfig
+    cp_it ~/.vimrc <span class="nv">$ROOTFS</span>/opt/.vimrc
+    cp_it ~/.bashrc <span class="nv">$ROOTFS</span>/opt/.bashrc
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -451,11 +471,9 @@ cat &gt; <span class="nv">$INTERFACES</span> <span class="s">&lt;&lt;EOF</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure instance network</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">INSTALL_SH</span><span class="o">=</span><span class="nv">$ROOTFS</span>/root/install.sh
-cat &gt; <span class="nv">$INSTALL_SH</span> <span class="s">&lt;&lt;EOF</span>
+<span class="nv">RUN_SH</span><span class="o">=</span><span class="nv">$ROOTFS</span>/root/run.sh
+cat &gt; <span class="nv">$RUN_SH</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">#!/bin/bash</span>
-<span class="s"># DIVIDER</span>
-<span class="s">echo \#\!/bin/sh -e &gt; /etc/rc.local</span>
 <span class="s"># DIVIDER</span>
 <span class="s">echo &quot;nameserver $NAMESERVER&quot; | resolvconf -a eth0</span>
 <span class="s">sleep 1</span>
@@ -463,40 +481,45 @@ cat &gt; <span class="nv">$INSTALL_SH</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s"># DIVIDER</span>
 <span class="s">apt-get update</span>
 <span class="s">apt-get -y --force-yes install git-core vim-nox sudo</span>
-<span class="s">su -c &quot;git clone git://github.com/cloudbuilders/nfs-stack.git ~/nfs-stack&quot; stack</span>
-<span class="s">su -c &quot;cd ~/nfs-stack &amp;&amp; ./stack.sh&quot; stack</span>
+<span class="s">if [ ! -d &quot;~/nfs-stack&quot; ]</span>
+<span class="s">    su -c &quot;git clone git://github.com/cloudbuilders/nfs-stack.git ~/nfs-stack&quot; stack</span>
+<span class="s">fi</span>
+<span class="s">su -c &quot;cd ~/nfs-stack &amp;&amp; $STACKSH_PARAMS ./stack.sh&quot; stack</span>
 <span class="s">EOF</span>
 
-chmod 700 <span class="nv">$INSTALL_SH</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure the runner</p>
+</td><td class=code><div class=highlight><pre>
+chmod 700 <span class="nv">$RUN_SH</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure the first run installer</p>
+<p>Make sure dns is set up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">RC_LOCAL</span><span class="o">=</span><span class="nv">$ROOTFS</span>/etc/rc.local
 cat &gt; <span class="nv">$RC_LOCAL</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">#!/bin/sh -e</span>
-<span class="s">/root/install.sh</span>
+<span class="s">/root/run.sh</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Disable startup script</p>
+<p>Install and run stack.sh</p>
 </td><td class=code><div class=highlight><pre>
-mkdir -p /cgroup
-mount none -t cgroup /cgroup
+<span class="k">if</span> ! mount | grep -q cgroup; <span class="k">then</span>
+<span class="k">    </span>mkdir -p /cgroup
+    mount none -t cgroup /cgroup
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Make sure dns is set up</p>
+<p>Make the run.sh executable</p>
 </td><td class=code><div class=highlight><pre>
 lxc-start -d -n <span class="nv">$CONTAINER</span>
 
 
 </td><td class=code><div class=highlight><pre>
 </pre></div></td></tr><tr><td class=docs>
-<p>Install and run stack.sh</p>
+<p>Make runner launch on boot</p>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Make installer run on boot</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure cgroup directory</p>
 </pre></div></td></tr><tr><td class=docs>
