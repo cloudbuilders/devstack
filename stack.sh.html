@@ -366,14 +366,14 @@ installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>stack.sh keeps the list of <strong>apt</strong> and <strong>pip</strong> dependencies in files.
-Additionally we have a few config templates and other useful files useful
-installation.  They are needed to be located at <tt class="docutils literal">apts</tt>, <tt class="docutils literal">files</tt> and
-<tt class="docutils literal">pips</tt> in the <tt class="docutils literal">DEVSTACK</tt> directory (next to this script).</p>
+<p>stack.sh keeps the list of <strong>apt</strong> and <strong>pip</strong> dependencies in external
+files, along with config templates and other useful files.  You can find these
+in the <tt class="docutils literal">files</tt> directory (next to this script).  We will reference this
+directory using the <tt class="docutils literal">FILES</tt> variable in this script.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">DEVSTACK</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
-<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$DEVSTACK</span>/apts <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> ! -d <span class="nv">$DEVSTACK</span>/files <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> ! -d <span class="nv">$DEVSTACK</span>/pips <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing devstack files - did you grab more than just stack.sh?&quot;</span>
+<span class="nv">FILES</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>/files
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$FILES</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing devstack/files - did you grab more than just stack.sh?&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
@@ -499,12 +499,12 @@ cat <span class="s">&lt;&lt;MYSQL_PRESEED | sudo debconf-set-selections</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>install apt requirements</p>
 </td><td class=code><div class=highlight><pre>
-sudo apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$DEVSTACK</span>/apts/* | cut -d<span class="se">\#</span> -f1 | grep -Ev <span class="s2">&quot;mysql-server|rabbitmq-server&quot;</span><span class="sb">`</span>
+sudo apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$FILES</span>/apts/* | cut -d<span class="se">\#</span> -f1 | grep -Ev <span class="s2">&quot;mysql-server|rabbitmq-server&quot;</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install python requirements</p>
 </td><td class=code><div class=highlight><pre>
-sudo <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span>/var/cache/pip pip install <span class="sb">`</span>cat <span class="nv">$DEVSTACK</span>/pips/*<span class="sb">`</span>
+sudo <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span>/var/cache/pip pip install <span class="sb">`</span>cat <span class="nv">$FILES</span>/pips/*<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>git clone only if directory doesn't exist already</p>
@@ -575,7 +575,7 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <p>Add a useful screenrc.  This isn't required to run openstack but is we do
 it since we are going to run the services in screen for simple</p>
 </td><td class=code><div class=highlight><pre>
-cp <span class="nv">$DEVSTACK</span>/files/screenrc ~/.screenrc
+cp <span class="nv">$FILES</span>/screenrc ~/.screenrc
 
 <span class="c">## TODO: update current user to allow sudo for all commands in files/sudo/*</span>
 
@@ -636,7 +636,7 @@ initial imports</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Includes settings for Nixon, to expose munin charts.</p>
 </td><td class=code><div class=highlight><pre>
-    sudo cp <span class="nv">$DEVSTACK</span>/files/dash_settings.py <span class="nb">local</span>/local_settings.py
+    sudo cp <span class="nv">$FILES</span>/dash_settings.py <span class="nb">local</span>/local_settings.py
 
     dashboard/manage.py syncdb
 
@@ -646,13 +646,13 @@ initial imports</p>
     sudo mkdir -p <span class="nv">$DASH_DIR</span>/.blackhole
 
     <span class="c">## Configure apache&#39;s 000-default to run dashboard</span>
-    sudo cp <span class="nv">$DEVSTACK</span>/files/000-default.template /etc/apache2/sites-enabled/000-default
+    sudo cp <span class="nv">$FILES</span>/000-default.template /etc/apache2/sites-enabled/000-default
     sudo sed -e <span class="s2">&quot;s,%DASH_DIR%,$DASH_DIR,g&quot;</span> -i /etc/apache2/sites-enabled/000-default
 
 </pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">python setup.py develop</tt> left some files owned by root in <tt class="docutils literal">DASH_DIR</tt> and
-others by the original owner.  We need to change the owner to apache so
-dashboard can run</p>
+<p><tt class="docutils literal">python setup.py develop</tt> left some files owned by root in <tt class="docutils literal">DASH_DIR</tt>
+and others are owned by the user you are using to run this script.
+We need to change the owner to apache for dashboard to run.</p>
 </td><td class=code><div class=highlight><pre>
     sudo chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
 <span class="k">fi</span>
@@ -723,7 +723,7 @@ we need to insure that our user has permissions to use them.</p>
 <p>Copy over our glance-registry.conf</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">GLANCE_CONF</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-registry.conf
-    cp <span class="nv">$DEVSTACK</span>/files/glance-registry.conf <span class="nv">$GLANCE_CONF</span>
+    cp <span class="nv">$FILES</span>/glance-registry.conf <span class="nv">$GLANCE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/glance,g&quot;</span> -i <span class="nv">$GLANCE_CONF</span>
 <span class="k">fi</span>
 
@@ -853,13 +853,13 @@ can be labeled via e2label)</p>
 <p>FIXME (anthony) keystone should use keystone.conf.example</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
-    cp <span class="nv">$DEVSTACK</span>/files/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
+    cp <span class="nv">$FILES</span>/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>initialize keystone with default users/endpoints</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$DEVSTACK</span>/files/keystone_data.sh
+    <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$FILES</span>/keystone_data.sh
 <span class="k">fi</span>
 
 
