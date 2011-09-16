@@ -499,7 +499,7 @@ cat <span class="s">&lt;&lt;MYSQL_PRESEED | sudo debconf-set-selections</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>install apt requirements</p>
 </td><td class=code><div class=highlight><pre>
-sudo apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$DEVSTACK</span>/apts/* | cut -d<span class="se">\#</span> -f1<span class="sb">`</span>
+sudo apt-get install -y -q <span class="sb">`</span>cat <span class="nv">$DEVSTACK</span>/apts/* | cut -d<span class="se">\#</span> -f1 | grep -Ev <span class="s2">&quot;mysql-server|rabbitmq-server&quot;</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install python requirements</p>
@@ -579,12 +579,27 @@ cp <span class="nv">$DEVSTACK</span>/files/screenrc ~/.screenrc
 
 <span class="c">## TODO: update current user to allow sudo for all commands in files/sudo/*</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="rabbit">
+<h3>Rabbit</h3>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;rabbit&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install and start rabbitmq-server</p>
+</td><td class=code><div class=highlight><pre>
+    sudo apt-get install -y -q rabbitmq-server
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="mysql">
 <h3>Mysql</h3>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install and start mysql-server</p>
+</td><td class=code><div class=highlight><pre>
+    sudo apt-get -y -q install mysql-server
 </pre></div></td></tr><tr><td class=docs>
 <p>Update the DB to give user ‘$MYSQL_USER’&#64;’%’ full control of the all databases:</p>
 </td><td class=code><div class=highlight><pre>
@@ -621,7 +636,7 @@ initial imports</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Includes settings for Nixon, to expose munin charts.</p>
 </td><td class=code><div class=highlight><pre>
-    sudo cp <span class="nv">$DIR</span>/files/dash_settings.py <span class="nb">local</span>/local_settings.py
+    sudo cp <span class="nv">$DEVSTACK</span>/files/dash_settings.py <span class="nb">local</span>/local_settings.py
 
     dashboard/manage.py syncdb
 
