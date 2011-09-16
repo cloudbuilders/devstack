@@ -454,9 +454,10 @@ FLAT_INTERFACE=eth0</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Nova hypervisor configuration</p>
+<p>Nova hypervisor configuration.  We default to <strong>kvm</strong> but will drop back to
+<strong>qemu</strong> if we are unable to load the kvm module.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">LIBVIRT_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_TYPE</span><span class="k">:-</span><span class="nv">qemu</span><span class="k">}</span>
+<span class="nv">LIBVIRT_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_TYPE</span><span class="k">:-</span><span class="nv">kvm</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Mysql connection info</p>
@@ -562,6 +563,7 @@ git_clone https://github.com/cloudbuilders/openstack-munin.git <span class="nv">
 <div class="section" id="initialization">
 <h2>Initialization</h2>
 </td><td class=code><div class=highlight><pre>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>setup our checkouts so they are installed into python path
@@ -737,52 +739,18 @@ we need to insure that our user has permissions to use them.</p>
 <h3>Nova</h3>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">function </span>add_nova_flag <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_DIR</span>/bin/nova.conf
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>(re)create nova.conf</p>
-</td><td class=code><div class=highlight><pre>
-rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
-add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
-add_nova_flag <span class="s2">&quot;--nodaemon&quot;</span>
-add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
-add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
-add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
-add_nova_flag <span class="s2">&quot;--public_interface=$INTERFACE&quot;</span>
-add_nova_flag <span class="s2">&quot;--vlan_interface=$INTERFACE&quot;</span>
-add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
-add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
-add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
-add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
-add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/&quot;</span>
-add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
-add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
-add_nova_flag <span class="s2">&quot;--ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
-add_nova_flag <span class="s2">&quot;--rabbit_host=$RABBIT_HOST&quot;</span>
-add_nova_flag <span class="s2">&quot;--glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
-<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
-<span class="k">fi</span>
-<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$MULTI_HOST&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--multi_host=$MULTI_HOST&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>create a new named screen to store things in</p>
-</td><td class=code><div class=highlight><pre>
-screen -d -m -S nova -t nova
-sleep 1
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-cpu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>attempt to load modules: kvm (hardware virt) and nbd (network block
-device - used to manage qcow images)</p>
+<p>attempt to load modules: nbd (network block device - used to manage
+qcow images) and kvm (hardware based virtualization).  If unable to
+load kvm, set the libvirt type to qemu.</p>
 </td><td class=code><div class=highlight><pre>
     sudo modprobe nbd <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>sudo modprobe kvm <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span><span class="k">if</span> ! sudo modprobe kvm; <span class="k">then</span>
+<span class="k">        </span><span class="nv">LIBVIRT_TYPE</span><span class="o">=</span>qemu
+    <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>User needs to be member of libvirtd group for nova-compute to use libvirt.</p>
 </td><td class=code><div class=highlight><pre>
@@ -791,8 +759,6 @@ device - used to manage qcow images)</p>
 <p>if kvm wasn't running before we need to restart libvirt to enable it</p>
 </td><td class=code><div class=highlight><pre>
     sudo /etc/init.d/libvirt-bin restart
-
-    <span class="c">## FIXME(ja): should LIBVIRT_TYPE be kvm if kvm module is loaded?</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>setup nova instance directory</p>
@@ -843,6 +809,38 @@ can be labeled via e2label)</p>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 <span class="k">fi</span>
 
+<span class="k">function </span>add_nova_flag <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_DIR</span>/bin/nova.conf
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>(re)create nova.conf</p>
+</td><td class=code><div class=highlight><pre>
+rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
+add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
+add_nova_flag <span class="s2">&quot;--nodaemon&quot;</span>
+add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
+add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
+add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
+add_nova_flag <span class="s2">&quot;--public_interface=$INTERFACE&quot;</span>
+add_nova_flag <span class="s2">&quot;--vlan_interface=$INTERFACE&quot;</span>
+add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
+add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
+add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
+add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
+add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/&quot;</span>
+add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
+add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
+add_nova_flag <span class="s2">&quot;--ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
+add_nova_flag <span class="s2">&quot;--rabbit_host=$RABBIT_HOST&quot;</span>
+add_nova_flag <span class="s2">&quot;--glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
+<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$MULTI_HOST&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>add_nova_flag <span class="s2">&quot;--multi_host=$MULTI_HOST&quot;</span>
+<span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="keystone">
@@ -863,10 +861,13 @@ can be labeled via e2label)</p>
     cp <span class="nv">$FILES</span>/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
 
+    <span class="nv">KEYSTONE_DATA</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin/keystone_data.sh
+    cp <span class="nv">$FILES</span>/keystone_data.sh <span class="nv">$KEYSTONE_DATA</span>
+    sudo sed -e <span class="s2">&quot;s,%HOST_IP%,$HOST_IP,g&quot;</span> -i <span class="nv">$KEYSTONE_DATA</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>initialize keystone with default users/endpoints</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$FILES</span>/keystone_data.sh
+    <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$KEYSTONE_DATA</span>
 <span class="k">fi</span>
 
 
@@ -893,6 +894,12 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
         screen -S nova -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create a new named screen to run processes in</p>
+</td><td class=code><div class=highlight><pre>
+screen -d -m -S nova -t nova
+sleep 1
 
 screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
 screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
