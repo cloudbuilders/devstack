@@ -344,13 +344,20 @@ ul.auto-toc {
 </pre></div></td></tr><tr><td class=docs>
 <p>Networking params</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">NAMESERVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NAMESERVER</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.2.1</span><span class="k">}</span>
+<span class="nv">NAMESERVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NAMESERVER</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.1</span><span class="k">}</span>
 <span class="nv">GATEWAY</span><span class="o">=</span><span class="k">${</span><span class="nv">GATEWAY</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.1</span><span class="k">}</span>
+<span class="nv">NETMASK</span><span class="o">=</span><span class="k">${</span><span class="nv">NETMASK</span><span class="k">:-</span><span class="nv">255</span><span class="p">.255.255.0</span><span class="k">}</span>
+<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.196/30</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setting this to 1 shuts down and destroys our containers without relaunching.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TERMINATE</span><span class="o">=</span><span class="k">${</span><span class="nv">TERMINATE</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Variables common amongst all hosts in the cluster</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">COMMON_VARS</span><span class="o">=</span><span class="s2">&quot;MYSQL_HOST=$HEAD_HOST RABBIT_HOST=$HEAD_HOST GLANCE_HOSTPORT=$HEAD_HOST:9292 NET_MAN=FlatDHCPManager FLAT_INTERFACE=eth0&quot;</span>
+<span class="nv">COMMON_VARS</span><span class="o">=</span><span class="s2">&quot;MYSQL_HOST=$HEAD_HOST RABBIT_HOST=$HEAD_HOST GLANCE_HOSTPORT=$HEAD_HOST:9292 NET_MAN=FlatDHCPManager FLAT_INTERFACE=eth0 FLOATING_RANGE=$FLOATING_RANGE MULTI_HOST=1&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Helper to launch containers</p>
@@ -359,7 +366,7 @@ ul.auto-toc {
 </pre></div></td></tr><tr><td class=docs>
 <p>For some reason container names with periods can cause issues :/</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">CONTAINER</span><span class="o">=</span><span class="nv">$1</span> <span class="nv">CONTAINER_IP</span><span class="o">=</span><span class="nv">$2</span> <span class="nv">CONTAINER_GATEWAY</span><span class="o">=</span><span class="nv">$GATEWAY</span> <span class="nv">NAMESERVER</span><span class="o">=</span><span class="nv">$NAMESERVER</span> <span class="nv">STACKSH_PARAMS</span><span class="o">=</span><span class="s2">&quot;$COMMON_VARS $3&quot;</span> ./build_lxc.sh
+    <span class="nv">CONTAINER</span><span class="o">=</span><span class="nv">$1</span> <span class="nv">CONTAINER_IP</span><span class="o">=</span><span class="nv">$2</span> <span class="nv">CONTAINER_NETMASK</span><span class="o">=</span><span class="nv">$NETMASK</span> <span class="nv">CONTAINER_GATEWAY</span><span class="o">=</span><span class="nv">$GATEWAY</span> <span class="nv">NAMESERVER</span><span class="o">=</span><span class="nv">$NAMESERVER</span> <span class="nv">TERMINATE</span><span class="o">=</span><span class="nv">$TERMINATE</span> <span class="nv">STACKSH_PARAMS</span><span class="o">=</span><span class="s2">&quot;$COMMON_VARS $3&quot;</span> ./build_lxc.sh
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -371,10 +378,12 @@ run_lxc STACKMASTER <span class="nv">$HEAD_HOST</span> <span class="s2">&quot;EN
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait till the head node is up</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">while</span> ! wget -q -O- http://<span class="nv">$HEAD_HOST</span> | grep -q username; <span class="k">do</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for head node ($HEAD_HOST) to start...&quot;</span>
-    sleep 5
-<span class="k">done</span>
+<span class="k">if</span> <span class="o">[</span> ! <span class="s2">&quot;$TERMINATE&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    while</span> ! wget -q -O- http://<span class="nv">$HEAD_HOST</span> | grep -q username; <span class="k">do</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for head node ($HEAD_HOST) to start...&quot;</span>
+        sleep 5
+    <span class="k">done</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Launch the compute hosts</p>
