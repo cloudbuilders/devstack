@@ -678,7 +678,7 @@ We need to change the owner to apache for dashboard to run.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>allow connections from other hosts</p>
 </td><td class=code><div class=highlight><pre>
-    sudo sed -i -e <span class="s1">&#39;/Allow from localhost/s/localhost.*$/all/&#39;</span> /etc/munin/apache.conf
+    sudo sed -i -e <span class="s1">&#39;s/Allow from localhost/Allow from all/g&#39;</span> /etc/munin/apache.conf
 
     cat &gt;/tmp/nova <span class="s">&lt;&lt;EOF</span>
 <span class="s">[keystone_*]</span>
@@ -790,25 +790,6 @@ can be labeled via e2label)</p>
     mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 <span class="k">fi</span>
 
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>(re)create nova database</p>
-</td><td class=code><div class=highlight><pre>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE nova;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
-
-</pre></div></td></tr><tr><td class=docs>
-<p>create a small network</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 32
-
-</pre></div></td></tr><tr><td class=docs>
-<p>create some floating ips</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
-<span class="k">fi</span>
-
 <span class="k">function </span>add_nova_flag <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_DIR</span>/bin/nova.conf
 <span class="o">}</span>
@@ -840,6 +821,26 @@ add_nova_flag <span class="s2">&quot;--glance_api_servers=$GLANCE_HOSTPORT&quot;
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$MULTI_HOST&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--multi_host=$MULTI_HOST&quot;</span>
 <span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>(re)create nova database</p>
+</td><td class=code><div class=highlight><pre>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE nova;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create a small network</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 32
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create some floating ips</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+<span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
