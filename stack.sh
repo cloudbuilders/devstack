@@ -11,10 +11,10 @@
 # Sanity Check
 # ============
 
-# Warn users who aren't on natty, but allow them to override check and attempt
+# Warn users who aren't on maverick, but allow them to override check and attempt
 # installation with ``FORCE=yes ./stack``
-if ! grep -q natty /etc/lsb-release; then
-    echo "WARNING: this script has only been tested on natty"
+if ! grep -q maverick /etc/lsb-release; then
+    echo "WARNING: this script has only been tested on maverick"
     if [[ "$FORCE" != "yes" ]]; then
         echo "If you wish to run this script anyway run with FORCE=yes"
         exit 1
@@ -118,9 +118,16 @@ mysql-server-5.1 mysql-server/start_on_boot boolean true
 MYSQL_PRESEED
 
 # install apt requirements
+sudo apt-get install python-software-properties
+sudo add-apt-repository ppa:glance-core/trunk
+sudo add-apt-repository ppa:nova-core/trunk
+sudo apt-get install -y --force-yes libvirt0=0.8.3-1ubuntu19.1 \
+				libvirt-bin=0.8.3-1ubuntu19.1 \
+				python-libvirt=0.8.3-1ubuntu19.1
 sudo apt-get install -y -q `cat $FILES/apts/* | cut -d\# -f1 | grep -Ev "mysql-server|rabbitmq-server"`
 
 # install python requirements
+sudo apt-get install python-pip
 sudo PIP_DOWNLOAD_CACHE=/var/cache/pip pip install `cat $FILES/pips/*`
 
 # git clone only if directory doesn't exist already.  Since ``DEST`` might not

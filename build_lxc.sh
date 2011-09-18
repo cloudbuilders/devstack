@@ -12,9 +12,9 @@ COPYENV=${COPYENV:-1}
 # Param string to pass to stack.sh.  Like "EC2_DMZ_HOST=192.168.1.1 MYSQL_USER=nova"
 STACKSH_PARAMS=${STACKSH_PARAMS:-}
 
-# Warn users who aren't on natty
-if ! grep -q natty /etc/lsb-release; then
-    echo "WARNING: this script has only been tested on natty"
+# Warn users who aren't on maverick
+if ! grep -q maverick /etc/lsb-release; then
+    echo "WARNING: this script has only been tested on maverick"
 fi
 
 # Install deps
@@ -50,10 +50,10 @@ if [ -d /cgroup/$CONTAINER ]; then
 fi
 
 # Warm the base image on first install
-CACHEDIR=/var/cache/lxc/natty/rootfs-amd64
+CACHEDIR=/var/cache/lxc/ubuntu/rootfs-amd64
 if [ ! -d $CACHEDIR ]; then
     # trigger the initial debootstrap
-    lxc-create -n $CONTAINER -t natty -f $LXC_CONF
+    lxc-create -n $CONTAINER -t ubuntu -f $LXC_CONF
     chroot $CACHEDIR apt-get update
     chroot $CACHEDIR apt-get install -y `cat files/apts/* | cut -d\# -f1 | egrep -v "(rabbitmq|libvirt-bin|mysql-server)"`
     chroot $CACHEDIR pip install `cat files/pips/*`
@@ -75,7 +75,7 @@ if [ "$TERMINATE" = "1" ]; then
 fi
 
 # Create the container
-lxc-create -n $CONTAINER -t natty -f $LXC_CONF
+lxc-create -n $CONTAINER -t ubuntu -f $LXC_CONF
 
 # Specify where our container rootfs lives
 ROOTFS=/var/lib/lxc/$CONTAINER/rootfs/
