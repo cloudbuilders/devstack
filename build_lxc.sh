@@ -150,7 +150,7 @@ sudo apt-get -y --force-yes install git-core vim-nox sudo
 if [ ! -d "/opt/devstack" ]; then
     git clone git://github.com/cloudbuilders/devstack.git /opt/devstack
 fi
-cd /opt/devstack && $STACKSH_PARAMS ./stack.sh > /opt/run.sh.log
+cd /opt/devstack && git checkout 047_hack && $STACKSH_PARAMS ./stack.sh > /opt/run.sh.log
 EOF
 
 # Make the run.sh executable

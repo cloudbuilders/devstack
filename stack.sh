@@ -156,6 +156,9 @@ git_clone https://github.com/cloudbuilders/openstackx.git $API_DIR
 # openstack-munin is a collection of munin plugins for monitoring the stack
 git_clone https://github.com/cloudbuilders/openstack-munin.git $MUNIN_DIR
 
+# HACK DON"T PUT THIS IN TRUNK
+cp $FILES/hacks/047_remove_instances_fk_from_vif.py /opt/nova/nova/db/sqlalchemy/migrate_repo/versions/047_remove_instances_fk_from_vif.py
+
 # Initialization
 # ==============
 
