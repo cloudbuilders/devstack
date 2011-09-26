@@ -1,109 +1,76 @@
-<h1 id="concepts">Concepts</h1>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>devstacp</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
 
-<p>Using one ubuntu linux server and dhcp, you can network quickly boot/configure new ubuntu boxes using nfs.  To do this you must:</p>
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
 
-<ul>
-<li>configure dhcp to send pxe instructions</li>
-<li>create a kernel/ramdisk that supports nfs</li>
-<li>create a nfs export per host you want to boot</li>
-<li>setup a pxeconfig for each host (maps mac address to nfs export)</li>
-<li>serve kernel, ramdisk, and pxeconfig via tftp</li>
-</ul>
+    <!-- Le styles -->
+    <link href="assets/css/bootstrap.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+      }
+    </style>
 
-<p>Then you can manage nfs exported filesystems on the host as you would normal directories (copy/snapshot/backup/update) - allowing you to launch new (development/testing) machines in seconds.</p>
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="assets/images/favicon.ico">
+  </head>
 
-<h2 id="prerequisites">Prerequisites</h2>
+  <body>
 
-<p>There are many ways to netboot, but I am going to show you how to with a linux router &amp; host.</p>
+    <div class="topbar">
+      <div class="fill">
+        <div class="container">
+          <a class="brand" href="#">DevStack</a>
+          <ul class="nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
 
-<ul>
-<li>Able to configure local dhcp server</li>
-<li>Ubuntu Natty machine running to provide NFS exports / TFTP for rest of machines</li>
-</ul>
+    <div class="container">
 
-<h1 id="configurednsmasqtosendpxebootinstructions">Configure dnsmasq to send pxe boot instructions</h1>
+      <!-- Main hero unit for a primary marketing message or call to action -->
+      <div class="hero-unit">
+        <h1>Got OpenStack?</h1>
+        <p>Vestibulum id ligula porta felis euismod semper. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit.</p>
+        <p><a class="btn primary large">Learn more &raquo;</a></p>
+      </div>
 
-<p>Adding a dhcp-boot option configures dnsmasq to instruction booting systems that we do offer a network boot option.  In this case I&#8217;m telling the system to download pxelinux.0 from my tftp server located at 192.168.2.2</p>
+      <!-- Example row of columns -->
+      <div class="row">
+        <div class="span6">
+          <h2>Heading</h2>
+          <p>Etiam porta sem malesuada magna mollis euismod. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum. Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit.</p>
+          <p><a class="btn" href="#">View details &raquo;</a></p>
+        </div>
+        <div class="span5">
+          <h2>Heading</h2>
+           <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p><a class="btn" href="#">View details &raquo;</a></p>
+       </div>
+        <div class="span5">
+          <h2>Heading</h2>
+          <p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
+          <p><a class="btn" href="#">View details &raquo;</a></p>
+        </div>
+      </div>
 
-<pre><code>dhcp-boot=pxelinux.0,ubuntu,192.168.2.2</code></pre>
+      <footer>
+        <p>&copy; Openstack LLC 2011</p>
+      </footer>
 
-<p><strong>NOTE</strong> I run dd-wrt on a Asus RT-N16 linux router.  In the <em>Services</em> tab I add the above line to <em>Additional DNSMasq Options</em> and then setup <em>Static Leases</em> for each machine I want to netboot.</p>
+    </div> <!-- /container -->
 
-<p>Machines that are configured (usually in their bios) to netboot will now attempt to fetch pxelinux.0 via tftp from 192.168.2.2.  </p>
-
-<h2 id="settinguptftpsyslinuxpxelinux.0">Setting up TFTP &amp; syslinux (pxelinux.0)</h2>
-
-<p>On our ubuntu host machine you need to install syslinux (to get the bootstrap pxelinux.0) and a tftp server.</p>
-
-<pre><code>apt-get install -y syslinux tftpd-hpa
-cp /usr/lib/syslinux/pxelinux.0 /var/lib/tftpboot
-mkdir /var/lib/tftpboot/pxelinux.cfg</code></pre>
-
-<p><strong>TIP</strong> ensure the tftp server is configured correctly by trying to download pxelinux.0 via another machine.  In my case I run <em>tftp 192.168.2.2</em> from my laptop then type <em>get pxelinux.0</em> which reports a successful download.</p>
-
-<p>At this point, machines that boot on your network will retrieve pxelinux.0, then complain that no pxelinux.cfg was found for this host.  </p>
-
-<h2 id="linuxubuntuserver:setupnfs">linux ubuntu server: setup nfs</h2>
-
-<pre><code>apt-get install -y nfs-kernel-server
-mkdir /nfs
-echo "/nfs             192.168.2.*(rw,no_root_squash,async,insecure)" &gt;&gt; /etc/exports
-exportfs -rv</code></pre>
-
-<h2 id="buildsharedkernelramdiskthatworkswithnfs">build shared kernel/ramdisk that works with nfs</h2>
-
-<pre><code>cp /boot/vmlinuz-`uname -r` /var/lib/tftpboot</code></pre>
-
-<p>Update boot/modules in /etc/initramfs-tools/initramfs.conf</p>
-
-<pre><code>BOOT=nfs
-MODULES=most # most instructions say netboot - but that won't include drivers to use local disk</code></pre>
-
-<p>Then build initrd.img</p>
-
-<pre><code>mkinitramfs -o /var/lib/tftpboot/initrd.img-`uname -r`</code></pre>
-
-<h2 id="permachinesetup">Per machine setup</h2>
-
-<h3 id="createavarlibtftpbootpxelinux.cfg01-lower-case-mac-address-with-dashes">Create a /var/lib/tftpboot/pxelinux.cfg/01-lower-case-mac-address-with-dashes</h3>
-
-<pre><code>prompt 0
-timeout 0
-default net
-
-LABEL net
-KERNEL vmlinuz-2.6.38-8-generic
-APPEND root=/dev/nfs initrd=initrd.img-2.6.38-8-generic nfsroot=192.168.2.2:/nfs/NAME ip=dhcp rw</code></pre>
-
-<h3 id="setupthefilesystem">Setup the filesystem</h3>
-
-<p>You can bootstrap a clean install of natty (or oneiric, maverick, various debian versions) from scratch via</p>
-
-<pre><code>debootstrap natty /nfs/NAME</code></pre>
-
-<p>Copy over the modules that match the kernel/ramdisk we setup above</p>
-
-<pre><code>cp -pr /lib/modules/`uname -r` /nfs/NAME/lib/modules</code></pre>
-
-<p>Or just bootstrap a single filesytem and create a copy each time you create a new machine</p>
-
-<pre><code>debootstrap natty /nfs/proto # one time only
-cp -pr /nfs/proto /nfs/NAME</code></pre>
-
-<h1 id="improvements">Improvements</h1>
-
-<p>Recommended additional tweaks after debootstrap</p>
-
-<ul>
-<li>update hostname</li>
-<li>set password</li>
-<li>add more useful apt source list</li>
-<li>use chroot to update/install apt packages</li>
-</ul>
-
-<p>Additional improvements</p>
-
-<ul>
-<li>use a local cache of apt packages</li>
-<li>copy/snapshot filesystems instead of running debootstrap for each machine</li>
-</ul>
+  </body>
+</html>
