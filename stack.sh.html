@@ -369,6 +369,10 @@ installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+<span class="c">#The following makes fresh mininmal installs (i.e. LXCs) happy</span>
+apt-get update
+apt-get install -y sudo
+
 </pre></div></td></tr><tr><td class=docs>
 <p>stack.sh keeps the list of <strong>apt</strong> and <strong>pip</strong> dependencies in external
 files, along with config templates and other useful files.  You can find these
@@ -432,7 +436,7 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Specify which services to launch.  These generally correspond to screen tabs</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash,mysql,rabbit</span><span class="k">}</span>
+<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash,mysql,rabbit,munin</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Use the first IP unless an explicit is set by <tt class="docutils literal">HOST_IP</tt> environment variable</p>
@@ -444,18 +448,21 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova network configuration</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
-<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.6.0.0/27</span><span class="k">}</span>
-<span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
-<span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">VlanManager</span><span class="k">}</span>
+<span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+<span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">$PUBLIC_INTERFACE</span><span class="k">}</span>
+<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.1/28</span><span class="k">}</span>
+<span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/16</span><span class="k">}</span>
+<span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">FlatDHCPManager</span><span class="k">}</span>
 <span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
+<span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
+<span class="nv">SCHEDULER</span><span class="o">=</span><span class="k">${</span><span class="nv">SCHEDULER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.scheduler.simple.SimpleScheduler</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If you are using FlatDHCP on multiple hosts, set the <tt class="docutils literal">FLAT_INTERFACE</tt>
 variable but make sure that the interface doesn't already have an
-ip or you risk breaking things.
-FLAT_INTERFACE=eth0</p>
+ip or you risk breaking things.</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova hypervisor configuration.  We default to <strong>kvm</strong> but will drop back to
@@ -482,7 +489,7 @@ FLAT_INTERFACE=eth0</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Glance connection info.  Note the port must be specified.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">0</span><span class="p">.0.0.0:</span><span class="nv">9292</span><span class="k">}</span>
+<span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -525,9 +532,13 @@ ownership to the proper user.</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>compute service</p>
+<p>compute service
+FIXME - need to factor out these repositories
+git_clone <a class="reference external" href="https://github.com/cloudbuilders/nova.git">https://github.com/cloudbuilders/nova.git</a> $NOVA_DIR</p>
 </td><td class=code><div class=highlight><pre>
-git_clone https://github.com/cloudbuilders/nova.git <span class="nv">$NOVA_DIR</span>
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$NOVA_DIR</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>bzr clone lp:~hudson-openstack/nova/milestone-proposed/ <span class="nv">$NOVA_DIR</span>
+<span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>image catalog service</p>
 </td><td class=code><div class=highlight><pre>
@@ -544,6 +555,10 @@ git_clone https://github.com/cloudbuilders/noVNC.git <span class="nv">$NOVNC_DIR
 <p>django powered web control panel for openstack</p>
 </td><td class=code><div class=highlight><pre>
 git_clone https://github.com/cloudbuilders/openstack-dashboard.git <span class="nv">$DASH_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>FIXME - need to factor out logic like this</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">cd</span> <span class="nv">$DASH_DIR</span> <span class="o">&amp;&amp;</span> sudo git fetch <span class="o">&amp;&amp;</span> sudo git checkout origin/keystone_diablo
 </pre></div></td></tr><tr><td class=docs>
 <p>add nixon, will use this to show munin graphs in dashboard</p>
 </td><td class=code><div class=highlight><pre>
@@ -642,7 +657,7 @@ initial imports</p>
     sudo touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/client.py
 
     <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
-    
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Includes settings for Nixon, to expose munin charts.</p>
 </td><td class=code><div class=highlight><pre>
@@ -711,30 +726,33 @@ We need to change the owner to apache for dashboard to run.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-reg&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">GLANCE_IMAGE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance/images
 </pre></div></td></tr><tr><td class=docs>
-<p>Glance uses <tt class="docutils literal">/var/lib/glance</tt> and <tt class="docutils literal">/var/log/glance</tt> by default, so
-we need to insure that our user has permissions to use them.</p>
+<p>Delete existing images</p>
 </td><td class=code><div class=highlight><pre>
-    sudo mkdir -p /var/log/glance
-    sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> /var/log/glance 
-    sudo mkdir -p /var/lib/glance
-    sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> /var/lib/glance
+    rm -rf <span class="nv">$GLANCE_IMAGE_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Delete existing images/database as glance will recreate the db on startup</p>
+<p>Use local glance directories</p>
 </td><td class=code><div class=highlight><pre>
-    rm -rf /var/lib/glance/images/*
+    mkdir -p <span class="nv">$GLANCE_IMAGE_DIR</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create glance database</p>
 </td><td class=code><div class=highlight><pre>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE glance;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE glance;&#39;</span>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS glance;&#39;</span>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE glance;&#39;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Copy over our glance-registry.conf</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">GLANCE_CONF</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-registry.conf
     cp <span class="nv">$FILES</span>/glance-registry.conf <span class="nv">$GLANCE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/glance,g&quot;</span> -i <span class="nv">$GLANCE_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%DEST%,$DEST,g&quot;</span> -i <span class="nv">$GLANCE_CONF</span>
+
+    <span class="nv">GLANCE_API_CONF</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-api.conf
+    cp <span class="nv">$FILES</span>/glance-api.conf <span class="nv">$GLANCE_API_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%DEST%,$DEST,g&quot;</span> -i <span class="nv">$GLANCE_API_CONF</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -752,7 +770,7 @@ qcow images) and kvm (hardware based virtualization).  If unable to
 load kvm, set the libvirt type to qemu.</p>
 </td><td class=code><div class=highlight><pre>
     sudo modprobe nbd <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span><span class="k">if</span> ! sudo modprobe kvm; <span class="k">then</span>
+<span class="nb">    </span><span class="k">if</span> <span class="o">[</span> ! -e /dev/kvm <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">LIBVIRT_TYPE</span><span class="o">=</span>qemu
     <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -789,7 +807,7 @@ can be labeled via e2label)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>delete traces of nova networks from prior runs</p>
 </td><td class=code><div class=highlight><pre>
-    killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
+    sudo killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">    </span>rm -rf <span class="nv">$NOVA_DIR</span>/networks
     mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 <span class="k">fi</span>
@@ -804,11 +822,12 @@ can be labeled via e2label)</p>
 rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
 add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
 add_nova_flag <span class="s2">&quot;--nodaemon&quot;</span>
+add_nova_flag <span class="s2">&quot;--scheduler_driver=$SCHEDULER&quot;</span>
 add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
 add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
 add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
-add_nova_flag <span class="s2">&quot;--public_interface=$INTERFACE&quot;</span>
-add_nova_flag <span class="s2">&quot;--vlan_interface=$INTERFACE&quot;</span>
+add_nova_flag <span class="s2">&quot;--public_interface=$PUBLIC_INTERFACE&quot;</span>
+add_nova_flag <span class="s2">&quot;--vlan_interface=$VLAN_INTERFACE&quot;</span>
 add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
 add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
 add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
@@ -819,6 +838,7 @@ add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceIma
 add_nova_flag <span class="s2">&quot;--ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
 add_nova_flag <span class="s2">&quot;--rabbit_host=$RABBIT_HOST&quot;</span>
 add_nova_flag <span class="s2">&quot;--glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
+add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
 <span class="k">fi</span>
@@ -830,8 +850,8 @@ add_nova_flag <span class="s2">&quot;--glance_api_servers=$GLANCE_HOSTPORT&quot;
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create nova database</p>
 </td><td class=code><div class=highlight><pre>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE nova;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS nova;&#39;</span>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
 
 </pre></div></td></tr><tr><td class=docs>
@@ -856,8 +876,8 @@ add_nova_flag <span class="s2">&quot;--glance_api_servers=$GLANCE_HOSTPORT&quot;
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create keystone database</p>
 </td><td class=code><div class=highlight><pre>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE keystone;&#39;</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS keystone;&#39;</span>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>FIXME (anthony) keystone should use keystone.conf.example</p>
@@ -906,10 +926,33 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 screen -d -m -S nova -t nova
 sleep 1
 
-screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
-screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
-screen_it key <span class="s2">&quot;$KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF&quot;</span>
-screen_it n-api <span class="s2">&quot;$NOVA_DIR/bin/nova-api&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-reg&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
+    <span class="k">while</span> ! wget -q -O- http://<span class="nv">$GLANCE_HOSTPORT</span>; <span class="k">do</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for g-api ($GLANCE_HOSTPORT) to start...&quot;</span>
+        sleep 1
+    <span class="k">done</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF -d&quot;</span>
+    <span class="k">while</span> ! wget -q -O- http://127.0.0.1:5000; <span class="k">do</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
+        sleep 1
+    <span class="k">done</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-api&quot;</span>
+    <span class="k">while</span> ! wget -q -O- http://127.0.0.1:8774; <span class="k">do</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for nova-api to start...&quot;</span>
+        sleep 1
+    <span class="k">done</span>
+<span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Launching nova-compute should be as simple as running <tt class="docutils literal"><span class="pre">nova-compute</span></tt> but
 have to do a little more than that in our script.  Since we add the group
@@ -918,14 +961,14 @@ within the context of our original shell (so our groups won't be updated).
 We can send the command nova-compute to the <tt class="docutils literal">newgrp</tt> command to execute
 in a specific context.</p>
 </td><td class=code><div class=highlight><pre>
-screen_it n-cpu <span class="s2">&quot;echo $NOVA_DIR/bin/nova-compute | newgrp libvirtd&quot;</span>
-screen_it n-net <span class="s2">&quot;$NOVA_DIR/bin/nova-network&quot;</span>
-screen_it n-sch <span class="s2">&quot;$NOVA_DIR/bin/nova-scheduler&quot;</span>
+screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; echo $NOVA_DIR/bin/nova-compute | newgrp libvirtd&quot;</span>
+screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-network&quot;</span>
+screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-scheduler&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>nova-vncproxy binds a privileged port, and so needs sudo</p>
 </td><td class=code><div class=highlight><pre>
-screen_it n-vnc <span class="s2">&quot;sudo $NOVA_DIR/bin/nova-vncproxy&quot;</span>
-screen_it dash <span class="s2">&quot;sudo /etc/init.d/apache2 restart; sudo tail -f /var/log/apache2/error.log&quot;</span>
+screen_it n-vnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sudo $NOVA_DIR/bin/nova-vncproxy&quot;</span>
+screen_it dash <span class="s2">&quot;cd $DASH_DIR &amp;&amp; sudo /etc/init.d/apache2 restart; sudo tail -f /var/log/apache2/error.log&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -952,9 +995,9 @@ we upload to glance with the glance cli tool.</p>
 <p>add images to glance
 FIXME: kernel/ramdisk is hardcoded - use return result from add</p>
 </td><td class=code><div class=highlight><pre>
-    glance add <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="nv">$FILES</span>/images/aki-tty/image 
-    glance add <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="nv">$FILES</span>/images/ari-tty/image 
-    glance add <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span>1 <span class="nv">ramdisk_id</span><span class="o">=</span>2 &lt; <span class="nv">$FILES</span>/images/ami-tty/image
+    glance add -A 999888777666 <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="nv">$FILES</span>/images/aki-tty/image
+    glance add -A 999888777666 <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="nv">$FILES</span>/images/ari-tty/image
+    glance add -A 999888777666 <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span>1 <span class="nv">ramdisk_id</span><span class="o">=</span>2 &lt; <span class="nv">$FILES</span>/images/ami-tty/image
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>

@@ -335,32 +335,28 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>upload_image.sh - Upload Ubuntu images (create if necessary) in various formats</p>
-<p>upload_image.sh release format</p>
-<p>format   target
-qcow2    kvm,qemu
-vmdk     vmw6
-vbox     vdi
-vhd      vpc</p>
+<p>upload_image.sh - Upload Ubuntu images (create if necessary) in various formats
+Supported formats: qcow (kvm), vmdk (vmserver), vdi (vbox), vhd (vpc)
+Requires sudo to root</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
-<span class="nv">HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST</span><span class="k">:-</span><span class="nv">demo</span><span class="p">.rcb.me</span><span class="k">}</span>
-<span class="nv">PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">PORT</span><span class="k">:-</span><span class="nv">9292</span><span class="k">}</span>
-
 usage<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$0 - Upload Ubuntu images&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$0 - Upload images to OpenStack&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;$0 [-h host] [-p port] release format&quot;</span>
     <span class="nb">exit </span>1
 <span class="o">}</span>
 
+<span class="nv">HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+<span class="nv">PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">PORT</span><span class="k">:-</span><span class="nv">9292</span><span class="k">}</span>
+
 <span class="k">while </span><span class="nb">getopts </span>h:p: c; <span class="k">do</span>
 <span class="k">    case</span> <span class="nv">$c</span> in
-        h<span class="o">)</span>      <span class="nv">HOST</span><span class="o">=</span><span class="nv">$OPTARG</span>
-                ;;
-	p<span class="o">)</span>	<span class="nv">PORT</span><span class="o">=</span><span class="nv">$OPTARG</span>
-		;;
+        h<span class="o">)</span>  <span class="nv">HOST</span><span class="o">=</span><span class="nv">$OPTARG</span>
+            ;;
+        p<span class="o">)</span>  <span class="nv">PORT</span><span class="o">=</span><span class="nv">$OPTARG</span>
+            ;;
     <span class="k">esac</span>
 <span class="k">done</span>
 <span class="nb">shift</span> <span class="sb">`</span>expr <span class="nv">$OPTIND</span> - 1<span class="sb">`</span>
@@ -368,57 +364,74 @@ usage<span class="o">()</span> <span class="o">{</span>
 <span class="nv">RELEASE</span><span class="o">=</span><span class="nv">$1</span>
 <span class="nv">FORMAT</span><span class="o">=</span><span class="nv">$2</span>
 
-<span class="k">case</span> <span class="nv">$RELEASE</span> in
-    natty<span class="o">)</span>	;;
-    maverick<span class="o">)</span>	;;
-    lucid<span class="o">)</span>	;;
-    karmic<span class="o">)</span>	;;
-    jaunty<span class="o">)</span>	;;
-    *<span class="o">)</span>		<span class="nb">echo</span> <span class="s2">&quot;Unknown release: $RELEASE&quot;</span>
-		usage
+<span class="k">case</span> <span class="nv">$FORMAT</span> in
+    kvm|qcow2<span class="o">)</span>  <span class="nv">FORMAT</span><span class="o">=</span>qcow2
+                <span class="nv">TARGET</span><span class="o">=</span>kvm
+                ;;
+    vmserver|vmdk<span class="o">)</span>
+                <span class="nv">FORMAT</span><span class="o">=</span>vmdk
+                <span class="nv">TARGET</span><span class="o">=</span>vmserver
+                ;;
+    vbox|vdi<span class="o">)</span>   <span class="nv">TARGET</span><span class="o">=</span>kvm
+                <span class="nv">FORMAT</span><span class="o">=</span>vdi
+                ;;
+    vhd|vpc<span class="o">)</span>    <span class="nv">TARGET</span><span class="o">=</span>kvm
+                <span class="nv">FORMAT</span><span class="o">=</span>vhd
+                ;;
+    *<span class="o">)</span>          <span class="nb">echo</span> <span class="s2">&quot;Unknown format: $FORMAT&quot;</span>
+                usage
 <span class="k">esac</span>
 
-<span class="k">case</span> <span class="nv">$FORMAT</span> in
-    kvm|qcow2<span class="o">)</span>	<span class="nv">FORMAT</span><span class="o">=</span>qcow2
-		<span class="nv">TARGET</span><span class="o">=</span>kvm
-		;;
-    vmserver|vmdk<span class="o">)</span>	<span class="nv">FORMAT</span><span class="o">=</span>vmdk
-		<span class="nv">TARGET</span><span class="o">=</span>vmserver
-		;;
-    vbox|vdi<span class="o">)</span>	<span class="nv">TARGET</span><span class="o">=</span>kvm
-		<span class="nv">FORMAT</span><span class="o">=</span>vdi
-		;;
-    vhd|vpc<span class="o">)</span>	<span class="nv">TARGET</span><span class="o">=</span>kvm
-		<span class="nv">FORMAT</span><span class="o">=</span>vpc
-		;;
-    *<span class="o">)</span>		<span class="nb">echo</span> <span class="s2">&quot;Unknown format: $FORMAT&quot;</span>
-		usage
+<span class="k">case</span> <span class="nv">$RELEASE</span> in
+    natty<span class="o">)</span>      ;;
+    maverick<span class="o">)</span>   ;;
+    lucid<span class="o">)</span>      ;;
+    karmic<span class="o">)</span>     ;;
+    jaunty<span class="o">)</span>     ;;
+    *<span class="o">)</span>          <span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$RELEASE</span>.<span class="nv">$FORMAT</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                    </span><span class="nb">echo</span> <span class="s2">&quot;Unknown release: $RELEASE&quot;</span>
+                    usage
+                <span class="k">fi</span>
+                ;;
 <span class="k">esac</span>
 
 <span class="nv">GLANCE</span><span class="o">=</span><span class="sb">`</span>which glance<span class="sb">`</span>
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$GLANCE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">	</span><span class="nb">echo</span> <span class="s2">&quot;Glance not found, must install client&quot;</span>
-	sudo apt-get install python-pip python-eventlet python-routes python-greenlet python-argparse python-sqlalchemy python-wsgiref python-pastedeploy python-xattr
-	sudo pip install kombu
-	git clone https://github.com/cloudbuilders/glance.git
-	<span class="nb">cd </span>glance
-	sudo python setup.py develop
-	<span class="nb">cd</span> ..
-	<span class="nv">GLANCE</span><span class="o">=</span><span class="sb">`</span>which glance<span class="sb">`</span>
+<span class="k">    if</span> <span class="o">[</span> -x <span class="s2">&quot;/opt/glance/bin/glance&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Look for stack.sh's install</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">GLANCE</span><span class="o">=</span><span class="s2">&quot;/opt/glance/bin/glance&quot;</span>
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install Glance client in /opt</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="s2">&quot;Glance not found, must install client&quot;</span>
+        <span class="nv">OWD</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
+        <span class="nb">cd</span> /opt
+        sudo apt-get install python-pip python-eventlet python-routes python-greenlet python-argparse python-sqlalchemy python-wsgiref python-pastedeploy python-xattr
+        sudo pip install kombu
+        sudo git clone https://github.com/cloudbuilders/glance.git
+        <span class="nb">cd </span>glance
+        sudo python setup.py develop
+        <span class="nb">cd</span> <span class="nv">$OWD</span>
+        <span class="nv">GLANCE</span><span class="o">=</span><span class="sb">`</span>which glance<span class="sb">`</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create image if it doesn't exist</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$RELEASE</span>.<span class="nv">$FORMAT</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">	</span><span class="nv">DIR</span><span class="o">=</span><span class="sb">`</span>dirname <span class="nv">$0</span><span class="sb">`</span>
-	<span class="nb">echo</span> <span class="s2">&quot;$RELEASE.$FORMAT not found, creating...must be root to do this:&quot;</span>
-	<span class="nv">$DIR</span>/make_image.sh <span class="nv">$RELEASE</span> <span class="nv">$FORMAT</span>
+<span class="k">    </span><span class="nv">DIR</span><span class="o">=</span><span class="sb">`</span>dirname <span class="nv">$0</span><span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$RELEASE.$FORMAT not found, creating...&quot;</span>
+    <span class="nv">$DIR</span>/make_image.sh <span class="nv">$RELEASE</span> <span class="nv">$FORMAT</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Upload the image</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">echo</span> <span class="s2">&quot;Uploading image $RELEASE.$FORMAT to $HOST&quot;</span>
 <span class="nv">$GLANCE</span> add <span class="nv">name</span><span class="o">=</span><span class="nv">$RELEASE</span>.<span class="nv">$FORMAT</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">disk_format</span><span class="o">=</span><span class="nv">$FORMAT</span> --host <span class="nv">$HOST</span> --port <span class="nv">$PORT</span> &lt;<span class="nv">$RELEASE</span>.<span class="nv">$FORMAT</span>
 
 
