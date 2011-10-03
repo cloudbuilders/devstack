@@ -345,7 +345,11 @@ ul.auto-toc {
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>FIXME: talk about single or multi-node installs</p>
+<p>This script allows you to specify configuration options of what git
+repositories to use, enabled services, network configuration and various
+passwords.  If you are crafty you can run the script on multiple nodes using
+shared settings for common resources (mysql, rabbitmq) and build a multi-node
+developer install.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -460,15 +464,14 @@ MYSQL_USER=hellaroot
 </pre>
 <p>We try to have sensible defaults, so you should be able to run <tt class="docutils literal">./stack.sh</tt>
 in most cases.</p>
-</td><td class=code><div class=highlight><pre>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>FIXME: TALK ABOUT stackrc and localrc</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Import variables</p>
+<p>We our settings from <tt class="docutils literal">stackrc</tt>.  This file is distributed with devstack and
+contains locations for what repositories to use.  If you want to use other
+repositories and branches, you can add your own settings with another file
+called <tt class="docutils literal">localrc</tt></p>
+<p>If <tt class="docutils literal">localrc</tt> exists, then <tt class="docutils literal">stackrc</tt> will load those settings.  This is
+useful for changing a branch or repostiory to test other versions.  Also you
+can store your other settings like <strong>MYSQL_PASS</strong> or <strong>ADMIN_PASSWORD</strong> instead
+of letting devstack generate random ones for you.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> ./stackrc
 
@@ -520,6 +523,11 @@ cases unless you are working on multi-zone mode.</p>
 <h2>Nova Network Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>FIXME: more documentation about why these are important flags.  Also
+we should make sure we use the same variable names as the flag names.</p>
+</td><td class=code><div class=highlight><pre>
+
 <span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
 <span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">FIXED_NETWORK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_NETWORK_SIZE</span><span class="k">:-</span><span class="nv">256</span><span class="k">}</span>
@@ -540,6 +548,15 @@ running the VM - removing a SPOF and bandwidth bottleneck.</p>
 <p>If you are using FlatDHCP on multiple hosts, set the <tt class="docutils literal">FLAT_INTERFACE</tt>
 variable but make sure that the interface doesn't already have an
 ip or you risk breaking things.</p>
+<p><strong>DHCP Warning</strong>:  If your flat interface device uses DHCP, there will be a
+hiccup while the network is moved from the flat interface to the flat network
+bridge.  This will happen when you launch your first instance.  Upon launch
+you will lose all connectivity to the node, and the vm launch will probably
+fail.</p>
+<p>If you are running on a single node and don't need to access the VMs from
+devices other than that node, you can set the flat interface to the same
+value as <tt class="docutils literal">FLAT_NETWORK_BRIDGE</tt>.  This will stop the network hiccup from
+occuring.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
 
@@ -1121,10 +1138,30 @@ screen_it dash <span class="s2">&quot;cd $DASH_DIR &amp;&amp; sudo /etc/init.d/a
 <h1>Install Images</h1>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Upload a couple images to glance.  <strong>TTY</strong> is a simple small image that use the
+lets you login to it with username/password of user/password.  TTY is useful
+for basic functionality.  We all include an Ubuntu cloud build of <strong>Natty</strong>.
+Natty uses cloud-init, supporting login via keypair and sending scripts as
+userdata.</p>
+<p>Read more about cloud-init at <a class="reference external" href="https://help.ubuntu.com/community/CloudInit">https://help.ubuntu.com/community/CloudInit</a></p>
+</td><td class=code><div class=highlight><pre>
+
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-reg&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Downloads a tty image (ami/aki/ari style), then extracts it.  Upon extraction
-we upload to glance with the glance cli tool.</p>
+<p>create a directory for the downloadedthe images tarballs.</p>
+</td><td class=code><div class=highlight><pre>
+    mkdir -p <span class="nv">$FILES</span>/images
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="debug-image-tty">
+<h2>Debug Image (TTY)</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Downloads the image (ami/aki/ari style), then extracts it.  Upon extraction
+we upload to glance with the glance cli tool.  TTY is a stripped down
+version of ubuntu.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$FILES</span>/tty.tgz <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>wget -c http://images.ansolabs.com/tty.tgz -O <span class="nv">$FILES</span>/tty.tgz
@@ -1133,20 +1170,43 @@ we upload to glance with the glance cli tool.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>extract ami-tty/image, aki-tty/image &amp; ari-tty/image</p>
 </td><td class=code><div class=highlight><pre>
-    mkdir -p <span class="nv">$FILES</span>/images
     tar -zxf <span class="nv">$FILES</span>/tty.tgz -C <span class="nv">$FILES</span>/images
 
 </pre></div></td></tr><tr><td class=docs>
-<p>add a debugging images to glance</p>
+<p>Use glance client to add the kernel, ramdisk and finally the root
+filesystem.  We parse the results of the uploads to get glance IDs of the
+ramdisk and kernel and use them for the root filesystem.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="nv">$FILES</span>/images/aki-tty/image<span class="sb">`</span>
     <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
     <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="nv">$FILES</span>/images/ari-tty/image<span class="sb">`</span>
     <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
     glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span><span class="nv">$KERNEL_ID</span> <span class="nv">ramdisk_id</span><span class="o">=</span><span class="nv">$RAMDISK_ID</span> &lt; <span class="nv">$FILES</span>/images/ami-tty/image
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="ubuntu-11-04-aka-natty">
+<h2>Ubuntu 11.04 aka Natty</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Downloaded from ubuntu enterprise cloud images.  This
+image doesn't use the ramdisk functionality</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$FILES</span>/natty.tgz <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>wget -c http://uec-images.ubuntu.com/natty/current/natty-server-cloudimg-amd64.tar.gz -O <span class="nv">$FILES</span>/natty.tgz
+    <span class="k">fi</span>
+<span class="k">    </span>
+<span class="k">    </span>tar -zxf <span class="nv">$FILES</span>/natty.tgz -C <span class="nv">$FILES</span>/images
+
+    <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;uec-natty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="nv">$FILES</span>/images/natty-server-cloudimg-amd64-vmlinuz-virtual<span class="sb">`</span>
+    <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
+    glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;uec-natty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span><span class="nv">$KERNEL_ID</span> &lt; <span class="nv">$FILES</span>/images/natty-server-cloudimg-amd64.img
+
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 <div class="section" id="using-the-cloud">
 <h1>Using the cloud</h1>
@@ -1172,8 +1232,8 @@ to access the site using your browser.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="summary">
-<h1>Summary</h1>
+<div class="section" id="fin">
+<h1>Fin</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
