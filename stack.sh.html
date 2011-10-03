@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.8: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -335,10 +335,18 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>stack.sh</strong> is an opinionated openstack dev installation.</p>
+<p><strong>stack.sh</strong> is an opinionated openstack developer installation.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+<p>This script installs and configures <em>nova</em>, <em>glance</em>, <em>dashboard</em> and <em>keystone</em></p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>FIXME: talk about single or multi-node installs</p>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>To keep this script simple we assume you are running on an <strong>Ubuntu 11.04
@@ -348,14 +356,18 @@ this repo.  So start by grabbing this script and the dependencies.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>You can grab the most recent version of this script and files from Rackspace
-Cloud Builders at <a class="reference external" href="https://github.com/cloudbuilders/devstack">https://github.com/cloudbuilders/devstack</a></p>
+<p>Learn more and get the most recent version at <a class="reference external" href="http://devstack.org">http://devstack.org</a></p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="sanity-check">
-<h2>Sanity Check</h2>
+<h1>Sanity Check</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Record the start time.  This allows us to print how long this script takes to run.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">START_TIME</span><span class="o">=</span><span class="sb">`</span>python -c <span class="s2">&quot;import time; print time.time()&quot;</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Warn users who aren't on natty, but allow them to override check and attempt
@@ -368,10 +380,6 @@ installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
         <span class="nb">exit </span>1
     <span class="k">fi</span>
 <span class="k">fi</span>
-
-<span class="c">#The following makes fresh mininmal installs (i.e. LXCs) happy</span>
-apt-get update
-apt-get install -y sudo
 
 </pre></div></td></tr><tr><td class=docs>
 <p>stack.sh keeps the list of <strong>apt</strong> and <strong>pip</strong> dependencies in external
@@ -386,22 +394,38 @@ directory using the <tt class="docutils literal">FILES</tt> variable in this scr
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="settings">
-<h2>Settings</h2>
+<p>OpenStack is designed to be run as a regular user (Dashboard will fail to run
+as root, since apache refused to startup serve content from root user).  If
+stack.sh is run as root, it automatically creates a stack user with
+sudo privileges and runs as that user.</p>
 </td><td class=code><div class=highlight><pre>
 
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$EUID</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;You are running this script as root.&quot;</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>This script is customizable through setting environment variables.  If you
-want to override a setting you can either:</p>
-<pre class="literal-block">
-export MYSQL_PASS=anothersecret
-./stack.sh
-</pre>
-<p>You can also pass options on a single line <tt class="docutils literal">MYSQL_PASS=simple ./stack.sh</tt></p>
-<p>We try to have sensible defaults, so you should be able to run <tt class="docutils literal">./stack.sh</tt>
-in most cases.</p>
+<p>since this script runs as a normal user, we need to give that user
+ability to run sudo</p>
 </td><td class=code><div class=highlight><pre>
+   apt-get update
+   apt-get install -y sudo
+
+   <span class="k">if</span> ! getent passwd | grep -q stack; <span class="k">then</span>
+<span class="k">       </span><span class="nb">echo</span> <span class="s2">&quot;Creating a user called stack&quot;</span>
+       useradd -U -G sudo -s /bin/bash -m stack
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Giving stack user passwordless sudo priviledges&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;stack ALL=(ALL) NOPASSWD: ALL&quot;</span> &gt;&gt; /etc/sudoers
+
+    <span class="nb">echo</span> <span class="s2">&quot;Copying files to stack user&quot;</span>
+    cp -r -f <span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span> /home/stack/
+    <span class="nv">THIS_DIR</span><span class="o">=</span><span class="k">$(</span>basename <span class="k">$(</span>dirname <span class="k">$(</span>readlink -f <span class="nv">$0</span><span class="k">)))</span>
+    chown -R stack /home/stack/<span class="nv">$THIS_DIR</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Running the script as stack in 3 seconds...&quot;</span>
+    sleep 3
+    <span class="nb">exec </span>su -c <span class="s2">&quot;cd /home/stack/$THIS_DIR/; bash stack.sh; bash&quot;</span> stack
+    <span class="nb">exit </span>0
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>So that errors don't compound we exit on any errors so you see only the
@@ -416,27 +440,73 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">set</span> -o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="settings">
+<h1>Settings</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>This script is customizable through setting environment variables.  If you
+want to override a setting you can either:</p>
+<pre class="literal-block">
+export MYSQL_PASS=anothersecret
+./stack.sh
+</pre>
+<p>You can also pass options on a single line <tt class="docutils literal">MYSQL_PASS=simple ./stack.sh</tt></p>
+<p>Additionally, you can put any local variables into a <tt class="docutils literal">localrc</tt> file, like:</p>
+<pre class="literal-block">
+MYSQL_PASS=anothersecret
+MYSQL_USER=hellaroot
+</pre>
+<p>We try to have sensible defaults, so you should be able to run <tt class="docutils literal">./stack.sh</tt>
+in most cases.</p>
+</td><td class=code><div class=highlight><pre>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>FIXME: TALK ABOUT stackrc and localrc</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import variables</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> ./stackrc
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Destination path for installation <tt class="docutils literal">DEST</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt</span><span class="k">}</span>
+<span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
+sudo mkdir -p <span class="nv">$DEST</span>
+sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$DEST</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the destination directories for openstack projects</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
 <span class="nv">DASH_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/dash
-<span class="nv">NIXON_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/dash/openstack-dashboard/dashboard/nixon
 <span class="nv">GLANCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance
 <span class="nv">KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/keystone
 <span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
-<span class="nv">API_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstackx
+<span class="nv">OPENSTACKX_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstackx
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
-<span class="nv">MUNIN_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstack-munin
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Specify which services to launch.  These generally correspond to screen tabs</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash,mysql,rabbit,munin</span><span class="k">}</span>
+<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash,mysql,rabbit</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Nova hypervisor configuration.  We default to <strong>kvm</strong> but will drop back to
+<strong>qemu</strong> if we are unable to load the kvm module.  Stack.sh can also install
+an <strong>LXC</strong> based system.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">LIBVIRT_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_TYPE</span><span class="k">:-</span><span class="nv">kvm</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>nova supports pluggable schedulers.  <tt class="docutils literal">SimpleScheduler</tt> should work in most
+cases unless you are working on multi-zone mode.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SCHEDULER</span><span class="o">=</span><span class="k">${</span><span class="nv">SCHEDULER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.scheduler.simple.SimpleScheduler</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Use the first IP unless an explicit is set by <tt class="docutils literal">HOST_IP</tt> environment variable</p>
@@ -446,17 +516,25 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Nova network configuration</p>
+<div class="section" id="nova-network-configuration">
+<h2>Nova Network Configuration</h2>
 </td><td class=code><div class=highlight><pre>
+
 <span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
-<span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">$PUBLIC_INTERFACE</span><span class="k">}</span>
-<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.1/28</span><span class="k">}</span>
 <span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">FIXED_NETWORK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_NETWORK_SIZE</span><span class="k">:-</span><span class="nv">256</span><span class="k">}</span>
+<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.1/28</span><span class="k">}</span>
 <span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">FlatDHCPManager</span><span class="k">}</span>
 <span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
 <span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
-<span class="nv">SCHEDULER</span><span class="o">=</span><span class="k">${</span><span class="nv">SCHEDULER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.scheduler.simple.SimpleScheduler</span><span class="k">}</span>
+<span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">$PUBLIC_INTERFACE</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Multi-host is a mode where each compute node runs its own network node.  This
+allows network operations and routing for a VM to occur on the server that is
+running the VM - removing a SPOF and bandwidth bottleneck.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MULTI_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MULTI_HOST</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If you are using FlatDHCP on multiple hosts, set the <tt class="docutils literal">FLAT_INTERFACE</tt>
@@ -465,18 +543,31 @@ ip or you risk breaking things.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Nova hypervisor configuration.  We default to <strong>kvm</strong> but will drop back to
-<strong>qemu</strong> if we are unable to load the kvm module.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">LIBVIRT_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_TYPE</span><span class="k">:-</span><span class="nv">kvm</span><span class="k">}</span>
+<span class="c">## FIXME(ja): should/can we check that FLAT_INTERFACE is sane?</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Mysql connection info</p>
+</div>
+<div class="section" id="mysql-rabbitmq">
+<h2>MySQL &amp; RabbitMQ</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We configure Nova, Dashboard, Glance and Keystone to use MySQL as their
+database server.  While they share a single server, each has their own
+database and tables.</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>By default this script will install and configure MySQL.  If you want to
+use an existing server, you can pass in the user/password/host parameters.
+You will need to send the same <tt class="docutils literal">MYSQL_PASS</tt> to every host if you are doing
+a multi-node devstack installation.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">MYSQL_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_USER</span><span class="k">:-</span><span class="nv">root</span><span class="k">}</span>
-<span class="nv">MYSQL_PASS</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_PASS</span><span class="k">:-</span><span class="nv">nova</span><span class="k">}</span>
+<span class="nv">MYSQL_PASS</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_PASS</span><span class="k">:-</span><span class="sb">`</span>openssl rand -hex 12<span class="sb">`</span><span class="k">}</span>
 <span class="nv">MYSQL_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>don't specify /db in this string, so we can use it for multiple services</p>
 </td><td class=code><div class=highlight><pre>
@@ -486,6 +577,7 @@ ip or you risk breaking things.</p>
 <p>Rabbit connection info</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+<span class="nv">RABBIT_PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_PASSWORD</span><span class="k">:-</span><span class="sb">`</span>openssl rand -hex 12<span class="sb">`</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Glance connection info.  Note the port must be specified.</p>
@@ -494,20 +586,26 @@ ip or you risk breaking things.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="install-packages">
-<h2>Install Packages</h2>
-<p>Openstack uses a fair number of other projects.</p>
+<div class="section" id="keystone">
+<h2>Keystone</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Seed configuration with mysql password so that apt-get install doesn't
-prompt us for a password upon install.</p>
+<p>Service Token - Openstack components need to have an admin token
+to validate user tokens.</p>
 </td><td class=code><div class=highlight><pre>
-cat <span class="s">&lt;&lt;MYSQL_PRESEED | sudo debconf-set-selections</span>
-<span class="s">mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS</span>
-<span class="s">mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS</span>
-<span class="s">mysql-server-5.1 mysql-server/start_on_boot boolean true</span>
-<span class="s">MYSQL_PRESEED</span>
+<span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TOKEN</span><span class="k">:-</span><span class="sb">`</span>uuidgen<span class="sb">`</span><span class="k">}</span>
+<span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">:-</span><span class="sb">`</span>openssl rand -hex 12<span class="sb">`</span><span class="k">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
+<div class="section" id="install-packages">
+<h1>Install Packages</h1>
+<p>Openstack uses a fair number of other projects.</p>
+</td><td class=code><div class=highlight><pre>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install apt requirements</p>
@@ -529,59 +627,48 @@ ownership to the proper user.</p>
 <span class="k">        </span>sudo mkdir <span class="nv">$2</span>
         sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$2</span>
         git clone <span class="nv">$1</span> <span class="nv">$2</span>
+        <span class="nb">cd</span> <span class="nv">$2</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This checkout syntax works for both branches and tags</p>
+</td><td class=code><div class=highlight><pre>
+        git checkout <span class="nv">$3</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>compute service
-FIXME - need to factor out these repositories
-git_clone <a class="reference external" href="https://github.com/cloudbuilders/nova.git">https://github.com/cloudbuilders/nova.git</a> $NOVA_DIR</p>
+<p>compute service</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$NOVA_DIR</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>bzr clone lp:~hudson-openstack/nova/milestone-proposed/ <span class="nv">$NOVA_DIR</span>
-<span class="k">fi</span>
+git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_DIR</span> <span class="nv">$NOVA_BRANCH</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>image catalog service</p>
 </td><td class=code><div class=highlight><pre>
-git_clone https://github.com/cloudbuilders/glance.git <span class="nv">$GLANCE_DIR</span>
+git_clone <span class="nv">$GLANCE_REPO</span> <span class="nv">$GLANCE_DIR</span> <span class="nv">$GLANCE_BRANCH</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>unified auth system (manages accounts/tokens)</p>
 </td><td class=code><div class=highlight><pre>
-git_clone https://github.com/cloudbuilders/keystone.git <span class="nv">$KEYSTONE_DIR</span>
+git_clone <span class="nv">$KEYSTONE_REPO</span> <span class="nv">$KEYSTONE_DIR</span> <span class="nv">$KEYSTONE_BRANCH</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>a websockets/html5 or flash powered VNC console for vm instances</p>
 </td><td class=code><div class=highlight><pre>
-git_clone https://github.com/cloudbuilders/noVNC.git <span class="nv">$NOVNC_DIR</span>
+git_clone <span class="nv">$NOVNC_REPO</span> <span class="nv">$NOVNC_DIR</span> <span class="nv">$NOVNC_BRANCH</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>django powered web control panel for openstack</p>
 </td><td class=code><div class=highlight><pre>
-git_clone https://github.com/cloudbuilders/openstack-dashboard.git <span class="nv">$DASH_DIR</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>FIXME - need to factor out logic like this</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">cd</span> <span class="nv">$DASH_DIR</span> <span class="o">&amp;&amp;</span> sudo git fetch <span class="o">&amp;&amp;</span> sudo git checkout origin/keystone_diablo
-</pre></div></td></tr><tr><td class=docs>
-<p>add nixon, will use this to show munin graphs in dashboard</p>
-</td><td class=code><div class=highlight><pre>
-git_clone https://github.com/cloudbuilders/nixon.git <span class="nv">$NIXON_DIR</span>
+git_clone <span class="nv">$DASH_REPO</span> <span class="nv">$DASH_DIR</span> <span class="nv">$DASH_BRANCH</span> <span class="nv">$DASH_TAG</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>python client library to nova that dashboard (and others) use</p>
 </td><td class=code><div class=highlight><pre>
-git_clone https://github.com/cloudbuilders/python-novaclient.git <span class="nv">$NOVACLIENT_DIR</span>
+git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_DIR</span> <span class="nv">$NOVACLIENT_BRANCH</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>openstackx is a collection of extensions to openstack.compute &amp; nova
 that is <em>deprecated</em>.  The code is being moved into python-novaclient &amp; nova.</p>
 </td><td class=code><div class=highlight><pre>
-git_clone https://github.com/cloudbuilders/openstackx.git <span class="nv">$API_DIR</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>openstack-munin is a collection of munin plugins for monitoring the stack</p>
-</td><td class=code><div class=highlight><pre>
-git_clone https://github.com/cloudbuilders/openstack-munin.git <span class="nv">$MUNIN_DIR</span>
+git_clone <span class="nv">$OPENSTACKX_REPO</span> <span class="nv">$OPENSTACKX_DIR</span> <span class="nv">$OPENSTACKX_BRANCH</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="initialization">
-<h2>Initialization</h2>
+<h1>Initialization</h1>
 </td><td class=code><div class=highlight><pre>
 
 
@@ -593,7 +680,7 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$KEYSTONE_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$GLANCE_DIR</span>; sudo python setup.py develop
-<span class="nb">cd</span> <span class="nv">$API_DIR</span>; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$OPENSTACKX_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/django-openstack; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard; sudo python setup.py develop
 
@@ -607,21 +694,38 @@ cp <span class="nv">$FILES</span>/screenrc ~/.screenrc
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="rabbit">
-<h3>Rabbit</h3>
+<h2>Rabbit</h2>
 </td><td class=code><div class=highlight><pre>
+
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;rabbit&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install and start rabbitmq-server</p>
 </td><td class=code><div class=highlight><pre>
     sudo apt-get install -y -q rabbitmq-server
+</pre></div></td></tr><tr><td class=docs>
+<p>change the rabbit password since the default is &quot;guest&quot;</p>
+</td><td class=code><div class=highlight><pre>
+    sudo rabbitmqctl change_password guest <span class="nv">$RABBIT_PASSWORD</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="mysql">
-<h3>Mysql</h3>
+<h2>Mysql</h2>
 </td><td class=code><div class=highlight><pre>
+
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Seed configuration with mysql password so that apt-get install doesn't
+prompt us for a password upon install.</p>
+</td><td class=code><div class=highlight><pre>
+    cat <span class="s">&lt;&lt;MYSQL_PRESEED | sudo debconf-set-selections</span>
+<span class="s">mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS</span>
+<span class="s">mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS</span>
+<span class="s">mysql-server-5.1 mysql-server/start_on_boot boolean true</span>
+<span class="s">MYSQL_PRESEED</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Install and start mysql-server</p>
 </td><td class=code><div class=highlight><pre>
@@ -642,8 +746,11 @@ cp <span class="nv">$FILES</span>/screenrc ~/.screenrc
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="dashboard">
-<h3>Dashboard</h3>
-<p>Setup the django application to serve via apache/wsgi</p>
+<h2>Dashboard</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setup the django dashboard application to serve via apache/wsgi</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;dash&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -653,17 +760,17 @@ cp <span class="nv">$FILES</span>/screenrc ~/.screenrc
 of installing quantum we can create a simple module that will pass the
 initial imports</p>
 </td><td class=code><div class=highlight><pre>
-    sudo mkdir -p  <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>sudo touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/__init__.py
-    sudo touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/client.py
+    mkdir -p  <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/__init__.py
+    touch <span class="nv">$DASH_DIR</span>/openstack-dashboard/quantum/client.py
 
-    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Includes settings for Nixon, to expose munin charts.</p>
+<p><tt class="docutils literal">local_settings.py</tt> is used to override dashboard default settings.</p>
 </td><td class=code><div class=highlight><pre>
-    sudo cp <span class="nv">$FILES</span>/dash_settings.py <span class="nb">local</span>/local_settings.py
+    cp <span class="nv">$FILES</span>/dash_settings.py <span class="nv">$DASH_DIR</span>/openstack-dashboard/local/local_settings.py
 
+    <span class="nb">cd</span> <span class="nv">$DASH_DIR</span>/openstack-dashboard
     dashboard/manage.py syncdb
 
 </pre></div></td></tr><tr><td class=docs>
@@ -673,57 +780,15 @@ initial imports</p>
 
     <span class="c">## Configure apache&#39;s 000-default to run dashboard</span>
     sudo cp <span class="nv">$FILES</span>/000-default.template /etc/apache2/sites-enabled/000-default
+    sudo sed -e <span class="s2">&quot;s,%USER%,$USER,g&quot;</span> -i /etc/apache2/sites-enabled/000-default
     sudo sed -e <span class="s2">&quot;s,%DASH_DIR%,$DASH_DIR,g&quot;</span> -i /etc/apache2/sites-enabled/000-default
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">python setup.py develop</tt> left some files owned by root in <tt class="docutils literal">DASH_DIR</tt>
-and others are owned by the user you are using to run this script.
-We need to change the owner to apache for dashboard to run.</p>
-</td><td class=code><div class=highlight><pre>
-    sudo chown -R www-data:www-data <span class="nv">$DASH_DIR</span>
 <span class="k">fi</span>
 
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="munin">
-<h3>Munin</h3>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Munin is accessable via apache and was configured in the dashboard section.</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;munin&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>allow connections from other hosts</p>
-</td><td class=code><div class=highlight><pre>
-    sudo sed -i -e <span class="s1">&#39;s/Allow from localhost/Allow from all/g&#39;</span> /etc/munin/apache.conf
-
-    cat &gt;/tmp/nova <span class="s">&lt;&lt;EOF</span>
-<span class="s">[keystone_*]</span>
-<span class="s">user `whoami`</span>
-
-<span class="s">[nova_*]</span>
-<span class="s">user `whoami`</span>
-<span class="s">EOF</span>
-    sudo mv /tmp/nova /etc/munin/plugin-conf.d/nova
-</pre></div></td></tr><tr><td class=docs>
-<p>configure Munin for Nova plugins</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">PLUGINS</span><span class="o">=</span><span class="s2">&quot;keystone_stats nova_floating_ips nova_instance_launched nova_instance_ nova_instance_timing nova_services&quot;</span>
-    <span class="k">for </span>i in <span class="nv">$PLUGINS</span>; <span class="k">do</span>
-<span class="k">      </span>sudo cp -p <span class="nv">$MUNIN_DIR</span>/<span class="nv">$i</span> /usr/share/munin/plugins
-      sudo ln -sf /usr/share/munin/plugins/<span class="nv">$i</span> /etc/munin/plugins
-    <span class="k">done</span>
-<span class="k">    </span>sudo mv /etc/munin/plugins/nova_instance_ /etc/munin/plugins/nova_instance_launched
-    sudo restart munin-node
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="glance">
-<h3>Glance</h3>
+<h2>Glance</h2>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-reg&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -749,31 +814,71 @@ We need to change the owner to apache for dashboard to run.</p>
     <span class="nv">GLANCE_CONF</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-registry.conf
     cp <span class="nv">$FILES</span>/glance-registry.conf <span class="nv">$GLANCE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/glance,g&quot;</span> -i <span class="nv">$GLANCE_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$GLANCE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%DEST%,$DEST,g&quot;</span> -i <span class="nv">$GLANCE_CONF</span>
 
     <span class="nv">GLANCE_API_CONF</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-api.conf
     cp <span class="nv">$FILES</span>/glance-api.conf <span class="nv">$GLANCE_API_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%DEST%,$DEST,g&quot;</span> -i <span class="nv">$GLANCE_API_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$GLANCE_API_CONF</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="nova">
-<h3>Nova</h3>
+<h2>Nova</h2>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>We are going to use the sample http middleware configuration from the keystone
+project to launch nova.  This paste config adds the configuration required
+for nova to validate keystone tokens - except we need to switch the config
+to use our admin token instead (instead of the token from their sample data).</p>
+</td><td class=code><div class=highlight><pre>
+sudo sed -e <span class="s2">&quot;s,999888777666,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$KEYSTONE_DIR</span>/examples/paste/nova-api-paste.ini
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-cpu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>attempt to load modules: nbd (network block device - used to manage
-qcow images) and kvm (hardware based virtualization).  If unable to
-load kvm, set the libvirt type to qemu.</p>
+<div class="section" id="virtualization-configuration">
+<h3>Virtualization Configuration</h3>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>attempt to load modules: network block device - used to manage qcow images</p>
 </td><td class=code><div class=highlight><pre>
     sudo modprobe nbd <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span><span class="k">if</span> <span class="o">[</span> ! -e /dev/kvm <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">LIBVIRT_TYPE</span><span class="o">=</span>qemu
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Check for kvm (hardware based virtualization).  If unable to load kvm,
+set the libvirt type to qemu.  Note: many systems come with hardware
+virtualization disabled in BIOS.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> -eq <span class="s2">&quot;kvm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo modprobe kvm <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">        </span><span class="k">if</span> <span class="o">[</span> ! -e /dev/kvm <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: Switching to QEMU&quot;</span>
+            <span class="nv">LIBVIRT_TYPE</span><span class="o">=</span>qemu
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Install and configure <strong>LXC</strong> if specified.  LXC is another approach to
+splitting a system into many smaller parts.  LXC uses cgroups and chroot
+to simulate multiple systems.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> -eq <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo apt-get install lxc -y
+</pre></div></td></tr><tr><td class=docs>
+<p>lxc requires cgroups to be configured on /cgroup</p>
+</td><td class=code><div class=highlight><pre>
+        sudo mkdir -p /cgroup
+        <span class="k">if</span> ! grep -q cgroup /etc/fstab; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo </span>none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0 | sudo tee -a /etc/fstab
+        <span class="k">fi</span>
+<span class="k">        </span>sudo mount /cgroup
     <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>User needs to be member of libvirtd group for nova-compute to use libvirt.</p>
 </td><td class=code><div class=highlight><pre>
@@ -783,8 +888,15 @@ load kvm, set the libvirt type to qemu.</p>
 </td><td class=code><div class=highlight><pre>
     sudo /etc/init.d/libvirt-bin restart
 
+
 </pre></div></td></tr><tr><td class=docs>
-<p>setup nova instance directory</p>
+</div>
+<div class="section" id="instance-storage">
+<h3>Instance Storage</h3>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Nova stores each instance in its own directory.</p>
 </td><td class=code><div class=highlight><pre>
     mkdir -p <span class="nv">$NOVA_DIR</span>/instances
 
@@ -799,7 +911,7 @@ can be labeled via e2label)</p>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Clean out the instances directory</p>
+<p>Clean out the instances directory.</p>
 </td><td class=code><div class=highlight><pre>
     rm -rf <span class="nv">$NOVA_DIR</span>/instances/*
 <span class="k">fi</span>
@@ -831,13 +943,14 @@ add_nova_flag <span class="s2">&quot;--public_interface=$PUBLIC_INTERFACE&quot;<
 add_nova_flag <span class="s2">&quot;--vlan_interface=$VLAN_INTERFACE&quot;</span>
 add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
 add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
-add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$API_DIR/extensions&quot;</span>
+add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$OPENSTACKX_DIR/extensions&quot;</span>
 add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
 add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/&quot;</span>
 add_nova_flag <span class="s2">&quot;--api_paste_config=$KEYSTONE_DIR/examples/paste/nova-api-paste.ini&quot;</span>
 add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
 add_nova_flag <span class="s2">&quot;--ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
 add_nova_flag <span class="s2">&quot;--rabbit_host=$RABBIT_HOST&quot;</span>
+add_nova_flag <span class="s2">&quot;--rabbit_password=$RABBIT_PASSWORD&quot;</span>
 add_nova_flag <span class="s2">&quot;--glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
 add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -847,18 +960,33 @@ add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--multi_host=$MULTI_HOST&quot;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="nova-database">
+<h3>Nova Database</h3>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>All nova components talk to a central database.  We will need to do this step
+only once for an entire cluster.</p>
+</td><td class=code><div class=highlight><pre>
+
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create nova database</p>
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS nova;&#39;</span>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASS</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>(re)create nova database</p>
+</td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create a small network</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span> 
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create some floating ips</p>
@@ -869,8 +997,9 @@ add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="keystone">
-<h3>Keystone</h3>
+</div>
+<div class="section" id="id1">
+<h2>Keystone</h2>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -886,10 +1015,16 @@ add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&
     <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
     cp <span class="nv">$FILES</span>/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%DEST%,$DEST,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>keystone_data.sh creates our admin user and our <tt class="docutils literal">SERVICE_TOKEN</tt>.</p>
+</td><td class=code><div class=highlight><pre>
     <span class="nv">KEYSTONE_DATA</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin/keystone_data.sh
     cp <span class="nv">$FILES</span>/keystone_data.sh <span class="nv">$KEYSTONE_DATA</span>
     sudo sed -e <span class="s2">&quot;s,%HOST_IP%,$HOST_IP,g&quot;</span> -i <span class="nv">$KEYSTONE_DATA</span>
+    sudo sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$KEYSTONE_DATA</span>
+    sudo sed -e <span class="s2">&quot;s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g&quot;</span> -i <span class="nv">$KEYSTONE_DATA</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>initialize keystone with default users/endpoints</p>
 </td><td class=code><div class=highlight><pre>
@@ -901,7 +1036,7 @@ add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&
 </div>
 </div>
 <div class="section" id="launch-services">
-<h2>Launch Services</h2>
+<h1>Launch Services</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -927,10 +1062,16 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 screen -d -m -S nova -t nova
 sleep 1
 
+</pre></div></td></tr><tr><td class=docs>
+<p>launch the glance registery service</p>
+</td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-reg&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>launch the glance api and wait for it to answer before continuing</p>
+</td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
     <span class="k">while</span> ! wget -q -O- http://<span class="nv">$GLANCE_HOSTPORT</span>; <span class="k">do</span>
@@ -939,6 +1080,9 @@ sleep 1
     <span class="k">done</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>launch the keystone and wait for it to answer before continuing</p>
+</td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF -d&quot;</span>
     <span class="k">while</span> ! wget -q -O- http://127.0.0.1:5000; <span class="k">do</span>
@@ -947,6 +1091,9 @@ sleep 1
     <span class="k">done</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>launch the nova-api and wait for it to answer before continuing</p>
+</td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-api&quot;</span>
     <span class="k">while</span> ! wget -q -O- http://127.0.0.1:8774; <span class="k">do</span>
@@ -965,16 +1112,13 @@ in a specific context.</p>
 screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; echo $NOVA_DIR/bin/nova-compute | newgrp libvirtd&quot;</span>
 screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-network&quot;</span>
 screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-scheduler&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>nova-vncproxy binds a privileged port, and so needs sudo</p>
-</td><td class=code><div class=highlight><pre>
-screen_it n-vnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sudo $NOVA_DIR/bin/nova-vncproxy&quot;</span>
+screen_it n-vnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-wsproxy.py 6080 --web .&quot;</span>
 screen_it dash <span class="s2">&quot;cd $DASH_DIR &amp;&amp; sudo /etc/init.d/apache2 restart; sudo tail -f /var/log/apache2/error.log&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="install-images">
-<h2>Install Images</h2>
+<h1>Install Images</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-reg&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -993,18 +1137,19 @@ we upload to glance with the glance cli tool.</p>
     tar -zxf <span class="nv">$FILES</span>/tty.tgz -C <span class="nv">$FILES</span>/images
 
 </pre></div></td></tr><tr><td class=docs>
-<p>add images to glance
-FIXME: kernel/ramdisk is hardcoded - use return result from add</p>
+<p>add a debugging images to glance</p>
 </td><td class=code><div class=highlight><pre>
-    glance add -A 999888777666 <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="nv">$FILES</span>/images/aki-tty/image
-    glance add -A 999888777666 <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="nv">$FILES</span>/images/ari-tty/image
-    glance add -A 999888777666 <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span>1 <span class="nv">ramdisk_id</span><span class="o">=</span>2 &lt; <span class="nv">$FILES</span>/images/ami-tty/image
+    <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="nv">$FILES</span>/images/aki-tty/image<span class="sb">`</span>
+    <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
+    <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="nv">$FILES</span>/images/ari-tty/image<span class="sb">`</span>
+    <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
+    glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span><span class="nv">$KERNEL_ID</span> <span class="nv">ramdisk_id</span><span class="o">=</span><span class="nv">$RAMDISK_ID</span> &lt; <span class="nv">$FILES</span>/images/ami-tty/image
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="using-the-cloud">
-<h2>Using the cloud</h2>
+<h1>Using the cloud</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1021,7 +1166,22 @@ to access the site using your browser.</p>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;keystone is serving at http://$HOST_IP:5000/v2.0/&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;examples on using novaclient command line is in exercise.sh&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;the default users are: admin and demo&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;the password: $ADMIN_PASSWORD&quot;</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="summary">
+<h1>Summary</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>End our timer and give a timing summary</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">END_TIME</span><span class="o">=</span><span class="sb">`</span>python -c <span class="s2">&quot;import time; print time.time()&quot;</span><span class="sb">`</span>
+<span class="nv">ELAPSED</span><span class="o">=</span><span class="sb">`</span>python -c <span class="s2">&quot;print $END_TIME - $START_TIME&quot;</span><span class="sb">`</span>
+<span class="nb">echo</span> <span class="s2">&quot;stack.sh completed in $ELAPSED seconds.&quot;</span>
 
 
 </td><td class=code><div class=highlight><pre>
