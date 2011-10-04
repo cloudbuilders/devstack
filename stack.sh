@@ -43,36 +43,6 @@ if [ ! -d $FILES ]; then
     exit 1
 fi
 
-# OpenStack is designed to be run as a regular user (Dashboard will fail to run
-# as root, since apache refused to startup serve content from root user).  If
-# stack.sh is run as root, it automatically creates a stack user with
-# sudo privileges and runs as that user.
-
-if [[ $EUID -eq 0 ]]; then
-    echo "You are running this script as root."
-
-    # since this script runs as a normal user, we need to give that user
-    # ability to run sudo
-    apt-get update
-    apt-get install -y sudo
-
-    if ! getent passwd | grep -q stack; then
-        echo "Creating a user called stack"
-        useradd -U -G sudo -s /bin/bash -m stack
-    fi
-    echo "Giving stack user passwordless sudo priviledges"
-    echo "stack ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
-    echo "Copying files to stack user"
-    cp -r -f `pwd` /home/stack/
-    THIS_DIR=$(basename $(dirname $(readlink -f $0)))
-    chown -R stack /home/stack/$THIS_DIR
-    echo "Running the script as stack in 3 seconds..."
-    sleep 3
-    exec su -c "cd /home/stack/$THIS_DIR/; bash stack.sh; bash" stack
-    exit 0
-fi
-
 # So that errors don't compound we exit on any errors so you see only the
 # first error that occured.
 set -o errexit
@@ -113,6 +83,37 @@ source ./stackrc
 
 # Destination path for installation ``DEST``
 DEST=${DEST:-/opt/stack}
+
+# OpenStack is designed to be run as a regular user (Dashboard will fail to run
+# as root, since apache refused to startup serve content from root user).  If
+# stack.sh is run as root, it automatically creates a stack user with
+# sudo privileges and runs as that user.
+
+if [[ $EUID -eq 0 ]]; then
+    echo "You are running this script as root."
+
+    # since this script runs as a normal user, we need to give that user
+    # ability to run sudo
+    apt-get update
+    apt-get install -y sudo
+
+    if ! getent passwd | grep -q stack; then
+        echo "Creating a user called stack"
+        useradd -U -G sudo -s /bin/bash -d $DEST -m stack
+    fi
+    echo "Giving stack user passwordless sudo priviledges"
+    echo "stack ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+#    echo "Copying files to stack user"
+#    cp -r -f `pwd` /home/stack/
+    THIS_DIR=$(basename $(dirname $(readlink -f $0)))
+    chown -R stack $DEST
+    echo "Running the script as stack in 3 seconds..."
+    sleep 3
+    exec su -c "cd $DEST/$THIS_DIR/; bash stack.sh; bash" stack
+    exit 0
+fi
+
 sudo mkdir -p $DEST
 sudo chown `whoami` $DEST
 
