@@ -94,12 +94,7 @@ git_clone $NOVNC_REPO $DEST/novnc $NOVNC_BRANCH
 git_clone $DASH_REPO $DEST/dash $DASH_BRANCH
 git_clone $NOVACLIENT_REPO $DEST/python-novaclient $NOVACLIENT_BRANCH
 git_clone $OPENSTACKX_REPO $DEST/openstackx $OPENSTACKX_BRANCH
-
-# Use this version of devstack?
-if [ "$USE_CURRENT_DEVSTACK" = "1" ]; then
-    rm -rf $CHROOTCACHE/natty-stack/$DEST/devstack
-    cp -pr $CWD $CHROOTCACHE/natty-stack/$DEST/devstack
-fi
+git_clone $DEVSTACK_REPO $DEST/devstack $DEVSTACK_BRANCH
 
 # Configure host network for DHCP
 mkdir -p $CHROOTCACHE/natty-stack/etc/network
