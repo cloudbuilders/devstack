@@ -7,7 +7,7 @@
 
 ROOTSIZE=${ROOTSIZE:-8192}
 SWAPSIZE=${SWAPSIZE:-1024}
-MIN_PKGS=${MIN_PKGS:-"apt-utils gpgv openssh-server"}
+MIN_PKGS=${MIN_PKGS:-"apt-utils gpgv openssh-server uuid-runtime"}
 
 usage() {
     echo "Usage: $0 - Create Ubuntu images"
