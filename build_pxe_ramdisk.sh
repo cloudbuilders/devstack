@@ -17,6 +17,9 @@ CWD=`pwd`
 
 DEST=${DEST:-/opt/stack}
 
+# Param string to pass to stack.sh.  Like "EC2_DMZ_HOST=192.168.1.1 MYSQL_USER=nova"
+STACKSH_PARAMS=${STACKSH_PARAMS:-}
+
 # Option to use the version of devstack on which we are currently working
 USE_CURRENT_DEVSTACK=${USE_CURRENT_DEVSTACK:-1}
 
@@ -105,6 +108,33 @@ iface lo inet loopback
 auto eth0
 iface eth0 inet dhcp
 EOF
+
+# Configure the runner
+RUN_SH=$CHROOTCACHE/natty-stack/$DEST/run.sh
+cat > $RUN_SH <<EOF
+#!/usr/bin/env bash
+
+# MySQL needs a password to clean up previous runs, so make the password persistient
+if [ ! -r $DEST/.MYSQL_PASS ]; then
+    openssl rand -hex 12 >$DEST/.MYSQL_PASS
+fi
+MYSQL_PASS=`cat $DEST/.MYSQL_PASS`
+
+# Param string to pass to stack.sh.  Like "EC2_DMZ_HOST=192.168.1.1 MYSQL_USER=nova"
+STACKSH_PARAMS="\${STACKSH_PARAMS:-$STACKSH_PARAMS} \$MYSQL_PASS"
+
+# Kill any existing screens
+killall screen
+
+# Run stack.sh
+cd $DEST/devstack && \$STACKSH_PARAMS ./stack.sh > $DEST/run.sh.log
+echo >> $DEST/run.sh.log
+echo >> $DEST/run.sh.log
+echo "All done! Time to start clicking." >> $DEST/run.sh.log
+EOF
+
+# Make the run.sh executable
+chmod 755 $RUN_SH
 
 # build a new image
 BASE=$CHROOTCACHE/build.$$
