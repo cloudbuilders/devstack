@@ -9,9 +9,7 @@
 
 UBUNTU_MIRROR=http://archive.ubuntu.com/ubuntu/dists/natty/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64
 
-MEMTEST_VER=4.10
-MEMTEST_BIN=memtest86+-${MEMTEST_VER}.bin
-MEMTEST_URL=http://www.memtest.org/download/${MEMTEST_VER}/
+MEMTEST_BIN=memtest86+.bin
 
 KVER=`uname -r`
 if [ "$1" = "-k" ]; then
@@ -81,10 +79,8 @@ LABEL ubuntu
 EOF
 
 # Get Memtest
-cd $DEST_DIR
 if [ ! -r $MEMTEST_BIN ]; then
-    wget -N --quiet ${MEMTEST_URL}/${MEMTEST_BIN}.gz
-    gunzip $MEMTEST_BIN
+    cp -p $MEMTEST+BIN $DEST_DIR
 fi
 cat >>$DEFAULT <<EOF
 
