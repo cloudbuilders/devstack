@@ -118,10 +118,18 @@ cat > $RUN_SH <<EOF
 if [ ! -r $DEST/.MYSQL_PASS ]; then
     openssl rand -hex 12 >$DEST/.MYSQL_PASS
 fi
-MYSQL_PASS=`cat $DEST/.MYSQL_PASS`
+export MYSQL_PASS=\`cat $DEST/.MYSQL_PASS\`
+
+# Get IP range
+set \`ip addr show dev eth0 | grep inet\`
+PREFIX=\`echo \$2 | cut -d. -f1,2,3\`
+export FLOATING_RANGE="\$PREFIX.128/25"
 
 # Param string to pass to stack.sh.  Like "EC2_DMZ_HOST=192.168.1.1 MYSQL_USER=nova"
-STACKSH_PARAMS="\${STACKSH_PARAMS:-$STACKSH_PARAMS} \$MYSQL_PASS"
+STACKSH_PARAMS="\${STACKSH_PARAMS:-}"
+
+# Pre-empt download of natty image
+tar czf /opt/stack/devstack/files/natty.tgz /etc/hosts
 
 # Kill any existing screens
 killall screen
@@ -135,6 +143,7 @@ EOF
 
 # Make the run.sh executable
 chmod 755 $RUN_SH
+chroot $CHROOTCACHE/natty-stack chown stack $DEST/run.sh
 
 # build a new image
 BASE=$CHROOTCACHE/build.$$
@@ -157,4 +166,4 @@ rmdir $MNT
 
 # gzip into final location
 gzip -1 $IMG -c > $1
-
+rm $IMG
