@@ -79,8 +79,8 @@ LABEL ubuntu
 EOF
 
 # Get Memtest
-if [ ! -r $MEMTEST_BIN ]; then
-    cp -p $MEMTEST+BIN $DEST_DIR
+if [ ! -r $DEST_DIR/$MEMTEST_BIN ]; then
+    cp -p /boot/$MEMTEST_BIN $DEST_DIR
 fi
 cat >>$DEFAULT <<EOF
 
