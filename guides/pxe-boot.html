@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>OpenWRT PXE Server Guide - DevStack</title>
+    <title>PXE Server Guide - DevStack</title>
     <meta name="description" content="">
     <meta name="author" content="">
 
@@ -37,7 +37,7 @@
 
     <div class="container">
       <section id="overview">
-        <h1>OpenWRT PXE Server: Highly Portable Stack Fluffer</h1>
+        <h1>PXE Server: Highly Portable Stack Fluffer</h1>
         <p>Devstack-In-A-Box-On-The-Go</p>
       </section>
 
@@ -93,6 +93,13 @@ put openwrt-ar71xx-wzr-hp-g300nh-squashfs-tftp.bin</pre>
 uci commit fstab
 /etc/init.d/fstab restart</pre>
           </li>
+          <li>Reset the DHCP address range.  Devstack will claim the upper 
+            /25 of the router's LAN address space for floating IPs so the
+            default DHCP address range needs to be moved:
+            <pre>uci set dhcp.lan.start=65
+uci set dhcp.lan.limit=60
+uci commit dhcp</pre>
+          </li>
           <li>Enable TFTP:
             <pre>uci set dhcp.@dnsmasq[0].enable_tftp=1
 uci set dhcp.@dnsmasq[0].tftp_root=/mnt/sda1/tftpboot
@@ -100,9 +107,44 @@ uci set dhcp.@dnsmasq[0].dhcp_boot=pxelinux.0
 uci commit dhcp
 /etc/init.d/dnsmasq restart</pre>
           </li>
-          <li>Insert a USB drive into the USB port with a pre-configured /tftpboot structure and you're off to the races!</li>
         </ul>
 
+        <h3>Set Up tftpboot</h3>
+        <ul>
+          <li>Create the /tmp/tftpboot structure and populate it:
+            <pre>cd ~/devstack
+./build_pxe_boot.sh /tmp</pre>
+            This calls build_pxe_ramdisk.sh to create a 2GB ramdisk 
+            containing a complete development Natty OS plus the 
+            OpenStack code checkouts.
+          </li>
+          <li>Copy tftpboot to a USB drive:
+            <pre>mount /dev/sdb1 /mnt/tmp
+rsync -a /tmp/tftpboot/ /mnt/tmp/tftpboot/
+umount /tmp
+          </li>
+          <li>Plug USB drive into router.  It will be automounted and is ready to serve content.</li>
+        </ul>
+
+        <h3>Fire It Up</h3>
+        <ul>
+          <li>Connect a computer to one of the routers LAN ports and PXE boot it.  Select 'devstack'.</li>
+          <li>Log in with the 'stack' user and 'pass' password.</li>
+          <li>Create <code>devstack/localrc</code> if you wish to change any of the 
+            configuration variables.  You will probably want to at least set the admin 
+            login password to something memorable rather than the default 20 random
+            characters:
+            <pre>ADMIN_PASSWORD=openstack</pre>
+          </li>
+          <li>Fire up OpenStack!
+            <pre>./run.sh</pre>
+          </li>
+          <li>See the processes running in screen:
+            <pre>screen -x</pre>
+          </li>
+          <li>Connect to the dashboard at http://<ip-address>/</li>
+        </ul>
+      </section>
 
       <footer>
         <p>&copy; Openstack LLC 2011 &mdash; this is not an official OpenStack project...</p>
