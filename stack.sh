@@ -410,7 +410,9 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
         if ! grep -q cgroup /etc/fstab; then
             echo none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0 | sudo tee -a /etc/fstab
         fi
-        sudo mount /cgroup
+        if ! mount -n | grep -q cgroup; then
+            sudo mount /cgroup
+        fi
     fi
 
     # User needs to be member of libvirtd group for nova-compute to use libvirt.
@@ -584,7 +586,7 @@ fi
 screen_it n-cpu "cd $NOVA_DIR && echo $NOVA_DIR/bin/nova-compute | newgrp libvirtd"
 screen_it n-net "cd $NOVA_DIR && $NOVA_DIR/bin/nova-network"
 screen_it n-sch "cd $NOVA_DIR && $NOVA_DIR/bin/nova-scheduler"
-screen_it n-vnc "cd $NOVNC_DIR && ./utils/nova-wsproxy.py 6080 --web ."
+screen_it n-vnc "cd $NOVNC_DIR && ./utils/nova-wsproxy.py 6080 --web . --flagfile=../nova/bin/nova.conf"
 screen_it dash "cd $DASH_DIR && sudo /etc/init.d/apache2 restart; sudo tail -f /var/log/apache2/error.log"
 
 # Install Images
