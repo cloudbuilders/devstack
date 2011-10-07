@@ -129,7 +129,9 @@ export FLOATING_RANGE="\$PREFIX.128/25"
 STACKSH_PARAMS="\${STACKSH_PARAMS:-}"
 
 # Pre-empt download of natty image
-tar czf /opt/stack/devstack/files/natty.tgz /etc/hosts
+tar czf $DEST/devstack/files/natty.tgz /etc/hosts
+touch $DEST/devstack/files/images/natty-server-cloudimg-amd64-vmlinuz-virtual
+touch $DEST/devstack/files/images/natty-server-cloudimg-amd64.img
 
 # Kill any existing screens
 killall screen
