@@ -95,7 +95,7 @@ if [[ $EUID -eq 0 ]]; then
     # since this script runs as a normal user, we need to give that user
     # ability to run sudo
     apt-get update
-    apt-get install -y sudo
+    apt-get install -q -y sudo
 
     if ! getent passwd | grep -q stack; then
         echo "Creating a user called stack"
@@ -110,7 +110,10 @@ if [[ $EUID -eq 0 ]]; then
     chown -R stack $DEST
     echo "Running the script as stack in 3 seconds..."
     sleep 3
-    exec su -c "cd $DEST/$THIS_DIR/; bash stack.sh; bash" stack
+    if [[ "$SHELL_AFTER_RUN" != "no" ]]; then
+        CMD="; bash"
+    fi
+    exec su -c "cd $DEST/$THIS_DIR/; bash stack.sh $CMD" stack
     exit 0
 fi
 
@@ -436,7 +439,7 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
     fi
 
     # Clean out the instances directory.
-    rm -rf $NOVA_DIR/instances/*
+    sudo rm -rf $NOVA_DIR/instances/*
 fi
 
 if [[ "$ENABLED_SERVICES" =~ "n-net" ]]; then
