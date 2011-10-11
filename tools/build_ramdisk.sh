@@ -1,4 +1,5 @@
 #!/bin/bash
+# build_ramdisk.sh - Build RAM disk images
 
 if [ ! "$#" -eq "1" ]; then
     echo "$0 builds a gziped natty openstack install"
@@ -16,6 +17,9 @@ source ./stackrc
 CWD=`pwd`
 
 DEST=${DEST:-/opt/stack}
+
+# Param string to pass to stack.sh.  Like "EC2_DMZ_HOST=192.168.1.1 MYSQL_USER=nova"
+STACKSH_PARAMS=${STACKSH_PARAMS:-}
 
 # Option to use the version of devstack on which we are currently working
 USE_CURRENT_DEVSTACK=${USE_CURRENT_DEVSTACK:-1}
@@ -94,12 +98,7 @@ git_clone $NOVNC_REPO $DEST/novnc $NOVNC_BRANCH
 git_clone $DASH_REPO $DEST/dash $DASH_BRANCH
 git_clone $NOVACLIENT_REPO $DEST/python-novaclient $NOVACLIENT_BRANCH
 git_clone $OPENSTACKX_REPO $DEST/openstackx $OPENSTACKX_BRANCH
-
-# Use this version of devstack?
-if [ "$USE_CURRENT_DEVSTACK" = "1" ]; then
-    rm -rf $CHROOTCACHE/natty-stack/$DEST/devstack
-    cp -pr $CWD $CHROOTCACHE/natty-stack/$DEST/devstack
-fi
+git_clone $DEVSTACK_REPO $DEST/devstack $DEVSTACK_BRANCH
 
 # Configure host network for DHCP
 mkdir -p $CHROOTCACHE/natty-stack/etc/network
@@ -110,6 +109,38 @@ iface lo inet loopback
 auto eth0
 iface eth0 inet dhcp
 EOF
+
+# Configure the runner
+RUN_SH=$CHROOTCACHE/natty-stack/$DEST/run.sh
+cat > $RUN_SH <<EOF
+#!/usr/bin/env bash
+
+# Get IP range
+set \`ip addr show dev eth0 | grep inet\`
+PREFIX=\`echo \$2 | cut -d. -f1,2,3\`
+export FLOATING_RANGE="\$PREFIX.128/25"
+
+# Param string to pass to stack.sh.  Like "EC2_DMZ_HOST=192.168.1.1 MYSQL_USER=nova"
+STACKSH_PARAMS="\${STACKSH_PARAMS:-}"
+
+# Pre-empt download of natty image
+tar czf $DEST/devstack/files/natty.tgz /etc/hosts
+touch $DEST/devstack/files/images/natty-server-cloudimg-amd64-vmlinuz-virtual
+touch $DEST/devstack/files/images/natty-server-cloudimg-amd64.img
+
+# Kill any existing screens
+killall screen
+
+# Run stack.sh
+cd $DEST/devstack && \$STACKSH_PARAMS ./stack.sh > $DEST/run.sh.log
+echo >> $DEST/run.sh.log
+echo >> $DEST/run.sh.log
+echo "All done! Time to start clicking." >> $DEST/run.sh.log
+EOF
+
+# Make the run.sh executable
+chmod 755 $RUN_SH
+chroot $CHROOTCACHE/natty-stack chown stack $DEST/run.sh
 
 # build a new image
 BASE=$CHROOTCACHE/build.$$
@@ -132,4 +163,4 @@ rmdir $MNT
 
 # gzip into final location
 gzip -1 $IMG -c > $1
-
+rm $IMG
