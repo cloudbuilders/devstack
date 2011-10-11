@@ -60,8 +60,12 @@ if [[ $EUID -eq 0 ]]; then
         echo "Creating a user called stack"
         useradd -U -G sudo -s /bin/bash -m stack
     fi
-    echo "Giving stack user passwordless sudo priviledges"
-    echo "stack ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+    echo "Giving stack user passwordless sudo priviledges for nova commands"
+    SUDOERS=/etc/sudoers.d/nova_sudoers
+    cp $FILES/nova_sudoers.template $SUDOERS
+    chmod 660 $SUDOERS
+    sudo sed -e "s,%USER%,stack,g" -i $SUDOERS
 
     echo "Copying files to stack user"
     cp -r -f `pwd` /home/stack/
