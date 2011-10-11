@@ -105,6 +105,7 @@ if [[ $EUID -eq 0 ]]; then
     echo "stack ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
     echo "Copying files to stack user"
+    mkdir -p $DEST/devstack
     cp -r -f `pwd` $DEST
     THIS_DIR=$(basename $(dirname $(readlink -f $0)))
     chown -R stack $DEST
