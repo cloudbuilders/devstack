@@ -104,8 +104,8 @@ if [[ $EUID -eq 0 ]]; then
     echo "Giving stack user passwordless sudo priviledges"
     echo "stack ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-#    echo "Copying files to stack user"
-#    cp -r -f `pwd` /home/stack/
+    echo "Copying files to stack user"
+    cp -r -f `pwd` $DEST
     THIS_DIR=$(basename $(dirname $(readlink -f $0)))
     chown -R stack $DEST
     echo "Running the script as stack in 3 seconds..."
