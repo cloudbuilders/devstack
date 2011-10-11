@@ -83,6 +83,8 @@ source ./stackrc
 
 # Destination path for installation ``DEST``
 DEST=${DEST:-/opt/stack}
+sudo mkdir -p $DEST
+sudo chown `whoami` $DEST
 
 # OpenStack is designed to be run as a regular user (Dashboard will fail to run
 # as root, since apache refused to startup serve content from root user).  If
@@ -93,7 +95,9 @@ if [[ $EUID -eq 0 ]]; then
     echo "You are running this script as root."
 
     # since this script runs as a normal user, we need to give that user
-    # ability to run sudo
+    # ability to run sudo.  The stack user will have a home directory of
+    # ``DEST`` and we move devstack checkout so that it is readable by 
+    # the stack user.
     apt-get update
     apt-get install -q -y sudo
 
@@ -101,14 +105,15 @@ if [[ $EUID -eq 0 ]]; then
         echo "Creating a user called stack"
         useradd -U -G sudo -s /bin/bash -d $DEST -m stack
     fi
+
     echo "Giving stack user passwordless sudo priviledges"
     echo "stack ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-    echo "Copying files to stack user"
-    mkdir -p $DEST/devstack
-    cp -r -f `pwd` $DEST
+    echo "Moves devstack to stack user's home directory"
     THIS_DIR=$(basename $(dirname $(readlink -f $0)))
+    mv `pwd` $DEST/
     chown -R stack $DEST
+
     echo "Running the script as stack in 3 seconds..."
     sleep 3
     if [[ "$SHELL_AFTER_RUN" != "no" ]]; then
@@ -117,9 +122,6 @@ if [[ $EUID -eq 0 ]]; then
     exec su -c "cd $DEST/$THIS_DIR/; bash stack.sh $CMD" stack
     exit 0
 fi
-
-sudo mkdir -p $DEST
-sudo chown `whoami` $DEST
 
 # Set the destination directories for openstack projects
 NOVA_DIR=$DEST/nova
