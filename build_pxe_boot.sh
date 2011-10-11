@@ -7,10 +7,6 @@
 # Assumes devstack files are in `pwd`/pxe
 # Only needs to run as root if the destdir permissions require it
 
-UBUNTU_MIRROR=http://archive.ubuntu.com/ubuntu/dists/natty/main/installer-amd64/current/images/netboot/ubuntu-installer/amd64
-
-MEMTEST_BIN=memtest86+.bin
-
 KVER=`uname -r`
 if [ "$1" = "-k" ]; then
     KVER=$2
@@ -67,40 +63,16 @@ LABEL devstack
 EOF
 
 # Get Ubuntu
-if [ -d $PXEDIR ]; then
+if [ -d $PXEDIR -a -r $PXEDIR/natty-base-initrd.gz ]; then
     cp -p $PXEDIR/natty-base-initrd.gz $DEST_DIR/ubuntu
-fi
-cat >>$DEFAULT <<EOF
+    cat >>$DEFAULT <<EOF
 
 LABEL ubuntu
     MENU LABEL ^Ubuntu Natty
     KERNEL ubuntu/vmlinuz-$KVER
     APPEND initrd=ubuntu/natty-base-initrd.gz ramdisk_size=419600 root=/dev/ram0
 EOF
-
-# Get Memtest
-if [ ! -r $DEST_DIR/$MEMTEST_BIN ]; then
-    cp -p /boot/$MEMTEST_BIN $DEST_DIR
 fi
-cat >>$DEFAULT <<EOF
-
-LABEL memtest
-    MENU LABEL ^Memtest86+
-    KERNEL $MEMTEST_BIN
-EOF
-
-# Get FreeDOS
-mkdir -p $DEST_DIR/freedos
-cd $DEST_DIR/freedos
-wget -N --quiet http://www.fdos.org/bootdisks/autogen/FDSTD.288.gz
-gunzip -f FDSTD.288.gz
-cat >>$DEFAULT <<EOF
-
-LABEL freedos
-	MENU LABEL ^FreeDOS bootdisk
-	KERNEL memdisk
-	APPEND initrd=freedos/FDSTD.288
-EOF
 
 # Local disk boot
 cat >>$DEFAULT <<EOF

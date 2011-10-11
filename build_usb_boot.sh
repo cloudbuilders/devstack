@@ -7,8 +7,6 @@
 # Assumes devstack files are in `pwd`/pxe
 # Needs to run as root
 
-MEMTEST_BIN=memtest86+.bin
-
 KVER=`uname -r`
 if [ "$1" = "-k" ]; then
     KVER=$2
@@ -81,27 +79,16 @@ LABEL devstack
 EOF
 
 # Get Ubuntu
-if [ -d $PXEDIR ]; then
+if [ -d $PXEDIR -a -r $PXEDIR/natty-base-initrd.gz ]; then
     cp -p $PXEDIR/natty-base-initrd.gz $DEST_DIR/ubuntu
-fi
-cat >>$CFG <<EOF
+    cat >>$CFG <<EOF
 
 LABEL ubuntu
     MENU LABEL ^Ubuntu Natty
     KERNEL /ubuntu/vmlinuz-$KVER
     APPEND initrd=/ubuntu/natty-base-initrd.gz ramdisk_size=419600 root=/dev/ram0
 EOF
-
-# Get Memtest
-if [ ! -r $DEST_DIR/syslinux/$MEMTEST_BIN ]; then
-    cp -p /boot/$MEMTEST_BIN $DEST_DIR/syslinux
 fi
-cat >>$CFG <<EOF
-
-LABEL memtest
-    MENU LABEL ^Memtest86+
-    KERNEL /syslinux/$MEMTEST_BIN
-EOF
 
 # Local disk boot
 cat >>$CFG <<EOF
