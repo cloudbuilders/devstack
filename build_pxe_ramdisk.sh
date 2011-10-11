@@ -114,12 +114,6 @@ RUN_SH=$CHROOTCACHE/natty-stack/$DEST/run.sh
 cat > $RUN_SH <<EOF
 #!/usr/bin/env bash
 
-# MySQL needs a password to clean up previous runs, so make the password persistient
-if [ ! -r $DEST/.MYSQL_PASS ]; then
-    openssl rand -hex 12 >$DEST/.MYSQL_PASS
-fi
-export MYSQL_PASS=\`cat $DEST/.MYSQL_PASS\`
-
 # Get IP range
 set \`ip addr show dev eth0 | grep inet\`
 PREFIX=\`echo \$2 | cut -d. -f1,2,3\`
