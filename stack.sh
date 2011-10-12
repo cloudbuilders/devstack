@@ -61,12 +61,6 @@ if [[ $EUID -eq 0 ]]; then
         useradd -U -G sudo -s /bin/bash -m stack
     fi
 
-    echo "Giving stack user passwordless sudo priviledges for nova commands"
-    SUDOERS=/etc/sudoers.d/nova_sudoers
-    cp $FILES/nova_sudoers.template $SUDOERS
-    chmod 660 $SUDOERS
-    sudo sed -e "s,%USER%,stack,g" -i $SUDOERS
-
     echo "Copying files to stack user"
     cp -r -f `pwd` /home/stack/
     THIS_DIR=$(basename $(dirname $(readlink -f $0)))
@@ -80,6 +74,13 @@ if [[ $EUID -eq 0 ]]; then
     fi
     exit 0
 fi
+
+echo "Give stack user passwordless sudo priviledges for nova commands"
+SUDOERS=/etc/sudoers.d/nova_sudoers
+cp $FILES/nova_sudoers.template $SUDOERS
+chmod 660 $SUDOERS
+sudo sed -e "s,%USER%,$USER,g" -i $SUDOERS
+
 
 # So that errors don't compound we exit on any errors so you see only the
 # first error that occured.
