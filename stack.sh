@@ -4,7 +4,7 @@
 
 # This script installs and configures *nova*, *glance*, *dashboard* and *keystone*
 
-# This script allows you to specify configuration options of what git 
+# This script allows you to specify configuration options of what git
 # repositories to use, enabled services, network configuration and various
 # passwords.  If you are crafty you can run the script on multiple nodes using
 # shared settings for common resources (mysql, rabbitmq) and build a multi-node
@@ -51,7 +51,7 @@ TOP_DIR=$(cd $(dirname "$0") && pwd)
 if [[ $EUID -eq 0 ]]; then
     echo "You are running this script as root."
     echo "In 10 seconds, we will create a user 'stack' and run as that user"
-    sleep 10 
+    sleep 10
 
     # since this script runs as a normal user, we need to give that user
     # ability to run sudo
@@ -103,11 +103,11 @@ fi
 # in most cases.
 #
 # We our settings from ``stackrc``.  This file is distributed with devstack and
-# contains locations for what repositories to use.  If you want to use other 
-# repositories and branches, you can add your own settings with another file 
+# contains locations for what repositories to use.  If you want to use other
+# repositories and branches, you can add your own settings with another file
 # called ``localrc``
 #
-# If ``localrc`` exists, then ``stackrc`` will load those settings.  This is 
+# If ``localrc`` exists, then ``stackrc`` will load those settings.  This is
 # useful for changing a branch or repostiory to test other versions.  Also you
 # can store your other settings like **MYSQL_PASSWORD** or **ADMIN_PASSWORD** instead
 # of letting devstack generate random ones for you.
@@ -124,9 +124,10 @@ KEYSTONE_DIR=$DEST/keystone
 NOVACLIENT_DIR=$DEST/python-novaclient
 OPENSTACKX_DIR=$DEST/openstackx
 NOVNC_DIR=$DEST/noVNC
+SWIFT_DIR=$DEST/swift
 
 # Specify which services to launch.  These generally correspond to screen tabs
-ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash,mysql,rabbit}
+ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash,mysql,rabbit,swift}
 
 # Nova hypervisor configuration.  We default to **kvm** but will drop back to
 # **qemu** if we are unable to load the kvm module.  Stack.sh can also install
@@ -157,7 +158,7 @@ function read_password {
             touch $localrc
         fi
 
-        # Presumably if we got this far it can only be that our localrc is missing 
+        # Presumably if we got this far it can only be that our localrc is missing
         # the required password.  Prompt user for a password and write to localrc.
         echo ''
         echo '################################################################################'
@@ -182,7 +183,7 @@ function read_password {
 # Nova Network Configuration
 # --------------------------
 
-# FIXME: more documentation about why these are important flags.  Also 
+# FIXME: more documentation about why these are important flags.  Also
 # we should make sure we use the same variable names as the flag names.
 
 PUBLIC_INTERFACE=${PUBLIC_INTERFACE:-eth0}
@@ -203,15 +204,15 @@ MULTI_HOST=${MULTI_HOST:-0}
 # variable but make sure that the interface doesn't already have an
 # ip or you risk breaking things.
 #
-# **DHCP Warning**:  If your flat interface device uses DHCP, there will be a 
-# hiccup while the network is moved from the flat interface to the flat network 
-# bridge.  This will happen when you launch your first instance.  Upon launch 
-# you will lose all connectivity to the node, and the vm launch will probably 
+# **DHCP Warning**:  If your flat interface device uses DHCP, there will be a
+# hiccup while the network is moved from the flat interface to the flat network
+# bridge.  This will happen when you launch your first instance.  Upon launch
+# you will lose all connectivity to the node, and the vm launch will probably
 # fail.
-# 
-# If you are running on a single node and don't need to access the VMs from 
+#
+# If you are running on a single node and don't need to access the VMs from
 # devices other than that node, you can set the flat interface to the same
-# value as ``FLAT_NETWORK_BRIDGE``.  This will stop the network hiccup from 
+# value as ``FLAT_NETWORK_BRIDGE``.  This will stop the network hiccup from
 # occuring.
 FLAT_INTERFACE=${FLAT_INTERFACE:-eth0}
 
@@ -221,11 +222,11 @@ FLAT_INTERFACE=${FLAT_INTERFACE:-eth0}
 # MySQL & RabbitMQ
 # ----------------
 
-# We configure Nova, Dashboard, Glance and Keystone to use MySQL as their 
+# We configure Nova, Dashboard, Glance and Keystone to use MySQL as their
 # database server.  While they share a single server, each has their own
 # database and tables.
 
-# By default this script will install and configure MySQL.  If you want to 
+# By default this script will install and configure MySQL.  If you want to
 # use an existing server, you can pass in the user/password/host parameters.
 # You will need to send the same ``MYSQL_PASSWORD`` to every host if you are doing
 # a multi-node devstack installation.
@@ -315,6 +316,8 @@ git_clone $NOVACLIENT_REPO $NOVACLIENT_DIR $NOVACLIENT_BRANCH
 # openstackx is a collection of extensions to openstack.compute & nova
 # that is *deprecated*.  The code is being moved into python-novaclient & nova.
 git_clone $OPENSTACKX_REPO $OPENSTACKX_DIR $OPENSTACKX_BRANCH
+# swift object storage service
+git_clone $SWIFT_REPO $SWIFT_DIR $SWIFT_BRANCH
 
 # Initialization
 # ==============
@@ -329,6 +332,7 @@ cd $GLANCE_DIR; sudo python setup.py develop
 cd $OPENSTACKX_DIR; sudo python setup.py develop
 cd $DASH_DIR/django-openstack; sudo python setup.py develop
 cd $DASH_DIR/openstack-dashboard; sudo python setup.py develop
+cd $SWIFT_DIR; sudo python setup.py develop
 
 # Add a useful screenrc.  This isn't required to run openstack but is we do
 # it since we are going to run the services in screen for simple
@@ -458,8 +462,8 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
     # attempt to load modules: network block device - used to manage qcow images
     sudo modprobe nbd || true
 
-    # Check for kvm (hardware based virtualization).  If unable to load kvm, 
-    # set the libvirt type to qemu.  Note: many systems come with hardware 
+    # Check for kvm (hardware based virtualization).  If unable to load kvm,
+    # set the libvirt type to qemu.  Note: many systems come with hardware
     # virtualization disabled in BIOS.
     if [[ "$LIBVIRT_TYPE" == "kvm" ]]; then
         sudo modprobe kvm || true
@@ -668,7 +672,7 @@ screen_it dash "cd $DASH_DIR && sudo /etc/init.d/apache2 restart; sudo tail -f /
 # TTY also uses cloud-init, supporting login via keypair and sending scripts as
 # userdata.  See https://help.ubuntu.com/community/CloudInit for more on cloud-init
 #
-# Override IMAGE_URLS if you would to launch a different image(s).  
+# Override IMAGE_URLS if you would to launch a different image(s).
 # Specify IMAGE_URLS as a comma-separated list of uec urls.  Some other options include:
 #   natty: http://uec-images.ubuntu.com/natty/current/natty-server-cloudimg-amd64.tar.gz
 #   oneiric: http://uec-images.ubuntu.com/oneiric/current/oneiric-server-cloudimg-amd64.tar.gz
@@ -695,6 +699,135 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
         KERNEL_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
         glance add -A $SERVICE_TOKEN name="$IMAGE_NAME" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID < $FILES/images/$IMAGE_NAME.img
     done
+fi
+
+# Install Swift
+# =============
+
+if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
+    sudo apt-get install -y curl gcc bzr memcached python-configobj python-coverage python-dev python-nose python-setuptools python-simplejson python-xattr sqlite3 xfsprogs python-webob python-eventlet python-greenlet python-pastedeploy python-netifaces
+
+    # create a loopback device for storage
+    DEVICE_SIZE=1024 # in MB
+    DEVICE_LOCATION=/srv/swift-disk
+    [ ! -d /srv ] && sudo mkdir -p /srv
+
+    if [ -e $DEVICE_LOCATION ]
+    then
+       echo "$DEVICE_LOCATION already exists.  Moving to $DEVICE_LOCATION.bak"
+       sudo mv $DEVICE_LOCATION $DEVICE_LOCATION.bak
+    fi
+    sudo dd if=/dev/zero of=$DEVICE_LOCATION bs=1M count=0 seek=$DEVICE_SIZE
+    sudo mkfs.xfs -i size=$DEVICE_SIZE $DEVICE_LOCATION
+
+    FSTAB_OUT="$DEVICE_LOCATION /mnt/sdb1 xfs loop,noatime,nodiratime,nobarrier,logbufs=8 0 0"
+
+    if [ -n "`grep "$FSTAB_OUT" /etc/fstab`" ]
+    then
+       echo "/etc/fstab already populated."
+
+    elif [ -n "`grep "/mnt/sdb1" /etc/fstab`" ]
+    then
+       echo "/etc/fstab already has an entry for /mnt/sdb1.  Please verify it is correct, or replace it with"
+       echo $FSTAB_OUT
+
+    else
+       sudo echo $FSTAB_OUT >> /etc/fstab
+    fi
+
+    sudo mkdir -p /mnt/sdb1
+    sudo mount /mnt/sdb1
+
+    # set up some folders?
+    pushd /mnt/sdb1 &> /dev/null
+    sudo mkdir -p 1 2 3 4
+    popd &> /dev/null
+
+
+    sudo chown stack:stack /mnt/sdb1/*
+    for x in {1..4}; do sudo ln -s /mnt/sdb1/$x /srv/$x; done
+    sudo mkdir -p /etc/swift/object-server /etc/swift/container-server /etc/swift/account-server /srv/1/node/sdb1 /srv/2/node/sdb2 /srv/3/node/sdb3 /srv/4/node/sdb4 /var/run/swift
+
+    sudo chown -R stack:stack /etc/swift /srv/[1-4]/ /var/run/swift
+
+    [ ! -d /var/run/swift ] && sudo mkdir -p /var/run/swift
+    sudo chown stacl:stack /var/run/swift
+
+    # stupid rc.local has exits in them
+    # this will probably muck up a nonstandard/complex rc.local
+    if [ -z "`grep '/var/run/swift' /etc/rc.local`" ]
+    then
+       sudo grep -v 'exit' /etc/rc.local > /etc/rc.local.new
+       sudo cat << RCLOCAL >> /etc/rc.local.new
+mkdir /var/run/swift
+chown $USERNAME:$GROUPNAME /var/run/swift
+
+exit 0
+RCLOCAL
+
+       sudo mv /etc/rc.local /etc/rc.local.old
+       sudo mv /etc/rc.local.new /etc/rc.local
+       sudo chmod +x /etc/rc.local
+    fi
+
+    [ -e /etc/rsyncd.conf ] && sudo mv /etc/rsyncd.conf /etc/rsyncd.conf.bak
+    sudo mv $FILES/rsyncd.conf /etc/rsyncd.conf
+    sed -i 's/RSYNC_ENABLE=false/RSYNC_ENABLE=true/' /etc/default/rsync
+    sudo ervice rsync restart
+
+    # Shut down swift, in case it's running
+    if [ -f ~/bin/resetswift ]; then
+        ~/bin/resetswift
+    fi
+
+    mkdir -p ~/bin
+    cat << BASHRC >> ~/.bashrc
+export SWIFT_TEST_CONFIG_FILE=/etc/swift/func_test.conf
+export PATH=${PATH}:~/bin
+
+BASHRC
+
+    . ~/.bashrc
+    if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
+        cp $FILES/swift-configs/proxy-server.conf.tempauth /etc/swift/proxy-server.conf
+    else
+        cp $FILES/swift-configs/proxy-server.conf.keystone /etc/swift/proxy-server.conf
+    fi
+
+    set -i "s/USERNAME/stack/" /etc/swift/proxy-server.conf
+    set -i "s/IPADDRESS/$HOST_IP/" /etc/swift/proxy-server.conf
+    set -i "s/KEYSTONE_HOST/$HOST_IP/" /etc/swift/proxy-server.conf
+
+    cp $FILES/swift-config/swift.conf /etc/swift/swift.conf
+
+    SWIFTFILES="account-server container-server object-server"
+    for x in {1..4}
+    do
+       for SWIFTFILE in $SWIFTFILES
+       do
+           cp $FILES/swift-configs/$SWIFTFILE.conf /etc/swift/$SWIFTFILE/$x.conf
+           sed -i "s/NODENUM/$x/" /etc/swift/$SWIFTFILE/$x.conf
+           sed -i "s/LOGNUM/$((x+1))/" /etc/swift/$SWIFTFILE/$x.conf
+           sed -i "s/USERNAME/$USERNAME/" /etc/swift/$SWIFTFILE/$x.conf
+       done
+    done
+
+    cp $FILES/swift-bin/* ~/bin
+    chmod +x ~/bin/*
+
+    pushd ~/bin
+    for FILE in `ls`
+    do
+       sed -i "s/USERNAME/stack/" $FILE
+       sed -i "s/GROUPNAME/stack/" $FILE
+    done
+    popd &> /dev/null
+
+    ~/bin/remakerings
+    ~/bin/startmain
+
+    cp $FILES/swift-config/SWIFT-INSTRUCTIONS ~
+
 fi
 
 # Fin

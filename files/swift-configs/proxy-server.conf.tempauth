@@ -1,0 +1,29 @@
+[DEFAULT]
+bind_ip = IPADDRESS
+bind_port = 8080
+user = USERNAME
+log_facility = LOG_LOCAL1
+
+[pipeline:main]
+pipeline = healthcheck cache tempauth proxy-server
+
+[app:proxy-server]
+use = egg:swift#proxy
+allow_account_management = true
+
+[filter:tempauth]
+use = egg:swift#tempauth
+user_admin_admin = admin .admin .reseller_admin
+user_test_tester = testing .admin
+user_test2_tester2 = testing2 .admin
+user_test_tester3 = testing3
+
+# If connecting to swift-all-in-one from outside of the swift host, this is
+# necessary. Won't hurt anything if not 
+#default_swift_cluster = local#http://IPADDRESS:8080/v1
+
+[filter:healthcheck]
+use = egg:swift#healthcheck
+
+[filter:cache]
+use = egg:swift#memcache
