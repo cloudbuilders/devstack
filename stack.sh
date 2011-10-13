@@ -789,9 +789,9 @@ BASHRC
 
     . ~/.bashrc
     if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
-        cp $FILES/swift-configs/proxy-server.conf.tempauth /etc/swift/proxy-server.conf
-    else
         cp $FILES/swift-configs/proxy-server.conf.keystone /etc/swift/proxy-server.conf
+    else
+        cp $FILES/swift-configs/proxy-server.conf.tempauth /etc/swift/proxy-server.conf
     fi
 
     set -i "s/USERNAME/stack/" /etc/swift/proxy-server.conf
