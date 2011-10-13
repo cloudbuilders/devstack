@@ -249,14 +249,30 @@ sudo PIP_DOWNLOAD_CACHE=/var/cache/pip pip install `cat $FILES/pips/*`
 # be owned by the installation user, we create the directory and change the
 # ownership to the proper user.
 function git_clone {
-    if [ ! -d $2 ]; then
-        sudo mkdir $2
-        sudo chown `whoami` $2
-        git clone $1 $2
-        cd $2
-        # This checkout syntax works for both branches and tags
-        git checkout $3
+
+    # clone new copy or fetch latest changes
+    GIT_ORIGIN=$1
+    GIT_DEST=$2
+    GIT_BRANCH=$3
+    if [ ! -d $GIT_DEST ]; then
+        mkdir -p $GIT_DEST
+        git clone $GIT_ORIGIN $GIT_DEST
+    else
+        # FIXME(ja) if $ORIGIN has changed, should we update it?
+        pushd $GIT_DEST
+        git fetch
+        popd
     fi
+
+    # FIXME(ja): checkout specified version this doesn't works for tags
+    # FIXME(ja): shouldn't do this if working directory isn't clean
+
+    pushd $GIT_DEST
+    # checkout the requested branch
+    git checkout $GIT_BRANCH
+    # force our local version to be the same as the remote version
+    git reset --hard origin/$GIT_BRANCH
+    popd
 }
 
 # compute service
