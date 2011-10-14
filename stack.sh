@@ -744,14 +744,14 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     popd &> /dev/null
 
 
-    sudo chown stack:stack /mnt/sdb1/*
+    sudo chown $USER:$USER /mnt/sdb1/*
     for x in {1..4}; do sudo ln -s /mnt/sdb1/$x /srv/$x; done
     sudo mkdir -p /etc/swift/object-server /etc/swift/container-server /etc/swift/account-server /srv/1/node/sdb1 /srv/2/node/sdb2 /srv/3/node/sdb3 /srv/4/node/sdb4 /var/run/swift
 
-    sudo chown -R stack:stack /etc/swift /srv/[1-4]/ /var/run/swift
+    sudo chown -R $USER:$USER /etc/swift /srv/[1-4]/ /var/run/swift
 
     [ ! -d /var/run/swift ] && sudo mkdir -p /var/run/swift
-    sudo chown stacl:stack /var/run/swift
+    sudo chown $USER:$USER /var/run/swift
 
     # stupid rc.local has exits in them
     # this will probably muck up a nonstandard/complex rc.local
@@ -794,22 +794,22 @@ BASHRC
         cp $FILES/swift-configs/proxy-server.conf.tempauth /etc/swift/proxy-server.conf
     fi
 
-    set -i "s/USERNAME/stack/" /etc/swift/proxy-server.conf
-    set -i "s/IPADDRESS/$HOST_IP/" /etc/swift/proxy-server.conf
-    set -i "s/KEYSTONE_HOST/$HOST_IP/" /etc/swift/proxy-server.conf
+    sed -i "s,USERNAME,$USER,g" /etc/swift/proxy-server.conf
+    sed -i "s/IPADDRESS/$HOST_IP/" /etc/swift/proxy-server.conf
+    sed -i "s/KEYSTONE_HOST/$HOST_IP/" /etc/swift/proxy-server.conf
 
     cp $FILES/swift-config/swift.conf /etc/swift/swift.conf
 
     SWIFTFILES="account-server container-server object-server"
     for x in {1..4}
     do
-       for SWIFTFILE in $SWIFTFILES
-       do
-           cp $FILES/swift-configs/$SWIFTFILE.conf /etc/swift/$SWIFTFILE/$x.conf
-           sed -i "s/NODENUM/$x/" /etc/swift/$SWIFTFILE/$x.conf
-           sed -i "s/LOGNUM/$((x+1))/" /etc/swift/$SWIFTFILE/$x.conf
-           sed -i "s/USERNAME/$USERNAME/" /etc/swift/$SWIFTFILE/$x.conf
-       done
+        for SWIFTFILE in $SWIFTFILES
+        do
+            cp $FILES/swift-configs/$SWIFTFILE.conf /etc/swift/$SWIFTFILE/$x.conf
+            sed -i "s/NODENUM/$x/" /etc/swift/$SWIFTFILE/$x.conf
+            sed -i "s/LOGNUM/$((x+1))/" /etc/swift/$SWIFTFILE/$x.conf
+            sed -i "s,USERNAME,$USER,g" /etc/swift/$SWIFTFILE/$x.conf
+        done
     done
 
     cp $FILES/swift-bin/* ~/bin
