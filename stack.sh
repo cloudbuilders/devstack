@@ -611,6 +611,10 @@ function screen_it {
     fi
 }
 
+# Fix issue with permissions on /dev/pts/0 for normal user
+# Otherwise, screen call fails.
+sudo chmod o=r+w /dev/pts/0
+
 # create a new named screen to run processes in
 screen -d -m -S nova -t nova
 sleep 1

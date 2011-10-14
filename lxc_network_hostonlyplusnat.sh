@@ -31,7 +31,7 @@ for arg in "$@"; do
   process_option $arg
 done
 
-if [ $dry_run ]; then
+if [ "$dry_run" -eq "1" ]; then
   DRIER=echo
 fi
 
