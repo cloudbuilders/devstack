@@ -711,8 +711,7 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     DEVICE_LOCATION=/srv/swift-disk
     [ ! -d /srv ] && sudo mkdir -p /srv
 
-    if [ -e $DEVICE_LOCATION ]
-    then
+    if [ -e $DEVICE_LOCATION ]; then
        echo "$DEVICE_LOCATION already exists.  Moving to $DEVICE_LOCATION.bak"
        sudo mv $DEVICE_LOCATION $DEVICE_LOCATION.bak
     fi
@@ -721,15 +720,11 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
 
     FSTAB_OUT="$DEVICE_LOCATION /mnt/sdb1 xfs loop,noatime,nodiratime,nobarrier,logbufs=8 0 0"
 
-    if [ -n "`grep "$FSTAB_OUT" /etc/fstab`" ]
-    then
+    if [ -n "`grep "$FSTAB_OUT" /etc/fstab`" ]; then
        echo "/etc/fstab already populated."
-
-    elif [ -n "`grep "/mnt/sdb1" /etc/fstab`" ]
-    then
+    elif [ -n "`grep "/mnt/sdb1" /etc/fstab`" ]; then
        echo "/etc/fstab already has an entry for /mnt/sdb1.  Please verify it is correct, or replace it with"
        echo $FSTAB_OUT
-
     else
        sudo echo $FSTAB_OUT >> /etc/fstab
     fi
@@ -754,8 +749,7 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
 
     # stupid rc.local has exits in them
     # this will probably muck up a nonstandard/complex rc.local
-    if [ -z "`grep '/var/run/swift' /etc/rc.local`" ]
-    then
+    if [ -z "`grep '/var/run/swift' /etc/rc.local`" ]; then
        sudo grep -v 'exit' /etc/rc.local > /etc/rc.local.new
        sudo cat << RCLOCAL >> /etc/rc.local.new
 mkdir /var/run/swift
