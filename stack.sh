@@ -772,7 +772,7 @@ RCLOCAL
     [ -e /etc/rsyncd.conf ] && sudo mv /etc/rsyncd.conf /etc/rsyncd.conf.bak
     sudo mv $FILES/rsyncd.conf /etc/rsyncd.conf
     sed -i 's/RSYNC_ENABLE=false/RSYNC_ENABLE=true/' /etc/default/rsync
-    sudo ervice rsync restart
+    sudo service rsync restart
 
     # Shut down swift, in case it's running
     if [ -f ~/bin/resetswift ]; then
