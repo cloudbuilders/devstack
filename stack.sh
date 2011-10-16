@@ -726,7 +726,7 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
        echo "/etc/fstab already has an entry for /mnt/sdb1.  Please verify it is correct, or replace it with"
        echo $FSTAB_OUT
     else
-       sudo echo $FSTAB_OUT >> /etc/fstab
+       echo $FSTAB_OUT | sudo tee -a /etc/fstab
     fi
 
     sudo mkdir -p /mnt/sdb1
