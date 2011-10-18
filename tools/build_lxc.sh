@@ -65,8 +65,29 @@ lxc.network.type = veth
 lxc.network.link = $BRIDGE
 lxc.network.flags = up
 lxc.network.ipv4 = $CONTAINER_CIDR
+
 # allow tap/tun devices
 lxc.cgroup.devices.allow = c 10:200 rwm
+
+# allow /dev/mapper/control
+lxc.cgroup.devices.allow = c 10:236 rwm
+
+# allow /dev/ietctl
+lxc.cgroup.devices.allow = c 251:0 rwm
+#lxc.cgroup.devices.allow = c 0:7 rwm
+
+# volumes
+lxc.cgroup.devices.allow = b 251:0 rwm
+lxc.cgroup.devices.allow = b 251:1 rwm
+lxc.cgroup.devices.allow = b 251:2 rwm
+lxc.cgroup.devices.allow = b 251:3 rwm
+lxc.cgroup.devices.allow = b 251:4 rwm
+lxc.cgroup.devices.allow = b 251:5 rwm
+lxc.cgroup.devices.allow = b 251:6 rwm
+lxc.cgroup.devices.allow = b 251:7 rwm
+lxc.cgroup.devices.allow = b 251:8 rwm
+lxc.cgroup.devices.allow = b 251:9 rwm
+
 # /dev/loopx devices
 lxc.cgroup.devices.allow = b 7:0 rwm
 lxc.cgroup.devices.allow = b 7:1 rwm
@@ -138,6 +159,8 @@ chroot $CACHEDIR apt-get update
 chroot $CACHEDIR apt-get install -y --force-yes `cat files/apts/* | cut -d\# -f1 | egrep -v "(rabbitmq|libvirt-bin|mysql-server)"`
 chroot $CACHEDIR apt-get install -y --download-only rabbitmq-server libvirt-bin mysql-server
 chroot $CACHEDIR pip install `cat files/pips/*`
+
+echo "ISCSITARGET_ENABLE=true" > $CACHEDIR/etc/default/iscsitarget
 
 # Clean out code repos if directed to do so
 if [ "$CLEAN" = "1" ]; then

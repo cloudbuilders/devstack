@@ -530,13 +530,13 @@ fi
 # volume group, create your own volume group called 'nova-volumes' before
 # invoking stack.sh.
 #
-# By default, the backing file is 3G in size, and is stored in /tmp.
+# By default, the backing file is 4G in size, and is stored in /tmp.
 VOLUME_BACKING_FILE=${VOLUME_BACKING_FILE:-/tmp/nova-volumes-backing-file}
-VOLUME_BACKING_FILE_SIZE=${VOLUME_BACKING_SIZE:-3G}
+VOLUME_BACKING_FILE_SIZE=${VOLUME_BACKING_SIZE:-4100M}
 if [[ "$ENABLED_SERVICES" =~ "n-vol" ]]; then
-    if [ ! sudo vgdisplay | grep -q nova-volumes ]; then
+    if ! sudo vgdisplay | grep -q nova-volumes; then
         truncate -s $VOLUME_BACKING_FILE_SIZE $VOLUME_BACKING_FILE
-        DEV=`sudo losetup -f --show volumes`
+        DEV=`sudo losetup -f --show $VOLUME_BACKING_FILE`
         sudo vgcreate nova-volumes $DEV
     fi
 fi
