@@ -67,6 +67,17 @@ lxc.network.flags = up
 lxc.network.ipv4 = $CONTAINER_CIDR
 # allow tap/tun devices
 lxc.cgroup.devices.allow = c 10:200 rwm
+# /dev/loopx devices
+lxc.cgroup.devices.allow = b 7:0 rwm
+lxc.cgroup.devices.allow = b 7:1 rwm
+lxc.cgroup.devices.allow = b 7:2 rwm
+lxc.cgroup.devices.allow = b 7:3 rwm
+lxc.cgroup.devices.allow = b 7:4 rwm
+lxc.cgroup.devices.allow = b 7:5 rwm
+lxc.cgroup.devices.allow = b 7:6 rwm
+lxc.cgroup.devices.allow = b 7:7 rwm
+lxc.cgroup.devices.allow = b 7:8 rwm
+lxc.cgroup.devices.allow = b 7:9 rwm
 EOF
 
 # Shutdown any existing container
