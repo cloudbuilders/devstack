@@ -297,6 +297,9 @@ if ! mount | grep -q cgroup; then
     mount none -t cgroup /cgroup
 fi
 
+# Remove all existing volumes
+lvremove --force /dev/nova-volumes/*
+
 # Start our container
 lxc-start -d -n $CONTAINER
 
