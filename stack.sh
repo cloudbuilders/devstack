@@ -290,6 +290,13 @@ sudo PIP_DOWNLOAD_CACHE=/var/cache/pip pip install `cat $FILES/pips/*`
 # be owned by the installation user, we create the directory and change the
 # ownership to the proper user.
 function git_clone {
+    # if there is an existing checkout, move it out of the way
+    if [[ "$RECLONE" == "yes" ]]; then
+        if [ -d $2 ]; then
+            mv $2 /tmp/stack.`date +%s`
+        fi
+    fi
+
     if [ ! -d $2 ]; then
         sudo mkdir $2
         sudo chown `whoami` $2
@@ -322,10 +329,10 @@ git_clone $OPENSTACKX_REPO $OPENSTACKX_DIR $OPENSTACKX_BRANCH
 
 # setup our checkouts so they are installed into python path
 # allowing ``import nova`` or ``import glance.client``
-cd $NOVACLIENT_DIR; sudo python setup.py develop
-cd $NOVA_DIR; sudo python setup.py develop
 cd $KEYSTONE_DIR; sudo python setup.py develop
 cd $GLANCE_DIR; sudo python setup.py develop
+cd $NOVACLIENT_DIR; sudo python setup.py develop
+cd $NOVA_DIR; sudo python setup.py develop
 cd $OPENSTACKX_DIR; sudo python setup.py develop
 cd $DASH_DIR/django-openstack; sudo python setup.py develop
 cd $DASH_DIR/openstack-dashboard; sudo python setup.py develop
