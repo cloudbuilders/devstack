@@ -749,7 +749,7 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
 
     [ -e /etc/rsyncd.conf ] && sudo mv /etc/rsyncd.conf /etc/rsyncd.conf.bak
     sudo mv $FILES/rsyncd.conf /etc/rsyncd.conf
-    sed -i 's/RSYNC_ENABLE=false/RSYNC_ENABLE=true/' /etc/default/rsync
+    sudo sed -i 's/RSYNC_ENABLE=false/RSYNC_ENABLE=true/' /etc/default/rsync
     sudo service rsync restart
 
     # Shut down swift, in case it's running
