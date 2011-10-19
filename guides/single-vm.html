@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Single Machine Guide - DevStack</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+    <link href="../assets/css/bootstrap.css" rel="stylesheet">
+    <link href="../assets/css/local.css" rel="stylesheet">
+    <style type="text/css">
+      body { padding-top: 60px; }
+      dd { padding: 10px; }
+    </style>
+  </head>
+
+  <body>
+
+    <div class="topbar">
+      <div class="fill">
+        <div class="container">
+          <a class="brand" href="#">DevStack</a>
+          <ul class="nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <section id="overview">
+        <h1>Running a Cloud in a VM</h1>
+        <p>Use the cloud to build the cloud! Use your cloud to launch new versions of openstack in about 5 minutes.  When you break it, start over!</p>
+      </section>
+
+      <section id="requirements">
+        <div class="page-header">
+          <h2>Prerequisites <small>Cloud & Image</small></h2>
+        </div>
+        
+        <h3>OpenStack Deployment &amp; CloudInit</h3>
+        <p>We are going launch VMs with userdata that automatically installs everything needed.  The first step is to make sure you have a Natty UEC image.</p>
+        <pre>wget http://uec-images.ubuntu.com/natty/current/natty-server-cloudimg-amd64.tar.gz
+
+tar -zxvf natty-server-cloudimg-amd64.tar.gz
+glance add  -A $TOKEN name="uec-natty-kernel" is_public=true container_format=aki \
+    disk_format=aki < natty-server-cloudimg-amd64-vmlinuz-virtual
+
+# use the returned id as the kernel for the image
+glance add -A $TOKEN name="uec-natty" is_public=true container_format=ami kernel_id=$KERNEL \
+    disk_format=ami < natty-server-cloudimg-amd64.img</pre>
+
+      <section id="requirements">
+        <div class="page-header">
+          <h2>Installation <small>shake and bake</small></h2>
+        </div>
+
+        <h3>Launching with using Userdata</h3>
+        <p>We'll grab the latest version of devstack via git</p>
+        <pre>#!/bin/sh
+apt-get update
+apt-get install -qqy git
+git clone https://github.com/cloudbuilders/devstack.git
+cd devstack
+echo ADMIN_PASSWORD=password &gt; localrc
+echo MYSQL_PASSWORD=password &gt;&gt; localrc
+echo RABBIT_PASSWORD=password &gt;&gt; localrc
+echo SERVICE_TOKEN=tokentoken &gt;&gt; localrc
+echo FLAT_INTERFACE=br100 &gt;&gt; localrc
+./stack.sh</pre>
+
+        <h3>Using OpenStack</h3>
+
+        <p>At this point you should be able to access the dashboard from other computers on your home network...  Launch VMs and if you give them floating IPs access those VMs from other machines on your network.</p>
+
+      <footer>
+        <p>&copy; Openstack LLC 2011 &mdash; this is not an official OpenStack project...</p>
+      </footer>
+
+    </div> <!-- /container -->
+
+  </body>
+</html>
