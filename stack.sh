@@ -775,7 +775,7 @@ BASHRC
     sed -i "s/IPADDRESS/$HOST_IP/" /etc/swift/proxy-server.conf
     sed -i "s/KEYSTONE_HOST/$HOST_IP/" /etc/swift/proxy-server.conf
 
-    cp $FILES/swift-config/swift.conf /etc/swift/swift.conf
+    cp $FILES/swift-configs/swift.conf /etc/swift/swift.conf
 
     SWIFTFILES="account-server container-server object-server"
     for x in {1..4}
