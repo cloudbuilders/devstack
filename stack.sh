@@ -747,22 +747,6 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     [ ! -d /var/run/swift ] && sudo mkdir -p /var/run/swift
     sudo chown $USER:$USER /var/run/swift
 
-    # stupid rc.local has exits in them
-    # this will probably muck up a nonstandard/complex rc.local
-    if [ -z "`grep '/var/run/swift' /etc/rc.local`" ]; then
-       sudo grep -v 'exit' /etc/rc.local > /etc/rc.local.new
-       sudo cat << RCLOCAL >> /etc/rc.local.new
-mkdir /var/run/swift
-chown $USERNAME:$GROUPNAME /var/run/swift
-
-exit 0
-RCLOCAL
-
-       sudo mv /etc/rc.local /etc/rc.local.old
-       sudo mv /etc/rc.local.new /etc/rc.local
-       sudo chmod +x /etc/rc.local
-    fi
-
     [ -e /etc/rsyncd.conf ] && sudo mv /etc/rsyncd.conf /etc/rsyncd.conf.bak
     sudo mv $FILES/rsyncd.conf /etc/rsyncd.conf
     sed -i 's/RSYNC_ENABLE=false/RSYNC_ENABLE=true/' /etc/default/rsync
