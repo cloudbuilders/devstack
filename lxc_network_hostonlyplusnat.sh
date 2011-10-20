@@ -48,19 +48,6 @@ if [ ! -x "$BRCTL" ]; then
   exit 1
 fi
 
-# Scare off the nubs.
-echo "====================================================="
-echo
-echo "WARNING"
-echo
-echo "This script will modify your current network setup,"
-echo "this can be a scary thing and it is recommended that"
-echo "you have something equivalent to physical access to"
-echo "this machine before continuing in case your network"
-echo "gets all funky."
-echo
-echo "If you don't want to continue, hit CTRL-C now."
-
 if [ -z "$host_ip" ];
 then
   echo "Otherwise, please type in your host's ip address and"
@@ -68,11 +55,6 @@ then
   echo
   echo "====================================================="
   read host_ip
-else
-  echo "Otherwise hit enter."
-  echo
-  echo "====================================================="
-  read accept
 fi
 
 
