@@ -70,9 +70,10 @@ if [[ $EUID -eq 0 ]]; then
     echo "Running the script as stack in 3 seconds..."
     sleep 3
     if [[ "$SHELL_AFTER_RUN" != "no" ]]; then
-	exec su -c "cd /home/stack/$THIS_DIR/; bash stack.sh; bash" stack
+	#exec su -c "cd /home/stack/$THIS_DIR/; bash stack.sh; bash" stack
+	$(su -c "cd /home/stack/$THIS_DIR/; bash stack.sh" stack)
     else
-	exec su -c "cd /home/stack/$THIS_DIR/; bash stack.sh" stack
+	$(su -c "cd /home/stack/$THIS_DIR/; bash stack.sh" stack)
     fi
     exit 0
 fi
