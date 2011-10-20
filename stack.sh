@@ -130,7 +130,7 @@ OPENSTACKX_DIR=$DEST/openstackx
 NOVNC_DIR=$DEST/noVNC
 
 # Specify which services to launch.  These generally correspond to screen tabs
-ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,dash,mysql,rabbit}
+ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-vol,n-api,n-cpu,n-net,n-sch,n-vnc,dash,mysql,rabbit}
 
 # Nova hypervisor configuration.  We default to **kvm** but will drop back to
 # **qemu** if we are unable to load the kvm module.  Stack.sh can also install
@@ -559,6 +559,7 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
     screen_it g-reg "cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf"
 fi
 
+
 # launch the glance api and wait for it to answer before continuing
 if [[ "$ENABLED_SERVICES" =~ "g-api" ]]; then
     screen_it g-api "cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf"
@@ -585,6 +586,12 @@ if [[ "$ENABLED_SERVICES" =~ "n-api" ]]; then
         sleep 1
     done
 fi
+
+# launch volume service
+if [[ "$ENABLED_SERVICES" =~ "n-vol" ]]; then
+    screen_it n-vol "cd $NOVA_DIR; bin/nova-volume"
+fi
+
 # Launching nova-compute should be as simple as running ``nova-compute`` but
 # have to do a little more than that in our script.  Since we add the group
 # ``libvirtd`` to our user in this script, when nova-compute is run it is
