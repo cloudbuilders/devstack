@@ -522,6 +522,7 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
     KEYSTONE_DATA=$KEYSTONE_DIR/bin/keystone_data.sh
     cp $FILES/keystone_data.sh $KEYSTONE_DATA
     sudo sed -e "s,%HOST_IP%,$HOST_IP,g" -i $KEYSTONE_DATA
+    sudo sed -e "s,%HOST_PUBLIC_IP%,$HOST_PUBLIC_IP,g" -i $KEYSTONE_DATA
     sudo sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $KEYSTONE_DATA
     sudo sed -e "s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g" -i $KEYSTONE_DATA
     # initialize keystone with default users/endpoints
