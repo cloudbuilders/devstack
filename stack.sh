@@ -351,7 +351,12 @@ cp $FILES/screenrc ~/.screenrc
 
 if [[ "$ENABLED_SERVICES" =~ "rabbit" ]]; then
     # Install and start rabbitmq-server
-    sudo apt-get install -y -q rabbitmq-server
+    # Rabbit installer doesn't detach from parent properly, so use tempfile
+    # https://bugs.launchpad.net/ubuntu/+source/rabbitmq-server/+bug/878600
+    tfile=$(mktemp)
+    sudo apt-get install -y -q rabbitmq-server > "$tfile" 2>&1
+    cat "$tfile"
+    rm -f "$tfile"
     # change the rabbit password since the default is "guest"
     sudo rabbitmqctl change_password guest $RABBIT_PASSWORD
 fi
