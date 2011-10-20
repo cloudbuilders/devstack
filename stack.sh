@@ -542,17 +542,16 @@ fi
 function screen_it {
     NL=`echo -ne '\015'`
     if [[ "$ENABLED_SERVICES" =~ "$1" ]]; then
-        screen -S nova -X screen -t $1
-        screen -S nova -p $1 -X stuff "$2$NL"
+        sudo screen -S nova -X screen -t $1
+        sudo screen -S nova -p $1 -X stuff "$2$NL"
     fi
 }
 
 # Fix issue with permissions on /dev/pts/0 for normal user
 # Otherwise, screen call fails.
-sudo chmod o=r+w /dev/pts/0
 
 # create a new named screen to run processes in
-screen -d -m -S nova -t nova
+sudo screen -d -m -S nova -t nova
 sleep 1
 
 # launch the glance registery service
