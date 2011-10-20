@@ -626,7 +626,7 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
     # we upload to glance with the glance cli tool.  TTY is a stripped down 
     # version of ubuntu.
     if [ ! -f $FILES/tty.tgz ]; then
-        wget -c http://images.ansolabs.com/tty.tgz -O $FILES/tty.tgz
+        wget -q -c http://images.ansolabs.com/tty.tgz -O $FILES/tty.tgz 
     fi
 
     # extract ami-tty/image, aki-tty/image & ari-tty/image
@@ -647,7 +647,7 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
     # Downloaded from ubuntu enterprise cloud images.  This
     # image doesn't use the ramdisk functionality
     if [ ! -f $FILES/natty.tgz ]; then
-        wget -c http://uec-images.ubuntu.com/natty/current/natty-server-cloudimg-amd64.tar.gz -O $FILES/natty.tgz
+        wget -q -c http://uec-images.ubuntu.com/natty/current/natty-server-cloudimg-amd64.tar.gz -O $FILES/natty.tgz
     fi
     
     tar -zxf $FILES/natty.tgz -C $FILES/images
