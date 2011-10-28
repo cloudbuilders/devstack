@@ -156,7 +156,7 @@ QUANTUM_DIR=$DEST/quantum
 Q_PLUGIN=${Q_PLUGIN:-openvswitch}
 
 # Specify which services to launch.  These generally correspond to screen tabs
-ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,mysql,rabbit,q-svc,q-agt}
+ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,horizon,mysql,rabbit}
 
 # Nova hypervisor configuration.  We default to libvirt whth  **kvm** but will
 # drop back to **qemu** if we are unable to load the kvm module.  Stack.sh can
@@ -252,6 +252,10 @@ FLAT_INTERFACE=${FLAT_INTERFACE:-eth0}
 #
 # Make sure that q-svc is enabled in ENABLED_SERVICES.  If it is the network
 # manager will be set to the QuantumManager.
+#
+# If you're planning to use the Quantum openvswitch plugin, set Q_PLUGIN to
+# "openvswitch" and make sure the q-agt service is enabled in
+# ENABLED_SERVICES.
 #
 # With Quantum networking the NET_MAN variable is ignored.
 
