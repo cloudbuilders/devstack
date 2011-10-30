@@ -387,10 +387,14 @@ if [ "$WAIT_TILL_LAUNCH" = "1" ]; then
     # Let Ctrl-c kill tail and exit
     trap kill_tail SIGINT
 
+    set +o xtrace
+
     echo "Waiting stack.sh to finish..."
     while ! cat $VM_DIR/console.log | grep -q 'All done' ; do
         sleep 5
     done
+
+    set -o xtrace
 
     kill $TAIL_PID
 
