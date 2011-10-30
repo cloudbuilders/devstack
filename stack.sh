@@ -280,22 +280,11 @@ read_password SERVICE_TOKEN "ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN 
 # Horizon currently truncates usernames and passwords at 20 characters
 read_password ADMIN_PASSWORD "ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS)."
 
-LOGFILE=${LOGFILE:-"$PWD/stack.sh.$$.log"}
-LOGGER=${LOGGER:-tee -a "$LOGFILE"}
-(
-# So that errors don't compound we exit on any errors so you see only the
-# first error that occured.
-trap failed ERR
-failed() {
-    local r=$?
-    set +o xtrace
-    [ -n "$LOGFILE" ] && echo "${0##*/} failed: full log in $LOGFILE"
-    exit $r
-}
-
 # Print the commands being run so that we can see the command that triggers
 # an error.  It is also useful for following along as the install occurs.
 set -o xtrace
+
+set -o errexit
 
 # create the destination directory and ensure it is writable by the user
 sudo mkdir -p $DEST
@@ -833,13 +822,6 @@ fi
 # Fin
 # ===
 
-
-) 2>&1 | $LOGGER
-
-# Check that the left side of the above pipe succeeded
-for ret in "${PIPESTATUS[@]}"; do [ $ret -eq 0 ] || exit $ret; done
-
-(
 # Using the cloud
 # ===============
 
@@ -860,4 +842,3 @@ fi
 # indicate how long this took to run (bash maintained variable 'SECONDS')
 echo "stack.sh completed in $SECONDS seconds."
 
-) | $LOGGER
