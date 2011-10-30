@@ -281,6 +281,7 @@ read_password SERVICE_TOKEN "ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN 
 read_password ADMIN_PASSWORD "ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS)."
 
 LOGFILE=${LOGFILE:-"$PWD/stack.sh.$$.log"}
+LOGGER=${LOGGER:-tee -a "$LOGFILE"}
 (
 # So that errors don't compound we exit on any errors so you see only the
 # first error that occured.
@@ -833,7 +834,7 @@ fi
 # ===
 
 
-) 2>&1 | tee "${LOGFILE}"
+) 2>&1 | $LOGGER
 
 # Check that the left side of the above pipe succeeded
 for ret in "${PIPESTATUS[@]}"; do [ $ret -eq 0 ] || exit $ret; done
@@ -859,4 +860,4 @@ fi
 # indicate how long this took to run (bash maintained variable 'SECONDS')
 echo "stack.sh completed in $SECONDS seconds."
 
-) | tee -a "$LOGFILE"
+) | $LOGGER
