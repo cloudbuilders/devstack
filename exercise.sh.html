@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.8: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -336,124 +336,307 @@ ul.auto-toc {
 
 
 <p><strong>exercise.sh</strong> - using the cloud can be fun</p>
-</td><td class=code><div class=highlight><pre>
-<span class="c">#!/usr/bin/env bash</span>
-
-
 </pre></div></td></tr><tr><td class=docs>
 <p>we will use the <tt class="docutils literal">nova</tt> cli tool provided by the <tt class="docutils literal"><span class="pre">python-novaclient</span></tt>
 package</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This script exits on an error so that errors don't compound and you see
 only the first error that occured.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o errexit
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Print the commands being run so that we can see the command that triggers
 an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="settings">
+<h1>Settings</h1>
+</td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o xtrace
 
 
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="settings">
-<h2>Settings</h2>
+<p>Use openrc + stackrc + localrc for settings</p>
 </td><td class=code><div class=highlight><pre>
-
-<span class="nv">HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Nova original used project_id as the <em>account</em> that owned resources (servers,
-ip address, ...)   With the addition of Keystone we have standardized on the
-term <strong>tenant</strong> as the entity that owns the resources.  <strong>novaclient</strong> still
-uses the old deprecated terms project_id.</p>
+</div>
+<div class="section" id="get-a-token-for-clients-that-don-t-support-service-catalog">
+<h1>Get a token for clients that don't support service catalog</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">export </span><span class="nv">NOVA_PROJECT_ID</span><span class="o">=</span><span class="k">${</span><span class="nv">TENANT</span><span class="k">:-</span><span class="nv">demo</span><span class="k">}</span>
+<span class="nb">source</span> ./openrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>In addition to the owning entity (tenant), nova stores the entity performing
-the action as the <strong>user</strong>.</p>
+<p>manually create a token by querying keystone (sending JSON data).  Keystone
+returns a token and catalog of endpoints.  We use python to parse the token
+and save it.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">export </span><span class="nv">NOVA_USERNAME</span><span class="o">=</span><span class="k">${</span><span class="nv">USERNAME</span><span class="k">:-</span><span class="nv">demo</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>With Keystone you pass the keystone password instead of an api key.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">export </span><span class="nv">NOVA_API_KEY</span><span class="o">=</span><span class="k">${</span><span class="nv">PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>With the addition of Keystone, to use an openstack cloud you should
-authenticate against keystone, which returns a <strong>Token</strong> and <strong>Service
-Catalog</strong>.  The catalog contains the endpoint for all services the user/tenant
-has access to - including nova, glance, keystone, swift, ...  We currently
-recommend using the 2.0 <em>auth api</em>.</p>
-<p><em>NOTE</em>: Using the 2.0 <em>auth api</em> does mean that compute api is 2.0.  We will
-use the 1.1 <em>compute api</em></p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">export </span><span class="nv">NOVA_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_URL</span><span class="k">:-</span><span class="nv">http</span><span class="p">://</span><span class="nv">$HOST</span><span class="p">:</span><span class="nv">5000</span><span class="p">/v2.0/</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Currently novaclient needs you to specify the <em>compute api</em> version.  This
-needs to match the config of your catalog returned by Keystone.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">export </span><span class="nv">NOVA_VERSION</span><span class="o">=</span>1.1
-
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="launching-a-server">
-<h2>Launching a server</h2>
+<h1>Launching a server</h1>
 </td><td class=code><div class=highlight><pre>
+
+<span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>curl -s -d  <span class="s2">&quot;{\&quot;auth\&quot;:{\&quot;passwordCredentials\&quot;: {\&quot;username\&quot;: \&quot;$NOVA_USERNAME\&quot;, \&quot;password\&quot;: \&quot;$NOVA_API_KEY\&quot;}}}&quot;</span> -H <span class="s2">&quot;Content-type: application/json&quot;</span> http://<span class="nv">$HOST_IP</span>:5000/v2.0/tokens | python -c <span class="s2">&quot;import sys; import json; tok = json.loads(sys.stdin.read()); print tok[&#39;access&#39;][&#39;token&#39;][&#39;id&#39;];&quot;</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>List servers for tenant:</p>
 </td><td class=code><div class=highlight><pre>
-nova list
-
-</pre></div></td></tr><tr><td class=docs>
-<p>List of flavors:</p>
-</td><td class=code><div class=highlight><pre>
-nova flavor-list
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="images">
-<h3>Images</h3>
+<h2>Images</h2>
 </td><td class=code><div class=highlight><pre>
+nova list
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova has a <strong>deprecated</strong> way of listing images.</p>
 </td><td class=code><div class=highlight><pre>
-nova image-list
 
 </pre></div></td></tr><tr><td class=docs>
 <p>But we recommend using glance directly</p>
 </td><td class=code><div class=highlight><pre>
-glance index
+nova image-list
 
 </pre></div></td></tr><tr><td class=docs>
-<p>show details of the active servers:</p>
-<pre class="literal-block">
-nova show 1234
-</pre>
+<p>Let's grab the id of the first AMI image to launch</p>
 </td><td class=code><div class=highlight><pre>
-nova list | grep ACTIVE | cut -d <span class="se">\|</span> -f2 | xargs -n1 nova show
-
-
-</td><td class=code><div class=highlight><pre>
-</pre></div></td></tr><tr><td class=docs>
-</pre></div></td></tr><tr><td class=docs>
-</td><td class=code><div class=highlight><pre>
+glance -A <span class="nv">$TOKEN</span> index
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
+<div class="section" id="security-groups">
+<h2>Security Groups</h2>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>glance -A <span class="nv">$TOKEN</span> index | egrep ami | cut -d<span class="s2">&quot; &quot;</span> -f1<span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>List of secgroups:</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SECGROUP</span><span class="o">=</span>test_secgroup
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create a secgroup</p>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-list
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="determine-flavor">
+<h2>determine flavor</h2>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-create <span class="nv">$SECGROUP</span> <span class="s2">&quot;test_secgroup description&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>List of flavors:</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>and grab the first flavor in the list to launch</p>
+</td><td class=code><div class=highlight><pre>
+nova flavor-list
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
+<div class="section" id="testing">
+<h1>Testing</h1>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">FLAVOR</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | head -n 4 | tail -n 1 | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
+
+<span class="nv">NAME</span><span class="o">=</span><span class="s2">&quot;myserver&quot;</span>
+
+nova boot --flavor <span class="nv">$FLAVOR</span> --image <span class="nv">$IMAGE</span> <span class="nv">$NAME</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>First check if it spins up (becomes active and responds to ping on
+internal ip).  If you run this script from a nova node, you should
+bypass security groups and have direct access to the server.</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="waiting-for-boot">
+<h2>Waiting for boot</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Max time to wait while vm goes from build to active state</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Max time till the vm is bootable</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ACTIVE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">ACTIVE_TIMEOUT</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Max time to wait for proper association and dis-association.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">BOOT_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">BOOT_TIMEOUT</span><span class="k">:-</span><span class="nv">15</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>check that the status is active within ACTIVE_TIMEOUT seconds</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ASSOCIATE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">ASSOCIATE_TIMEOUT</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>get the IP of the server</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $NAME | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become active!&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>for single node deployments, we can ping private ips</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$NAME</span> | grep <span class="s2">&quot;private network&quot;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3<span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>sometimes the first ping fails (10 seconds isn't enough time for the VM's
+network to respond?), so let's ping for a default of 15 seconds with a
+timeout of a second for each ping.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MULTI_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MULTI_HOST</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$MULTI_HOST&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>On a multi-host system, without vm net access, do a sleep to wait for the boot</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> ! timeout <span class="nv">$BOOT_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="security-groups-floating-ips">
+<h2>Security Groups &amp; Floating IPs</h2>
+</td><td class=code><div class=highlight><pre>
+    sleep <span class="nv">$BOOT_TIMEOUT</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>allow icmp traffic (ping)</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>List rules for a secgroup</p>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-add-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
+
+</pre></div></td></tr><tr><td class=docs>
+<p>allocate a floating ip</p>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-list-rules <span class="nv">$SECGROUP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>store  floating address</p>
+</td><td class=code><div class=highlight><pre>
+nova floating-ip-create
+
+</pre></div></td></tr><tr><td class=docs>
+<p>add floating ip to our server</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-list | grep None | head -1 | cut -d <span class="s1">&#39;|&#39;</span> -f2 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
+</td><td class=code><div class=highlight><pre>
+nova add-floating-ip <span class="nv">$NAME</span> <span class="nv">$FLOATING_IP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>pause the VM and verify we can't ping it anymore</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server with floating ip&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>unpause the VM and verify we can ping it again</p>
+</td><td class=code><div class=highlight><pre>
+nova pause <span class="nv">$NAME</span>
+
+sleep 2
+
+<span class="k">if</span> <span class="o">(</span> ping -c1 -w1 <span class="nv">$IP</span><span class="o">)</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Pause failure - ping shouldn&#39;t work&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">(</span> ping -c1 -w1 <span class="nv">$FLOATING_IP</span><span class="o">)</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Pause failure - ping floating ips shouldn&#39;t work&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>dis-allow icmp traffic (ping)</p>
+</td><td class=code><div class=highlight><pre>
+nova unpause <span class="nv">$NAME</span>
+
+sleep 2
+
+ping -c1 -w1 <span class="nv">$IP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>test we can aren't able to ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
+
+</pre></div></td></tr><tr><td class=docs>
+<p>de-allocate the floating ip</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>print <span class="s2">&quot;Security group failure - ping should not be allowed!&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server with floating ip&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>shutdown the server</p>
+</td><td class=code><div class=highlight><pre>
+nova floating-ip-delete <span class="nv">$FLOATING_IP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete a secgroup</p>
+</td><td class=code><div class=highlight><pre>
+nova delete <span class="nv">$NAME</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>FIXME: validate shutdown within 5 seconds
+(nova show $NAME returns 1 or status != ACTIVE)?</p>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-delete <span class="nv">$SECGROUP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
+<div class="section" id="testing-euca2ools">
+<h1>Testing Euca2ools</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>make sure that we can describe instances</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+euca-describe-instances
+
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
 </body>
-</html></td><td class='code'></td></tr>
+</html>
+</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
     </tbody>
     </table>
 </div>
