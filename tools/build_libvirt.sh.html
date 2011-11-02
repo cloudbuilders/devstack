@@ -344,7 +344,7 @@ ul.auto-toc {
 <span class="nb">set</span> -o errexit
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Echo commands</p>
+<p>Clean up any resources that may be in use</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">UBUNTU_VERSION</span><span class="o">=</span><span class="sb">`</span>cat /etc/lsb-release | grep CODENAME | sed <span class="s1">&#39;s/.*=//g&#39;</span><span class="sb">`</span>
 <span class="k">if</span> <span class="o">[</span> ! <span class="s2">&quot;oneiric&quot;</span> <span class="o">=</span> <span class="s2">&quot;$UBUNTU_VERSION&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -353,6 +353,33 @@ ul.auto-toc {
         <span class="nb">exit </span>1
     <span class="k">fi</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Release NBD devices</p>
+</td><td class=code><div class=highlight><pre>
+cleanup<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">set</span> +o errexit
+    unmount_images
+
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$ROOTFS&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>umount <span class="nv">$ROOTFS</span>/dev
+        umount <span class="nv">$ROOTFS</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Kill ourselves to signal any calling process</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$NBD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>qemu-nbd -d <span class="nv">$NBD</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Echo commands</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
+<span class="o">}</span>
+
+<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the current directory</p>
@@ -484,14 +511,9 @@ unmount_images
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Let Ctrl-c kill tail and exit</p>
-</td><td class=code><div class=highlight><pre>
-dpkg -l kvm libvirt-bin kpartx <span class="o">||</span> apt-get install -y --force-yes kvm libvirt-bin kpartx
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Where Openstack code will live in image</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">trap </span>kill_unmount SIGINT
+dpkg -l kvm libvirt-bin kpartx <span class="o">||</span> apt-get install -y --force-yes kvm libvirt-bin kpartx
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Mount the file system
@@ -657,9 +679,37 @@ umount <span class="nv">$ROOTFS</span> <span class="o">||</span> <span class="nb
 rm -f <span class="nv">$VM_DIR</span>/disk
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Make sure we have nbd-ness</p>
+<p>Finds the next available NBD device
+Exits script if error connecting or none free
+map_nbd image
+returns full nbd device path</p>
 </td><td class=code><div class=highlight><pre>
 qemu-img create -f qcow2 -b <span class="nv">$VM_IMAGE</span> disk
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Connect to nbd and wait till it is ready</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>map_nbd <span class="o">{</span>
+    <span class="k">for </span>i in <span class="sb">`</span>seq 0 15<span class="sb">`</span>; <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[</span> ! -e /sys/block/nbd<span class="nv">$i</span>/pid <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">NBD</span><span class="o">=</span>/dev/nbd<span class="nv">$i</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure we have nbd-ness</p>
+</td><td class=code><div class=highlight><pre>
+            qemu-nbd -c <span class="nv">$NBD</span> <span class="nv">$1</span>
+            <span class="k">if</span> ! timeout 60 sh -c <span class="s2">&quot;while ! [ -e ${NBD}p1 ]; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t connect $NBD&quot;</span>
+                <span class="nb">exit </span>1
+            <span class="k">fi</span>
+<span class="k">            </span><span class="nb">break</span>
+<span class="nb">        </span><span class="k">fi</span>
+<span class="k">    done</span>
+<span class="k">    if</span> <span class="o">[</span> -z <span class="s2">&quot;$NBD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;No free NBD slots&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="nv">$NBD</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up nbd</p>
@@ -667,26 +717,9 @@ qemu-img create -f qcow2 -b <span class="nv">$VM_IMAGE</span> disk
 modprobe nbd <span class="nv">max_part</span><span class="o">=</span>63
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Connect to nbd and wait till it is ready</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">for </span>i in <span class="sb">`</span>seq 0 15<span class="sb">`</span>; <span class="k">do</span>
-<span class="k">    if</span> <span class="o">[</span> ! -e /sys/block/nbd<span class="nv">$i</span>/pid <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">NBD</span><span class="o">=</span>/dev/nbd<span class="nv">$i</span>
-</pre></div></td></tr><tr><td class=docs>
 <p>Mount the instance</p>
 </td><td class=code><div class=highlight><pre>
-        qemu-nbd -c <span class="nv">$NBD</span> disk
-        <span class="k">if</span> ! timeout 60 sh -c <span class="s2">&quot;while ! [ -e ${NBD}p1 ]; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t connect $NBD&quot;</span>
-            <span class="nb">exit </span>1
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nb">break</span>
-<span class="nb">    </span><span class="k">fi</span>
-<span class="k">done</span>
-<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$NBD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;No free NBD slots&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
+<span class="nv">NBD</span><span class="o">=</span><span class="sb">`</span>map_nbd disk<span class="sb">`</span>
 <span class="nv">NBD_DEV</span><span class="o">=</span><span class="sb">`</span>basename <span class="nv">$NBD</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -841,7 +874,9 @@ sed -e <span class="s1">&#39;s/^PasswordAuthentication.*$/PasswordAuthentication
 <p>Change boot params so that we get a console log</p>
 </td><td class=code><div class=highlight><pre>
 umount <span class="nv">$ROOTFS</span> <span class="o">||</span> <span class="nb">echo</span> <span class="s1">&#39;ok&#39;</span>
+<span class="nv">ROOTFS</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 qemu-nbd -d <span class="nv">$NBD</span>
+<span class="nv">NBD</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Pre-generate ssh host keys and allow password login</p>

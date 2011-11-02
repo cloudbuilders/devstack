@@ -340,7 +340,7 @@ ul.auto-toc {
 <p>Assumes syslinux is installed
 Only needs to run as root if the destdir permissions require it</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>Setup devstack boot</p>
+<p>Clean up any resources that may be in use</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash -e</span>
 
@@ -348,6 +348,28 @@ Only needs to run as root if the destdir permissions require it</p>
 <span class="nv">PXEDIR</span><span class="o">=</span><span class="k">${</span><span class="nv">PXEDIR</span><span class="k">:-</span><span class="p">/var/cache/devstack/pxe</span><span class="k">}</span>
 <span class="nv">OPWD</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
 <span class="nv">PROGDIR</span><span class="o">=</span><span class="sb">`</span>dirname <span class="nv">$0</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Mop up temporary files</p>
+</td><td class=code><div class=highlight><pre>
+cleanup<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">set</span> +o errexit
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Kill ourselves to signal any calling process</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$MNTDIR&quot;</span> -a -d <span class="s2">&quot;$MNTDIR&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>umount <span class="nv">$MNTDIR</span>
+        rmdir <span class="nv">$MNTDIR</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setup devstack boot</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
+<span class="o">}</span>
+
+<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM
 
 mkdir -p <span class="nv">$DEST_DIR</span>/pxelinux.cfg
 <span class="nb">cd</span> <span class="nv">$DEST_DIR</span>
