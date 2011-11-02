@@ -588,6 +588,7 @@ unmount_images
 <p>libvirt.xml configuration</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">GUEST_NETWORK</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_NETWORK</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+<span class="nv">GUEST_RECREATE_NET</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_RECREATE_NET</span><span class="k">:-</span><span class="nv">yes</span><span class="k">}</span>
 
 <span class="nv">GUEST_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_IP</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.</span><span class="nv">$GUEST_NETWORK</span><span class="p">.50</span><span class="k">}</span>
 <span class="nv">GUEST_CIDR</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_CIDR</span><span class="k">:-</span><span class="nv">$GUEST_IP</span><span class="p">/24</span><span class="k">}</span>
@@ -610,8 +611,10 @@ cat &gt; <span class="nv">$NET_XML</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">&lt;/network&gt;</span>
 <span class="s">EOF</span>
 
-virsh net-destroy devstack-<span class="nv">$GUEST_NETWORK</span> <span class="o">||</span> <span class="nb">true</span>
-virsh net-create <span class="nv">$VM_DIR</span>/net.xml
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$GUEST_RECREATE_NET&quot;</span> <span class="o">==</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>virsh net-destroy devstack-<span class="nv">$GUEST_NETWORK</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>virsh net-create <span class="nv">$VM_DIR</span>/net.xml
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Mount point for instance fs</p>
