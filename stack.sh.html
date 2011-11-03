@@ -515,7 +515,7 @@ Natty uec images sudoers does not have a '#includedir'. add one.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Specify which services to launch.  These generally correspond to screen tabs</p>
+<p>Default Quantum Plugin</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
 <span class="nv">HORIZON_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/horizon
@@ -524,6 +524,12 @@ Natty uec images sudoers does not have a '#includedir'. add one.</p>
 <span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
 <span class="nv">OPENSTACKX_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstackx
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
+<span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Specify which services to launch.  These generally correspond to screen tabs</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_PLUGIN</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_PLUGIN</span><span class="k">:-</span><span class="nv">openvswitch</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova hypervisor configuration.  We default to libvirt whth  <strong>kvm</strong> but will
@@ -634,13 +640,23 @@ occuring.</p>
 <span class="nv">MULTI_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MULTI_HOST</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="mysql-rabbitmq">
-<h3>MySQL &amp; RabbitMQ</h3>
+<p>Using Quantum networking:</p>
+<p>Make sure that q-svc is enabled in ENABLED_SERVICES.  If it is the network
+manager will be set to the QuantumManager.</p>
+<p>If you're planning to use the Quantum openvswitch plugin, set Q_PLUGIN to
+&quot;openvswitch&quot; and make sure the q-agt service is enabled in
+ENABLED_SERVICES.</p>
+<p>With Quantum networking the NET_MAN variable is ignored.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
 
 <span class="c">## FIXME(ja): should/can we check that FLAT_INTERFACE is sane?</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="mysql-rabbitmq">
+<h3>MySQL &amp; RabbitMQ</h3>
+</td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -816,11 +832,15 @@ that is <em>deprecated</em>.  The code is being moved into python-novaclient &am
 </td><td class=code><div class=highlight><pre>
 git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_DIR</span> <span class="nv">$NOVACLIENT_BRANCH</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>quantum</p>
+</td><td class=code><div class=highlight><pre>
+git_clone <span class="nv">$OPENSTACKX_REPO</span> <span class="nv">$OPENSTACKX_DIR</span> <span class="nv">$OPENSTACKX_BRANCH</span>
+</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="initialization">
 <h2>Initialization</h2>
 </td><td class=code><div class=highlight><pre>
-git_clone <span class="nv">$OPENSTACKX_REPO</span> <span class="nv">$OPENSTACKX_DIR</span> <span class="nv">$OPENSTACKX_BRANCH</span>
+git_clone <span class="nv">$QUANTUM_REPO</span> <span class="nv">$QUANTUM_DIR</span> <span class="nv">$QUANTUM_BRANCH</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>setup our checkouts so they are installed into python path
@@ -839,6 +859,7 @@ it since we are going to run the services in screen for simple</p>
 <span class="nb">cd</span> <span class="nv">$OPENSTACKX_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/django-openstack; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/openstack-dashboard; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$QUANTUM_DIR</span>; sudo python setup.py develop
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="rabbit">
@@ -1162,8 +1183,16 @@ add_nova_flag <span class="s2">&quot;--nodaemon&quot;</span>
 add_nova_flag <span class="s2">&quot;--allow_admin_api&quot;</span>
 add_nova_flag <span class="s2">&quot;--scheduler_driver=$SCHEDULER&quot;</span>
 add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
-add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
 add_nova_flag <span class="s2">&quot;--fixed_range=$FIXED_RANGE&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>add_nova_flag <span class="s2">&quot;--network_manager=nova.network.quantum.manager.QuantumManager&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>add_nova_flag <span class="s2">&quot;--libvirt_vif_type=ethernet&quot;</span>
+        add_nova_flag <span class="s2">&quot;--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
+    <span class="k">fi</span>
+<span class="k">else</span>
+<span class="k">    </span>add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
+<span class="k">fi</span>
 add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
 add_nova_flag <span class="s2">&quot;--public_interface=$PUBLIC_INTERFACE&quot;</span>
 add_nova_flag <span class="s2">&quot;--vlan_interface=$VLAN_INTERFACE&quot;</span>
@@ -1228,22 +1257,12 @@ only once for an entire cluster.</p>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>create a small network</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
-
-</pre></div></td></tr><tr><td class=docs>
-<p>create some floating ips</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span>
-
-</pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
 <div class="section" id="id1">
 <h3>Keystone</h3>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
 <span class="k">fi</span>
 
 
@@ -1343,11 +1362,7 @@ sleep 1
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Launching nova-compute should be as simple as running <tt class="docutils literal"><span class="pre">nova-compute</span></tt> but
-have to do a little more than that in our script.  Since we add the group
-<tt class="docutils literal">libvirtd</tt> to our user in this script, when nova-compute is run it is
-within the context of our original shell (so our groups won't be updated).
-Use 'sg' to execute nova-compute as a member of the libvirtd group.</p>
+<p>Quantum</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-api&quot;</span>
@@ -1357,6 +1372,75 @@ Use 'sg' to execute nova-compute as a member of the libvirtd group.</p>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create database for the plugin/agent</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure we're using the openvswitch plugin</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS ovs_quantum;&#39;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
+            <span class="nb">exit </span>1
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+<span class="k">    </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/quantum/plugins.ini
+</pre></div></td></tr><tr><td class=docs>
+<p>Quantum agent (for compute nodes)</p>
+</td><td class=code><div class=highlight><pre>
+    sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
+    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; export PYTHONPATH=.:$PYTHONPATH; python $QUANTUM_DIR/bin/quantum $QUANTUM_DIR/etc/quantum.conf&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up integration bridge</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-agt&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Start up the quantum &lt;-&gt; openvswitch agent</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
+        sudo ovs-vsctl --no-wait -- --if-exists del-br <span class="nv">$OVS_BRIDGE</span>
+        sudo ovs-vsctl --no-wait add-br <span class="nv">$OVS_BRIDGE</span>
+        sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
+happen after we've started the Quantum service.</p>
+</td><td class=code><div class=highlight><pre>
+    screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_DIR/quantum/plugins/openvswitch/ovs_quantum_plugin.ini -v&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create a small network</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>create some floating ips</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Not creating floating IPs (not supported by QuantumManager)&quot;</span>
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Launching nova-compute should be as simple as running <tt class="docutils literal"><span class="pre">nova-compute</span></tt> but
+have to do a little more than that in our script.  Since we add the group
+<tt class="docutils literal">libvirtd</tt> to our user in this script, when nova-compute is run it is
+within the context of our original shell (so our groups won't be updated).
+Use 'sg' to execute nova-compute as a member of the libvirtd group.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="install-images">
