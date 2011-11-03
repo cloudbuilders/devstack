@@ -423,7 +423,7 @@ contains locations for what repositories to use.  If you want to use other
 repositories and branches, you can add your own settings with another file
 called <tt class="docutils literal">localrc</tt></p>
 <p>If <tt class="docutils literal">localrc</tt> exists, then <tt class="docutils literal">stackrc</tt> will load those settings.  This is
-useful for changing a branch or repostiory to test other versions.  Also you
+useful for changing a branch or repository to test other versions.  Also you
 can store your other settings like <strong>MYSQL_PASSWORD</strong> or <strong>ADMIN_PASSWORD</strong> instead
 of letting devstack generate random ones for you.</p>
 </td><td class=code><div class=highlight><pre>
@@ -493,7 +493,7 @@ Natty uec images sudoers does not have a '#includedir'. add one.</p>
     <span class="nb">echo</span> <span class="s2">&quot;Copying files to stack user&quot;</span>
     <span class="nv">STACK_DIR</span><span class="o">=</span><span class="s2">&quot;$DEST/${PWD##*/}&quot;</span>
     cp -r -f <span class="s2">&quot;$PWD&quot;</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
-    chown -R stack <span class="s2">&quot;$STACK_DIR&quot;</span>
+    chown -R <span class="nv">$USER</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SHELL_AFTER_RUN&quot;</span> !<span class="o">=</span> <span class="s2">&quot;no&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">exec </span>su -c <span class="s2">&quot;set -e; cd $STACK_DIR; bash stack.sh; bash&quot;</span> stack
     <span class="k">else</span>
@@ -524,6 +524,8 @@ Natty uec images sudoers does not have a '#includedir'. add one.</p>
 <span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
 <span class="nv">OPENSTACKX_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstackx
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
+<span class="nv">SWIFT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift
+<span class="nv">SWIFT_KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift-keystone2
 <span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
 
 </pre></div></td></tr><tr><td class=docs>
@@ -635,7 +637,7 @@ fail.</p>
 <p>If you are running on a single node and don't need to access the VMs from
 devices other than that node, you can set the flat interface to the same
 value as <tt class="docutils literal">FLAT_NETWORK_BRIDGE</tt>.  This will stop the network hiccup from
-occuring.</p>
+occurring.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">MULTI_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MULTI_HOST</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
 
@@ -692,11 +694,50 @@ read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="keystone">
-<h3>Keystone</h3>
+<div class="section" id="swift">
+<h3>SWIFT</h3>
+<p>TODO: implement glance support
+TODO: add logging to different location.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>By default the location of swift drives and objects is located inside
+the swift source directory. SWIFT_LOCATION variable allow you to redefine
+this.</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>devstack will create a loop-back disk formatted as XFS to store the
+swift data. By default the disk size is 1 gigabyte. The variable
+SWIFT_LOOPBACK_DISK_SIZE specified in bytes allow you to change
+that.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SWIFT_LOCATION</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">:-${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>The ring uses a configurable number of bits from a path’s MD5 hash as
+a partition index that designates a device. The number of bits kept
+from the hash is known as the partition power, and 2 to the partition
+power indicates the partition count. Partitioning the full MD5 hash
+ring allows other parts of the cluster to work in batches of items at
+once which ends up either more efficient or at least less complex than
+working with each item separately or the entire cluster all at once.
+By default we define 9 for the partition count (which mean 512).</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">1000000</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>SWIFT_HASH is a random unique string for a swift cluster that can never change.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">:-</span><span class="nv">9</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="keystone">
+<h3>Keystone</h3>
+</td><td class=code><div class=highlight><pre>
+read_password SWIFT_HASH <span class="s2">&quot;ENTER A RANDOM SWIFT HASH.&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Service Token - Openstack components need to have an admin token
@@ -709,7 +750,7 @@ to validate user tokens.</p>
 read_password SERVICE_TOKEN <span class="s2">&quot;ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN TOKEN.&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>So that errors don't compound we exit on any errors so you see only the
-first error that occured.</p>
+first error that occurred.</p>
 </td><td class=code><div class=highlight><pre>
 read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS).&quot;</span>
 
@@ -807,9 +848,17 @@ thinks the pyc files are correct using them)</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>image catalog service</p>
+<p>storage service</p>
 </td><td class=code><div class=highlight><pre>
 git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_DIR</span> <span class="nv">$NOVA_BRANCH</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>swift + keystone middleware</p>
+</td><td class=code><div class=highlight><pre>
+git_clone <span class="nv">$SWIFT_REPO</span> <span class="nv">$SWIFT_DIR</span> <span class="nv">$SWIFT_BRANCH</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>image catalog service</p>
+</td><td class=code><div class=highlight><pre>
+git_clone <span class="nv">$SWIFT_KEYSTONE_REPO</span> <span class="nv">$SWIFT_KEYSTONE_DIR</span> <span class="nv">$SWIFT_KEYSTONE_BRANCH</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>unified auth system (manages accounts/tokens)</p>
 </td><td class=code><div class=highlight><pre>
@@ -853,6 +902,8 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 it since we are going to run the services in screen for simple</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">cd</span> <span class="nv">$KEYSTONE_DIR</span>; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$SWIFT_DIR</span>; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$SWIFT_KEYSTONE_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$GLANCE_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$NOVA_DIR</span>; sudo python setup.py develop
@@ -1131,14 +1182,160 @@ mount it (ext filesystems can be labeled via e2label).</p>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-net&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>Storage Service</p>
+</td><td class=code><div class=highlight><pre>
+    sudo killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>rm -rf <span class="nv">$NOVA_DIR</span>/networks
+    mkdir -p <span class="nv">$NOVA_DIR</span>/networks
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We first do a bit of setup by creating the directories and
+changing the permissions so we can run it as our user.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>We then create a loopback disk and format it to XFS.</p>
+</td><td class=code><div class=highlight><pre>
+
+    <span class="nv">USER_GROUP</span><span class="o">=</span><span class="k">$(</span>id -g<span class="k">)</span>
+    sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives
+    sudo chown -R <span class="nv">$USER</span>:<span class="k">${</span><span class="nv">USER_GROUP</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives
+    
+</pre></div></td></tr><tr><td class=docs>
+<p>After the drive being created we mount the disk with a few mount
+options to make it most efficient as possible for swift.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> ! -e <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img <span class="o">]]</span>;<span class="k">then</span>
+<span class="k">        </span>mkdir -p  <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images
+        sudo touch  <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img
+        sudo chown <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img
+        
+        dd <span class="k">if</span><span class="o">=</span>/dev/zero <span class="nv">of</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img <span class="se">\</span>
+            <span class="nv">bs</span><span class="o">=</span>1024 <span class="nv">count</span><span class="o">=</span>0 <span class="nv">seek</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">}</span>
+        mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We then create link to that mounted location so swift would know
+where to go.</p>
+</td><td class=code><div class=highlight><pre>
+    mkdir -p <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1
+    <span class="k">if</span> ! egrep -q <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1 /proc/mounts;then
+        sudo mount -t xfs -o loop,noatime,nodiratime,nobarrier,logbufs<span class="o">=</span>8  <span class="se">\</span>
+            <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We now have to emulate a few different servers into one we
+create all the directories needed for swift</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>x in <span class="o">{</span>1..4<span class="o">}</span>; <span class="k">do </span>sudo ln -sf <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="nv">$x</span> <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/<span class="nv">$x</span>; <span class="k">done</span>
+    
+</pre></div></td></tr><tr><td class=docs>
+<p>Swift use rsync to syncronize between all the different
+partitions (which make more sense when you have a multi-node
+setup) we configure it with our version of rsync.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">tmpd</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">for </span>d in <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="o">{</span>1..4<span class="o">}</span> /etc/swift /etc/swift/<span class="o">{</span>object,container,account<span class="o">}</span>-server <span class="se">\</span>
+        <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/<span class="o">{</span>1..4<span class="o">}</span>/node/sdb1 /var/run/swift ;<span class="k">do</span>
+        <span class="o">[[</span> -d <span class="nv">$d</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">continue</span>
+<span class="k">        </span>sudo install -o <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> -g <span class="nv">$USER_GROUP</span> -d <span class="nv">$d</span>
+    <span class="k">done</span>
+
+<span class="k">    </span>sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/<span class="o">{</span>1..4<span class="o">}</span>/node
+
+</pre></div></td></tr><tr><td class=docs>
+<p>By default Swift will be installed with the tempauth middleware
+which has some default username and password if you have
+configured keystone it will checkout the directory.</p>
+</td><td class=code><div class=highlight><pre>
+   sed -e <span class="s2">&quot;s/%GROUP%/${USER_GROUP}/;s/%USER%/$USER/;s,%SWIFT_LOCATION%,$SWIFT_LOCATION,&quot;</span> <span class="nv">$FILES</span>/swift/rsyncd.conf | sudo tee /etc/rsyncd.conf
+   sudo sed -i <span class="s1">&#39;/^RSYNC_ENABLE=false/ { s/false/true/ }&#39;</span> /etc/default/rsync
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We need a special version of bin/swift which understand the
+OpenStack api 2.0, we download it until this is getting
+integrated in swift.</p>
+</td><td class=code><div class=highlight><pre>
+   <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span>keystone
+</pre></div></td></tr><tr><td class=docs>
+<p>We do the install of the proxy-server and swift configuration
+replacing a few directives to match our configuration.</p>
+</td><td class=code><div class=highlight><pre>
+       sudo curl -s -o/usr/local/bin/swift <span class="se">\</span>
+           <span class="s1">&#39;https://review.openstack.org/gitweb?p=openstack/swift.git;a=blob_plain;f=bin/swift;hb=48bfda6e2fdf3886c98bd15649887d54b9a2574e&#39;</span>
+   <span class="k">else</span>
+<span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span>tempauth
+   <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We need to generate a object/account/proxy configuration
+emulating 4 nodes on different ports we have a little function
+that help us doing that.</p>
+</td><td class=code><div class=highlight><pre>
+   sed <span class="s2">&quot;s/%USER%/$USER/;s/%SERVICE_TOKEN%/${SERVICE_TOKEN}/;s/%AUTH_SERVER%/${swift_auth_server}/&quot;</span> <span class="se">\</span>
+       <span class="nv">$FILES</span>/swift/proxy-server.conf|sudo tee  /etc/swift/proxy-server.conf
+
+   sed -e <span class="s2">&quot;s/%SWIFT_HASH%/$SWIFT_HASH/&quot;</span> <span class="nv">$FILES</span>/swift/swift.conf &gt; /etc/swift/swift.conf
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We create two helper scripts :</p>
+<ul class="simple">
+<li>swift-remakerings
+Allow to recreate rings from scratch.</li>
+<li>swift-startmain
+Restart your full cluster.</li>
+</ul>
+</td><td class=code><div class=highlight><pre>
+   <span class="k">function </span>generate_swift_configuration<span class="o">()</span> <span class="o">{</span>
+       <span class="nb">local </span><span class="nv">server_type</span><span class="o">=</span><span class="nv">$1</span>
+       <span class="nb">local </span><span class="nv">bind_port</span><span class="o">=</span><span class="nv">$2</span>
+       <span class="nb">local </span><span class="nv">log_facility</span><span class="o">=</span><span class="nv">$3</span>
+       <span class="nb">local </span>node_number
+       
+       <span class="k">for </span>node_number in <span class="o">{</span>1..4<span class="o">}</span>;<span class="k">do</span>
+<span class="k">           </span><span class="nv">node_path</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+           sed -e <span class="s2">&quot;s,%USER%,$USER,;s,%NODE_PATH%,${node_path},;s,%BIND_PORT%,${bind_port},;s,%LOG_FACILITY%,${log_facility},&quot;</span> <span class="se">\</span>
+               <span class="nv">$FILES</span>/swift/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server.conf &gt; /etc/swift/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
+           <span class="nv">bind_port</span><span class="o">=</span><span class="k">$((</span> <span class="k">${</span><span class="nv">bind_port</span><span class="k">}</span> <span class="o">+</span> <span class="m">10</span> <span class="k">))</span>
+           <span class="nv">log_facility</span><span class="o">=</span><span class="k">$((</span> <span class="k">${</span><span class="nv">log_facility</span><span class="k">}</span> <span class="o">+</span> <span class="m">1</span> <span class="k">))</span>
+       <span class="k">done</span>
+   <span class="o">}</span>
+   generate_swift_configuration object 6010 2
+   generate_swift_configuration container 6011 2
+   generate_swift_configuration account 6012 2
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We then can start rsync.</p>
+</td><td class=code><div class=highlight><pre>
+   sed -e <span class="s2">&quot;s/%SWIFT_PARTITION_POWER_SIZE%/$SWIFT_PARTITION_POWER_SIZE/&quot;</span> <span class="nv">$FILES</span>/swift/swift-remakerings | <span class="se">\</span>
+       sudo tee /usr/local/bin/swift-remakerings
+   sudo install -m755 <span class="nv">$FILES</span>/swift/swift-startmain /usr/local/bin/
+   sudo chmod +x /usr/local/bin/swift-*
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create our ring for the object/container/account.</p>
+</td><td class=code><div class=highlight><pre>
+   sudo /etc/init.d/rsync restart <span class="o">||</span> :
+      
+</pre></div></td></tr><tr><td class=docs>
+<p>And now we launch swift-startmain to get our cluster running
+ready to be tested.</p>
+</td><td class=code><div class=highlight><pre>
+   /usr/local/bin/swift-remakerings
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
 <div class="section" id="volume-service">
 <h3>Volume Service</h3>
 </td><td class=code><div class=highlight><pre>
-    sudo killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>rm -rf <span class="nv">$NOVA_DIR</span>/networks
-    mkdir -p <span class="nv">$NOVA_DIR</span>/networks
+   /usr/local/bin/swift-startmain <span class="o">||</span> :
+   
+   <span class="nb">unset </span>s swift_hash swift_auth_server tmpd
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1319,15 +1516,15 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <span class="k">function </span>screen_it <span class="o">{</span>
     <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;$1&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen -S nova -X screen -t <span class="nv">$1</span>
-        screen -S nova -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
+<span class="k">        </span>screen -S stack -X screen -t <span class="nv">$1</span>
+        screen -S stack -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>launch the glance registery service</p>
+<p>launch the glance registry service</p>
 </td><td class=code><div class=highlight><pre>
-screen -d -m -S nova -t nova
+screen -d -m -S stack -t stack
 sleep 1
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1465,7 +1662,7 @@ screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f
 the username/password of root/password.</p>
 <p>TTY also uses cloud-init, supporting login via keypair and sending scripts as
 userdata.  See <a class="reference external" href="https://help.ubuntu.com/community/CloudInit">https://help.ubuntu.com/community/CloudInit</a> for more on cloud-init</p>
-<p>Override <tt class="docutils literal">IMAGE_URLS</tt> with a comma-seperated list of uec images.</p>
+<p>Override <tt class="docutils literal">IMAGE_URLS</tt> with a comma-separated list of uec images.</p>
 <blockquote>
 <ul class="simple">
 <li><strong>natty</strong>: <a class="reference external" href="http://uec-images.ubuntu.com/natty/current/natty-server-cloudimg-amd64.tar.gz">http://uec-images.ubuntu.com/natty/current/natty-server-cloudimg-amd64.tar.gz</a></li>
