@@ -703,9 +703,15 @@ TODO: add logging to different location.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>By default the location of swift drives and objects is located inside
-the swift source directory. SWIFT_LOCATION variable allow you to redefine
+the swift source directory. SWIFT_DATA_LOCATION variable allow you to redefine
 this.</p>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We are going to have the configuration files inside the source
+directory, change SWIFT_CONFIG_LOCATION if you want to adjust that.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SWIFT_DATA_LOCATION</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">:-${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>devstack will create a loop-back disk formatted as XFS to store the
@@ -713,7 +719,7 @@ swift data. By default the disk size is 1 gigabyte. The variable
 SWIFT_LOOPBACK_DISK_SIZE specified in bytes allow you to change
 that.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SWIFT_LOCATION</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">:-${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
+<span class="nv">SWIFT_CONFIG_LOCATION</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">:-${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span><span class="p">/config</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The ring uses a configurable number of bits from a path’s MD5 hash as
@@ -1205,59 +1211,70 @@ changing the permissions so we can run it as our user.</p>
 </td><td class=code><div class=highlight><pre>
 
     <span class="nv">USER_GROUP</span><span class="o">=</span><span class="k">$(</span>id -g<span class="k">)</span>
-    sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives
-    sudo chown -R <span class="nv">$USER</span>:<span class="k">${</span><span class="nv">USER_GROUP</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives
+    sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives
+    sudo chown -R <span class="nv">$USER</span>:<span class="k">${</span><span class="nv">USER_GROUP</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives
     
 </pre></div></td></tr><tr><td class=docs>
 <p>After the drive being created we mount the disk with a few mount
 options to make it most efficient as possible for swift.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> ! -e <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img <span class="o">]]</span>;<span class="k">then</span>
-<span class="k">        </span>mkdir -p  <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images
-        sudo touch  <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img
-        sudo chown <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img
+    <span class="k">if</span> <span class="o">[[</span> ! -e <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/images/swift.img <span class="o">]]</span>;<span class="k">then</span>
+<span class="k">        </span>mkdir -p  <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/images
+        sudo touch  <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/images/swift.img
+        sudo chown <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/images/swift.img
         
-        dd <span class="k">if</span><span class="o">=</span>/dev/zero <span class="nv">of</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img <span class="se">\</span>
+        dd <span class="k">if</span><span class="o">=</span>/dev/zero <span class="nv">of</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/images/swift.img <span class="se">\</span>
             <span class="nv">bs</span><span class="o">=</span>1024 <span class="nv">count</span><span class="o">=</span>0 <span class="nv">seek</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">}</span>
-        mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img
+        mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/images/swift.img
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>We then create link to that mounted location so swift would know
 where to go.</p>
 </td><td class=code><div class=highlight><pre>
-    mkdir -p <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1
-    <span class="k">if</span> ! egrep -q <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1 /proc/mounts;then
+    mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/sdb1
+    <span class="k">if</span> ! egrep -q <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/sdb1 /proc/mounts;then
         sudo mount -t xfs -o loop,noatime,nodiratime,nobarrier,logbufs<span class="o">=</span>8  <span class="se">\</span>
-            <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/images/swift.img <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1
+            <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/images/swift.img <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/sdb1
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>We now have to emulate a few different servers into one we
 create all the directories needed for swift</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>x in <span class="o">{</span>1..4<span class="o">}</span>; <span class="k">do </span>sudo ln -sf <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="nv">$x</span> <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/<span class="nv">$x</span>; <span class="k">done</span>
+    <span class="k">for </span>x in <span class="o">{</span>1..4<span class="o">}</span>; <span class="k">do </span>sudo ln -sf <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="nv">$x</span> <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="nv">$x</span>; <span class="k">done</span>
     
+</pre></div></td></tr><tr><td class=docs>
+<p>We do want to make sure this is all owned by our user.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">tmpd</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">for </span>d in <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="o">{</span>1..4<span class="o">}</span> <span class="se">\</span>
+        <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/<span class="o">{</span>object,container,account<span class="o">}</span>-server <span class="se">\</span>
+        <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="o">{</span>1..4<span class="o">}</span>/node/sdb1 /var/run/swift ;<span class="k">do</span>
+        <span class="o">[[</span> -d <span class="nv">$d</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">continue</span>
+<span class="k">        </span>sudo install -o <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> -g <span class="nv">$USER_GROUP</span> -d <span class="nv">$d</span>
+    <span class="k">done</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>swift-init has a bug using /etc/swift until bug #885595 is fixed
+we have to create a link</p>
+</td><td class=code><div class=highlight><pre>
+   sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="o">{</span>1..4<span class="o">}</span>/node
+   sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Swift use rsync to syncronize between all the different
 partitions (which make more sense when you have a multi-node
 setup) we configure it with our version of rsync.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">tmpd</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">for </span>d in <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="o">{</span>1..4<span class="o">}</span> /etc/swift /etc/swift/<span class="o">{</span>object,container,account<span class="o">}</span>-server <span class="se">\</span>
-        <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/<span class="o">{</span>1..4<span class="o">}</span>/node/sdb1 /var/run/swift ;<span class="k">do</span>
-        <span class="o">[[</span> -d <span class="nv">$d</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">continue</span>
-<span class="k">        </span>sudo install -o <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> -g <span class="nv">$USER_GROUP</span> -d <span class="nv">$d</span>
-    <span class="k">done</span>
-
-<span class="k">    </span>sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/<span class="o">{</span>1..4<span class="o">}</span>/node
-
+   sudo ln -s <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span> /etc/swift
+   
 </pre></div></td></tr><tr><td class=docs>
 <p>By default Swift will be installed with the tempauth middleware
 which has some default username and password if you have
 configured keystone it will checkout the directory.</p>
 </td><td class=code><div class=highlight><pre>
-   sed -e <span class="s2">&quot;s/%GROUP%/${USER_GROUP}/;s/%USER%/$USER/;s,%SWIFT_LOCATION%,$SWIFT_LOCATION,&quot;</span> <span class="nv">$FILES</span>/swift/rsyncd.conf | sudo tee /etc/rsyncd.conf
+   sed -e <span class="s2">&quot;s/%GROUP%/${USER_GROUP}/;s/%USER%/$USER/;s,%SWIFT_DATA_LOCATION%,$SWIFT_DATA_LOCATION,&quot;</span> <span class="nv">$FILES</span>/swift/rsyncd.conf | sudo tee /etc/rsyncd.conf
    sudo sed -i <span class="s1">&#39;/^RSYNC_ENABLE=false/ { s/false/true/ }&#39;</span> /etc/default/rsync
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1282,10 +1299,10 @@ replacing a few directives to match our configuration.</p>
 emulating 4 nodes on different ports we have a little function
 that help us doing that.</p>
 </td><td class=code><div class=highlight><pre>
-   sed <span class="s2">&quot;s/%USER%/$USER/;s/%SERVICE_TOKEN%/${SERVICE_TOKEN}/;s/%AUTH_SERVER%/${swift_auth_server}/&quot;</span> <span class="se">\</span>
-       <span class="nv">$FILES</span>/swift/proxy-server.conf|sudo tee  /etc/swift/proxy-server.conf
+   sed <span class="s2">&quot;s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},;s/%USER%/$USER/;s/%SERVICE_TOKEN%/${SERVICE_TOKEN}/;s/%AUTH_SERVER%/${swift_auth_server}/&quot;</span> <span class="se">\</span>
+       <span class="nv">$FILES</span>/swift/proxy-server.conf|sudo tee  <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/proxy-server.conf
 
-   sed -e <span class="s2">&quot;s/%SWIFT_HASH%/$SWIFT_HASH/&quot;</span> <span class="nv">$FILES</span>/swift/swift.conf &gt; /etc/swift/swift.conf
+   sed -e <span class="s2">&quot;s/%SWIFT_HASH%/$SWIFT_HASH/&quot;</span> <span class="nv">$FILES</span>/swift/swift.conf &gt; <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/swift.conf
 
 </pre></div></td></tr><tr><td class=docs>
 <p>We create two helper scripts :</p>
@@ -1303,9 +1320,9 @@ Restart your full cluster.</li>
        <span class="nb">local </span>node_number
        
        <span class="k">for </span>node_number in <span class="o">{</span>1..4<span class="o">}</span>;<span class="k">do</span>
-<span class="k">           </span><span class="nv">node_path</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOCATION</span><span class="k">}</span>/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
-           sed -e <span class="s2">&quot;s,%USER%,$USER,;s,%NODE_PATH%,${node_path},;s,%BIND_PORT%,${bind_port},;s,%LOG_FACILITY%,${log_facility},&quot;</span> <span class="se">\</span>
-               <span class="nv">$FILES</span>/swift/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server.conf &gt; /etc/swift/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
+<span class="k">           </span><span class="nv">node_path</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+           sed -e <span class="s2">&quot;s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},;s,%USER%,$USER,;s,%NODE_PATH%,${node_path},;s,%BIND_PORT%,${bind_port},;s,%LOG_FACILITY%,${log_facility},&quot;</span> <span class="se">\</span>
+               <span class="nv">$FILES</span>/swift/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server.conf &gt; <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
            <span class="nv">bind_port</span><span class="o">=</span><span class="k">$((</span> <span class="k">${</span><span class="nv">bind_port</span><span class="k">}</span> <span class="o">+</span> <span class="m">10</span> <span class="k">))</span>
            <span class="nv">log_facility</span><span class="o">=</span><span class="k">$((</span> <span class="k">${</span><span class="nv">log_facility</span><span class="k">}</span> <span class="o">+</span> <span class="m">1</span> <span class="k">))</span>
        <span class="k">done</span>
@@ -1317,7 +1334,7 @@ Restart your full cluster.</li>
 </pre></div></td></tr><tr><td class=docs>
 <p>We then can start rsync.</p>
 </td><td class=code><div class=highlight><pre>
-   sed -e <span class="s2">&quot;s/%SWIFT_PARTITION_POWER_SIZE%/$SWIFT_PARTITION_POWER_SIZE/&quot;</span> <span class="nv">$FILES</span>/swift/swift-remakerings | <span class="se">\</span>
+   sed -e <span class="s2">&quot;s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},;s/%SWIFT_PARTITION_POWER_SIZE%/$SWIFT_PARTITION_POWER_SIZE/&quot;</span> <span class="nv">$FILES</span>/swift/swift-remakerings | <span class="se">\</span>
        sudo tee /usr/local/bin/swift-remakerings
    sudo install -m755 <span class="nv">$FILES</span>/swift/swift-startmain /usr/local/bin/
    sudo chmod +x /usr/local/bin/swift-*
