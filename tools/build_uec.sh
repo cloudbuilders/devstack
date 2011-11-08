@@ -51,7 +51,7 @@ tarball=$image_dir/$(basename $uec_url)
 if [ ! -f $tarball ]; then
     curl $uec_url -o $tarball
     (cd $image_dir && tar -Sxvzf $tarball)
-    resize-part-image $image_dir/*.img $GUEST_SIZE $image_dir/disk
+    uec-resize-image $image_dir/*.img $GUEST_SIZE $image_dir/disk
     cp $image_dir/*-vmlinuz-virtual $image_dir/kernel
 fi
 
@@ -136,7 +136,7 @@ cat > $LIBVIRT_XML <<EOF
     <interface type='network'>
       <source network='devstack-$GUEST_NETWORK'/>
     </interface>
-        
+
     <!-- The order is significant here.  File must be defined first -->
     <serial type="file">
       <source path='$vm_dir/console.log'/>
@@ -182,6 +182,7 @@ cd devstack
 git remote set-url origin `cd $TOP_DIR; git remote show origin | grep Fetch | awk '{print $3}'`
 git fetch
 git checkout `git rev-parse HEAD`
+echo root:pass | chpasswd
 cat > localrc <<LOCAL_EOF
 ROOTSLEEP=0
 `cat $TOP_DIR/localrc`
