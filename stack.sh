@@ -146,6 +146,7 @@ NOVA_DIR=$DEST/nova
 HORIZON_DIR=$DEST/horizon
 GLANCE_DIR=$DEST/glance
 KEYSTONE_DIR=$DEST/keystone
+KEYSTONELIGHT_DIR=$DEST/keystonelight
 NOVACLIENT_DIR=$DEST/python-novaclient
 OPENSTACKX_DIR=$DEST/openstackx
 NOVNC_DIR=$DEST/noVNC
@@ -157,7 +158,7 @@ QUANTUM_DIR=$DEST/quantum
 Q_PLUGIN=${Q_PLUGIN:-openvswitch}
 
 # Specify which services to launch.  These generally correspond to screen tabs
-ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,horizon,mysql,rabbit}
+ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,ksl,n-api,n-cpu,n-net,n-sch,n-vnc,horizon,mysql,rabbit}
 
 # Nova hypervisor configuration.  We default to libvirt whth  **kvm** but will
 # drop back to **qemu** if we are unable to load the kvm module.  Stack.sh can
@@ -410,8 +411,10 @@ git_clone $SWIFT_REPO $SWIFT_DIR $SWIFT_BRANCH
 git_clone $SWIFT_KEYSTONE_REPO $SWIFT_KEYSTONE_DIR $SWIFT_KEYSTONE_BRANCH
 # image catalog service
 git_clone $GLANCE_REPO $GLANCE_DIR $GLANCE_BRANCH
-# unified auth system (manages accounts/tokens)
+# deprecated unified auth system (manages accounts/tokens)
 git_clone $KEYSTONE_REPO $KEYSTONE_DIR $KEYSTONE_BRANCH
+# unified auth system (manages accounts/tokens)
+git_clone $KEYSTONELIGHT_REPO $KEYSTONELIGHT_DIR $KEYSTONELIGHT_BRANCH
 # a websockets/html5 or flash powered VNC console for vm instances
 git_clone $NOVNC_REPO $NOVNC_DIR $NOVNC_BRANCH
 # django powered web control panel for openstack
@@ -431,6 +434,7 @@ git_clone $QUANTUM_REPO $QUANTUM_DIR $QUANTUM_BRANCH
 # setup our checkouts so they are installed into python path
 # allowing ``import nova`` or ``import glance.client``
 cd $KEYSTONE_DIR; sudo python setup.py develop
+cd $KEYSTONELIGHT_DIR; sudo python setup.py develop
 cd $SWIFT_DIR; sudo python setup.py develop
 cd $SWIFT_KEYSTONE_DIR; sudo python setup.py develop
 cd $GLANCE_DIR; sudo python setup.py develop
@@ -702,7 +706,7 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
    # By default Swift will be installed with the tempauth middleware
    # which has some default username and password if you have
    # configured keystone it will checkout the directory.
-   if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
+   if [[ "$ENABLED_SERVICES" =~ "key" || "$ENABLED_SERVICES" =~ "ksl" ]]; then
        swift_auth_server=keystone
        # We need a special version of bin/swift which understand the
        # OpenStack api 2.0, we download it until this is getting
@@ -898,6 +902,29 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
 fi
 
 
+# Keystone Light
+# --------------
+
+if [[ "$ENABLED_SERVICES" =~ "ksl" ]]; then
+    # FIXME (anthony) keystone should use keystone.conf.example
+    KEYSTONE_CONF=$KEYSTONE_DIR/etc/keystone.conf
+    cp $FILES/keystonelight.conf $KEYSTONE_CONF
+    #sudo sed -e "s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g" -i $KEYSTONE_CONF
+    #sudo sed -e "s,%DEST%,$DEST,g" -i $KEYSTONE_CONF
+    #sudo sed -e "s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g" -i $KEYSTONE_CONF
+    sudo sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $KEYSTONE_CONF
+    sudo sed -e "s,%HOST_IP%,$HOST_IP,g" -i $KEYSTONE_CONF
+
+    # keystone_data.sh creates our admin user and our ``SERVICE_TOKEN``.
+    #KEYSTONE_DATA=$KEYSTONE_DIR/bin/keystone_data.sh
+    #cp $FILES/keystone_data.sh $KEYSTONE_DATA
+    ##sudo sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $KEYSTONE_DATA
+    ## initialize keystone with default users/endpoints
+    #BIN_DIR=$KEYSTONE_DIR/bin bash $KEYSTONE_DATA
+fi
+
+
+
 # Launch Services
 # ===============
 
@@ -940,6 +967,15 @@ fi
 # launch the keystone and wait for it to answer before continuing
 if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
     screen_it key "cd $KEYSTONE_DIR && $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF -d"
+    echo "Waiting for keystone to start..."
+    if ! timeout $SERVICE_TIMEOUT sh -c "while ! wget -q -O- http://127.0.0.1:5000; do sleep 1; done"; then
+      echo "keystone did not start"
+      exit 1
+    fi
+fi
+
+if [[ "$ENABLED_SERVICES" =~ "ksl" ]]; then
+    screen_it key "cd $KEYSTONELIGHT_DIR && $KEYSTONELIGHT_DIR/bin/keystone $KEYSTONE_CONF"
     echo "Waiting for keystone to start..."
     if ! timeout $SERVICE_TIMEOUT sh -c "while ! wget -q -O- http://127.0.0.1:5000; do sleep 1; done"; then
       echo "keystone did not start"
