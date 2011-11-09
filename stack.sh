@@ -936,17 +936,17 @@ fi
 function screen_it {
     NL=`echo -ne '\015'`
     if [[ "$ENABLED_SERVICES" =~ "$1" ]]; then
-        screen -S stack -X screen -t $1
+        screen -L -S stack -X screen -t $1
         # sleep to allow bash to be ready to be send the command - we are
         # creating a new window in screen and then sends characters, so if
         # bash isn't running by the time we send the command, nothing happens
         sleep 1
-        screen -S stack -p $1 -X stuff "$2$NL"
+        screen -L -S stack -p $1 -X stuff "$2$NL"
     fi
 }
 
 # create a new named screen to run processes in
-screen -d -m -S stack -t stack
+screen -L -d -m -S stack -t stack
 sleep 1
 
 # launch the glance registry service
