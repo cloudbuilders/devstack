@@ -975,7 +975,7 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
 fi
 
 if [[ "$ENABLED_SERVICES" =~ "ksl" ]]; then
-    screen_it ksl "cd $KEYSTONELIGHT_DIR && $KEYSTONELIGHT_DIR/bin/keystone $KEYSTONE_CONF"
+    screen_it ksl "cd $KEYSTONELIGHT_DIR && $KEYSTONELIGHT_DIR/bin/keystone $KEYSTONELIGHT_CONF"
     echo "Waiting for keystonelight to start..."
     if ! timeout $SERVICE_TIMEOUT sh -c "while ! wget -q -O- http://127.0.0.1:5000; do sleep 1; done"; then
       echo "keystonelight did not start"
