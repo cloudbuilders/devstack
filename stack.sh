@@ -975,10 +975,10 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
 fi
 
 if [[ "$ENABLED_SERVICES" =~ "ksl" ]]; then
-    screen_it key "cd $KEYSTONELIGHT_DIR && $KEYSTONELIGHT_DIR/bin/keystone $KEYSTONE_CONF"
-    echo "Waiting for keystone to start..."
+    screen_it ksl "cd $KEYSTONELIGHT_DIR && $KEYSTONELIGHT_DIR/bin/keystone $KEYSTONE_CONF"
+    echo "Waiting for keystonelight to start..."
     if ! timeout $SERVICE_TIMEOUT sh -c "while ! wget -q -O- http://127.0.0.1:5000; do sleep 1; done"; then
-      echo "keystone did not start"
+      echo "keystonelight did not start"
       exit 1
     fi
 fi
@@ -1133,7 +1133,7 @@ if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
 fi
 
 # If keystone is present, you can point nova cli to this server
-if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "key" || "$ENABLED_SERVICES" =~ "ksl" ]]; then
     echo "keystone is serving at http://$HOST_IP:5000/v2.0/"
     echo "examples on using novaclient command line is in exercise.sh"
     echo "the default users are: admin and demo"
