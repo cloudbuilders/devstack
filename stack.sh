@@ -996,7 +996,7 @@ fi
 
 # If we're using Quantum (i.e. q-svc is enabled), network creation has to
 # happen after we've started the Quantum service.
-if [[ "$ENABLED_SERVICES" =~ "mysql" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "n-net" ]]; then
     # create a small network
     $NOVA_DIR/bin/nova-manage network create private $FIXED_RANGE 1 $FIXED_NETWORK_SIZE
 
