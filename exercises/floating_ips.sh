@@ -100,7 +100,7 @@ if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show $NAME | grep status | grep
 fi
 
 # get the IP of the server
-IP=`nova show $NAME | grep "private network" | cut -d"|" -f3`
+IP=`nova show $NAME | grep "${ROUTABLE_LABEL} network" | cut -d"|" -f3`
 
 # for single node deployments, we can ping private ips
 MULTI_HOST=${MULTI_HOST:-0}
