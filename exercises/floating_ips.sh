@@ -58,6 +58,11 @@ SECGROUP=test_secgroup
 # List of secgroups:
 nova secgroup-list
 
+# Delete the secgroup if it exists
+if (nova secgroup-list | grep "${SECGROUP}"); then
+    nova secgroup-delete "${SECGROUP}"
+fi
+
 # Create a secgroup
 nova secgroup-create $SECGROUP "test_secgroup description"
 
