@@ -72,6 +72,24 @@ FLAVOR=`nova flavor-list | head -n 4 | tail -n 1 | cut -d"|" -f2`
 
 NAME="myserver"
 
+# Make sure the instance doesn't already exists.  If so, we'll
+# terminate it
+
+COUNT=0
+# since we only get details on first match, we'll keep
+# looping through until all the servers with this name
+# are terminated.
+while DETAILS=$(nova show ${NAME}); do
+    ID=$(echo "${DETAILS}" | grep " id " | cut -d'|' -f 3)
+    nova delete ${ID}
+    sleep 5
+    COUNT=$(( COUNT + 1 ))
+    if [ $COUNT -gt 10 ]; then
+	echo "Can't seem to delete the \"${NAME}\" instance"
+	exit 1
+    fi
+done
+
 nova boot --flavor $FLAVOR --image $IMAGE $NAME --security_groups=$SECGROUP
 
 # Testing
