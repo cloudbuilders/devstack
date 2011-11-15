@@ -923,6 +923,8 @@ if [[ "$ENABLED_SERVICES" =~ "ksl" ]]; then
     ##sudo sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $KEYSTONELIGHT_DATA
     ## initialize keystone with default users/endpoints
     BIN_DIR=$KEYSTONELIGHT_DIR/bin bash $KEYSTONELIGHT_DATA
+    sleep 20
+    BIN_DIR=$KEYSTONELIGHT_DIR/bin bash $KEYSTONELIGHT_DATA
 fi
 
 
