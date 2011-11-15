@@ -76,8 +76,11 @@ IMAGE_FNAME=$DIST_NAME.raw
 # Name of our instance, used by libvirt
 GUEST_NAME=${GUEST_NAME:-devstack}
 
+# Where the cached images live
+CACHEDIR=${CACHEDIR:-/opt/stack/cache}
+
 # Original version of built image
-BASE_IMAGE=$IMAGES_DIR/$DIST_NAME.raw
+BASE_IMAGE=$CACHEDIR/$DIST_NAME.raw
 
 # Copy of base image, which we pre-install with tasty treats
 VM_IMAGE=$IMAGES_DIR/$DIST_NAME.$GUEST_NAME.raw
