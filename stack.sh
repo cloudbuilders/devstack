@@ -921,10 +921,6 @@ if [[ "$ENABLED_SERVICES" =~ "ksl" ]]; then
     cp $FILES/keystonelight_data.sh $KEYSTONELIGHT_DATA
     sudo sed -e "s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g" -i $KEYSTONELIGHT_DATA
     ##sudo sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $KEYSTONELIGHT_DATA
-    ## initialize keystone with default users/endpoints
-    BIN_DIR=$KEYSTONELIGHT_DIR/bin bash $KEYSTONELIGHT_DATA
-    sleep 20
-    BIN_DIR=$KEYSTONELIGHT_DIR/bin bash $KEYSTONELIGHT_DATA
 fi
 
 
@@ -985,6 +981,8 @@ if [[ "$ENABLED_SERVICES" =~ "ksl" ]]; then
       echo "keystonelight did not start"
       exit 1
     fi
+    ## initialize keystone with default users/endpoints
+    BIN_DIR=$KEYSTONELIGHT_DIR/bin bash $KEYSTONELIGHT_DATA
 fi
 
 # launch the nova-api and wait for it to answer before continuing
