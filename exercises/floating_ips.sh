@@ -53,7 +53,7 @@ IMAGE=`glance -A $TOKEN index | egrep ami | cut -d" " -f1`
 
 # Security Groups
 # ---------------
-SECGROUP=test_secgroup
+SECGROUP=${SECGROUP:-test_secgroup}
 
 # List of secgroups:
 nova secgroup-list
@@ -70,9 +70,9 @@ nova flavor-list
 # and grab the first flavor in the list to launch
 FLAVOR=`nova flavor-list | head -n 4 | tail -n 1 | cut -d"|" -f2`
 
-NAME="myserver"
+SERVERNAME=${SERVERNAME:-myserver}
 
-nova boot --flavor $FLAVOR --image $IMAGE $NAME --security_groups=$SECGROUP
+nova boot --flavor $FLAVOR --image $IMAGE "$SERVERNAME" --security_groups="$SECGROUP"
 
 # Testing
 # =======
@@ -94,13 +94,13 @@ BOOT_TIMEOUT=${BOOT_TIMEOUT:-15}
 ASSOCIATE_TIMEOUT=${ASSOCIATE_TIMEOUT:-10}
 
 # check that the status is active within ACTIVE_TIMEOUT seconds
-if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show $NAME | grep status | grep -q ACTIVE; do sleep 1; done"; then
+if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show \"$SERVERNAME\" | grep status | grep -q ACTIVE; do sleep 1; done"; then
     echo "server didn't become active!"
     exit 1
 fi
 
 # get the IP of the server
-IP=`nova show $NAME | grep "private network" | cut -d"|" -f3`
+IP=`nova show "$SERVERNAME" | grep "private network" | cut -d"|" -f3`
 
 # for single node deployments, we can ping private ips
 MULTI_HOST=${MULTI_HOST:-0}
@@ -133,7 +133,7 @@ nova floating-ip-create
 FLOATING_IP=`nova floating-ip-list | grep None | head -1 | cut -d '|' -f2 | sed 's/ //g'`
 
 # add floating ip to our server
-nova add-floating-ip $NAME $FLOATING_IP
+nova add-floating-ip "$SERVERNAME" $FLOATING_IP
 
 # test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
 if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done"; then
@@ -142,7 +142,7 @@ if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! ping -c1 -w1 $FLOATING_IP; do sle
 fi
 
 # pause the VM and verify we can't ping it anymore
-nova pause $NAME
+nova pause "$SERVERNAME"
 
 sleep 2
 
@@ -157,7 +157,7 @@ if ( ping -c1 -w1 $FLOATING_IP); then
 fi
 
 # unpause the VM and verify we can ping it again
-nova unpause $NAME
+nova unpause "$SERVERNAME"
 
 sleep 2
 
@@ -180,11 +180,11 @@ fi
 nova floating-ip-delete $FLOATING_IP
 
 # shutdown the server
-nova delete $NAME
+nova delete "$SERVERNAME"
 
 # Delete a secgroup
 nova secgroup-delete $SECGROUP
 
 # FIXME: validate shutdown within 5 seconds
-# (nova show $NAME returns 1 or status != ACTIVE)?
+# (nova show "$SERVERNAME" returns 1 or status != ACTIVE)?
 

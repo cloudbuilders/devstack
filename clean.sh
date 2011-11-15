@@ -42,7 +42,7 @@ set -o nounset
 # This will need to be changed if the security group name
 # in floating_ips changes.
 
-SECGROUP=test_secgroup
+SECGROUP=${SECGROUP:-test_secgroup}
 
 if ( nova secgroup-list | grep ${SECGROUP}); then
     nova secgroup-delete ${SECGROUP}
@@ -63,10 +63,10 @@ fi
 # The hardcoded name will have to be changed if the instance name
 # in exercises/floating_ips.sh changes
 
-NAME=myserver
+SERVERNAME=${SERVERNAME:-myserver}
 
 while ( /bin/true ); do
-    ID=$(nova show "${NAME}" | grep " id " | cut -d'|' -f 3)
+    ID=$(nova show "${SERVERNAME}" | grep " id " | cut -d'|' -f 3)
     if [ "$ID" == "" ]; then
         break;
     fi
