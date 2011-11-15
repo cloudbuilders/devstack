@@ -335,6 +335,7 @@ fi
 read_password SERVICE_TOKEN "ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN TOKEN."
 # Horizon currently truncates usernames and passwords at 20 characters
 read_password ADMIN_PASSWORD "ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS)."
+ADMIN_USER=admin
 
 LOGFILE=${LOGFILE:-"$PWD/stack.sh.$$.log"}
 (
@@ -1086,6 +1087,9 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
     # Create a directory for the downloaded image tarballs.
     mkdir -p $FILES/images
 
+    # Grab a real token for the "admin" user
+    TOKEN=`curl -s -d  "{\"auth\":{\"passwordCredentials\": {\"username\": \"$ADMIN_USER\", \"password\": \"$ADMIN_PASSWORD\"}}}" -H "Content-type: application/json" http://$HOST_IP:5000/v2.0/tokens | python -c "import sys; import json; tok = json.loads(sys.stdin.read()); print tok['access']['token']['id'];"`
+
     # Option to upload legacy ami-tty, which works with xenserver
     if [ $UPLOAD_LEGACY_TTY ]; then
         if [ ! -f $FILES/tty.tgz ]; then
@@ -1093,11 +1097,11 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
         fi
 
         tar -zxf $FILES/tty.tgz -C $FILES/images
-        RVAL=`glance add -A $SERVICE_TOKEN name="tty-kernel" is_public=true container_format=aki disk_format=aki < $FILES/images/aki-tty/image`
+        RVAL=`glance add -A $TOKEN name="tty-kernel" is_public=true container_format=aki disk_format=aki < $FILES/images/aki-tty/image`
         KERNEL_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
-        RVAL=`glance add -A $SERVICE_TOKEN name="tty-ramdisk" is_public=true container_format=ari disk_format=ari < $FILES/images/ari-tty/image`
+        RVAL=`glance add -A $TOKEN name="tty-ramdisk" is_public=true container_format=ari disk_format=ari < $FILES/images/ari-tty/image`
         RAMDISK_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
-        glance add -A $SERVICE_TOKEN name="tty" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID ramdisk_id=$RAMDISK_ID < $FILES/images/ami-tty/image
+        glance add -A $TOKEN name="tty" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID ramdisk_id=$RAMDISK_ID < $FILES/images/ami-tty/image
     fi
 
     for image_url in ${IMAGE_URLS//,/ }; do
@@ -1114,9 +1118,9 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
         # Use glance client to add the kernel the root filesystem.
         # We parse the results of the first upload to get the glance ID of the
         # kernel for use when uploading the root filesystem.
-        RVAL=`glance add -A $SERVICE_TOKEN name="$IMAGE_NAME-kernel" is_public=true container_format=aki disk_format=aki < $FILES/images/$IMAGE_NAME-vmlinuz*`
+        RVAL=`glance add -A $TOKEN name="$IMAGE_NAME-kernel" is_public=true container_format=aki disk_format=aki < $FILES/images/$IMAGE_NAME-vmlinuz*`
         KERNEL_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
-        glance add -A $SERVICE_TOKEN name="$IMAGE_NAME" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID < $FILES/images/$IMAGE_NAME.img
+        glance add -A $TOKEN name="$IMAGE_NAME" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID < $FILES/images/$IMAGE_NAME.img
     done
 fi
 
