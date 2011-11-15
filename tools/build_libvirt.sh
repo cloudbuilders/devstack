@@ -144,6 +144,16 @@ function git_clone {
 
 # Make sure that base requirements are installed
 cp /etc/resolv.conf $COPY_DIR/etc/resolv.conf
+
+# We need the multiverse for python-profiler
+echo <<EOF
+deb http://archive.ubuntu.com/ubuntu/ natty multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ natty multiverse
+deb http://archive.ubuntu.com/ubuntu/ natty-updates multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ natty-updates multiverse
+EOF
+>> /etc/apt/source.list
+
 chroot $COPY_DIR apt-get update
 chroot $COPY_DIR apt-get install -y --download-only `cat files/apts/* | grep NOPRIME | cut -d\# -f1`
 chroot $COPY_DIR apt-get install -y --force-yes `cat files/apts/* | grep -v NOPRIME | cut -d\# -f1`
@@ -224,7 +234,7 @@ cat > $LIBVIRT_XML <<EOF
         <interface type='network'>
            <source network='devstack-$GUEST_NETWORK'/>
         </interface>
-        
+
         <!-- The order is significant here.  File must be defined first -->
         <serial type="file">
             <source path='$VM_DIR/console.log'/>
