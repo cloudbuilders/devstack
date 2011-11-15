@@ -20,10 +20,10 @@
 # Sanity Check
 # ============
 
-# Warn users who aren't on natty, but allow them to override check and attempt
+# Warn users who aren't on oneiric, but allow them to override check and attempt
 # installation with ``FORCE=yes ./stack``
-if ! egrep -q 'natty|oneiric' /etc/lsb-release; then
-    echo "WARNING: this script has only been tested on natty and oneiric"
+if ! egrep -q 'oneiric' /etc/lsb-release; then
+    echo "WARNING: this script has only been tested on oneiric"
     if [[ "$FORCE" != "yes" ]]; then
         echo "If you wish to run this script anyway run with FORCE=yes"
         exit 1
@@ -111,7 +111,7 @@ if [[ $EUID -eq 0 ]]; then
     fi
 
     echo "Giving stack user passwordless sudo priviledges"
-    # natty uec images sudoers does not have a '#includedir'. add one.
+    # some uec images sudoers does not have a '#includedir'. add one.
     grep -q "^#includedir.*/etc/sudoers.d" /etc/sudoers ||
         echo "#includedir /etc/sudoers.d" >> /etc/sudoers
     ( umask 226 && echo "stack ALL=(ALL) NOPASSWD:ALL" \
