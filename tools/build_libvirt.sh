@@ -162,6 +162,14 @@ do
   chroot $COPY_DIR pip install `cat $x`
 done
 
+# Add some entropy, hopefully
+chroot $COPY_DIR apt-get install -y --force-yes rng-tools
+echo <<EOF
+HRNGDEVICE=/dev/urandom
+EOF
+>> /etc/default/rng-tools
+
+
 # Clean out code repos if directed to do so
 if [ "$CLEAN" = "1" ]; then
     rm -rf $COPY_DIR/$DEST
