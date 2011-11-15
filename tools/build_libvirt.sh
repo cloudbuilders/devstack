@@ -157,7 +157,10 @@ EOF
 chroot $COPY_DIR apt-get update
 chroot $COPY_DIR apt-get install -y --download-only `cat files/apts/* | grep NOPRIME | cut -d\# -f1`
 chroot $COPY_DIR apt-get install -y --force-yes `cat files/apts/* | grep -v NOPRIME | cut -d\# -f1`
-chroot $COPY_DIR pip install `cat files/pips/*`
+for x in `ls files/pips/*`
+do
+  chroot $COPY_DIR pip install `cat $x`
+done
 
 # Clean out code repos if directed to do so
 if [ "$CLEAN" = "1" ]; then
