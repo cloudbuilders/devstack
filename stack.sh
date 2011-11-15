@@ -354,10 +354,17 @@ failed() {
 # an error.  It is also useful for following along as the install occurs.
 set -o xtrace
 
-# create the destination directory and ensure it is writable by the user
+# Create the destination directory and ensure it is writable by the user.
 sudo mkdir -p $DEST
 if [ ! -w $DEST ]; then
     sudo chown `whoami` $DEST
+fi
+
+# Make sure the destination directory is world readable. If this is not done
+# libvirt will be unable to access the console.log file when it tries
+# to boot the instance.
+if [ $(stat -c %A $DEST | cut -c 8) != 'r' ]; then
+    sudo chmod 755 $DEST
 fi
 
 # Install Packages
