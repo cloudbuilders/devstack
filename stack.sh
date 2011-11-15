@@ -907,7 +907,7 @@ fi
 
 if [[ "$ENABLED_SERVICES" =~ "ksl" ]]; then
     # FIXME (anthony) keystone should use keystone.conf.example
-    KEYSTONELIGHT_CONF=$KEYSTONELIGHT_DIR/etc/keystone.conf
+    KEYSTONELIGHT_CONF=$KEYSTONELIGHT_DIR/etc/default.conf
     cp $FILES/keystonelight.conf $KEYSTONELIGHT_CONF
     #sudo sed -e "s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g" -i $KEYSTONELIGHT_CONF
     #sudo sed -e "s,%DEST%,$DEST,g" -i $KEYSTONELIGHT_CONF
@@ -916,11 +916,12 @@ if [[ "$ENABLED_SERVICES" =~ "ksl" ]]; then
     sudo sed -e "s,%HOST_IP%,$HOST_IP,g" -i $KEYSTONELIGHT_CONF
 
     # keystone_data.sh creates our admin user and our ``SERVICE_TOKEN``.
-    #KEYSTONELIGHT_DATA=$KEYSTONELIGHT_DIR/bin/keystone_data.sh
-    #cp $FILES/keystone_data.sh $KEYSTONELIGHT_DATA
+    KEYSTONELIGHT_DATA=$KEYSTONELIGHT_DIR/keystonelight_data.sh
+    cp $FILES/keystonelight_data.sh $KEYSTONELIGHT_DATA
+    sudo sed -e "s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g" -i $KEYSTONELIGHT_DATA
     ##sudo sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $KEYSTONELIGHT_DATA
     ## initialize keystone with default users/endpoints
-    #BIN_DIR=$KEYSTONELIGHT_DIR/bin bash $KEYSTONELIGHT_DATA
+    BIN_DIR=$KEYSTONELIGHT_DIR/bin bash $KEYSTONELIGHT_DATA
 fi
 
 
