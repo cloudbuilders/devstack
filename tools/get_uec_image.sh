@@ -70,16 +70,17 @@ esac
 
 trap cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
 
-# Find resize script
-RESIZE=`which resize-part-image || which uec-resize-image`
-if [ -z "$RESIZE" ]; then
-    RESIZE=""
-fi
-
 # Check dependencies
 if [ ! -x "`which qemu-img`" -o -z "`dpkg -l | grep cloud-utils`" ]; then
     # Missing KVM?
     apt_get install qemu-kvm cloud-utils
+fi
+
+# Find resize script
+RESIZE=`which resize-part-image || which uec-resize-image`
+if [ -z "$RESIZE" ]; then
+    echo "resize tool from cloud-utils not found"
+    exit 1
 fi
 
 # Get the UEC image
