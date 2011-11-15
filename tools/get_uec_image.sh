@@ -16,7 +16,7 @@ usage() {
     echo ""
     echo "$0 [-r rootsize] release imagefile"
     echo ""
-    echo "-r size   - root fs size in MB (min 2000MB)"
+    echo "-r size   - root fs size (min 2000MB)"
     echo "release   - Ubuntu release: jaunty - oneric"
     echo "imagefile - output image file"
     exit 1
@@ -96,7 +96,7 @@ if [ ! -d $CACHEDIR/$DIST_NAME ]; then
     (cd $CACHEDIR/$DIST_NAME && tar Sxvzf ../$UEC_NAME.tar.gz)
 fi
 
-$RESIZE $CACHEDIR/$DIST_NAME/$UEC_NAME.img ${ROOTSIZE}M $IMG_FILE_TMP
+$RESIZE $CACHEDIR/$DIST_NAME/$UEC_NAME.img ${ROOTSIZE} $IMG_FILE_TMP
 mv $IMG_FILE_TMP $IMG_FILE
 
 trap - SIGHUP SIGINT SIGTERM SIGQUIT EXIT

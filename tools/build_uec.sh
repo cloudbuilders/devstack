@@ -43,16 +43,9 @@ WORK_DIR=${WORK_DIR:-/opt/kvmstack}
 image_dir=$WORK_DIR/images/$DIST_NAME
 mkdir -p $image_dir
 
-# Original version of built image
-uec_url=http://uec-images.ubuntu.com/$DIST_NAME/current/$DIST_NAME-server-cloudimg-amd64.tar.gz
-tarball=$image_dir/$(basename $uec_url)
-
-# download the base uec image if we haven't already
-if [ ! -f $tarball ]; then
-    curl $uec_url -o $tarball
-    (cd $image_dir && tar -Sxvzf $tarball)
-    resize-part-image $image_dir/*.img $GUEST_SIZE $image_dir/disk
-    cp $image_dir/*-vmlinuz-virtual $image_dir/kernel
+# Get the base image if it does not yet exist
+if [ ! -e $image_dir/disk ]; then
+    $TOOLS_DIR/get_uec_image.sh -r $GUEST_SIZE $DIST_NAME $image_dir/disk
 fi
 
 

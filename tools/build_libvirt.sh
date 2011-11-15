@@ -100,7 +100,7 @@ mkdir -p $COPY_DIR
 
 # Get the base image if it does not yet exist
 if [ ! -e $BASE_IMAGE ]; then
-    $TOOLS_DIR/get_uec_image.sh -f raw -r 5000 $DIST_NAME $BASE_IMAGE
+    $TOOLS_DIR/get_uec_image.sh -r 5000M $DIST_NAME $BASE_IMAGE
 fi
 
 # Create a copy of the base image
