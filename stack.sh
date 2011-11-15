@@ -991,7 +991,18 @@ if [[ "$ENABLED_SERVICES" =~ "n-api" ]]; then
     echo "Waiting for nova-api to start..."
     if ! timeout $SERVICE_TIMEOUT sh -c "while ! wget -q -O- http://127.0.0.1:8774; do sleep 1; done"; then
       echo "nova-api did not start"
-      exit 1
+      #exit 1
+    fi
+fi
+
+# launch the nova-api and wait for it to answer before continuing
+if [[ "$ENABLED_SERVICES" =~ "n-api" ]]; then
+    sudo rngd -r /dev/urandom
+    screen_it n-api "cd $NOVA_DIR && $NOVA_DIR/bin/nova-api"
+    echo "Waiting for nova-api to start..."
+    if ! timeout $SERVICE_TIMEOUT sh -c "while ! wget -q -O- http://127.0.0.1:8774; do sleep 1; done"; then
+      echo "nova-api did not start"
+      #exit 1
     fi
 fi
 
