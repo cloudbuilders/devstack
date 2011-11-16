@@ -303,5 +303,4 @@ if [ "$WAIT_TILL_LAUNCH" = "1" ]; then
     set +o xtrace
     echo ""
     echo "Finished - Zip-a-dee Doo-dah!"
-    echo ""
 fi
