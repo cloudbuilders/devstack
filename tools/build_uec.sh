@@ -51,8 +51,17 @@ tarball=$image_dir/$(basename $uec_url)
 if [ ! -f $tarball ]; then
     curl $uec_url -o $tarball
     (cd $image_dir && tar -Sxvzf $tarball)
-    resize-part-image $image_dir/*.img $GUEST_SIZE $image_dir/disk
     cp $image_dir/*-vmlinuz-virtual $image_dir/kernel
+fi
+
+# Start over with a clean base image
+if [ $CLEAN_BASE ]; then
+    rm -f $image_dir/disk
+fi
+
+# Create base image
+if [ ! -f $image_dir/disk ]; then
+    resize-part-image $image_dir/*.img $GUEST_SIZE $image_dir/disk
 fi
 
 # Copy over dev environment if COPY_ENV is set.
@@ -202,12 +211,11 @@ ROOTSLEEP=0
 LOCAL_EOF
 fi
 # Disable byobu
-/usr/bin/byobu-disable
+sudo apt-get remove -y byobu
 EOF
 
 # Setup stack user with our key
-CONFIGURE_STACK_USER=${CONFIGURE_STACK_USER:-yes}
-if [[ -e ~/.ssh/id_rsa.pub  && "$CONFIGURE_STACK_USER" = "yes" ]]; then
+if [[ -e ~/.ssh/id_rsa.pub ]]; then
     PUB_KEY=`cat  ~/.ssh/id_rsa.pub`
     cat >> $vm_dir/uec/user-data<<EOF
 mkdir -p /opt/stack
