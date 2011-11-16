@@ -77,9 +77,6 @@ if [ $WARM_CACHE ]; then
     ./warm_apts_and_pips_for_uec.sh $image_dir/disk
 fi
 
-# Configure the root password of the vm to be the same as ``ADMIN_PASSWORD``
-ROOT_PASSWORD=${ADMIN_PASSWORD:-password}
-
 # Name of our instance, used by libvirt
 GUEST_NAME=${GUEST_NAME:-devstack}
 
