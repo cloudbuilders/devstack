@@ -14,11 +14,12 @@ set -o errexit
 usage() {
     echo "Usage: $0 - Fetch and prepare Ubuntu images"
     echo ""
-    echo "$0 [-r rootsize] release imagefile"
+    echo "$0 [-r rootsize] release imagefile [kernel]"
     echo ""
     echo "-r size   - root fs size (min 2000MB)"
     echo "release   - Ubuntu release: jaunty - oneric"
     echo "imagefile - output image file"
+    echo "kernel    - output kernel"
     exit 1
 }
 
@@ -45,7 +46,7 @@ while getopts hr: c; do
 done
 shift `expr $OPTIND - 1`
 
-if [ ! "$#" -eq "2" ]; then
+if [ ! "$#" -eq "2" -o ! "$@" -eq "3" ]; then
     usage
 fi
 
@@ -53,6 +54,7 @@ fi
 DIST_NAME=$1
 IMG_FILE=$2
 IMG_FILE_TMP=`mktemp $IMG_FILE.XXXXXX`
+KERNEL=$3
 
 case $DIST_NAME in
     oneiric)    ;;
@@ -91,5 +93,10 @@ fi
 
 $RESIZE $CACHEDIR/$DIST_NAME/$UEC_NAME.img ${ROOTSIZE} $IMG_FILE_TMP
 mv $IMG_FILE_TMP $IMG_FILE
+
+# Copy kernel to destination
+if [ "-n "$KERNEL" ]; then
+    cp -p $CACHEDIR/$DIST_NAME/*-vmlinuz-virtual $KERNEL
+fi
 
 trap - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
