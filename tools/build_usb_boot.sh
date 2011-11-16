@@ -78,7 +78,7 @@ fi
 # Get image into place
 if [ ! -r $PXEDIR/stack-initrd.img ]; then
     cd $TOP_DIR
-    $PROGDIR/build_ramdisk.sh $PXEDIR/stack-initrd.img
+    $PROGDIR/build_uec_ramdisk.sh $PXEDIR/stack-initrd.img
 fi
 if [ ! -r $PXEDIR/stack-initrd.gz ]; then
     gzip -1 -c $PXEDIR/stack-initrd.img >$PXEDIR/stack-initrd.gz

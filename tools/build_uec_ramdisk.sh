@@ -47,6 +47,8 @@ cd $TOP_DIR
 # Source params
 source ./stackrc
 
+DEST=${DEST:-/opt/stack}
+
 # Ubuntu distro to install
 DIST_NAME=${DIST_NAME:-oneiric}
 
@@ -70,7 +72,7 @@ apt-get install -y --force-yes $DEPS
 
 # Where to store files and instances
 CACHEDIR=${CACHEDIR:-/opt/stack/cache}
-WORK_DIR=${WORK_DIR:-/opt/kvmstack}
+WORK_DIR=${WORK_DIR:-/opt/ramstack}
 
 # Where to store images
 image_dir=$WORK_DIR/images/$DIST_NAME
