@@ -46,7 +46,7 @@ while getopts hr: c; do
 done
 shift `expr $OPTIND - 1`
 
-if [ ! "$#" -eq "2" -o ! "$@" -eq "3" ]; then
+if [ ! "$#" -eq "2" -a ! "$@" -eq "3" ]; then
     usage
 fi
 
