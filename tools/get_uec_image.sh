@@ -12,7 +12,7 @@ TOP_DIR=`cd $TOOLS_DIR/..; pwd`
 set -o errexit
 
 usage() {
-    echo "Usage: $0 - Prepare Ubuntu images"
+    echo "Usage: $0 - Fetch and prepare Ubuntu images"
     echo ""
     echo "$0 [-r rootsize] release imagefile"
     echo ""
@@ -86,18 +86,14 @@ fi
 # Get the UEC image
 UEC_NAME=$DIST_NAME-server-cloudimg-amd64
 if [ ! -d $CACHEDIR ]; then
-    mkdir -p $CACHEDIR
-fi
-if [ ! -e $CACHEDIR/$UEC_NAME.tar.gz ]; then
-    (cd $CACHEDIR && wget -N http://uec-images.ubuntu.com/$DIST_NAME/current/$UEC_NAME.tar.gz)
-fi
-if [ ! -d $CACHEDIR/$DIST_NAME ]; then
     mkdir -p $CACHEDIR/$DIST_NAME
-    (cd $CACHEDIR/$DIST_NAME && tar Sxvzf ../$UEC_NAME.tar.gz)
+fi
+if [ ! -e $CACHEDIR/$DIST_NAME/$UEC_NAME.tar.gz ]; then
+    (cd $CACHEDIR/$DIST_NAME && wget -N http://uec-images.ubuntu.com/$DIST_NAME/current/$UEC_NAME.tar.gz)
+    (cd $CACHEDIR/$DIST_NAME && tar Sxvzf $UEC_NAME.tar.gz)
 fi
 
 $RESIZE $CACHEDIR/$DIST_NAME/$UEC_NAME.img ${ROOTSIZE} $IMG_FILE_TMP
 mv $IMG_FILE_TMP $IMG_FILE
 
 trap - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
-
