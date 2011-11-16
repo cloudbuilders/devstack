@@ -50,8 +50,7 @@ fi
 
 # Get the base image if it does not yet exist
 if [ ! -e $image_dir/disk ]; then
-    $TOOLS_DIR/get_uec_image.sh -r $GUEST_SIZE $DIST_NAME $image_dir/disk
-    cp -p $image_dir/*-vmlinuz-virtual $image_dir/kernel
+    $TOOLS_DIR/get_uec_image.sh -r $GUEST_SIZE $DIST_NAME $image_dir/disk $image_dir/kernel
 fi
 
 # Copy over dev environment if COPY_ENV is set.
