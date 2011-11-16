@@ -16,6 +16,25 @@ if ! egrep -q "oneiric" /etc/lsb-release; then
     exit 1
 fi
 
+# Clean up resources that may be in use
+cleanup() {
+    set +o errexit
+
+    if [ -n "$MNT_DIR" ]; then
+        umount $MNT_DIR/dev
+        umount $MNT_DIR
+    fi
+
+    if [ -n "$DEST_FILE_TMP" ]; then
+        rm $DEST_FILE_TMP
+    fi
+
+    # Kill ourselves to signal parents
+    trap 2; kill -2 $$
+}
+
+trap cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
+
 # Output dest image
 DEST_FILE=$1
 
@@ -59,7 +78,7 @@ mkdir -p $image_dir
 
 # Get the base image if it does not yet exist
 if [ ! -e $image_dir/disk ]; then
-    $TOOLS_DIR/get_uec_image.sh -f raw -r 2000M $DIST_NAME $image_dir/disk
+    $TOOLS_DIR/get_uec_image.sh -r 2000M $DIST_NAME $image_dir/disk
 fi
 
 # Configure the root password of the vm to be the same as ``ADMIN_PASSWORD``
@@ -69,9 +88,11 @@ ROOT_PASSWORD=${ADMIN_PASSWORD:-password}
 GUEST_NAME=${GUEST_NAME:-devstack}
 
 # Pre-load the image with basic environment
-cp $image_dir/disk $image_dir/disk-primed
-$TOOLS_DIR/warm_apts_and_pips.sh $image_dir/disk-primed
-$TOOLS_DIR/setup_stack_user.sh $image_dir/disk-primed
+if [ ! -e $image_dir/disk-primed ]; then
+    cp $image_dir/disk $image_dir/disk-primed
+    $TOOLS_DIR/warm_apts_and_pips.sh $image_dir/disk-primed
+    $TOOLS_DIR/setup_stack_user.sh $image_dir/disk-primed
+fi
 
 # Back to devstack
 cd $TOP_DIR
@@ -86,20 +107,12 @@ GUEST_MAC=${GUEST_MAC:-"02:16:3e:07:69:`printf '%02X' $GUEST_NETWORK`"}
 GUEST_RAM=${GUEST_RAM:-1524288}
 GUEST_CORES=${GUEST_CORES:-1}
 
-exit 1
-
 DEST_FILE_TMP=`mktemp $DEST_FILE.XXXXXX`
-if [ ! -r $DEST_FILE ]; then
-
-# dd to fs image
-
-    mv $DEST_FILE_TMP $DEST_FILE
-fi
-rm -f $DEST_FILE_TMP
-
 MNT_DIR=`mktemp -d --tmpdir mntXXXXXXXX`
-mount -t ext4 -o loop $DEST_FILE $MNT_DIR
-cp -p /etc/resolv.conf $MN_TDIR/etc/resolv.conf
+cp $image_dir/disk-primed $DEST_FILE_TMP
+mount -t ext4 -o loop $DEST_FILE_TMP $MNT_DIR
+mount -o bind /dev /$MNT_DIR/dev
+cp -p /etc/resolv.conf $MNT_DIR/etc/resolv.conf
 
 # We need to install a non-virtual kernel and modules to boot from
 if [ ! -r "`ls $MNT_DIR/boot/vmlinuz-*-generic | head -1`" ]; then
@@ -142,11 +155,11 @@ git_clone $NOVNC_REPO $DEST/novnc $NOVNC_BRANCH
 git_clone $HORIZON_REPO $DEST/horizon $HORIZON_BRANCH
 git_clone $NOVACLIENT_REPO $DEST/python-novaclient $NOVACLIENT_BRANCH
 git_clone $OPENSTACKX_REPO $DEST/openstackx $OPENSTACKX_BRANCH
-git_clone $CITESTS_REPO $DEST/openstack-integration-tests $CITESTS_BRANCH
+git_clone $CITEST_REPO $DEST/openstack-integration-tests $CITEST_BRANCH
 
 # Use this version of devstack
 rm -rf $MNT_DIR/$DEST/devstack
-cp -pr $CWD $MNT_DIR/$DEST/devstack
+cp -pr $TOP_DIR $MNT_DIR/$DEST/devstack
 chroot $MNT_DIR chown -R stack $DEST/devstack
 
 # Configure host network for DHCP
@@ -160,8 +173,8 @@ iface eth0 inet dhcp
 EOF
 
 # Set hostname
-echo "ramstack" >$MNTDIR/etc/hostname
-echo "127.0.0.1		localhost	ramstack" >$MNTDIR/etc/hosts
+echo "ramstack" >$MNT_DIR/etc/hostname
+echo "127.0.0.1		localhost	ramstack" >$MNT_DIR/etc/hosts
 
 # Configure the runner
 RUN_SH=$MNT_DIR/$DEST/run.sh
@@ -185,99 +198,12 @@ EOF
 
 # Make the run.sh executable
 chmod 755 $RUN_SH
-chroot $MNTDIR chown stack $DEST/run.sh
+chroot $MNT_DIR chown stack $DEST/run.sh
 
-umount $MNTDIR
-rmdir $MNTDIR
+umount $MNT_DIR/dev
+umount $MNT_DIR
+rmdir $MNT_DIR
+mv $DEST_FILE_TMP $DEST_FILE
+rm -f $DEST_FILE_TMP
 
-# set user-data
-cat > $vm_dir/uec/user-data<<EOF
-#!/bin/bash
-# hostname needs to resolve for rabbit
-sed -i "s/127.0.0.1/127.0.0.1 \`hostname\`/" /etc/hosts
-apt-get update
-apt-get install git sudo -y
-git clone https://github.com/cloudbuilders/devstack.git
-cd devstack
-git remote set-url origin `cd $TOP_DIR; git remote show origin | grep Fetch | awk '{print $3}'`
-git fetch
-git checkout `git rev-parse HEAD`
-cat > localrc <<LOCAL_EOF
-ROOTSLEEP=0
-`cat $TOP_DIR/localrc`
-LOCAL_EOF
-# Disable byobu
-/usr/bin/byobu-disable
-EOF
-
-# Setup stack user with our key
-CONFIGURE_STACK_USER=${CONFIGURE_STACK_USER:-yes}
-if [[ -e ~/.ssh/id_rsa.pub  && "$CONFIGURE_STACK_USER" = "yes" ]]; then
-    PUB_KEY=`cat  ~/.ssh/id_rsa.pub`
-    cat >> $vm_dir/uec/user-data<<EOF
-EOF
-fi
-
-
-# Run stack.sh
-cat >> $vm_dir/uec/user-data<<EOF
-./stack.sh
-EOF
-
-# (re)start a metadata service
-(
-  pid=`lsof -iTCP@192.168.$GUEST_NETWORK.1:4567 -n | awk '{print $2}' | tail -1`
-  [ -z "$pid" ] || kill -9 $pid
-)
-cd $vm_dir/uec
-python meta.py 192.168.$GUEST_NETWORK.1:4567 &
-
-# Create the instance
-virsh create $vm_dir/libvirt.xml
-
-# Tail the console log till we are done
-WAIT_TILL_LAUNCH=${WAIT_TILL_LAUNCH:-1}
-if [ "$WAIT_TILL_LAUNCH" = "1" ]; then
-    set +o xtrace
-    # Done creating the container, let's tail the log
-    echo
-    echo "============================================================="
-    echo "                          -- YAY! --"
-    echo "============================================================="
-    echo
-    echo "We're done launching the vm, about to start tailing the"
-    echo "stack.sh log. It will take a second or two to start."
-    echo
-    echo "Just CTRL-C at any time to stop tailing."
-
-    while [ ! -e "$vm_dir/console.log" ]; do
-      sleep 1
-    done
-
-    tail -F $vm_dir/console.log &
-
-    TAIL_PID=$!
-
-    function kill_tail() {
-        kill $TAIL_PID
-        exit 1
-    }
-
-    # Let Ctrl-c kill tail and exit
-    trap kill_tail SIGINT
-
-    echo "Waiting stack.sh to finish..."
-    while ! egrep -q '^stack.sh (completed|failed)' $vm_dir/console.log ; do
-        sleep 1
-    done
-
-    set -o xtrace
-
-    kill $TAIL_PID
-
-    if ! grep -q "^stack.sh completed in" $vm_dir/console.log; then
-        exit 1
-    fi
-    echo ""
-    echo "Finished - Zip-a-dee Doo-dah!"
-fi
+trap - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
