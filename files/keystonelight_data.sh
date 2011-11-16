@@ -7,18 +7,18 @@ $BIN_DIR/ksl $* tenant add name=invisible_to_admin id=invisible_to_admin
 
 # Users
 $BIN_DIR/ksl $* user add name=admin id=admin password=%ADMIN_PASSWORD% \
-    tenants=admin \
-    tenants=demo
+    tenants[]=admin \
+    tenants[]=demo
 $BIN_DIR/ksl $* user add name=demo id=demo password=%ADMIN_PASSWORD% \
-    tenants=demo \
-    tenants=invisible_to_admin
+    tenants[]=demo \
+    tenants[]=invisible_to_admin
 
 # Roles
 $BIN_DIR/ksl $* extras add user_id=admin tenant_id=admin \
-    roles=Admin
+    roles[]=Admin
 $BIN_DIR/ksl $* extras add user_id=demo tenant_id=demo \
-    roles=sysadmin
-    roles=netadmin
+    roles[]=sysadmin \
+    roles[]=netadmin
 
 
 #$BIN_DIR/ksl $* role add Member
