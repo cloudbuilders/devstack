@@ -40,10 +40,6 @@ while getopts hr: c; do
         h)  usage
             ;;
         r)  ROOTSIZE=$OPTARG
-            if [[ $ROOTSIZE < 2000 ]]; then
-                echo "root size must be greater than 2000MB"
-                exit 1
-            fi
             ;;
     esac
 done
