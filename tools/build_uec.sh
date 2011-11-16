@@ -54,12 +54,12 @@ if [ ! -f $tarball ]; then
     cp $image_dir/*-vmlinuz-virtual $image_dir/kernel
 fi
 
-# Start over with a clean base image
+# Start over with a clean base image, if desired
 if [ $CLEAN_BASE ]; then
     rm -f $image_dir/disk
 fi
 
-# Create base image
+# Create base image, if missing
 if [ ! -f $image_dir/disk ]; then
     resize-part-image $image_dir/*.img $GUEST_SIZE $image_dir/disk
 fi
