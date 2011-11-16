@@ -63,6 +63,10 @@ cp_it ~/.gitconfig $STAGING_DIR/$DEST/.gitconfig
 cp_it ~/.vimrc $STAGING_DIR/$DEST/.vimrc
 cp_it ~/.bashrc $STAGING_DIR/$DEST/.bashrc
 
+# Copy devstack
+rm -rf $STAGING_DIR/$DEST/devstack
+cp_it . $STAGING_DIR/$DEST/devstack
+
 # Give stack ownership over $DEST so it may do the work needed
 chroot $STAGING_DIR chown -R stack $DEST
 
