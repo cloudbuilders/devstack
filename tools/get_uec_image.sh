@@ -46,7 +46,7 @@ while getopts hr: c; do
 done
 shift `expr $OPTIND - 1`
 
-if [ ! "$#" -eq "2" -a ! "$@" -eq "3" ]; then
+if [[ ! "$#" -eq "2" && ! "$#" -eq "3" ]]; then
     usage
 fi
 
@@ -95,7 +95,7 @@ $RESIZE $CACHEDIR/$DIST_NAME/$UEC_NAME.img ${ROOTSIZE} $IMG_FILE_TMP
 mv $IMG_FILE_TMP $IMG_FILE
 
 # Copy kernel to destination
-if [ "-n "$KERNEL" ]; then
+if [ -n "$KERNEL" ]; then
     cp -p $CACHEDIR/$DIST_NAME/*-vmlinuz-virtual $KERNEL
 fi
 
