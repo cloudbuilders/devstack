@@ -384,7 +384,7 @@ fi
 function get_packages() {
     local file_to_parse="general"
     local service
-    
+
     for service in ${ENABLED_SERVICES//,/ }; do
         if [[ $service == n-* ]]; then
             if [[ ! $file_to_parse =~ nova ]]; then
@@ -897,7 +897,6 @@ function add_nova_flag {
 # (re)create nova.conf
 rm -f $NOVA_DIR/bin/nova.conf
 add_nova_flag "--verbose"
-add_nova_flag "--nodaemon"
 add_nova_flag "--allow_admin_api"
 add_nova_flag "--scheduler_driver=$SCHEDULER"
 add_nova_flag "--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf"
@@ -943,6 +942,12 @@ fi
 if [ "$SYSLOG" != "False" ]; then
     add_nova_flag "--use_syslog"
 fi
+
+# You can define extra nova conf flags by defining the array EXTRA_FLAGS,
+# For Example: EXTRA_FLAGS=(--foo --bar=2)
+for I in "${EXTRA_FLAGS[@]}"; do
+    add_nova_flag $i
+done
 
 # XenServer
 # ---------
