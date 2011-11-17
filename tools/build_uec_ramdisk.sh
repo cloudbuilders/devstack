@@ -92,8 +92,8 @@ GUEST_NAME=${GUEST_NAME:-devstack}
 # Pre-load the image with basic environment
 if [ ! -e $image_dir/disk-primed ]; then
     cp $image_dir/disk $image_dir/disk-primed
-    $TOOLS_DIR/warm_apts_and_pips.sh $image_dir/disk-primed
-    $TOOLS_DIR/setup_stack_user.sh $image_dir/disk-primed
+    $TOOLS_DIR/warm_apts_and_pips_for_uec.sh $image_dir/disk-primed
+    $TOOLS_DIR/copy_dev_environment_to_uec.sh $image_dir/disk-primed
 fi
 
 # Back to devstack
