@@ -44,10 +44,8 @@ chroot $STAGING_DIR useradd stack -s /bin/bash -d $DEST -G libvirtd || true
 echo stack:pass | chroot $STAGING_DIR chpasswd
 
 # Configure sudo
-grep -q "^#includedir.*/etc/sudoers.d" $STAGING_DIR/etc/sudoers ||
-    echo "#includedir /etc/sudoers.d" | sudo tee -a $STAGING_DIR/etc/sudoers
-cp $TOP_DIR/files/sudo/* $STAGING_DIR/etc/sudoers.d/
-sed -e "s,%USER%,$USER,g" -i $STAGING_DIR/etc/sudoers.d/*
+( umask 226 && echo "stack ALL=(ALL) NOPASSWD:ALL" \
+    > /etc/sudoers.d/50_stack_sh )
 
 # Gracefully cp only if source file/dir exists
 function cp_it {
