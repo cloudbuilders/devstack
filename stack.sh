@@ -516,7 +516,10 @@ fi
 
 # setup our checkouts so they are installed into python path
 # allowing ``import nova`` or ``import glance.client``
-if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "key" || 
+      "$ENABLED_SERVICES" =~ "g-api" || 
+      "$ENABLED_SERVICES" =~ "n-api" || 
+      "$ENABLED_SERVICES" =~ "swift" ]]; then
     cd $KEYSTONE_DIR; sudo python setup.py develop
 fi
 if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
