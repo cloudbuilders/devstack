@@ -480,10 +480,12 @@ function is_enabled() {
     return 1
 }
 
-# compute service
-git_clone $NOVA_REPO $NOVA_DIR $NOVA_BRANCH
-# python client library to nova that horizon (and others) use
-git_clone $NOVACLIENT_REPO $NOVACLIENT_DIR $NOVACLIENT_BRANCH
+if is_enabled nova; then
+    # compute service
+    git_clone $NOVA_REPO $NOVA_DIR $NOVA_BRANCH
+    # python client library to nova that horizon (and others) use
+    git_clone $NOVACLIENT_REPO $NOVACLIENT_DIR $NOVACLIENT_BRANCH
+fi
 if is_enabled swift; then
     # storage service
     git_clone $SWIFT_REPO $SWIFT_DIR $SWIFT_BRANCH
@@ -532,8 +534,10 @@ fi
 if is_enabled g-api; then
     cd $GLANCE_DIR; sudo python setup.py develop
 fi
-cd $NOVACLIENT_DIR; sudo python setup.py develop
-cd $NOVA_DIR; sudo python setup.py develop
+if is_enabled nova; then
+    cd $NOVACLIENT_DIR; sudo python setup.py develop
+    cd $NOVA_DIR; sudo python setup.py develop
+fi
 if is_enabled openstackx; then
     cd $OPENSTACKX_DIR; sudo python setup.py develop
 fi
@@ -904,100 +908,101 @@ if is_enabled n-vol; then
     sudo /etc/init.d/iscsitarget restart
 fi
 
-function add_nova_flag {
-    echo "$1" >> $NOVA_DIR/bin/nova.conf
-}
+if is_enabled nova; then
+    function add_nova_flag {
+        echo "$1" >> $NOVA_DIR/bin/nova.conf
+    }
 
-# (re)create nova.conf
-rm -f $NOVA_DIR/bin/nova.conf
-add_nova_flag "--verbose"
-add_nova_flag "--allow_admin_api"
-add_nova_flag "--scheduler_driver=$SCHEDULER"
-add_nova_flag "--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf"
-add_nova_flag "--fixed_range=$FIXED_RANGE"
-if is_enabled q-svc; then
-    add_nova_flag "--network_manager=nova.network.quantum.manager.QuantumManager"
-    if [[ "$Q_PLUGIN" = "openvswitch" ]]; then
-        add_nova_flag "--libvirt_vif_type=ethernet"
-        add_nova_flag "--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver"
+    # (re)create nova.conf
+    rm -f $NOVA_DIR/bin/nova.conf
+    add_nova_flag "--verbose"
+    add_nova_flag "--allow_admin_api"
+    add_nova_flag "--scheduler_driver=$SCHEDULER"
+    add_nova_flag "--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf"
+    add_nova_flag "--fixed_range=$FIXED_RANGE"
+    if is_enabled q-svc; then
+        add_nova_flag "--network_manager=nova.network.quantum.manager.QuantumManager"
+        if [[ "$Q_PLUGIN" = "openvswitch" ]]; then
+            add_nova_flag "--libvirt_vif_type=ethernet"
+            add_nova_flag "--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver"
+        fi
+    else
+        add_nova_flag "--network_manager=nova.network.manager.$NET_MAN"
     fi
-else
-    add_nova_flag "--network_manager=nova.network.manager.$NET_MAN"
-fi
-if is_enabled n-vol; then
-    add_nova_flag "--volume_group=$VOLUME_GROUP"
-fi
-add_nova_flag "--my_ip=$HOST_IP"
-add_nova_flag "--public_interface=$PUBLIC_INTERFACE"
-add_nova_flag "--vlan_interface=$VLAN_INTERFACE"
-add_nova_flag "--sql_connection=$BASE_SQL_CONN/nova"
-add_nova_flag "--libvirt_type=$LIBVIRT_TYPE"
-if is_enabled openstackx; then
-    add_nova_flag "--osapi_extensions_path=$OPENSTACKX_DIR/extensions"
-fi
-if is_enabled n-vnc; then
-    add_nova_flag "--vncproxy_url=http://$HOST_IP:6080"
-    add_nova_flag "--vncproxy_wwwroot=$NOVNC_DIR/"
-fi
-add_nova_flag "--api_paste_config=$NOVA_DIR/bin/nova-api-paste.ini"
-add_nova_flag "--image_service=nova.image.glance.GlanceImageService"
-add_nova_flag "--ec2_dmz_host=$EC2_DMZ_HOST"
-add_nova_flag "--rabbit_host=$RABBIT_HOST"
-add_nova_flag "--rabbit_password=$RABBIT_PASSWORD"
-add_nova_flag "--glance_api_servers=$GLANCE_HOSTPORT"
-add_nova_flag "--force_dhcp_release"
-if [ -n "$INSTANCES_PATH" ]; then
-    add_nova_flag "--instances_path=$INSTANCES_PATH"
-fi
-if [ "$MULTI_HOST" != "False" ]; then
-    add_nova_flag "--multi_host"
-    add_nova_flag "--send_arp_for_ha"
-fi
-if [ "$SYSLOG" != "False" ]; then
-    add_nova_flag "--use_syslog"
-fi
+    if is_enabled n-vol; then
+        add_nova_flag "--volume_group=$VOLUME_GROUP"
+    fi
+    add_nova_flag "--my_ip=$HOST_IP"
+    add_nova_flag "--public_interface=$PUBLIC_INTERFACE"
+    add_nova_flag "--vlan_interface=$VLAN_INTERFACE"
+    add_nova_flag "--sql_connection=$BASE_SQL_CONN/nova"
+    add_nova_flag "--libvirt_type=$LIBVIRT_TYPE"
+    if is_enabled openstackx; then
+        add_nova_flag "--osapi_extensions_path=$OPENSTACKX_DIR/extensions"
+    fi
+    if is_enabled n-vnc; then
+        add_nova_flag "--vncproxy_url=http://$HOST_IP:6080"
+        add_nova_flag "--vncproxy_wwwroot=$NOVNC_DIR/"
+    fi
+    add_nova_flag "--api_paste_config=$NOVA_DIR/bin/nova-api-paste.ini"
+    add_nova_flag "--image_service=nova.image.glance.GlanceImageService"
+    add_nova_flag "--ec2_dmz_host=$EC2_DMZ_HOST"
+    add_nova_flag "--rabbit_host=$RABBIT_HOST"
+    add_nova_flag "--rabbit_password=$RABBIT_PASSWORD"
+    add_nova_flag "--glance_api_servers=$GLANCE_HOSTPORT"
+    add_nova_flag "--force_dhcp_release"
+    if [ -n "$INSTANCES_PATH" ]; then
+        add_nova_flag "--instances_path=$INSTANCES_PATH"
+    fi
+    if [ "$MULTI_HOST" != "False" ]; then
+        add_nova_flag "--multi_host"
+        add_nova_flag "--send_arp_for_ha"
+    fi
+    if [ "$SYSLOG" != "False" ]; then
+        add_nova_flag "--use_syslog"
+    fi
 
-# You can define extra nova conf flags by defining the array EXTRA_FLAGS,
-# For Example: EXTRA_FLAGS=(--foo --bar=2)
-for I in "${EXTRA_FLAGS[@]}"; do
-    add_nova_flag $i
-done
+    # You can define extra nova conf flags by defining the array EXTRA_FLAGS,
+    # For Example: EXTRA_FLAGS=(--foo --bar=2)
+    for I in "${EXTRA_FLAGS[@]}"; do
+        add_nova_flag $i
+    done
 
-# XenServer
-# ---------
+    # XenServer
+    # ---------
 
-if [ "$VIRT_DRIVER" = 'xenserver' ]; then
-    read_password XENAPI_PASSWORD "ENTER A PASSWORD TO USE FOR XEN."
-    add_nova_flag "--connection_type=xenapi"
-    add_nova_flag "--xenapi_connection_url=http://169.254.0.1"
-    add_nova_flag "--xenapi_connection_username=root"
-    add_nova_flag "--xenapi_connection_password=$XENAPI_PASSWORD"
-    add_nova_flag "--flat_injected=False"
-    add_nova_flag "--flat_interface=eth1"
-    add_nova_flag "--flat_network_bridge=xenbr1"
-    add_nova_flag "--public_interface=eth3"
-else
-    add_nova_flag "--flat_network_bridge=$FLAT_NETWORK_BRIDGE"
-    if [ -n "$FLAT_INTERFACE" ]; then
-        add_nova_flag "--flat_interface=$FLAT_INTERFACE"
+    if [ "$VIRT_DRIVER" = 'xenserver' ]; then
+        read_password XENAPI_PASSWORD "ENTER A PASSWORD TO USE FOR XEN."
+        add_nova_flag "--connection_type=xenapi"
+        add_nova_flag "--xenapi_connection_url=http://169.254.0.1"
+        add_nova_flag "--xenapi_connection_username=root"
+        add_nova_flag "--xenapi_connection_password=$XENAPI_PASSWORD"
+        add_nova_flag "--flat_injected=False"
+        add_nova_flag "--flat_interface=eth1"
+        add_nova_flag "--flat_network_bridge=xenbr1"
+        add_nova_flag "--public_interface=eth3"
+    else
+        add_nova_flag "--flat_network_bridge=$FLAT_NETWORK_BRIDGE"
+        if [ -n "$FLAT_INTERFACE" ]; then
+            add_nova_flag "--flat_interface=$FLAT_INTERFACE"
+        fi
+    fi
+
+    # Nova Database
+    # ~~~~~~~~~~~~~
+
+    # All nova components talk to a central database.  We will need to do this step
+    # only once for an entire cluster.
+
+    if is_enabled mysql; then
+        # (re)create nova database
+        mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'DROP DATABASE IF EXISTS nova;'
+        mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'CREATE DATABASE nova;'
+
+        # (re)create nova database
+        $NOVA_DIR/bin/nova-manage db sync
     fi
 fi
-
-# Nova Database
-# ~~~~~~~~~~~~~
-
-# All nova components talk to a central database.  We will need to do this step
-# only once for an entire cluster.
-
-if is_enabled mysql; then
-    # (re)create nova database
-    mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'DROP DATABASE IF EXISTS nova;'
-    mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'CREATE DATABASE nova;'
-
-    # (re)create nova database
-    $NOVA_DIR/bin/nova-manage db sync
-fi
-
 
 # Keystone
 # --------
@@ -1138,15 +1143,17 @@ if is_enabled mysql; then
     fi
 fi
 
-# Launching nova-compute should be as simple as running ``nova-compute`` but
-# have to do a little more than that in our script.  Since we add the group
-# ``libvirtd`` to our user in this script, when nova-compute is run it is
-# within the context of our original shell (so our groups won't be updated).
-# Use 'sg' to execute nova-compute as a member of the libvirtd group.
-screen_it n-cpu "cd $NOVA_DIR && sg libvirtd $NOVA_DIR/bin/nova-compute"
-screen_it n-vol "cd $NOVA_DIR && $NOVA_DIR/bin/nova-volume"
-screen_it n-net "cd $NOVA_DIR && $NOVA_DIR/bin/nova-network"
-screen_it n-sch "cd $NOVA_DIR && $NOVA_DIR/bin/nova-scheduler"
+if is_enabled nova;then
+    # Launching nova-compute should be as simple as running ``nova-compute`` but
+    # have to do a little more than that in our script.  Since we add the group
+    # ``libvirtd`` to our user in this script, when nova-compute is run it is
+    # within the context of our original shell (so our groups won't be updated).
+    # Use 'sg' to execute nova-compute as a member of the libvirtd group.
+    screen_it n-cpu "cd $NOVA_DIR && sg libvirtd $NOVA_DIR/bin/nova-compute"
+    screen_it n-vol "cd $NOVA_DIR && $NOVA_DIR/bin/nova-volume"
+    screen_it n-net "cd $NOVA_DIR && $NOVA_DIR/bin/nova-network"
+    screen_it n-sch "cd $NOVA_DIR && $NOVA_DIR/bin/nova-scheduler"
+fi
 if is_enabled n-vnc; then
     screen_it n-vnc "cd $NOVNC_DIR && ./utils/nova-wsproxy.py --flagfile $NOVA_DIR/bin/nova.conf --web . 6080"
 fi
