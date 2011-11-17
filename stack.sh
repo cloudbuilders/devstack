@@ -922,7 +922,7 @@ add_nova_flag "--vlan_interface=$VLAN_INTERFACE"
 add_nova_flag "--sql_connection=$BASE_SQL_CONN/nova"
 add_nova_flag "--libvirt_type=$LIBVIRT_TYPE"
 if [[ "$ENABLED_SERVICES" =~ "openstackx" ]]; then
-    add_nova_flag "--osapi_extension=nova.api.openstack.contrib.standard_extensions"
+    add_nova_flag "--osapi_extension=nova.api.openstack.v2.contrib.standard_extensions"
     add_nova_flag "--osapi_extension=extensions.admin.Admin"
 fi
 if [[ "$ENABLED_SERVICES" =~ "n-vnc" ]]; then
