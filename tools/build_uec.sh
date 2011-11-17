@@ -43,25 +43,14 @@ WORK_DIR=${WORK_DIR:-/opt/uecstack}
 image_dir=$WORK_DIR/images/$DIST_NAME
 mkdir -p $image_dir
 
-# Original version of built image
-uec_url=http://uec-images.ubuntu.com/$DIST_NAME/current/$DIST_NAME-server-cloudimg-amd64.tar.gz
-tarball=$image_dir/$(basename $uec_url)
-
-# Download the base uec image if we haven't already
-if [ ! -f $tarball ]; then
-    curl $uec_url -o $tarball
-    (cd $image_dir && tar -Sxvzf $tarball)
-    cp $image_dir/*-vmlinuz-virtual $image_dir/kernel
-fi
-
 # Start over with a clean base image, if desired
 if [ $CLEAN_BASE ]; then
     rm -f $image_dir/disk
 fi
 
-# Create base image, if missing
-if [ ! -f $image_dir/disk ]; then
-    resize-part-image $image_dir/*.img $GUEST_SIZE $image_dir/disk
+# Get the base image if it does not yet exist
+if [ ! -e $image_dir/disk ]; then
+    $TOOLS_DIR/get_uec_image.sh -r $GUEST_SIZE $DIST_NAME $image_dir/disk $image_dir/kernel
 fi
 
 # Copy over dev environment if COPY_ENV is set.
