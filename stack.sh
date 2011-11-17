@@ -488,7 +488,8 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     # swift + keystone middleware
     git_clone $SWIFT_KEYSTONE_REPO $SWIFT_KEYSTONE_DIR $SWIFT_KEYSTONE_BRANCH
 fi
-if [[ "$ENABLED_SERVICES" =~ "g-api" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "g-api" ||
+      "$ENABLED_SERVICES" =~ "n-api" ]]; then
     # image catalog service
     git_clone $GLANCE_REPO $GLANCE_DIR $GLANCE_BRANCH
 fi
@@ -526,7 +527,8 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     cd $SWIFT_DIR; sudo python setup.py develop
     cd $SWIFT_KEYSTONE_DIR; sudo python setup.py develop
 fi
-if [[ "$ENABLED_SERVICES" =~ "g-api" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "g-api" ||
+      "$ENABLED_SERVICES" =~ "n-api" ]]; then
     cd $GLANCE_DIR; sudo python setup.py develop
 fi
 cd $NOVACLIENT_DIR; sudo python setup.py develop
