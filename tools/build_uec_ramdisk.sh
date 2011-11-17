@@ -115,6 +115,7 @@ cp $image_dir/disk-primed $DEST_FILE_TMP
 mount -t ext4 -o loop $DEST_FILE_TMP $MNT_DIR
 mount -o bind /dev /$MNT_DIR/dev
 cp -p /etc/resolv.conf $MNT_DIR/etc/resolv.conf
+echo root:$ROOT_PASSWORD | chroot $MNT_DIR chpasswd
 
 # We need to install a non-virtual kernel and modules to boot from
 if [ ! -r "`ls $MNT_DIR/boot/vmlinuz-*-generic | head -1`" ]; then
