@@ -723,7 +723,7 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
     # virtual machines.  If there is a partition labeled nova-instances we
     # mount it (ext filesystems can be labeled via e2label).
     if [ -L /dev/disk/by-label/nova-instances ]; then
-        if ! mount -n | grep -q nova-instances; then
+        if ! mount -n | grep -q $NOVA_DIR/instances; then
             sudo mount -L nova-instances $NOVA_DIR/instances
             sudo chown -R `whoami` $NOVA_DIR/instances
         fi
