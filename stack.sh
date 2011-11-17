@@ -596,6 +596,9 @@ fi
 
 if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
 
+    # Install apache2, which is NOPRIME'd
+    sudo apt-get install -y apache2 libapache2-mod-wsgi
+
     # Horizon currently imports quantum even if you aren't using it.  Instead
     # of installing quantum we can create a simple module that will pass the
     # initial imports
