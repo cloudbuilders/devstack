@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# exit on error to stop unexpected errors
+set -o errexit
+set -o xtrace
+
 EXECUTOR_NUMBER=$1
 CONFIGURATION=$2
 ADAPTER=$3
