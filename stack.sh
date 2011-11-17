@@ -10,20 +10,22 @@
 # shared settings for common resources (mysql, rabbitmq) and build a multi-node
 # developer install.
 
-# To keep this script simple we assume you are running on an **Ubuntu 11.04
-# Natty** machine.  It should work in a VM or physical server.  Additionally we
-# put the list of *apt* and *pip* dependencies and other configuration files in
-# this repo.  So start by grabbing this script and the dependencies.
+# To keep this script simple we assume you are running on an **Ubuntu 11.10
+# Oneiric** machine.  It should work in a VM or physical server.  Additionally
+# we put the list of *apt* and *pip* dependencies and other configuration files
+# in this repo.  So start by grabbing this script and the dependencies.
 
 # Learn more and get the most recent version at http://devstack.org
 
 # Sanity Check
 # ============
 
-# Warn users who aren't on natty, but allow them to override check and attempt
+# Warn users who aren't on oneiric, but allow them to override check and attempt
 # installation with ``FORCE=yes ./stack``
-if ! egrep -q 'natty|oneiric' /etc/lsb-release; then
-    echo "WARNING: this script has only been tested on natty and oneiric"
+DISTRO=$(lsb_release -c -s)
+
+if [[ ! ${DISTRO} =~ (oneiric) ]]; then
+    echo "WARNING: this script has only been tested on oneiric"
     if [[ "$FORCE" != "yes" ]]; then
         echo "If you wish to run this script anyway run with FORCE=yes"
         exit 1
@@ -111,7 +113,7 @@ if [[ $EUID -eq 0 ]]; then
     fi
 
     echo "Giving stack user passwordless sudo priviledges"
-    # natty uec images sudoers does not have a '#includedir'. add one.
+    # some uec images sudoers does not have a '#includedir'. add one.
     grep -q "^#includedir.*/etc/sudoers.d" /etc/sudoers ||
         echo "#includedir /etc/sudoers.d" >> /etc/sudoers
     ( umask 226 && echo "stack ALL=(ALL) NOPASSWD:ALL" \
@@ -157,7 +159,7 @@ QUANTUM_DIR=$DEST/quantum
 Q_PLUGIN=${Q_PLUGIN:-openvswitch}
 
 # Specify which services to launch.  These generally correspond to screen tabs
-ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,horizon,mysql,rabbit}
+ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,horizon,mysql,rabbit,openstackx}
 
 # Name of the lvm volume group to use/create for iscsi volumes
 VOLUME_GROUP=${VOLUME_GROUP:-nova-volumes}
@@ -172,9 +174,16 @@ LIBVIRT_TYPE=${LIBVIRT_TYPE:-kvm}
 # cases unless you are working on multi-zone mode.
 SCHEDULER=${SCHEDULER:-nova.scheduler.simple.SimpleScheduler}
 
-# Use the first IP unless an explicit is set by ``HOST_IP`` environment variable
+# Use the eth0 IP unless an explicit is set by ``HOST_IP`` environment variable
 if [ ! -n "$HOST_IP" ]; then
-    HOST_IP=`LC_ALL=C /sbin/ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
+    HOST_IP=`LC_ALL=C /sbin/ifconfig eth0 | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
+    if [ "$HOST_IP" = "" ]; then
+        echo "Could not determine host ip address."
+        echo "If this is not your first run of stack.sh, it is "
+        echo "possible that nova moved your eth0 ip address to the FLAT_NETWORK_BRIDGE."
+        echo "Please specify your HOST_IP in your localrc."
+        exit 1
+    fi
 fi
 
 # Service startup timeout
@@ -365,10 +374,65 @@ fi
 #
 # Openstack uses a fair number of other projects.
 
+# - We are going to install packages only for the services needed.
+# - We are parsing the packages files and detecting metadatas.
+#  - If there is a NOPRIME as comment mean we are not doing the install
+#    just yet.
+#  - If we have the meta-keyword distro:DISTRO or
+#    distro:DISTRO1,DISTRO2 it will be installed only for those
+#    distros (case insensitive).
+function get_packages() {
+    local file_to_parse="general"
+    local service
+
+    for service in ${ENABLED_SERVICES//,/ }; do
+        if [[ $service == n-* ]]; then
+            if [[ ! $file_to_parse =~ nova ]]; then
+                file_to_parse="${file_to_parse} nova"
+            fi
+        elif [[ $service == g-* ]]; then
+            if [[ ! $file_to_parse =~ glance ]]; then
+                file_to_parse="${file_to_parse} glance"
+            fi
+        elif [[ $service == key* ]]; then
+            if [[ ! $file_to_parse =~ keystone ]]; then
+                file_to_parse="${file_to_parse} keystone"
+            fi
+        elif [[ -e $FILES/apts/${service} ]]; then
+            file_to_parse="${file_to_parse} $service"
+        fi
+    done
+
+    for file in ${file_to_parse}; do
+        local fname=${FILES}/apts/${file}
+        local OIFS line package distros distro
+        [[ -e $fname ]] || { echo "missing: $fname"; exit 1 ;}
+
+        OIFS=$IFS
+        IFS=$'\n'
+        for line in $(<${fname}); do
+            if [[ $line =~ "NOPRIME" ]]; then
+                continue
+            fi
+
+            if [[ $line =~ (.*)#.*dist:([^ ]*) ]]; then # We are using BASH regexp matching feature.
+                        package=${BASH_REMATCH[1]}
+                        distros=${BASH_REMATCH[2]}
+                        for distro in ${distros//,/ }; do  #In bash ${VAR,,} will lowecase VAR
+                            [[ ${distro,,} == ${DISTRO,,} ]] && echo $package
+                        done
+                        continue
+            fi
+
+            echo ${line%#*}
+        done
+        IFS=$OIFS
+    done
+}
 
 # install apt requirements
 apt_get update
-apt_get install `cat $FILES/apts/* | cut -d\# -f1 | grep -Ev "mysql-server|rabbitmq-server|memcached"`
+apt_get install $(get_packages)
 
 # install python requirements
 sudo PIP_DOWNLOAD_CACHE=/var/cache/pip pip install --use-mirrors `cat $FILES/pips/*`
@@ -407,25 +471,39 @@ function git_clone {
 
 # compute service
 git_clone $NOVA_REPO $NOVA_DIR $NOVA_BRANCH
-# storage service
-git_clone $SWIFT_REPO $SWIFT_DIR $SWIFT_BRANCH
-# swift + keystone middleware
-git_clone $SWIFT_KEYSTONE_REPO $SWIFT_KEYSTONE_DIR $SWIFT_KEYSTONE_BRANCH
-# image catalog service
-git_clone $GLANCE_REPO $GLANCE_DIR $GLANCE_BRANCH
-# unified auth system (manages accounts/tokens)
-git_clone $KEYSTONE_REPO $KEYSTONE_DIR $KEYSTONE_BRANCH
-# a websockets/html5 or flash powered VNC console for vm instances
-git_clone $NOVNC_REPO $NOVNC_DIR $NOVNC_BRANCH
-# django powered web control panel for openstack
-git_clone $HORIZON_REPO $HORIZON_DIR $HORIZON_BRANCH $HORIZON_TAG
 # python client library to nova that horizon (and others) use
 git_clone $NOVACLIENT_REPO $NOVACLIENT_DIR $NOVACLIENT_BRANCH
-# openstackx is a collection of extensions to openstack.compute & nova
-# that is *deprecated*.  The code is being moved into python-novaclient & nova.
-git_clone $OPENSTACKX_REPO $OPENSTACKX_DIR $OPENSTACKX_BRANCH
-# quantum
-git_clone $QUANTUM_REPO $QUANTUM_DIR $QUANTUM_BRANCH
+if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
+    # storage service
+    git_clone $SWIFT_REPO $SWIFT_DIR $SWIFT_BRANCH
+    # swift + keystone middleware
+    git_clone $SWIFT_KEYSTONE_REPO $SWIFT_KEYSTONE_DIR $SWIFT_KEYSTONE_BRANCH
+fi
+if [[ "$ENABLED_SERVICES" =~ "g-api" ]]; then
+    # image catalog service
+    git_clone $GLANCE_REPO $GLANCE_DIR $GLANCE_BRANCH
+fi
+if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
+    # unified auth system (manages accounts/tokens)
+    git_clone $KEYSTONE_REPO $KEYSTONE_DIR $KEYSTONE_BRANCH
+fi
+if [[ "$ENABLED_SERVICES" =~ "n-vnc" ]]; then
+    # a websockets/html5 or flash powered VNC console for vm instances
+    git_clone $NOVNC_REPO $NOVNC_DIR $NOVNC_BRANCH
+fi
+if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
+    # django powered web control panel for openstack
+    git_clone $HORIZON_REPO $HORIZON_DIR $HORIZON_BRANCH $HORIZON_TAG
+fi
+if [[ "$ENABLED_SERVICES" =~ "openstackx" ]]; then
+    # openstackx is a collection of extensions to openstack.compute & nova
+    # that is *deprecated*.  The code is being moved into python-novaclient & nova.
+    git_clone $OPENSTACKX_REPO $OPENSTACKX_DIR $OPENSTACKX_BRANCH
+fi
+if [[ "$ENABLED_SERVICES" =~ "quantum" ]]; then
+    # quantum
+    git_clone $QUANTUM_REPO $QUANTUM_DIR $QUANTUM_BRANCH
+fi
 
 # Initialization
 # ==============
@@ -433,16 +511,28 @@ git_clone $QUANTUM_REPO $QUANTUM_DIR $QUANTUM_BRANCH
 
 # setup our checkouts so they are installed into python path
 # allowing ``import nova`` or ``import glance.client``
-cd $KEYSTONE_DIR; sudo python setup.py develop
-cd $SWIFT_DIR; sudo python setup.py develop
-cd $SWIFT_KEYSTONE_DIR; sudo python setup.py develop
-cd $GLANCE_DIR; sudo python setup.py develop
+if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
+    cd $KEYSTONE_DIR; sudo python setup.py develop
+fi
+if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
+    cd $SWIFT_DIR; sudo python setup.py develop
+    cd $SWIFT_KEYSTONE_DIR; sudo python setup.py develop
+fi
+if [[ "$ENABLED_SERVICES" =~ "g-api" ]]; then
+    cd $GLANCE_DIR; sudo python setup.py develop
+fi
 cd $NOVACLIENT_DIR; sudo python setup.py develop
 cd $NOVA_DIR; sudo python setup.py develop
-cd $OPENSTACKX_DIR; sudo python setup.py develop
-cd $HORIZON_DIR/django-openstack; sudo python setup.py develop
-cd $HORIZON_DIR/openstack-dashboard; sudo python setup.py develop
-cd $QUANTUM_DIR; sudo python setup.py develop
+if [[ "$ENABLED_SERVICES" =~ "openstackx" ]]; then
+    cd $OPENSTACKX_DIR; sudo python setup.py develop
+fi
+if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
+    cd $HORIZON_DIR/django-openstack; sudo python setup.py develop
+    cd $HORIZON_DIR/openstack-dashboard; sudo python setup.py develop
+fi
+if [[ "$ENABLED_SERVICES" =~ "quantum" ]]; then
+    cd $QUANTUM_DIR; sudo python setup.py develop
+fi
 
 # Add a useful screenrc.  This isn't required to run openstack but is we do
 # it since we are going to run the services in screen for simple
@@ -587,6 +677,7 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
     # kvm, we drop back to the slower emulation mode (qemu).  Note: many systems
     # come with hardware virtualization disabled in BIOS.
     if [[ "$LIBVIRT_TYPE" == "kvm" ]]; then
+        apt_get install libvirt-bin
         sudo modprobe kvm || true
         if [ ! -e /dev/kvm ]; then
             echo "WARNING: Switching to QEMU"
@@ -656,7 +747,7 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     sudo chown -R $USER:${USER_GROUP} ${SWIFT_DATA_LOCATION}/drives
 
     # We then create a loopback disk and format it to XFS.
-    if [[ ! -e ${SWIFT_DATA_LOCATION}/drives/images/swift.img ]];then
+    if [[ ! -e ${SWIFT_DATA_LOCATION}/drives/images/swift.img ]]; then
         mkdir -p  ${SWIFT_DATA_LOCATION}/drives/images
         sudo touch  ${SWIFT_DATA_LOCATION}/drives/images/swift.img
         sudo chown $USER: ${SWIFT_DATA_LOCATION}/drives/images/swift.img
@@ -669,7 +760,7 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     # After the drive being created we mount the disk with a few mount
     # options to make it most efficient as possible for swift.
     mkdir -p ${SWIFT_DATA_LOCATION}/drives/sdb1
-    if ! egrep -q ${SWIFT_DATA_LOCATION}/drives/sdb1 /proc/mounts;then
+    if ! egrep -q ${SWIFT_DATA_LOCATION}/drives/sdb1 /proc/mounts; then
         sudo mount -t xfs -o loop,noatime,nodiratime,nobarrier,logbufs=8  \
             ${SWIFT_DATA_LOCATION}/drives/images/swift.img ${SWIFT_DATA_LOCATION}/drives/sdb1
     fi
@@ -683,7 +774,7 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     tmpd=""
     for d in ${SWIFT_DATA_LOCATION}/drives/sdb1/{1..4} \
         ${SWIFT_CONFIG_LOCATION}/{object,container,account}-server \
-        ${SWIFT_DATA_LOCATION}/{1..4}/node/sdb1 /var/run/swift ;do
+        ${SWIFT_DATA_LOCATION}/{1..4}/node/sdb1 /var/run/swift; do
         [[ -d $d ]] && continue
         sudo install -o ${USER} -g $USER_GROUP -d $d
     done
@@ -737,7 +828,7 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
        local log_facility=$3
        local node_number
 
-       for node_number in {1..4};do
+       for node_number in {1..4}; do
            node_path=${SWIFT_DATA_LOCATION}/${node_number}
            sed -e "s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},;s,%USER%,$USER,;s,%NODE_PATH%,${node_path},;s,%BIND_PORT%,${bind_port},;s,%LOG_FACILITY%,${log_facility}," \
                $FILES/swift/${server_type}-server.conf > ${SWIFT_CONFIG_LOCATION}/${server_type}-server/${node_number}.conf
@@ -806,7 +897,6 @@ function add_nova_flag {
 # (re)create nova.conf
 rm -f $NOVA_DIR/bin/nova.conf
 add_nova_flag "--verbose"
-add_nova_flag "--nodaemon"
 add_nova_flag "--allow_admin_api"
 add_nova_flag "--scheduler_driver=$SCHEDULER"
 add_nova_flag "--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf"
@@ -828,10 +918,14 @@ add_nova_flag "--public_interface=$PUBLIC_INTERFACE"
 add_nova_flag "--vlan_interface=$VLAN_INTERFACE"
 add_nova_flag "--sql_connection=$BASE_SQL_CONN/nova"
 add_nova_flag "--libvirt_type=$LIBVIRT_TYPE"
-add_nova_flag "--osapi_extension=nova.api.openstack.contrib.standard_extensions"
-add_nova_flag "--osapi_extension=extensions.admin.Admin"
-add_nova_flag "--vncproxy_url=http://$HOST_IP:6080"
-add_nova_flag "--vncproxy_wwwroot=$NOVNC_DIR/"
+if [[ "$ENABLED_SERVICES" =~ "openstackx" ]]; then
+    add_nova_flag "--osapi_extension=nova.api.openstack.contrib.standard_extensions"
+    add_nova_flag "--osapi_extension=extensions.admin.Admin"
+fi
+if [[ "$ENABLED_SERVICES" =~ "n-vnc" ]]; then
+    add_nova_flag "--vncproxy_url=http://$HOST_IP:6080"
+    add_nova_flag "--vncproxy_wwwroot=$NOVNC_DIR/"
+fi
 add_nova_flag "--api_paste_config=$NOVA_DIR/bin/nova-api-paste.ini"
 add_nova_flag "--image_service=nova.image.glance.GlanceImageService"
 add_nova_flag "--ec2_dmz_host=$EC2_DMZ_HOST"
@@ -849,6 +943,12 @@ fi
 if [ "$SYSLOG" != "False" ]; then
     add_nova_flag "--use_syslog"
 fi
+
+# You can define extra nova conf flags by defining the array EXTRA_FLAGS,
+# For Example: EXTRA_FLAGS=(--foo --bar=2)
+for I in "${EXTRA_FLAGS[@]}"; do
+    add_nova_flag $i
+done
 
 # XenServer
 # ---------
@@ -922,12 +1022,17 @@ fi
 function screen_it {
     NL=`echo -ne '\015'`
     if [[ "$ENABLED_SERVICES" =~ "$1" ]]; then
-        screen -S stack -X screen -t $1
-        # sleep to allow bash to be ready to be send the command - we are
-        # creating a new window in screen and then sends characters, so if
-        # bash isn't running by the time we send the command, nothing happens
-        sleep 1
-        screen -S stack -p $1 -X stuff "$2$NL"
+        if [[ "$USE_TMUX" =~ "yes" ]]; then
+            tmux new-window -t stack -a -n "$1" "bash"
+            tmux send-keys "$2" C-M
+        else
+            screen -S stack -X screen -t $1
+            # sleep to allow bash to be ready to be send the command - we are
+            # creating a new window in screen and then sends characters, so if
+            # bash isn't running by the time we send the command, nothing happens
+            sleep 1
+            screen -S stack -p $1 -X stuff "$2$NL"
+        fi
     fi
 }
 
@@ -1029,8 +1134,12 @@ screen_it n-cpu "cd $NOVA_DIR && sg libvirtd $NOVA_DIR/bin/nova-compute"
 screen_it n-vol "cd $NOVA_DIR && $NOVA_DIR/bin/nova-volume"
 screen_it n-net "cd $NOVA_DIR && $NOVA_DIR/bin/nova-network"
 screen_it n-sch "cd $NOVA_DIR && $NOVA_DIR/bin/nova-scheduler"
-screen_it n-vnc "cd $NOVNC_DIR && ./utils/nova-wsproxy.py --flagfile $NOVA_DIR/bin/nova.conf --web . 6080"
-screen_it horizon "cd $HORIZON_DIR && sudo tail -f /var/log/apache2/error.log"
+if [[ "$ENABLED_SERVICES" =~ "n-vnc" ]]; then
+    screen_it n-vnc "cd $NOVNC_DIR && ./utils/nova-wsproxy.py --flagfile $NOVA_DIR/bin/nova.conf --web . 6080"
+fi
+if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
+    screen_it horizon "cd $HORIZON_DIR && sudo tail -f /var/log/apache2/error.log"
+fi
 
 # Install Images
 # ==============
