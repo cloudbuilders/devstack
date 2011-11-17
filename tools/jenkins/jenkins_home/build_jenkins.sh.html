@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>get_uec_image.sh</title>
+    <title>build_jenkins.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>get_uec_image.sh</h1></th>
+        <th class=docs><h1>build_jenkins.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -331,132 +331,150 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>get_uec_image.sh - Prepare Ubuntu UEC images</p>
+<p>Echo commands, exit on error</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>Keep track of the current directory</p>
+<p>Make sure only root can run our script</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
-<span class="nv">CACHEDIR</span><span class="o">=</span><span class="k">${</span><span class="nv">CACHEDIR</span><span class="k">:-</span><span class="p">/opt/stack/cache</span><span class="k">}</span>
-<span class="nv">ROOTSIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">ROOTSIZE</span><span class="k">:-</span><span class="nv">2000</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>exit on error to stop unexpected errors</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean up any resources that may be in use</p>
-</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o xtrace
 <span class="nb">set</span> -o errexit
 
-usage<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 - Fetch and prepare Ubuntu images&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$0 [-r rootsize] release imagefile [kernel]&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;-r size   - root fs size (min 2000MB)&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;release   - Ubuntu release: jaunty - oneric&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;imagefile - output image file&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;kernel    - output kernel&quot;</span>
-    <span class="nb">exit </span>1
-<span class="o">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This directory</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$EUID</span> -ne 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;This script must be run as root&quot;</span>
+   <span class="nb">exit </span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Mop up temporary files</p>
+<p>Configure trunk jenkins!</p>
 </td><td class=code><div class=highlight><pre>
-cleanup<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">set</span> +o errexit
+<span class="nv">CUR_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Kill ourselves to signal any calling process</p>
+<p>Clean out old jenkins - useful if you are having issues upgrading</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$IMG_FILE_TMP&quot;</span> -a -e <span class="s2">&quot;$IMG_FILE_TMP&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>rm -f <span class="nv">$IMG_FILE_TMP</span>
+<span class="nb">echo</span> <span class="s2">&quot;deb http://pkg.jenkins-ci.org/debian binary/&quot;</span> &gt; /etc/apt/sources.list.d/jenkins.list
+wget -q -O - http://pkg.jenkins-ci.org/debian/jenkins-ci.org.key | sudo apt-key add -
+apt-get update
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Install software</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">CLEAN_JENKINS</span><span class="o">=</span><span class="k">${</span><span class="nv">CLEAN_JENKINS</span><span class="k">:-</span><span class="nv">no</span><span class="k">}</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CLEAN_JENKINS&quot;</span> <span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>apt-get remove jenkins jenkins-common
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Install jenkins</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DEPS</span><span class="o">=</span><span class="s2">&quot;jenkins cloud-utils&quot;</span>
+apt-get install -y --force-yes <span class="nv">$DEPS</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure user has configured a jenkins ssh pubkey</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -e /var/lib/jenkins <span class="o">]</span>; <span class="k">then</span>
+<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;Jenkins installation failed&quot;</span>
+   <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setup sudo</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -e /var/lib/jenkins/.ssh/id_rsa.pub <span class="o">]</span>; <span class="k">then</span>
+<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;Public key for jenkins is missing.  This is used to ssh into your instances.&quot;</span>
+   <span class="nb">echo</span> <span class="s2">&quot;Please run &quot;</span>su -c ssh-keygen jenkins<span class="s2">&quot; before proceeding&quot;</span>
+   <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setup .gitconfig</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">JENKINS_SUDO</span><span class="o">=</span>/etc/sudoers.d/jenkins
+cat &gt; <span class="nv">$JENKINS_SUDO</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">jenkins ALL = NOPASSWD: ALL</span>
+<span class="s">EOF</span>
+chmod 440 <span class="nv">$JENKINS_SUDO</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Add build numbers</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">JENKINS_GITCONF</span><span class="o">=</span>/var/lib/jenkins/hudson.plugins.git.GitSCM.xml
+cat &gt; <span class="nv">$JENKINS_GITCONF</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">&lt;?xml version=&#39;1.0&#39; encoding=&#39;UTF-8&#39;?&gt;</span>
+<span class="s">&lt;hudson.plugins.git.GitSCM_-DescriptorImpl&gt;</span>
+<span class="s">  &lt;generation&gt;4&lt;/generation&gt;</span>
+<span class="s">  &lt;globalConfigName&gt;Jenkins&lt;/globalConfigName&gt;</span>
+<span class="s">  &lt;globalConfigEmail&gt;jenkins@rcb.me&lt;/globalConfigEmail&gt;</span>
+<span class="s">&lt;/hudson.plugins.git.GitSCM_-DescriptorImpl&gt;</span>
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set ownership to jenkins</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">JOBS</span><span class="o">=</span><span class="sb">`</span>ls <span class="nb">jobs</span><span class="sb">`</span>
+<span class="k">for </span>job in <span class="k">${</span><span class="nv">JOBS</span><span class="p">// / </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">    if</span> <span class="o">[</span> ! -e <span class="nb">jobs</span>/<span class="nv">$job</span>/nextBuildNumber <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo </span>1 &gt; <span class="nb">jobs</span>/<span class="nv">$job</span>/nextBuildNumber
     <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Default args</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
-<span class="o">}</span>
-
-<span class="k">while </span><span class="nb">getopts </span>hr: c; <span class="k">do</span>
-<span class="k">    case</span> <span class="nv">$c</span> in
-        h<span class="o">)</span>  usage
-            ;;
-        r<span class="o">)</span>  <span class="nv">ROOTSIZE</span><span class="o">=</span><span class="nv">$OPTARG</span>
-            ;;
-    <span class="k">esac</span>
 <span class="k">done</span>
-<span class="nb">shift</span> <span class="sb">`</span>expr <span class="nv">$OPTIND</span> - 1<span class="sb">`</span>
-
-<span class="k">if</span> <span class="o">[[</span> ! <span class="s2">&quot;$#&quot;</span> -eq <span class="s2">&quot;2&quot;</span> <span class="o">&amp;&amp;</span> ! <span class="s2">&quot;$#&quot;</span> -eq <span class="s2">&quot;3&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>usage
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Check dependencies</p>
+<p>Make sure this directory is accessible to jenkins</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">DIST_NAME</span><span class="o">=</span><span class="nv">$1</span>
-<span class="nv">IMG_FILE</span><span class="o">=</span><span class="nv">$2</span>
-<span class="nv">IMG_FILE_TMP</span><span class="o">=</span><span class="sb">`</span>mktemp <span class="nv">$IMG_FILE</span>.XXXXXX<span class="sb">`</span>
-<span class="nv">KERNEL</span><span class="o">=</span><span class="nv">$3</span>
-
-<span class="k">case</span> <span class="nv">$DIST_NAME</span> in
-    oneiric<span class="o">)</span>    ;;
-    natty<span class="o">)</span>      ;;
-    maverick<span class="o">)</span>   ;;
-    lucid<span class="o">)</span>      ;;
-    *<span class="o">)</span>          <span class="nb">echo</span> <span class="s2">&quot;Unknown release: $DIST_NAME&quot;</span>
-                usage
-                ;;
-<span class="k">esac</span>
-
-<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
+chown -R jenkins <span class="nv">$CUR_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Missing KVM?</p>
+<p>Move aside old jobs, if present</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -x <span class="s2">&quot;`which qemu-img`&quot;</span> -o -z <span class="s2">&quot;`dpkg -l | grep cloud-utils`&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Find resize script</p>
-</td><td class=code><div class=highlight><pre>
-    apt_get install qemu-kvm cloud-utils
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Get the UEC image</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">RESIZE</span><span class="o">=</span><span class="sb">`</span>which resize-part-image <span class="o">||</span> which uec-resize-image<span class="sb">`</span>
-<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$RESIZE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;resize tool from cloud-utils not found&quot;</span>
+<span class="k">if</span> ! su -c <span class="s2">&quot;ls $CUR_DIR&quot;</span> jenkins; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Your devstack directory is not accessible by jenkins.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;There is a decent chance you are trying to run this from a directory in /root.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;If so, try moving devstack elsewhere (eg. /opt/devstack).&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Copy kernel to destination</p>
+<p>Set up jobs symlink</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">UEC_NAME</span><span class="o">=</span><span class="nv">$DIST_NAME</span>-server-cloudimg-amd64
-<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$CACHEDIR</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>mkdir -p <span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span>
-<span class="k">fi</span>
-<span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span>/<span class="nv">$UEC_NAME</span>.tar.gz <span class="o">]</span>; <span class="k">then</span>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span> <span class="o">&amp;&amp;</span> wget -N http://uec-images.ubuntu.com/<span class="nv">$DIST_NAME</span>/current/<span class="nv">$UEC_NAME</span>.tar.gz<span class="o">)</span>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span> <span class="o">&amp;&amp;</span> tar Sxvzf <span class="nv">$UEC_NAME</span>.tar.gz<span class="o">)</span>
+<span class="k">if</span> <span class="o">[</span> ! -h /var/lib/jenkins/jobs <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Installing jobs symlink&quot;</span>
+    <span class="k">if</span> <span class="o">[</span> -d /var/lib/jenkins/jobs <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>mv /var/lib/jenkins/jobs /var/lib/jenkins/jobs.old
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
-<span class="nv">$RESIZE</span> <span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span>/<span class="nv">$UEC_NAME</span>.img <span class="k">${</span><span class="nv">ROOTSIZE</span><span class="k">}</span> <span class="nv">$IMG_FILE_TMP</span>
-mv <span class="nv">$IMG_FILE_TMP</span> <span class="nv">$IMG_FILE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>List of plugins</p>
+</td><td class=code><div class=highlight><pre>
+rm -f /var/lib/jenkins/jobs
+ln -s <span class="nv">$CUR_DIR</span>/jobs /var/lib/jenkins/jobs
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure plugins</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">PLUGINS</span><span class="o">=</span>http://hudson-ci.org/downloads/plugins/build-timeout/1.6/build-timeout.hpi,http://mirrors.jenkins-ci.org/plugins/git/1.1.12/git.hpi,http://hudson-ci.org/downloads/plugins/global-build-stats/1.2/global-build-stats.hpi,http://hudson-ci.org/downloads/plugins/greenballs/1.10/greenballs.hpi,http://download.hudson-labs.org/plugins/console-column-plugin/1.0/console-column-plugin.hpi
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Restart jenkins</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">for </span>plugin in <span class="k">${</span><span class="nv">PLUGINS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">    </span><span class="nv">name</span><span class="o">=</span><span class="sb">`</span>basename <span class="nv">$plugin</span><span class="sb">`</span>   
+    <span class="nv">dest</span><span class="o">=</span>/var/lib/jenkins/plugins/<span class="nv">$name</span>
+    <span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$dest</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>curl -L <span class="nv">$plugin</span> -o <span class="nv">$dest</span>
+    <span class="k">fi</span>
+<span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>cp -p <span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span>/*-vmlinuz-virtual <span class="nv">$KERNEL</span>
-<span class="k">fi</span>
-
-<span class="nb">trap</span> - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
+/etc/init.d/jenkins stop <span class="o">||</span> <span class="nb">true</span>
+/etc/init.d/jenkins start
 
 
 </pre></div></td></tr><tr><td class=docs>

@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7056 2011-06-17 10:50:48Z milde $
+:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,10 +64,6 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
-
-object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
-  overflow: hidden;
-}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -207,7 +203,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: inherit }
+  text-align: left }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -267,7 +263,7 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block, pre.math {
+pre.literal-block, pre.doctest-block {
   margin-left: 2em ;
   margin-right: 2em }
 
@@ -343,9 +339,16 @@ the configuration, certificate and key files.</p>
 <p>--server mode configures the host with a running OpenVPN server instance
 --client mode creates a tarball of a client configuration for this server</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>VPN Config</p>
+<p>Get config file</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>VPN Config</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> -e localrc.vpn <span class="o">]</span>; <span class="k">then</span>
+    . localrc.vpn
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Install OpenVPN</p>
@@ -354,8 +357,10 @@ the configuration, certificate and key files.</p>
 <span class="nv">VPN_PROTO</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_PROTO</span><span class="k">:-</span><span class="nv">tcp</span><span class="k">}</span>
 <span class="nv">VPN_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_PORT</span><span class="k">:-</span><span class="nv">6081</span><span class="k">}</span>
 <span class="nv">VPN_DEV</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_DEV</span><span class="k">:-</span><span class="nv">tun</span><span class="k">}</span>
+<span class="nv">VPN_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_BRIDGE</span><span class="k">:-</span><span class="nv">br0</span><span class="k">}</span>
 <span class="nv">VPN_CLIENT_NET</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_CLIENT_NET</span><span class="k">:-</span><span class="nv">172</span><span class="p">.16.28.0</span><span class="k">}</span>
 <span class="nv">VPN_CLIENT_MASK</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_CLIENT_MASK</span><span class="k">:-</span><span class="nv">255</span><span class="p">.255.255.0</span><span class="k">}</span>
+<span class="nv">VPN_CLIENT_DHCP</span><span class="o">=</span><span class="s2">&quot;${VPN_CLIENT_DHCP:-172.16.28.1 172.16.28.254}&quot;</span>
 <span class="nv">VPN_LOCAL_NET</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_LOCAL_NET</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0</span><span class="k">}</span>
 <span class="nv">VPN_LOCAL_MASK</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_LOCAL_MASK</span><span class="k">:-</span><span class="nv">255</span><span class="p">.255.0.0</span><span class="k">}</span>
 
@@ -380,7 +385,8 @@ usage<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Override the defaults</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -x <span class="sb">`</span>which openvpn<span class="sb">`</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="nv">VPN_EXEC</span><span class="o">=</span><span class="sb">`</span>which openvpn<span class="sb">`</span>
+<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$VPN_EXEC&quot;</span> -o ! -x <span class="s2">&quot;$VPN_EXEC&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>apt-get install -y openvpn bridge-utils
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$CA_DIR</span> <span class="o">]</span>; <span class="k">then</span>
@@ -420,21 +426,49 @@ do_server<span class="o">()</span> <span class="o">{</span>
     <span class="o">(</span><span class="nb">cd</span> <span class="nv">$CA_DIR</span>/keys;
         cp <span class="nv">$NAME</span>.crt <span class="nv">$NAME</span>.key ca.crt dh1024.pem ta.key <span class="nv">$VPN_DIR</span>
     <span class="o">)</span>
+    cat &gt;<span class="nv">$VPN_DIR</span>/br-up <span class="s">&lt;&lt;EOF</span>
+<span class="s">#!/bin/bash</span>
+
+<span class="s">BR=&quot;$VPN_BRIDGE&quot;</span>
+<span class="s">TAP=&quot;\$1&quot;</span>
+
+<span class="s">for t in \$TAP; do</span>
+<span class="s">    openvpn --mktun --dev \$t</span>
+<span class="s">    brctl addif \$BR \$t</span>
+<span class="s">    ifconfig \$t 0.0.0.0 promisc up</span>
+<span class="s">done</span>
+<span class="s">EOF</span>
+    chmod +x <span class="nv">$VPN_DIR</span>/br-up
+    cat &gt;<span class="nv">$VPN_DIR</span>/br-down <span class="s">&lt;&lt;EOF</span>
+<span class="s">#!/bin/bash</span>
+
+<span class="s">BR=&quot;$VPN_BRIDGE&quot;</span>
+<span class="s">TAP=&quot;\$1&quot;</span>
+
+<span class="s">for i in \$TAP; do</span>
+<span class="s">    brctl delif \$BR $t</span>
+<span class="s">    openvpn --rmtun --dev \$i</span>
+<span class="s">done</span>
+<span class="s">EOF</span>
+    chmod +x <span class="nv">$VPN_DIR</span>/br-down
     cat &gt;<span class="nv">$VPN_DIR</span>/<span class="nv">$NAME</span>.conf <span class="s">&lt;&lt;EOF</span>
 <span class="s">proto $VPN_PROTO</span>
 <span class="s">port $VPN_PORT</span>
 <span class="s">dev $VPN_DEV</span>
+<span class="s">up $VPN_DIR/br-up</span>
+<span class="s">down $VPN_DIR/br-down</span>
 <span class="s">cert $NAME.crt</span>
 <span class="s">key $NAME.key  # This file should be kept secret</span>
 <span class="s">ca ca.crt</span>
 <span class="s">dh dh1024.pem</span>
 <span class="s">duplicate-cn</span>
-<span class="s">server $VPN_CLIENT_NET $VPN_CLIENT_MASK</span>
+<span class="s">#server $VPN_CLIENT_NET $VPN_CLIENT_MASK</span>
+<span class="s">server-bridge $VPN_CLIENT_NET $VPN_CLIENT_MASK $VPN_CLIENT_DHCP</span>
 <span class="s">ifconfig-pool-persist ipp.txt</span>
 <span class="s">push &quot;route $VPN_LOCAL_NET $VPN_LOCAL_MASK&quot;</span>
 <span class="s">comp-lzo</span>
 <span class="s">user nobody</span>
-<span class="s">group nobody</span>
+<span class="s">group nogroup</span>
 <span class="s">persist-key</span>
 <span class="s">persist-tun</span>
 <span class="s">status openvpn-status.log</span>
@@ -470,7 +504,7 @@ do_client<span class="o">()</span> <span class="o">{</span>
 <span class="s">resolv-retry infinite</span>
 <span class="s">nobind</span>
 <span class="s">user nobody</span>
-<span class="s">group nobody</span>
+<span class="s">group nogroup</span>
 <span class="s">persist-key</span>
 <span class="s">persist-tun</span>
 <span class="s">comp-lzo</span>

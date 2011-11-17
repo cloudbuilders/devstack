@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7056 2011-06-17 10:50:48Z milde $
+:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,10 +64,6 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
-
-object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
-  overflow: hidden;
-}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -207,7 +203,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: inherit }
+  text-align: left }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -267,7 +263,7 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block, pre.math {
+pre.literal-block, pre.doctest-block {
   margin-left: 2em ;
   margin-right: 2em }
 
@@ -649,25 +645,39 @@ yum --enablerepo<span class="o">=</span>base install -y parted
 mkdir -p /boot/guest
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Uninstall previous runs</p>
+<p>Shutdown previous runs</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SR_UUID</span><span class="o">=</span><span class="sb">`</span>xe sr-list --minimal name-label<span class="o">=</span><span class="s2">&quot;Local storage&quot;</span><span class="sb">`</span>
 xe sr-param-set <span class="nv">uuid</span><span class="o">=</span><span class="nv">$SR_UUID</span> other-config:i18n-key<span class="o">=</span><span class="nb">local</span>-storage
 
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Shutdown all domU's that created previously</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DO_SHUTDOWN</span><span class="o">=</span><span class="k">${</span><span class="nv">DO_SHUTDOWN</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$DO_SHUTDOWN&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Destroy any instances that were launched</p>
 </td><td class=code><div class=highlight><pre>
-xe vm-list --minimal name-label<span class="o">=</span><span class="s2">&quot;$LABEL&quot;</span> | xargs ./scripts/uninstall-os-vpx.sh
+    xe vm-list --minimal name-label<span class="o">=</span><span class="s2">&quot;$LABEL&quot;</span> | xargs ./scripts/uninstall-os-vpx.sh
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Destroy orphaned vdis</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>uuid in <span class="sb">`</span>xe vm-list | grep -1 instance | grep uuid | sed <span class="s2">&quot;s/.*\: //g&quot;</span><span class="sb">`</span>; <span class="k">do</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Shutting down nova instance $uuid&quot;</span>
+        xe vm-unpause <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">        </span>xe vm-shutdown <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span>
+        xe vm-destroy <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span>
+    <span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Path to head xva.  By default keep overwriting the same one to save space</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">for </span>uuid in <span class="sb">`</span>xe vm-list | grep -1 instance | grep uuid | sed <span class="s2">&quot;s/.*\: //g&quot;</span><span class="sb">`</span>; <span class="k">do</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Shutting down nova instance $uuid&quot;</span>
-    xe vm-unpause <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>xe vm-shutdown <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span>
-    xe vm-destroy <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span>
-<span class="k">done</span>
+    <span class="k">for </span>uuid in <span class="sb">`</span>xe vdi-list | grep -1 Glance | grep uuid | sed <span class="s2">&quot;s/.*\: //g&quot;</span><span class="sb">`</span>; <span class="k">do</span>
+<span class="k">        </span>xe vdi-destroy <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span>
+    <span class="k">done</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean old xva. In the future may not do this every time.</p>

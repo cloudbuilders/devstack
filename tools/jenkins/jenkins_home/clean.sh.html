@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>build_bm.sh</title>
+    <title>clean.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>build_bm.sh</h1></th>
+        <th class=docs><h1>clean.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -331,56 +331,36 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>Build an OpenStack install on a bare metal machine.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Source params</p>
-</td><td class=code><div class=highlight><pre>
-<span class="c">#!/usr/bin/env bash</span>
-<span class="nb">set</span> +x
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Param string to pass to stack.sh.  Like &quot;EC2_DMZ_HOST=192.168.1.1 MYSQL_USER=nova&quot;</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./stackrc
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Option to use the version of devstack on which we are currently working</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">STACKSH_PARAMS</span><span class="o">=</span><span class="k">${</span><span class="nv">STACKSH_PARAMS</span><span class="k">:-}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure the runner</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">USE_CURRENT_DEVSTACK</span><span class="o">=</span><span class="k">${</span><span class="nv">USE_CURRENT_DEVSTACK</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Install and run stack.sh</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">RUN_SH</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-cat &gt; <span class="nv">$RUN_SH</span> <span class="s">&lt;&lt;EOF</span>
-<span class="s">#!/usr/bin/env bash</span>
-<span class="s"># DIVIDER</span>
-<span class="s">cd devstack</span>
-<span class="s">$STACKSH_PARAMS ./stack.sh</span>
-<span class="s">EOF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Make the run.sh executable</p>
-</td><td class=code><div class=highlight><pre>
-chmod 755 <span class="nv">$RUN_SH</span>
-
-scp -r . root@<span class="nv">$CONTAINER_IP</span>:devstack
-scp <span class="nv">$RUN_SH</span> root@<span class="nv">$CONTAINER_IP</span>:<span class="nv">$RUN_SH</span>
-ssh root@<span class="nv">$CONTAINER_IP</span> <span class="nv">$RUN_SH</span>
-
-
+<p>This script is not yet for general consumption.</p>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
+<span class="c">#!/bin/bash</span>
+
+<span class="nb">set</span> -o errexit
+
+<span class="k">if</span> <span class="o">[</span> ! <span class="s2">&quot;$FORCE&quot;</span> <span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;FORCE not set to &#39;yes&#39;.  Make sure this is something you really want to do.  Exiting.&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+virsh list | cut -d <span class="s2">&quot; &quot;</span> -f1 | grep -v <span class="s2">&quot;-&quot;</span> | egrep -e <span class="s2">&quot;[0-9]&quot;</span> | xargs -n 1 virsh destroy <span class="o">||</span> <span class="nb">true</span>
+virsh net-list | grep active | cut -d <span class="s2">&quot; &quot;</span> -f1 | xargs -n 1 virsh net-destroy <span class="o">||</span> <span class="nb">true</span>
+killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CLEAN&quot;</span> <span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>rm -rf <span class="nb">jobs</span>
+<span class="k">fi</span>
+rm /var/lib/jenkins/jobs
+git checkout -f
+git fetch
+git merge origin/jenkins
+./build_jenkins.sh
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </body>
-</html></td><td class='code'></td></tr>
+</html>
+</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
     </tbody>
     </table>
 </div>

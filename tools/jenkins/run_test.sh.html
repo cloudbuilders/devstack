@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>build_bm.sh</title>
+    <title>run_test.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>build_bm.sh</h1></th>
+        <th class=docs><h1>run_test.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -331,56 +331,37 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>Build an OpenStack install on a bare metal machine.</p>
+<p>Validate inputs</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>Source params</p>
+<p>Execute configuration script</p>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/usr/bin/env bash</span>
-<span class="nb">set</span> +x
+<span class="c">#!/bin/bash</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Param string to pass to stack.sh.  Like &quot;EC2_DMZ_HOST=192.168.1.1 MYSQL_USER=nova&quot;</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./stackrc
+<span class="nv">EXECUTOR_NUMBER</span><span class="o">=</span><span class="nv">$1</span>
+<span class="nv">ADAPTER</span><span class="o">=</span><span class="nv">$2</span>
+<span class="nv">RC</span><span class="o">=</span><span class="nv">$3</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Option to use the version of devstack on which we are currently working</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">STACKSH_PARAMS</span><span class="o">=</span><span class="k">${</span><span class="nv">STACKSH_PARAMS</span><span class="k">:-}</span>
+<span class="k">function </span>usage<span class="o">()</span> <span class="o">{</span>
+<span class="nb">echo</span> <span class="s2">&quot;Usage: $0 - Run a test&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;$0 [EXECUTOR_NUMBER] [ADAPTER] [RC (optional)]&quot;</span>
+<span class="nb">exit </span>1
+<span class="o">}</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure the runner</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">USE_CURRENT_DEVSTACK</span><span class="o">=</span><span class="k">${</span><span class="nv">USE_CURRENT_DEVSTACK</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Install and run stack.sh</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">RUN_SH</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-cat &gt; <span class="nv">$RUN_SH</span> <span class="s">&lt;&lt;EOF</span>
-<span class="s">#!/usr/bin/env bash</span>
-<span class="s"># DIVIDER</span>
-<span class="s">cd devstack</span>
-<span class="s">$STACKSH_PARAMS ./stack.sh</span>
-<span class="s">EOF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Make the run.sh executable</p>
-</td><td class=code><div class=highlight><pre>
-chmod 755 <span class="nv">$RUN_SH</span>
-
-scp -r . root@<span class="nv">$CONTAINER_IP</span>:devstack
-scp <span class="nv">$RUN_SH</span> root@<span class="nv">$CONTAINER_IP</span>:<span class="nv">$RUN_SH</span>
-ssh root@<span class="nv">$CONTAINER_IP</span> <span class="nv">$RUN_SH</span>
-
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$EXECUTOR_NUMBER&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">||</span> <span class="s2">&quot;$ADAPTER&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>usage
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">cd </span>adapters <span class="o">&amp;&amp;</span> ./<span class="nv">$ADAPTER</span>.sh <span class="nv">$EXECUTOR_NUMBER</span> <span class="nv">$ADAPTER</span> <span class="s2">&quot;$RC&quot;</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </body>
-</html></td><td class='code'></td></tr>
+</html>
+</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
     </tbody>
     </table>
 </div>

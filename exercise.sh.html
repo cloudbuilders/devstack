@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7056 2011-06-17 10:50:48Z milde $
+:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,10 +64,6 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
-
-object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
-  overflow: hidden;
-}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -207,7 +203,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: inherit }
+  text-align: left }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -267,7 +263,7 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block, pre.math {
+pre.literal-block, pre.doctest-block {
   margin-left: 2em ;
   margin-right: 2em }
 
@@ -335,343 +331,72 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>exercise.sh</strong> - using the cloud can be fun</p>
+<p>Run everything in the exercises/ directory that isn't explicitly disabled</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>we will use the <tt class="docutils literal">nova</tt> cli tool provided by the <tt class="docutils literal"><span class="pre">python-novaclient</span></tt>
-package</p>
+<p>comma separated list of script basenames to skip
+to refrain from exercising euca.sh use SKIP_EXERCISES=euca</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
+<span class="nb">source</span> ./stackrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This script exits on an error so that errors don't compound and you see
-only the first error that occured.</p>
+<p>Locate the scripts we should run</p>
 </td><td class=code><div class=highlight><pre>
-
+<span class="nv">SKIP_EXERCISES</span><span class="o">=</span><span class="k">${</span><span class="nv">SKIP_EXERCISES</span><span class="k">:-</span><span class="s2">&quot;&quot;</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Print the commands being run so that we can see the command that triggers
-an error.  It is also useful for following allowing as the install occurs.</p>
+<p>Track the state of each script</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o errexit
+<span class="nv">EXERCISE_DIR</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/exercises
+<span class="nv">basenames</span><span class="o">=</span><span class="k">$(for </span>b in <span class="sb">`</span>ls <span class="nv">$EXERCISE_DIR</span>/*.sh<span class="sb">`</span>; <span class="k">do </span>basename <span class="nv">$b</span> .sh; <span class="k">done)</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="settings">
-<h2>Settings</h2>
+<p>Loop over each possible script (by basename)</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o xtrace
-
+<span class="nv">passes</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="nv">failures</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="nv">skips</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Use openrc + stackrc + localrc for settings</p>
+<p>output status of exercise run</p>
 </td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="get-a-token-for-clients-that-don-t-support-service-catalog">
-<h2>Get a token for clients that don't support service catalog</h2>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./openrc
-
-</pre></div></td></tr><tr><td class=docs>
-<p>manually create a token by querying keystone (sending JSON data).  Keystone
-returns a token and catalog of endpoints.  We use python to parse the token
-and save it.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="launching-a-server">
-<h2>Launching a server</h2>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>curl -s -d  <span class="s2">&quot;{\&quot;auth\&quot;:{\&quot;passwordCredentials\&quot;: {\&quot;username\&quot;: \&quot;$NOVA_USERNAME\&quot;, \&quot;password\&quot;: \&quot;$NOVA_API_KEY\&quot;}}}&quot;</span> -H <span class="s2">&quot;Content-type: application/json&quot;</span> http://<span class="nv">$HOST_IP</span>:5000/v2.0/tokens | python -c <span class="s2">&quot;import sys; import json; tok = json.loads(sys.stdin.read()); print tok[&#39;access&#39;][&#39;token&#39;][&#39;id&#39;];&quot;</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>List servers for tenant:</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="images">
-<h3>Images</h3>
-</td><td class=code><div class=highlight><pre>
-nova list
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Nova has a <strong>deprecated</strong> way of listing images.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>But we recommend using glance directly</p>
-</td><td class=code><div class=highlight><pre>
-nova image-list
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Let's grab the id of the first AMI image to launch</p>
-</td><td class=code><div class=highlight><pre>
-glance -A <span class="nv">$TOKEN</span> index
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="security-groups">
-<h3>Security Groups</h3>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>glance -A <span class="nv">$TOKEN</span> index | egrep ami | cut -d<span class="s2">&quot; &quot;</span> -f1<span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>List of secgroups:</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SECGROUP</span><span class="o">=</span>test_secgroup
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create a secgroup</p>
-</td><td class=code><div class=highlight><pre>
-nova secgroup-list
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="determine-flavor">
-<h3>determine flavor</h3>
-</td><td class=code><div class=highlight><pre>
-nova secgroup-create <span class="nv">$SECGROUP</span> <span class="s2">&quot;test_secgroup description&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>List of flavors:</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>and grab the first flavor in the list to launch</p>
-</td><td class=code><div class=highlight><pre>
-nova flavor-list
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
-<div class="section" id="testing">
-<h2>Testing</h2>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">FLAVOR</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | head -n 4 | tail -n 1 | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
-
-<span class="nv">NAME</span><span class="o">=</span><span class="s2">&quot;myserver&quot;</span>
-
-nova boot --flavor <span class="nv">$FLAVOR</span> --image <span class="nv">$IMAGE</span> <span class="nv">$NAME</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>First check if it spins up (becomes active and responds to ping on
-internal ip).  If you run this script from a nova node, you should
-bypass security groups and have direct access to the server.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="waiting-for-boot">
-<h3>Waiting for boot</h3>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Max time to wait while vm goes from build to active state</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Max time till the vm is bootable</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">ACTIVE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">ACTIVE_TIMEOUT</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Max time to wait for proper association and dis-association.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">BOOT_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">BOOT_TIMEOUT</span><span class="k">:-</span><span class="nv">15</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>check that the status is active within ACTIVE_TIMEOUT seconds</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">ASSOCIATE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">ASSOCIATE_TIMEOUT</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>get the IP of the server</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $NAME | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become active!&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>for single node deployments, we can ping private ips</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$NAME</span> | grep <span class="s2">&quot;private network&quot;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3<span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>sometimes the first ping fails (10 seconds isn't enough time for the VM's
-network to respond?), so let's ping for a default of 15 seconds with a
-timeout of a second for each ping.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">MULTI_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MULTI_HOST</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$MULTI_HOST&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>On a multi-host system, without vm net access, do a sleep to wait for the boot</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> ! timeout <span class="nv">$BOOT_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">else</span>
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="security-groups-floating-ips">
-<h3>Security Groups &amp; Floating IPs</h3>
-</td><td class=code><div class=highlight><pre>
-    sleep <span class="nv">$BOOT_TIMEOUT</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>allow icmp traffic (ping)</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>List rules for a secgroup</p>
-</td><td class=code><div class=highlight><pre>
-nova secgroup-add-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
-
-</pre></div></td></tr><tr><td class=docs>
-<p>allocate a floating ip</p>
-</td><td class=code><div class=highlight><pre>
-nova secgroup-list-rules <span class="nv">$SECGROUP</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>store  floating address</p>
-</td><td class=code><div class=highlight><pre>
-nova floating-ip-create
-
-</pre></div></td></tr><tr><td class=docs>
-<p>add floating ip to our server</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-list | grep None | head -1 | cut -d <span class="s1">&#39;|&#39;</span> -f2 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
-</td><td class=code><div class=highlight><pre>
-nova add-floating-ip <span class="nv">$NAME</span> <span class="nv">$FLOATING_IP</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>pause the VM and verify we can't ping it anymore</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server with floating ip&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>unpause the VM and verify we can ping it again</p>
-</td><td class=code><div class=highlight><pre>
-nova pause <span class="nv">$NAME</span>
-
-sleep 2
-
-<span class="k">if</span> <span class="o">(</span> ping -c1 -w1 <span class="nv">$IP</span><span class="o">)</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Pause failure - ping shouldn&#39;t work&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">(</span> ping -c1 -w1 <span class="nv">$FLOATING_IP</span><span class="o">)</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Pause failure - ping floating ips shouldn&#39;t work&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>dis-allow icmp traffic (ping)</p>
-</td><td class=code><div class=highlight><pre>
-nova unpause <span class="nv">$NAME</span>
-
-sleep 2
-
-ping -c1 -w1 <span class="nv">$IP</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>FIXME (anthony): make xs support security groups</p>
-</td><td class=code><div class=highlight><pre>
-nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
-
-</pre></div></td></tr><tr><td class=docs>
-<p>test we can aren't able to ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;xenserver&quot;</span><span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>de-allocate the floating ip</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span>print <span class="s2">&quot;Security group failure - ping should not be allowed!&quot;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server with floating ip&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>shutdown the server</p>
-</td><td class=code><div class=highlight><pre>
-nova floating-ip-delete <span class="nv">$FLOATING_IP</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Delete a secgroup</p>
-</td><td class=code><div class=highlight><pre>
-nova delete <span class="nv">$NAME</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>FIXME: validate shutdown within 5 seconds
-(nova show $NAME returns 1 or status != ACTIVE)?</p>
-</td><td class=code><div class=highlight><pre>
-nova secgroup-delete <span class="nv">$SECGROUP</span>
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
-<div class="section" id="testing-euca2ools">
-<h2>Testing Euca2ools</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>make sure that we can describe instances</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="testing-swift">
-<h2>Testing Swift</h2>
-</td><td class=code><div class=highlight><pre>
-euca-describe-instances
-
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Check if we have to swift via keystone</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>We start by creating a test container</p>
-</td><td class=code><div class=highlight><pre>
-    swift --auth-version 2 -A http://<span class="k">${</span><span class="nv">HOST_IP</span><span class="k">}</span>:5000/v2.0 -U admin -K <span class="nv">$ADMIN_PASSWORD</span> stat
-
-</pre></div></td></tr><tr><td class=docs>
-<p>add some files into it.</p>
-</td><td class=code><div class=highlight><pre>
-    swift --auth-version 2 -A http://<span class="k">${</span><span class="nv">HOST_IP</span><span class="k">}</span>:5000/v2.0 -U admin -K <span class="nv">$ADMIN_PASSWORD</span> post testcontainer
-
-</pre></div></td></tr><tr><td class=docs>
-<p>list them</p>
-</td><td class=code><div class=highlight><pre>
-    swift --auth-version 2 -A http://<span class="k">${</span><span class="nv">HOST_IP</span><span class="k">}</span>:5000/v2.0 -U admin -K <span class="nv">$ADMIN_PASSWORD</span> upload testcontainer /etc/issue
-
-</pre></div></td></tr><tr><td class=docs>
-<p>And we may want to delete them now that we have tested that
-everything works.</p>
-</td><td class=code><div class=highlight><pre>
-    swift --auth-version 2 -A http://<span class="k">${</span><span class="nv">HOST_IP</span><span class="k">}</span>:5000/v2.0 -U admin -K <span class="nv">$ADMIN_PASSWORD</span> list testcontainer 
+<span class="k">for </span>script in <span class="nv">$basenames</span>; <span class="k">do</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$SKIP_EXERCISES&quot;</span> <span class="o">=</span>~ <span class="nv">$script</span> <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">        </span><span class="nv">skips</span><span class="o">=</span><span class="s2">&quot;$skips $script&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="o">=========================</span>
+        <span class="nb">echo </span>Running <span class="nv">$script</span>
+        <span class="nb">echo</span> <span class="o">=========================</span>
+        <span class="nv">$EXERCISE_DIR</span>/<span class="nv">$script</span>.sh
+        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> -ne 0 <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">            </span><span class="nv">failures</span><span class="o">=</span><span class="s2">&quot;$failures $script&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">passes</span><span class="o">=</span><span class="s2">&quot;$passes $script&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+<span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
-    swift --auth-version 2 -A http://<span class="k">${</span><span class="nv">HOST_IP</span><span class="k">}</span>:5000/v2.0 -U admin -K <span class="nv">$ADMIN_PASSWORD</span> delete testcontainer
+<span class="nb">echo</span> <span class="o">=========================</span>
+<span class="nb">echo</span> <span class="o">=========================</span>
+<span class="k">for </span>script in <span class="nv">$skips</span>; <span class="k">do</span>
+<span class="k">    </span><span class="nb">echo </span>SKIP <span class="nv">$script</span>
+<span class="k">done</span>
+<span class="k">for </span>script in <span class="nv">$passes</span>; <span class="k">do</span>
+<span class="k">    </span><span class="nb">echo </span>PASS <span class="nv">$script</span>
+<span class="k">done</span>
+<span class="k">for </span>script in <span class="nv">$failures</span>; <span class="k">do</span>
+<span class="k">    </span><span class="nb">echo </span>FAILED <span class="nv">$script</span>
+<span class="k">done</span>
+
+<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$failures&quot;</span> <span class="o">]</span> ; <span class="k">then</span>
+<span class="k">    </span><span class="nb">exit </span>1
 <span class="k">fi</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
 </div>
 </body>
 </html>
