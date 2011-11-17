@@ -887,7 +887,9 @@ if [[ "$ENABLED_SERVICES" =~ "n-vol" ]]; then
     # invoking stack.sh.
     #
     # By default, the backing file is 2G in size, and is stored in /opt/stack.
-    #
+
+    apt_get install iscsitarget-dkms iscsitarget
+
     if ! sudo vgdisplay | grep -q $VOLUME_GROUP; then
         VOLUME_BACKING_FILE=${VOLUME_BACKING_FILE:-$DEST/nova-volumes-backing-file}
         VOLUME_BACKING_FILE_SIZE=${VOLUME_BACKING_FILE_SIZE:-2052M}
