@@ -29,7 +29,7 @@ cleanup() {
     trap 2; kill -2 $$
 }
 
-trap cleanup SIGHUP SIGINT SIGTERM
+trap cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
 
 # Keep track of the current directory
 TOOLS_DIR=$(cd $(dirname "$0") && pwd)
@@ -142,3 +142,5 @@ password = password
 
 EOF
 mv $CONFIG_FILE_TMP $CONFIG_FILE
+
+trap - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
