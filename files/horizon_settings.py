@@ -45,11 +45,10 @@ OPENSTACK_KEYSTONE_URL = "http://%s:5000/v2.0" % OPENSTACK_HOST
 OPENSTACK_KEYSTONE_ADMIN_URL = "http://%s:35357/v2.0" % OPENSTACK_HOST
 OPENSTACK_KEYSTONE_DEFAULT_ROLE = "Member"
 
-SWIFT_ENABLED = False
 SWIFT_PAGINATE_LIMIT = 100
 
 # Configure quantum connection details for networking
-QUANTUM_ENABLED = False
+QUANTUM_ENABLED = True
 QUANTUM_URL = '%s'  % OPENSTACK_HOST
 QUANTUM_PORT = '9696'
 QUANTUM_TENANT = '1234'
@@ -61,49 +60,49 @@ QUANTUM_CLIENT_VERSION='0.1'
 #     ['Ganglia','http://bar.com'],
 # ]
 
-LOGGING = {
-        'version': 1,
-        # When set to True this will disable all logging except
-        # for loggers specified in this configuration dictionary. Note that
-        # if nothing is specified here and disable_existing_loggers is True,
-        # django.db.backends will still log unless it is disabled explicitly.
-        'disable_existing_loggers': False,
-        'handlers': {
-            'null': {
-                'level': 'DEBUG',
-                'class': 'django.utils.log.NullHandler',
-                },
-            'console': {
-                # Set the level to "DEBUG" for verbose output logging.
-                'level': 'INFO',
-                'class': 'logging.StreamHandler',
-                },
-            },
-        'loggers': {
-            # Logging from django.db.backends is VERY verbose, send to null
-            # by default.
-            'django.db.backends': {
-                'handlers': ['null'],
-                'propagate': False,
-                },
-            'horizon': {
-                'handlers': ['console'],
-                'propagate': False,
-            },
-            'novaclient': {
-                'handlers': ['console'],
-                'propagate': False,
-            },
-            'keystoneclient': {
-                'handlers': ['console'],
-                'propagate': False,
-            },
-            'nose.plugins.manager': {
-                'handlers': ['console'],
-                'propagate': False,
-            }
-        }
-}
+#LOGGING = {
+#        'version': 1,
+#        # When set to True this will disable all logging except
+#        # for loggers specified in this configuration dictionary. Note that
+#        # if nothing is specified here and disable_existing_loggers is True,
+#        # django.db.backends will still log unless it is disabled explicitly.
+#        'disable_existing_loggers': False,
+#        'handlers': {
+#            'null': {
+#                'level': 'DEBUG',
+#                'class': 'django.utils.log.NullHandler',
+#                },
+#            'console': {
+#                # Set the level to "DEBUG" for verbose output logging.
+#                'level': 'INFO',
+#                'class': 'logging.StreamHandler',
+#                },
+#            },
+#        'loggers': {
+#            # Logging from django.db.backends is VERY verbose, send to null
+#            # by default.
+#            'django.db.backends': {
+#                'handlers': ['null'],
+#                'propagate': False,
+#                },
+#            'horizon': {
+#                'handlers': ['console'],
+#                'propagate': False,
+#            },
+#            'novaclient': {
+#                'handlers': ['console'],
+#                'propagate': False,
+#            },
+#            'keystoneclient': {
+#                'handlers': ['console'],
+#                'propagate': False,
+#            },
+#            'nose.plugins.manager': {
+#                'handlers': ['console'],
+#                'propagate': False,
+#            }
+#        }
+#}
 
 # How much ram on each compute host?
 COMPUTE_HOST_RAM_GB = 16
