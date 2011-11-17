@@ -17,19 +17,6 @@ DATABASES = {
 
 CACHE_BACKEND = 'dummy://'
 
-# Add apps to horizon installation.
-INSTALLED_APPS = (
-    'dashboard',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django_openstack',
-    'django_openstack.templatetags',
-    'mailer',
-)
-
-
 # Send email to the console by default
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Or send them to /dev/null
