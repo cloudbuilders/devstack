@@ -473,6 +473,15 @@ function git_clone {
 git_clone $NOVA_REPO $NOVA_DIR $NOVA_BRANCH
 # python client library to nova that horizon (and others) use
 git_clone $NOVACLIENT_REPO $NOVACLIENT_DIR $NOVACLIENT_BRANCH
+
+# glance, swift middleware and nova api needs keystone middleware
+if [[ "$ENABLED_SERVICES" =~ "key" || 
+      "$ENABLED_SERVICES" =~ "g-api" || 
+      "$ENABLED_SERVICES" =~ "n-api" || 
+      "$ENABLED_SERVICES" =~ "swift" ]]; then
+    # unified auth system (manages accounts/tokens)
+    git_clone $KEYSTONE_REPO $KEYSTONE_DIR $KEYSTONE_BRANCH
+fi
 if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     # storage service
     git_clone $SWIFT_REPO $SWIFT_DIR $SWIFT_BRANCH
@@ -482,10 +491,6 @@ fi
 if [[ "$ENABLED_SERVICES" =~ "g-api" ]]; then
     # image catalog service
     git_clone $GLANCE_REPO $GLANCE_DIR $GLANCE_BRANCH
-fi
-if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
-    # unified auth system (manages accounts/tokens)
-    git_clone $KEYSTONE_REPO $KEYSTONE_DIR $KEYSTONE_BRANCH
 fi
 if [[ "$ENABLED_SERVICES" =~ "n-vnc" ]]; then
     # a websockets/html5 or flash powered VNC console for vm instances
