@@ -7,7 +7,7 @@
 # Needs to run as root
 
 DEST_DIR=${1:-/tmp/syslinux-boot}
-PXEDIR=${PXEDIR:-/opt/stack/cache/pxe}
+PXEDIR=${PXEDIR:-/opt/ramstack/pxe}
 PROGDIR=`dirname $0`
 
 # Clean up any resources that may be in use

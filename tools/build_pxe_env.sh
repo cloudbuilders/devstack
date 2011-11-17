@@ -10,7 +10,7 @@
 dpkg -l syslinux || apt-get install -y syslinux
 
 DEST_DIR=${1:-/tmp}/tftpboot
-PXEDIR=${PXEDIR:-/var/cache/devstack/pxe}
+PXEDIR=${PXEDIR:-/opt/ramstack/pxe}
 PROGDIR=`dirname $0`
 
 # Clean up any resources that may be in use
