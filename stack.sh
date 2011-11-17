@@ -527,7 +527,7 @@ if [[ "$ENABLED_SERVICES" =~ "openstackx" ]]; then
     cd $OPENSTACKX_DIR; sudo python setup.py develop
 fi
 if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
-    cd $HORIZON_DIR/django-openstack; sudo python setup.py develop
+    cd $HORIZON_DIR/horizon; sudo python setup.py develop
     cd $HORIZON_DIR/openstack-dashboard; sudo python setup.py develop
 fi
 if [[ "$ENABLED_SERVICES" =~ "quantum" ]]; then
