@@ -45,7 +45,7 @@ echo stack:pass | chroot $STAGING_DIR chpasswd
 
 # Configure sudo
 ( umask 226 && echo "stack ALL=(ALL) NOPASSWD:ALL" \
-    > /etc/sudoers.d/50_stack_sh )
+    > $STAGING_DIR/etc/sudoers.d/50_stack_sh 
 
 # Gracefully cp only if source file/dir exists
 function cp_it {
