@@ -6,7 +6,7 @@
 function usage {
     echo "$0 - Build config.ini for openstack-integration-tests"
     echo ""
-    echo "Usage: $0 configfile"
+    echo "Usage: $0 configdir"
     exit 1
 }
 
@@ -14,15 +14,20 @@ if [ ! "$#" -eq "1" ]; then
     usage
 fi
 
-CONFIG_FILE=$1
+CONFIG_DIR=$1
+CONFIG_CONF=$CONFIG_DIR/storm.conf
+CONFIG_INI=$CONFIG_DIR/config.ini
 
 # Clean up any resources that may be in use
 cleanup() {
     set +o errexit
 
     # Mop up temporary files
-    if [ -n "$CONFIG_FILE_TMP" -a -e "$CONFIG_FILE_TMP" ]; then
-        rm -f $CONFIG_FILE_TMP
+    if [ -n "$CONFIG_CONF_TMP" -a -e "$CONFIG_CONF_TMP" ]; then
+        rm -f $CONFIG_CONF_TMP
+    fi
+    if [ -n "$CONFIG_INI_TMP" -a -e "$CONFIG_INI_TMP" ]; then
+        rm -f $CONFIG_INI_TMP
     fi
 
     # Kill ourselves to signal any calling process
@@ -79,9 +84,36 @@ set `echo $GLANCE_HOSTPORT | tr ':' ' '`
 GLANCE_HOST=$1
 GLANCE_PORT=$2
 
-CONFIG_FILE_TMP=$(mktemp $CONFIG_FILE.XXXXXX)
+# Create storm.conf
+
+CONFIG_CONF_TMP=$(mktemp $CONFIG_CONF.XXXXXX)
+    cat >$CONFIG_CONF_TMP <<EOF
+[nova]
+auth_url=http://$HOST_IP:5000/v2.0/tokens
+user=admin
+api_key=$ADMIN_PASSWORD
+tenant_name=admin
+ssh_timeout=300
+build_interval=10
+build_timeout=600
+
+[environment]
+image_ref=3
+image_ref_alt=4
+flavor_ref=1
+flavor_ref_alt=2
+create_image_enabled=true
+resize_available=true
+authentication=keystone_v2
+EOF
+mv $CONFIG_CONF_TMP $CONFIG_CONF
+CONFIG_CONF_TMP=""
+
+# Create config.ini
+
+CONFIG_INI_TMP=$(mktemp $CONFIG_INI.XXXXXX)
 if [ "$UPLOAD_LEGACY_TTY" ]; then
-    cat >$CONFIG_FILE_TMP <<EOF
+    cat >$CONFIG_INI_TMP <<EOF
 [environment]
 aki_location = $DEST/devstack/files/images/aki-tty/image
 ari_location = $DEST/devstack/files/images/ari-tty/image
@@ -90,7 +122,7 @@ image_ref = 1
 flavor_ref = 1
 EOF
 else
-    cat >$CONFIG_FILE_TMP <<EOF
+    cat >$CONFIG_INI_TMP <<EOF
 [environment]
 aki_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64-vmlinuz-virtual
 #ari_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64-loader
@@ -100,7 +132,7 @@ flavor_ref = 1
 EOF
 fi
 
-cat >>$CONFIG_FILE_TMP <<EOF
+cat >>$CONFIG_INI_TMP <<EOF
 [glance]
 host = $GLANCE_HOST
 apiver = v1
@@ -143,6 +175,7 @@ username = root
 password = password
 
 EOF
-mv $CONFIG_FILE_TMP $CONFIG_FILE
+mv $CONFIG_INI_TMP $CONFIG_INI
+CONFIG_INI_TMP=""
 
 trap - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
