@@ -10,10 +10,10 @@
 # shared settings for common resources (mysql, rabbitmq) and build a multi-node
 # developer install.
 
-# To keep this script simple we assume you are running on an **Ubuntu 11.04
-# Natty** machine.  It should work in a VM or physical server.  Additionally we
-# put the list of *apt* and *pip* dependencies and other configuration files in
-# this repo.  So start by grabbing this script and the dependencies.
+# To keep this script simple we assume you are running on an **Ubuntu 11.10
+# Oneiric** machine.  It should work in a VM or physical server.  Additionally
+# we put the list of *apt* and *pip* dependencies and other configuration files
+# in this repo.  So start by grabbing this script and the dependencies.
 
 # Learn more and get the most recent version at http://devstack.org
 
