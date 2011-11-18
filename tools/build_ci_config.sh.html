@@ -343,7 +343,7 @@ ul.auto-toc {
 <span class="k">function </span>usage <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$0 - Build config.ini for openstack-integration-tests&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 configfile&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 configdir&quot;</span>
     <span class="nb">exit </span>1
 <span class="o">}</span>
 
@@ -351,7 +351,9 @@ ul.auto-toc {
 <span class="k">    </span>usage
 <span class="k">fi</span>
 
-<span class="nv">CONFIG_FILE</span><span class="o">=</span><span class="nv">$1</span>
+<span class="nv">CONFIG_DIR</span><span class="o">=</span><span class="nv">$1</span>
+<span class="nv">CONFIG_CONF</span><span class="o">=</span><span class="nv">$CONFIG_DIR</span>/storm.conf
+<span class="nv">CONFIG_INI</span><span class="o">=</span><span class="nv">$CONFIG_DIR</span>/config.ini
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Mop up temporary files</p>
@@ -362,8 +364,11 @@ cleanup<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill ourselves to signal any calling process</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$CONFIG_FILE_TMP&quot;</span> -a -e <span class="s2">&quot;$CONFIG_FILE_TMP&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>rm -f <span class="nv">$CONFIG_FILE_TMP</span>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$CONFIG_CONF_TMP&quot;</span> -a -e <span class="s2">&quot;$CONFIG_CONF_TMP&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>rm -f <span class="nv">$CONFIG_CONF_TMP</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> -n <span class="s2">&quot;$CONFIG_INI_TMP&quot;</span> -a -e <span class="s2">&quot;$CONFIG_INI_TMP&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>rm -f <span class="nv">$CONFIG_INI_TMP</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -372,7 +377,7 @@ cleanup<span class="o">()</span> <span class="o">{</span>
     <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
 <span class="o">}</span>
 
-<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM
+<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Abort if localrc is not set</p>
@@ -401,19 +406,21 @@ cleanup<span class="o">()</span> <span class="o">{</span>
 
 <span class="nv">DIST_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">DIST_NAME</span><span class="k">:-</span><span class="nv">oneiric</span><span class="k">}</span>
 
+<span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$DEST</span>/.ramdisk <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Use the GUEST_IP unless an explicit IP is set by <tt class="docutils literal">HOST_IP</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">GUEST_NETWORK</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_NETWORK</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
-<span class="nv">GUEST_RECREATE_NET</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_RECREATE_NET</span><span class="k">:-</span><span class="nv">yes</span><span class="k">}</span>
+    <span class="nv">GUEST_NETWORK</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_NETWORK</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+    <span class="nv">GUEST_RECREATE_NET</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_RECREATE_NET</span><span class="k">:-</span><span class="nv">yes</span><span class="k">}</span>
 
-<span class="nv">GUEST_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_IP</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.</span><span class="nv">$GUEST_NETWORK</span><span class="p">.50</span><span class="k">}</span>
-<span class="nv">GUEST_CIDR</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_CIDR</span><span class="k">:-</span><span class="nv">$GUEST_IP</span><span class="p">/24</span><span class="k">}</span>
-<span class="nv">GUEST_NETMASK</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_NETMASK</span><span class="k">:-</span><span class="nv">255</span><span class="p">.255.255.0</span><span class="k">}</span>
-<span class="nv">GUEST_GATEWAY</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_GATEWAY</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.</span><span class="nv">$GUEST_NETWORK</span><span class="p">.1</span><span class="k">}</span>
-<span class="nv">GUEST_MAC</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_MAC</span><span class="k">:-</span><span class="s2">&quot;02:16:3e:07:69:`printf &#39;%02X&#39; $GUEST_NETWORK`&quot;</span><span class="k">}</span>
-<span class="nv">GUEST_RAM</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_RAM</span><span class="k">:-</span><span class="nv">1524288</span><span class="k">}</span>
-<span class="nv">GUEST_CORES</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_CORES</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+    <span class="nv">GUEST_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_IP</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.</span><span class="nv">$GUEST_NETWORK</span><span class="p">.50</span><span class="k">}</span>
+    <span class="nv">GUEST_CIDR</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_CIDR</span><span class="k">:-</span><span class="nv">$GUEST_IP</span><span class="p">/24</span><span class="k">}</span>
+    <span class="nv">GUEST_NETMASK</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_NETMASK</span><span class="k">:-</span><span class="nv">255</span><span class="p">.255.255.0</span><span class="k">}</span>
+    <span class="nv">GUEST_GATEWAY</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_GATEWAY</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.</span><span class="nv">$GUEST_NETWORK</span><span class="p">.1</span><span class="k">}</span>
+    <span class="nv">GUEST_MAC</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_MAC</span><span class="k">:-</span><span class="s2">&quot;02:16:3e:07:69:`printf &#39;%02X&#39; $GUEST_NETWORK`&quot;</span><span class="k">}</span>
+    <span class="nv">GUEST_RAM</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_RAM</span><span class="k">:-</span><span class="nv">1524288</span><span class="k">}</span>
+    <span class="nv">GUEST_CORES</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_CORES</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Use the first IP if HOST_IP still is not set</p>
@@ -429,15 +436,46 @@ cleanup<span class="o">()</span> <span class="o">{</span>
 <span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Create storm.conf</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
 <span class="nb">set</span> <span class="sb">`</span><span class="nb">echo</span> <span class="nv">$GLANCE_HOSTPORT</span> | tr <span class="s1">&#39;:&#39;</span> <span class="s1">&#39; &#39;</span><span class="sb">`</span>
 <span class="nv">GLANCE_HOST</span><span class="o">=</span><span class="nv">$1</span>
 <span class="nv">GLANCE_PORT</span><span class="o">=</span><span class="nv">$2</span>
 
-<span class="nv">CONFIG_FILE_TMP</span><span class="o">=</span><span class="k">$(</span>mktemp <span class="nv">$CONFIG_FILE</span>.XXXXXX<span class="k">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create config.ini</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nv">CONFIG_CONF_TMP</span><span class="o">=</span><span class="k">$(</span>mktemp <span class="nv">$CONFIG_CONF</span>.XXXXXX<span class="k">)</span>
+    cat &gt;<span class="nv">$CONFIG_CONF_TMP</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">[nova]</span>
+<span class="s">auth_url=http://$HOST_IP:5000/v2.0/tokens</span>
+<span class="s">user=admin</span>
+<span class="s">api_key=$ADMIN_PASSWORD</span>
+<span class="s">tenant_name=admin</span>
+<span class="s">ssh_timeout=300</span>
+<span class="s">build_interval=10</span>
+<span class="s">build_timeout=600</span>
+
+<span class="s">[environment]</span>
+<span class="s">image_ref=3</span>
+<span class="s">image_ref_alt=4</span>
+<span class="s">flavor_ref=1</span>
+<span class="s">flavor_ref_alt=2</span>
+<span class="s">create_image_enabled=true</span>
+<span class="s">resize_available=true</span>
+<span class="s">authentication=keystone_v2</span>
+<span class="s">EOF</span>
+mv <span class="nv">$CONFIG_CONF_TMP</span> <span class="nv">$CONFIG_CONF</span>
+<span class="nv">CONFIG_CONF_TMP</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nv">CONFIG_INI_TMP</span><span class="o">=</span><span class="k">$(</span>mktemp <span class="nv">$CONFIG_INI</span>.XXXXXX<span class="k">)</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>cat &gt;<span class="nv">$CONFIG_FILE_TMP</span> <span class="s">&lt;&lt;EOF</span>
+<span class="k">    </span>cat &gt;<span class="nv">$CONFIG_INI_TMP</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">[environment]</span>
 <span class="s">aki_location = $DEST/devstack/files/images/aki-tty/image</span>
 <span class="s">ari_location = $DEST/devstack/files/images/ari-tty/image</span>
@@ -446,7 +484,7 @@ cleanup<span class="o">()</span> <span class="o">{</span>
 <span class="s">flavor_ref = 1</span>
 <span class="s">EOF</span>
 <span class="k">else</span>
-<span class="k">    </span>cat &gt;<span class="nv">$CONFIG_FILE_TMP</span> <span class="s">&lt;&lt;EOF</span>
+<span class="k">    </span>cat &gt;<span class="nv">$CONFIG_INI_TMP</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">[environment]</span>
 <span class="s">aki_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64-vmlinuz-virtual</span>
 <span class="s">#ari_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64-loader</span>
@@ -456,7 +494,7 @@ cleanup<span class="o">()</span> <span class="o">{</span>
 <span class="s">EOF</span>
 <span class="k">fi</span>
 
-cat &gt;&gt;<span class="nv">$CONFIG_FILE_TMP</span> <span class="s">&lt;&lt;EOF</span>
+cat &gt;&gt;<span class="nv">$CONFIG_INI_TMP</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">[glance]</span>
 <span class="s">host = $GLANCE_HOST</span>
 <span class="s">apiver = v1</span>
@@ -499,7 +537,10 @@ cat &gt;&gt;<span class="nv">$CONFIG_FILE_TMP</span> <span class="s">&lt;&lt;EOF
 <span class="s">password = password</span>
 
 <span class="s">EOF</span>
-mv <span class="nv">$CONFIG_FILE_TMP</span> <span class="nv">$CONFIG_FILE</span>
+mv <span class="nv">$CONFIG_INI_TMP</span> <span class="nv">$CONFIG_INI</span>
+<span class="nv">CONFIG_INI_TMP</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+
+<span class="nb">trap</span> - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
 
 
 </pre></div></td></tr><tr><td class=docs>
