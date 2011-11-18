@@ -31,7 +31,7 @@ popd
 # returns a token and catalog of endpoints.  We use python to parse the token
 # and save it.
 
-TOKEN=`curl -s -d  "{\"auth\":{\"passwordCredentials\": {\"username\": \"$NOVA_USERNAME\", \"password\": \"$NOVA_API_KEY\"}}}" -H "Content-type: application/json" http://$HOST_IP:5000/v2.0/tokens | python -c "import sys; import json; tok = json.loads(sys.stdin.read()); print tok['access']['token']['id'];"`
+TOKEN=`curl -s -d  "{\"auth\":{\"passwordCredentials\": {\"username\": \"$NOVA_USERNAME\", \"password\": \"$NOVA_PASSWORD\"}}}" -H "Content-type: application/json" http://$HOST_IP:5000/v2.0/tokens | python -c "import sys; import json; tok = json.loads(sys.stdin.read()); print tok['access']['token']['id'];"`
 
 # Launching a server
 # ==================
@@ -140,28 +140,6 @@ if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! ping -c1 -w1 $FLOATING_IP; do sle
     echo "Couldn't ping server with floating ip"
     exit 1
 fi
-
-# pause the VM and verify we can't ping it anymore
-nova pause $NAME
-
-sleep 2
-
-if ( ping -c1 -w1 $IP); then
-    echo "Pause failure - ping shouldn't work"
-    exit 1
-fi
-
-if ( ping -c1 -w1 $FLOATING_IP); then
-    echo "Pause failure - ping floating ips shouldn't work"
-    exit 1
-fi
-
-# unpause the VM and verify we can ping it again
-nova unpause $NAME
-
-sleep 2
-
-ping -c1 -w1 $IP
 
 # dis-allow icmp traffic (ping)
 nova secgroup-delete-rule $SECGROUP icmp -1 -1 0.0.0.0/0
