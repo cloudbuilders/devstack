@@ -473,19 +473,25 @@ function git_clone {
 git_clone $NOVA_REPO $NOVA_DIR $NOVA_BRANCH
 # python client library to nova that horizon (and others) use
 git_clone $NOVACLIENT_REPO $NOVACLIENT_DIR $NOVACLIENT_BRANCH
+
+# glance, swift middleware and nova api needs keystone middleware
+if [[ "$ENABLED_SERVICES" =~ "key" || 
+      "$ENABLED_SERVICES" =~ "g-api" || 
+      "$ENABLED_SERVICES" =~ "n-api" || 
+      "$ENABLED_SERVICES" =~ "swift" ]]; then
+    # unified auth system (manages accounts/tokens)
+    git_clone $KEYSTONE_REPO $KEYSTONE_DIR $KEYSTONE_BRANCH
+fi
 if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     # storage service
     git_clone $SWIFT_REPO $SWIFT_DIR $SWIFT_BRANCH
     # swift + keystone middleware
     git_clone $SWIFT_KEYSTONE_REPO $SWIFT_KEYSTONE_DIR $SWIFT_KEYSTONE_BRANCH
 fi
-if [[ "$ENABLED_SERVICES" =~ "g-api" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "g-api" ||
+      "$ENABLED_SERVICES" =~ "n-api" ]]; then
     # image catalog service
     git_clone $GLANCE_REPO $GLANCE_DIR $GLANCE_BRANCH
-fi
-if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
-    # unified auth system (manages accounts/tokens)
-    git_clone $KEYSTONE_REPO $KEYSTONE_DIR $KEYSTONE_BRANCH
 fi
 if [[ "$ENABLED_SERVICES" =~ "n-vnc" ]]; then
     # a websockets/html5 or flash powered VNC console for vm instances
@@ -511,14 +517,18 @@ fi
 
 # setup our checkouts so they are installed into python path
 # allowing ``import nova`` or ``import glance.client``
-if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "key" || 
+      "$ENABLED_SERVICES" =~ "g-api" || 
+      "$ENABLED_SERVICES" =~ "n-api" || 
+      "$ENABLED_SERVICES" =~ "swift" ]]; then
     cd $KEYSTONE_DIR; sudo python setup.py develop
 fi
 if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
     cd $SWIFT_DIR; sudo python setup.py develop
     cd $SWIFT_KEYSTONE_DIR; sudo python setup.py develop
 fi
-if [[ "$ENABLED_SERVICES" =~ "g-api" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "g-api" ||
+      "$ENABLED_SERVICES" =~ "n-api" ]]; then
     cd $GLANCE_DIR; sudo python setup.py develop
 fi
 cd $NOVACLIENT_DIR; sudo python setup.py develop
@@ -597,7 +607,7 @@ fi
 if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
 
     # Install apache2, which is NOPRIME'd
-    sudo apt-get install -y apache2 libapache2-mod-wsgi
+    apt_get install apache2 libapache2-mod-wsgi
 
     # Horizon currently imports quantum even if you aren't using it.  Instead
     # of installing quantum we can create a simple module that will pass the
@@ -879,7 +889,9 @@ if [[ "$ENABLED_SERVICES" =~ "n-vol" ]]; then
     # invoking stack.sh.
     #
     # By default, the backing file is 2G in size, and is stored in /opt/stack.
-    #
+
+    apt_get install iscsitarget-dkms iscsitarget
+
     if ! sudo vgdisplay | grep -q $VOLUME_GROUP; then
         VOLUME_BACKING_FILE=${VOLUME_BACKING_FILE:-$DEST/nova-volumes-backing-file}
         VOLUME_BACKING_FILE_SIZE=${VOLUME_BACKING_FILE_SIZE:-2052M}
