@@ -16,7 +16,9 @@ DATABASES = {
     },
 }
 
-CACHE_BACKEND = 'locmem://'
+# The default values for these two settings seem to cause issues with apache
+CACHE_BACKEND = 'dummy://'
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 # Send email to the console by default
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
