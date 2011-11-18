@@ -343,8 +343,7 @@ ul.auto-toc {
 dpkg -l syslinux <span class="o">||</span> apt-get install -y syslinux
 
 <span class="nv">DEST_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="p">/tmp</span><span class="k">}</span>/tftpboot
-<span class="nv">PXEDIR</span><span class="o">=</span><span class="k">${</span><span class="nv">PXEDIR</span><span class="k">:-</span><span class="p">/var/cache/devstack/pxe</span><span class="k">}</span>
-<span class="nv">OPWD</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
+<span class="nv">PXEDIR</span><span class="o">=</span><span class="k">${</span><span class="nv">PXEDIR</span><span class="k">:-</span><span class="p">/opt/ramstack/pxe</span><span class="k">}</span>
 <span class="nv">PROGDIR</span><span class="o">=</span><span class="sb">`</span>dirname <span class="nv">$0</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -362,12 +361,18 @@ cleanup<span class="o">()</span> <span class="o">{</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Setup devstack boot</p>
+<p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
 <span class="o">}</span>
 
-<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM
+<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setup devstack boot</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
 
 mkdir -p <span class="nv">$DEST_DIR</span>/pxelinux.cfg
 <span class="nb">cd</span> <span class="nv">$DEST_DIR</span>
@@ -381,7 +386,7 @@ cat &gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">prompt 0</span>
 <span class="s">timeout 0</span>
 
-<span class="s">MENU TITLE PXE Boot Menu</span>
+<span class="s">MENU TITLE devstack PXE Boot Menu</span>
 
 <span class="s">EOF</span>
 
@@ -397,7 +402,7 @@ mkdir -p <span class="nv">$DEST_DIR</span>/ubuntu
 <p>Get generic kernel version</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$PXEDIR</span>/stack-initrd.img <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$OPWD</span>
+<span class="k">    </span><span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
     <span class="nv">$PROGDIR</span>/build_ramdisk.sh <span class="nv">$PXEDIR</span>/stack-initrd.img
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$PXEDIR</span>/stack-initrd.gz <span class="o">]</span>; <span class="k">then</span>
@@ -458,6 +463,8 @@ cat &gt;&gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">    MENU LABEL ^Local disk</span>
 <span class="s">    LOCALBOOT 0</span>
 <span class="s">EOF</span>
+
+<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
 
 
 </pre></div></td></tr><tr><td class=docs>
