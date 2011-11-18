@@ -66,10 +66,10 @@ fi
 # We try to have sensible defaults, so you should be able to run ``./stack.sh``
 # in most cases.
 #
-# We our settings from ``stackrc``.  This file is distributed with devstack and
-# contains locations for what repositories to use.  If you want to use other
-# repositories and branches, you can add your own settings with another file
-# called ``localrc``
+# We source our settings from ``stackrc``.  This file is distributed with devstack
+# and contains locations for what repositories to use.  If you want to use other
+# repositories and branches, you can add your own settings with another file called
+# ``localrc``
 #
 # If ``localrc`` exists, then ``stackrc`` will load those settings.  This is
 # useful for changing a branch or repository to test other versions.  Also you
