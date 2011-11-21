@@ -944,7 +944,8 @@ if [[ "$ENABLED_SERVICES" =~ "openstackx" ]]; then
     add_nova_flag "--osapi_extension=extensions.admin.Admin"
 fi
 if [[ "$ENABLED_SERVICES" =~ "n-vnc" ]]; then
-    add_nova_flag "--vncproxy_url=http://$HOST_IP:6080"
+    VNCPROXY_URL=${VNCPROXY_URL:-"http://$HOST_IP:6080"}
+    add_nova_flag "--vncproxy_url=$VNCPROXY_URL"
     add_nova_flag "--vncproxy_wwwroot=$NOVNC_DIR/"
 fi
 add_nova_flag "--api_paste_config=$NOVA_DIR/bin/nova-api-paste.ini"
