@@ -118,8 +118,18 @@ if [ "$UPLOAD_LEGACY_TTY" ]; then
 aki_location = $DEST/devstack/files/images/aki-tty/image
 ari_location = $DEST/devstack/files/images/ari-tty/image
 ami_location = $DEST/devstack/files/images/ami-tty/image
-image_ref = 1
+image_ref = 3
+image_ref_alt = 3
 flavor_ref = 1
+flavor_ref_alt = 2
+
+[glance]
+host = $GLANCE_HOST
+apiver = v1
+port = $GLANCE_PORT
+image_id = 3
+image_id_alt = 3
+tenant_id = 1
 EOF
 else
     cat >$CONFIG_INI_TMP <<EOF
@@ -127,18 +137,22 @@ else
 aki_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64-vmlinuz-virtual
 #ari_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64-loader
 ami_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64.img
-image_ref = 1
+image_ref = 2
+image_ref_alt = 2
 flavor_ref = 1
-EOF
-fi
+flavor_ref_alt = 2
 
-cat >>$CONFIG_INI_TMP <<EOF
 [glance]
 host = $GLANCE_HOST
 apiver = v1
 port = $GLANCE_PORT
 image_id = 1
+image_id_alt = 1
 tenant_id = 1
+EOF
+fi
+
+cat >>$CONFIG_INI_TMP <<EOF
 
 [keystone]
 service_host = $HOST_IP
@@ -159,6 +173,7 @@ ssh_timeout = 300
 build_timeout = 300
 flavor_ref = 1
 flavor_ref_alt = 2
+multi_node = no
 
 [rabbitmq]
 host = $RABBIT_HOST
