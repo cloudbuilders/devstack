@@ -618,7 +618,13 @@ if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
 
 
     # ``local_settings.py`` is used to override horizon default settings.
-    cp $FILES/horizon_settings.py $HORIZON_DIR/openstack-dashboard/local/local_settings.py
+    local_settings=$HORIZON_DIR/openstack-dashboard/local/local_settings.py
+    cp $FILES/horizon_settings.py $local_settings
+
+    # Enable quantum in dashboard, if requested
+    if [[ "$ENABLED_SERVICES" =~ "quantum" ]]; then
+        sudo sed -e "s,QUANTUM_ENABLED = False,QUANTUM_ENABLED = True,g" -i $local_settings
+    fi
 
     # Initialize the horizon database (it stores sessions and notices shown to
     # users).  The user system is external (keystone).
@@ -1009,7 +1015,7 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
     mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'DROP DATABASE IF EXISTS keystone;'
     mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'CREATE DATABASE keystone;'
 
-    # FIXME (anthony) keystone should use keystone.conf.example
+    # Configure keystone.conf
     KEYSTONE_CONF=$KEYSTONE_DIR/etc/keystone.conf
     cp $FILES/keystone.conf $KEYSTONE_CONF
     sudo sed -e "s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g" -i $KEYSTONE_CONF
@@ -1022,7 +1028,7 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
     sudo sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $KEYSTONE_DATA
     sudo sed -e "s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g" -i $KEYSTONE_DATA
     # initialize keystone with default users/endpoints
-    BIN_DIR=$KEYSTONE_DIR/bin bash $KEYSTONE_DATA
+    ENABLED_SERVICES=$ENABLED_SERVICES BIN_DIR=$KEYSTONE_DIR/bin bash $KEYSTONE_DATA
 fi
 
 
