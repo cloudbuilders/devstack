@@ -1035,7 +1035,7 @@ it since we are going to run the services in screen for simple</p>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$OPENSTACKX_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;horizon&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/django-openstack; sudo python setup.py develop
+<span class="k">    </span><span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/horizon; sudo python setup.py develop
     <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/openstack-dashboard; sudo python setup.py develop
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;quantum&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1145,10 +1145,18 @@ initial imports</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Enable quantum in dashboard, if requested</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack-dashboard/local/local_settings.py
+    cp <span class="nv">$FILES</span>/horizon_settings.py <span class="nv">$local_settings</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Initialize the horizon database (it stores sessions and notices shown to
 users).  The user system is external (keystone).</p>
 </td><td class=code><div class=highlight><pre>
-    cp <span class="nv">$FILES</span>/horizon_settings.py <span class="nv">$HORIZON_DIR</span>/openstack-dashboard/local/local_settings.py
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;quantum&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo sed -e <span class="s2">&quot;s,QUANTUM_ENABLED = False,QUANTUM_ENABLED = True,g&quot;</span> -i <span class="nv">$local_settings</span>
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create an empty directory that apache uses as docroot</p>
@@ -1553,10 +1561,12 @@ add_nova_flag <span class="s2">&quot;--vlan_interface=$VLAN_INTERFACE&quot;</spa
 add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
 add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;openstackx&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--osapi_extensions_path=$OPENSTACKX_DIR/extensions&quot;</span>
+<span class="k">    </span>add_nova_flag <span class="s2">&quot;--osapi_extension=nova.api.openstack.v2.contrib.standard_extensions&quot;</span>
+    add_nova_flag <span class="s2">&quot;--osapi_extension=extensions.admin.Admin&quot;</span>
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-vnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--vncproxy_url=http://$HOST_IP:6080&quot;</span>
+<span class="k">    </span><span class="nv">VNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$HOST_IP:6080&quot;</span><span class="k">}</span>
+    add_nova_flag <span class="s2">&quot;--vncproxy_url=$VNCPROXY_URL&quot;</span>
     add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/&quot;</span>
 <span class="k">fi</span>
 add_nova_flag <span class="s2">&quot;--api_paste_config=$NOVA_DIR/bin/nova-api-paste.ini&quot;</span>
@@ -1640,7 +1650,7 @@ only once for an entire cluster.</p>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>FIXME (anthony) keystone should use keystone.conf.example</p>
+<p>Configure keystone.conf</p>
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS keystone;&#39;</span>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
@@ -1667,7 +1677,7 @@ only once for an entire cluster.</p>
 <div class="section" id="launch-services">
 <h1>Launch Services</h1>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$KEYSTONE_DATA</span>
+    <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$KEYSTONE_DATA</span>
 <span class="k">fi</span>
 
 
