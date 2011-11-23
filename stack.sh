@@ -1094,7 +1094,7 @@ if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
     # Install deps
     # FIXME add to files/apts/quantum, but don't install if not needed!
     # Install linux-headers as openvswitch depends on it for building
-    apt-get install linux-headers-$(uname -r)
+    apt_get install linux-headers-$(uname -r)
     apt_get install openvswitch-switch openvswitch-datapath-dkms
 
     # Create database for the plugin/agent
