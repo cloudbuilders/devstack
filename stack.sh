@@ -1093,6 +1093,8 @@ fi
 if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
     # Install deps
     # FIXME add to files/apts/quantum, but don't install if not needed!
+    # Install linux-headers as openvswitch depends on it for building
+    apt-get install linux-headers-$(uname -r)
     apt_get install openvswitch-switch openvswitch-datapath-dkms
 
     # Create database for the plugin/agent
@@ -1108,6 +1110,8 @@ if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
     QUANTUM_PLUGIN_INI_FILE=$QUANTUM_DIR/quantum/plugins.ini
     # Make sure we're using the openvswitch plugin
     sed -i -e "s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g" $QUANTUM_PLUGIN_INI_FILE
+    OVS_QUANTUM_PLUGIN_INI_FILE=$QUANTUM_DIR/quantum/plugins/openvswitch/ovs_quantum_plugin.ini
+    sed -i -e "s/^password =.*$/password = $MYSQL_PASSWORD/g" $OVS_QUANTUM_PLUGIN_INI_FILE
     screen_it q-svc "cd $QUANTUM_DIR && export PYTHONPATH=.:$PYTHONPATH; python $QUANTUM_DIR/bin/quantum $QUANTUM_DIR/etc/quantum.conf"
 fi
 
