@@ -1111,7 +1111,7 @@ if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
     # Make sure we're using the openvswitch plugin
     sed -i -e "s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g" $QUANTUM_PLUGIN_INI_FILE
     OVS_QUANTUM_PLUGIN_INI_FILE=$QUANTUM_DIR/quantum/plugins/openvswitch/ovs_quantum_plugin.ini
-    sed -i -e "s/^password =.*$/password = $MYSQL_PASSWORD/g" $OVS_QUANTUM_PLUGIN_INI_FILE
+    sed -i -e "s/^pass =.*$/pass = $MYSQL_PASSWORD/g" $OVS_QUANTUM_PLUGIN_INI_FILE
     screen_it q-svc "cd $QUANTUM_DIR && export PYTHONPATH=.:$PYTHONPATH; python $QUANTUM_DIR/bin/quantum $QUANTUM_DIR/etc/quantum.conf"
 fi
 
