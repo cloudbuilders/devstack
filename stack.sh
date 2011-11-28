@@ -606,6 +606,9 @@ fi
 
 if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
 
+    # Detecting user's default group name.
+    GROUP=`groups | cut -f 1 -d ' '`
+
     # Install apache2, which is NOPRIME'd
     apt_get install apache2 libapache2-mod-wsgi
 
@@ -630,6 +633,7 @@ if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
 
     ## Configure apache's 000-default to run horizon
     sudo cp $FILES/000-default.template /etc/apache2/sites-enabled/000-default
+    sudo sed -e "s,%GROUP%,$GROUP,g" -i /etc/apache2/sites-enabled/000-default
     sudo sed -e "s,%USER%,$USER,g" -i /etc/apache2/sites-enabled/000-default
     sudo sed -e "s,%HORIZON_DIR%,$HORIZON_DIR,g" -i /etc/apache2/sites-enabled/000-default
     sudo service apache2 restart
