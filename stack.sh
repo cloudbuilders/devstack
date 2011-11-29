@@ -927,6 +927,7 @@ if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
     if [[ "$Q_PLUGIN" = "openvswitch" ]]; then
         add_nova_flag "--libvirt_vif_type=ethernet"
         add_nova_flag "--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver"
+        add_nova_flag "--linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver"
     fi
 else
     add_nova_flag "--network_manager=nova.network.manager.$NET_MAN"
