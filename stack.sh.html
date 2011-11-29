@@ -1548,6 +1548,8 @@ add_nova_flag <span class="s2">&quot;--fixed_range=$FIXED_RANGE&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>add_nova_flag <span class="s2">&quot;--libvirt_vif_type=ethernet&quot;</span>
         add_nova_flag <span class="s2">&quot;--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
+        add_nova_flag <span class="s2">&quot;--linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver&quot;</span>
+        add_nova_flag <span class="s2">&quot;--quantum-use-dhcp&quot;</span>
     <span class="k">fi</span>
 <span class="k">else</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
@@ -1784,12 +1786,12 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
-<span class="k">    </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/quantum/plugins.ini
+<span class="k">    </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini
 </pre></div></td></tr><tr><td class=docs>
 <p>Quantum agent (for compute nodes)</p>
 </td><td class=code><div class=highlight><pre>
     sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
-    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; export PYTHONPATH=.:$PYTHONPATH; python $QUANTUM_DIR/bin/quantum $QUANTUM_DIR/etc/quantum.conf&quot;</span>
+    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_DIR/etc/quantum.conf&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1810,7 +1812,7 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 <p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
 happen after we've started the Quantum service.</p>
 </td><td class=code><div class=highlight><pre>
-    screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_DIR/quantum/plugins/openvswitch/ovs_quantum_plugin.ini -v&quot;</span>
+    screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_DIR/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini -v&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
