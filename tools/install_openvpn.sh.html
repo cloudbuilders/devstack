@@ -344,11 +344,31 @@ the configuration, certificate and key files.</p>
 <span class="c">#!/bin/bash</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Do some IP manipulation</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> -e localrc <span class="o">]</span>; <span class="k">then</span>
+    . localrc
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[</span> -e vpnrc <span class="o">]</span>; <span class="k">then</span>
+    . vpnrc
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>VPN Config</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> -e localrc.vpn <span class="o">]</span>; <span class="k">then</span>
-    . localrc.vpn
-<span class="k">fi</span>
+<span class="k">function </span>cidr2netmask<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">set</span> -- <span class="k">$((</span> <span class="m">5</span> <span class="o">-</span> <span class="o">(</span><span class="nv">$1</span> <span class="o">/</span> <span class="m">8</span><span class="o">)</span> <span class="k">))</span> 255 255 255 255 <span class="k">$((</span> <span class="o">(</span><span class="m">255</span> &lt;&lt; <span class="o">(</span><span class="m">8</span> <span class="o">-</span> <span class="o">(</span><span class="nv">$1</span> <span class="o">%</span> <span class="m">8</span><span class="k">))</span><span class="o">)</span> &amp; 255 <span class="o">))</span> 0 0 0
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$1</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">shift</span> <span class="nv">$1</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">shift</span>
+<span class="nb">    </span><span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="k">${</span><span class="nv">1</span><span class="p">-0</span><span class="k">}</span>.<span class="k">${</span><span class="nv">2</span><span class="p">-0</span><span class="k">}</span>.<span class="k">${</span><span class="nv">3</span><span class="p">-0</span><span class="k">}</span>.<span class="k">${</span><span class="nv">4</span><span class="p">-0</span><span class="k">}</span>
+<span class="o">}</span>
+
+<span class="nv">FIXED_NET</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$FIXED_RANGE</span> | cut -d<span class="s1">&#39;/&#39;</span> -f1<span class="sb">`</span>
+<span class="nv">FIXED_CIDR</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$FIXED_RANGE</span> | cut -d<span class="s1">&#39;/&#39;</span> -f2<span class="sb">`</span>
+<span class="nv">FIXED_MASK</span><span class="o">=</span><span class="sb">`</span>cidr2netmask <span class="nv">$FIXED_CIDR</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Install OpenVPN</p>
@@ -356,16 +376,15 @@ the configuration, certificate and key files.</p>
 <span class="nv">VPN_SERVER</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_SERVER</span><span class="k">:-</span><span class="sb">`</span>ifconfig eth0 | awk <span class="s2">&quot;/inet addr:/ { print \$2 }&quot;</span> | cut -d: -f2<span class="sb">`</span><span class="k">}</span>  <span class="c"># 50.56.12.212</span>
 <span class="nv">VPN_PROTO</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_PROTO</span><span class="k">:-</span><span class="nv">tcp</span><span class="k">}</span>
 <span class="nv">VPN_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_PORT</span><span class="k">:-</span><span class="nv">6081</span><span class="k">}</span>
-<span class="nv">VPN_DEV</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_DEV</span><span class="k">:-</span><span class="nv">tun</span><span class="k">}</span>
-<span class="nv">VPN_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_BRIDGE</span><span class="k">:-</span><span class="nv">br0</span><span class="k">}</span>
-<span class="nv">VPN_CLIENT_NET</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_CLIENT_NET</span><span class="k">:-</span><span class="nv">172</span><span class="p">.16.28.0</span><span class="k">}</span>
-<span class="nv">VPN_CLIENT_MASK</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_CLIENT_MASK</span><span class="k">:-</span><span class="nv">255</span><span class="p">.255.255.0</span><span class="k">}</span>
-<span class="nv">VPN_CLIENT_DHCP</span><span class="o">=</span><span class="s2">&quot;${VPN_CLIENT_DHCP:-172.16.28.1 172.16.28.254}&quot;</span>
-<span class="nv">VPN_LOCAL_NET</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_LOCAL_NET</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0</span><span class="k">}</span>
-<span class="nv">VPN_LOCAL_MASK</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_LOCAL_MASK</span><span class="k">:-</span><span class="nv">255</span><span class="p">.255.0.0</span><span class="k">}</span>
+<span class="nv">VPN_DEV</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_DEV</span><span class="k">:-</span><span class="nv">tap0</span><span class="k">}</span>
+<span class="nv">VPN_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_BRIDGE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
+<span class="nv">VPN_BRIDGE_IF</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_BRIDGE_IF</span><span class="k">:-</span><span class="nv">$FLAT_INTERFACE</span><span class="k">}</span>
+<span class="nv">VPN_CLIENT_NET</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_CLIENT_NET</span><span class="k">:-</span><span class="nv">$FIXED_NET</span><span class="k">}</span>
+<span class="nv">VPN_CLIENT_MASK</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_CLIENT_MASK</span><span class="k">:-</span><span class="nv">$FIXED_MASK</span><span class="k">}</span>
+<span class="nv">VPN_CLIENT_DHCP</span><span class="o">=</span><span class="s2">&quot;${VPN_CLIENT_DHCP:-net.1 net.254}&quot;</span>
 
 <span class="nv">VPN_DIR</span><span class="o">=</span>/etc/openvpn
-<span class="nv">CA_DIR</span><span class="o">=</span>/etc/openvpn/easy-rsa
+<span class="nv">CA_DIR</span><span class="o">=</span><span class="nv">$VPN_DIR</span>/easy-rsa
 
 usage<span class="o">()</span> <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$0 - OpenVPN install and certificate generation&quot;</span>
@@ -383,7 +402,7 @@ usage<span class="o">()</span> <span class="o">{</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Override the defaults</p>
+<p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VPN_EXEC</span><span class="o">=</span><span class="sb">`</span>which openvpn<span class="sb">`</span>
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$VPN_EXEC&quot;</span> -o ! -x <span class="s2">&quot;$VPN_EXEC&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -393,7 +412,18 @@ usage<span class="o">()</span> <span class="o">{</span>
 <span class="k">    </span>cp -pR /usr/share/doc/openvpn/examples/easy-rsa/2.0/ <span class="nv">$CA_DIR</span>
 <span class="k">fi</span>
 
-<span class="nv">OPWD</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Override the defaults</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+
+<span class="nv">WEB_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/../vpn
+<span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$WEB_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>mkdir -p <span class="nv">$WEB_DIR</span>
+<span class="k">fi</span>
+<span class="nv">WEB_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$TOP_DIR</span>/../vpn <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+
 <span class="nb">cd</span> <span class="nv">$CA_DIR</span>
 <span class="nb">source</span> ./vars
 
@@ -432,6 +462,10 @@ do_server<span class="o">()</span> <span class="o">{</span>
 <span class="s">BR=&quot;$VPN_BRIDGE&quot;</span>
 <span class="s">TAP=&quot;\$1&quot;</span>
 
+<span class="s">if [[ ! -d /sys/class/net/\$BR ]]; then</span>
+<span class="s">    brctl addbr \$BR</span>
+<span class="s">fi</span>
+
 <span class="s">for t in \$TAP; do</span>
 <span class="s">    openvpn --mktun --dev \$t</span>
 <span class="s">    brctl addif \$BR \$t</span>
@@ -462,10 +496,8 @@ do_server<span class="o">()</span> <span class="o">{</span>
 <span class="s">ca ca.crt</span>
 <span class="s">dh dh1024.pem</span>
 <span class="s">duplicate-cn</span>
-<span class="s">#server $VPN_CLIENT_NET $VPN_CLIENT_MASK</span>
 <span class="s">server-bridge $VPN_CLIENT_NET $VPN_CLIENT_MASK $VPN_CLIENT_DHCP</span>
 <span class="s">ifconfig-pool-persist ipp.txt</span>
-<span class="s">push &quot;route $VPN_LOCAL_NET $VPN_LOCAL_MASK&quot;</span>
 <span class="s">comp-lzo</span>
 <span class="s">user nobody</span>
 <span class="s">group nogroup</span>
@@ -510,9 +542,9 @@ do_client<span class="o">()</span> <span class="o">{</span>
 <span class="s">comp-lzo</span>
 <span class="s">verb 3</span>
 <span class="s">EOF</span>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$TMP_DIR</span>; tar cf <span class="nv">$OPWD</span>/<span class="nv">$NAME</span>.tar *<span class="o">)</span>
+    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$TMP_DIR</span>; tar cf <span class="nv">$WEB_DIR</span>/<span class="nv">$NAME</span>.tar *<span class="o">)</span>
     rm -rf <span class="nv">$TMP_DIR</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Client certificate and configuration is in $OPWD/$NAME.tar&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Client certificate and configuration is in $WEB_DIR/$NAME.tar&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
