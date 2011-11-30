@@ -343,17 +343,13 @@ ul.auto-toc {
 <span class="k">function </span>usage <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$0 - Build config.ini for openstack-integration-tests&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 configdir&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 [configdir]&quot;</span>
     <span class="nb">exit </span>1
 <span class="o">}</span>
 
-<span class="k">if</span> <span class="o">[</span> ! <span class="s2">&quot;$#&quot;</span> -eq <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">=</span> <span class="s2">&quot;-h&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>usage
 <span class="k">fi</span>
-
-<span class="nv">CONFIG_DIR</span><span class="o">=</span><span class="nv">$1</span>
-<span class="nv">CONFIG_CONF</span><span class="o">=</span><span class="nv">$CONFIG_DIR</span>/storm.conf
-<span class="nv">CONFIG_INI</span><span class="o">=</span><span class="nv">$CONFIG_DIR</span>/config.ini
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Mop up temporary files</p>
@@ -400,11 +396,70 @@ cleanup<span class="o">()</span> <span class="o">{</span>
 <span class="nb">source</span> ./stackrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Process network configuration vars</p>
+<p>git clone only if directory doesn't exist already.  Since <tt class="docutils literal">DEST</tt> might not
+be owned by the installation user, we create the directory and change the
+ownership to the proper user.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
 
+<span class="nv">CITEST_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstack-integration-tests
+
+<span class="nv">CONFIG_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="nv">$CITEST_DIR</span><span class="p">/etc</span><span class="k">}</span>
+<span class="nv">CONFIG_CONF</span><span class="o">=</span><span class="nv">$CONFIG_DIR</span>/storm.conf
+<span class="nv">CONFIG_INI</span><span class="o">=</span><span class="nv">$CONFIG_DIR</span>/config.ini
+
 <span class="nv">DIST_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">DIST_NAME</span><span class="k">:-</span><span class="nv">oneiric</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>do a full clone only if the directory doesn't exist</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>git_clone <span class="o">{</span>
+
+    <span class="nv">GIT_REMOTE</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nv">GIT_DEST</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$3</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>This checkout syntax works for both branches and tags</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$GIT_DEST</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>git clone <span class="nv">$GIT_REMOTE</span> <span class="nv">$GIT_DEST</span>
+        <span class="nb">cd</span> <span class="nv">$2</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>if it does exist then simulate what clone does if asked to RECLONE</p>
+</td><td class=code><div class=highlight><pre>
+        git checkout <span class="nv">$GIT_BRANCH</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$RECLONE&quot;</span> <span class="o">==</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>set the url to pull from and fetch</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">cd</span> <span class="nv">$GIT_DEST</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>remove the existing ignored files (like pyc) as they cause breakage
+(due to the py files having older timestamps than our pyc, so python
+thinks the pyc files are correct using them)</p>
+</td><td class=code><div class=highlight><pre>
+        git remote <span class="nb">set</span>-url origin <span class="nv">$GIT_REMOTE</span>
+        git fetch origin
+</pre></div></td></tr><tr><td class=docs>
+<p>a local branch might not exist</p>
+</td><td class=code><div class=highlight><pre>
+        find <span class="nv">$GIT_DEST</span> -name <span class="s1">&#39;*.pyc&#39;</span> -delete
+        git checkout -f origin/<span class="nv">$GIT_BRANCH</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install tests and prerequisites</p>
+</td><td class=code><div class=highlight><pre>
+        git branch -D <span class="nv">$GIT_BRANCH</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">        </span>git checkout -b <span class="nv">$GIT_BRANCH</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Process network configuration vars</p>
+</td><td class=code><div class=highlight><pre>
+sudo <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span>/var/cache/pip pip install --use-mirrors <span class="sb">`</span>cat <span class="nv">$TOP_DIR</span>/files/pips/openstack-integration-tests<span class="sb">`</span>
+
+git_clone <span class="nv">$CITEST_REPO</span> <span class="nv">$CITEST_DIR</span> <span class="nv">$CITEST_BRANCH</span>
 
 <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$DEST</span>/.ramdisk <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
