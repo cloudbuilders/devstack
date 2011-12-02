@@ -115,7 +115,7 @@ LABEL devstack
     MENU LABEL ^devstack
     MENU DEFAULT
     KERNEL /ubuntu/vmlinuz-$KVER
-    APPEND initrd=/ubuntu/stack-initrd.gz ramdisk_size=2109600 root=/dev/ram0
+    APPEND initrd=/ubuntu/stack-initrd.gz ramdisk_size=2109600 root=/dev/ram0 ds=nocloud-net;h=ramstack
 EOF
 
 # Get Ubuntu
