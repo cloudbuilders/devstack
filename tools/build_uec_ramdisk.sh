@@ -156,6 +156,9 @@ rm -rf $MNT_DIR/$DEST/devstack
 cp -pr $TOP_DIR $MNT_DIR/$DEST/devstack
 chroot $MNT_DIR chown -R stack $DEST/devstack
 
+# Disable byobu
+chroot apt-get remove -y byobu
+
 # Configure host network for DHCP
 mkdir -p $MNT_DIR/etc/network
 cat > $MNT_DIR/etc/network/interfaces <<EOF
