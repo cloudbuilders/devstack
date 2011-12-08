@@ -699,6 +699,7 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
 
     # Virtualization Configuration
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    apt_get install libvirt-bin
 
     # attempt to load modules: network block device - used to manage qcow images
     sudo modprobe nbd || true
@@ -707,7 +708,6 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
     # kvm, we drop back to the slower emulation mode (qemu).  Note: many systems
     # come with hardware virtualization disabled in BIOS.
     if [[ "$LIBVIRT_TYPE" == "kvm" ]]; then
-        apt_get install libvirt-bin
         sudo modprobe kvm || true
         if [ ! -e /dev/kvm ]; then
             echo "WARNING: Switching to QEMU"
@@ -719,16 +719,7 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
     # splitting a system into many smaller parts.  LXC uses cgroups and chroot
     # to simulate multiple systems.
     if [[ "$LIBVIRT_TYPE" == "lxc" ]]; then
-        apt_get install lxc
-        # lxc uses cgroups (a kernel interface via virtual filesystem) configured
-        # and mounted to ``/cgroup``
-        sudo mkdir -p /cgroup
-        if ! grep -q cgroup /etc/fstab; then
-            echo none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0 | sudo tee -a /etc/fstab
-        fi
-        if ! mount -n | grep -q cgroup; then
-            sudo mount /cgroup
-        fi
+        apt_get install cgroup-lite
     fi
 
     # The user that nova runs as needs to be member of libvirtd group otherwise
@@ -1213,20 +1204,55 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
     for image_url in ${IMAGE_URLS//,/ }; do
         # Downloads the image (uec ami+aki style), then extracts it.
         IMAGE_FNAME=`basename "$image_url"`
-        IMAGE_NAME=`basename "$IMAGE_FNAME" .tar.gz`
         if [ ! -f $FILES/$IMAGE_FNAME ]; then
             wget -c $image_url -O $FILES/$IMAGE_FNAME
         fi
 
-        # Extract ami and aki files
-        tar -zxf $FILES/$IMAGE_FNAME -C $FILES/images
+        KERNEL=""
+        RAMDISK=""
+        case "$IMAGE_FNAME" in
+            *.tar.gz|*.tgz)
+                # Extract ami and aki files
+                [ "${IMAGE_FNAME%.tar.gz}" != "$IMAGE_FNAME" ] &&
+                    IMAGE_NAME="${IMAGE_FNAME%.tar.gz}" ||
+                    IMAGE_NAME="${IMAGE_FNAME%.tgz}"
+                xdir="$FILES/images/$IMAGE_NAME"
+                rm -Rf "$xdir";
+                mkdir "$xdir"
+                tar -zxf $FILES/$IMAGE_FNAME -C "$xdir"
+                KERNEL=$(for f in "$xdir/"*-vmlinuz*; do
+                         [ -f "$f" ] && echo "$f" && break; done; true)
+                RAMDISK=$(for f in "$xdir/"*-initrd*; do
+                         [ -f "$f" ] && echo "$f" && break; done; true)
+                IMAGE=$(for f in "$xdir/"*.img; do
+                         [ -f "$f" ] && echo "$f" && break; done; true)
+                [ -n "$IMAGE_NAME" ]
+                IMAGE_NAME=$(basename "$IMAGE" ".img")
+                ;;
+            *.img)
+                IMAGE="$FILES/$IMAGE_FNAME";
+                IMAGE_NAME=$(basename "$IMAGE" ".img")
+                ;;
+            *.img.gz)
+                IMAGE="$FILES/${IMAGE_FNAME}"
+                IMAGE_NAME=$(basename "$IMAGE" ".img.gz")
+                ;;
+            *) echo "Do not know what to do with $IMAGE_FNAME"; false;;
+        esac
 
         # Use glance client to add the kernel the root filesystem.
         # We parse the results of the first upload to get the glance ID of the
         # kernel for use when uploading the root filesystem.
-        RVAL=`glance add -A $SERVICE_TOKEN name="$IMAGE_NAME-kernel" is_public=true container_format=aki disk_format=aki < $FILES/images/$IMAGE_NAME-vmlinuz*`
-        KERNEL_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
-        glance add -A $SERVICE_TOKEN name="$IMAGE_NAME" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID < $FILES/images/$IMAGE_NAME.img
+        KERNEL_ID=""; RAMDISK_ID="";
+        if [ -n "$KERNEL" ]; then
+            RVAL=`glance add -A $SERVICE_TOKEN name="$IMAGE_NAME-kernel" is_public=true container_format=aki disk_format=aki < "$KERNEL"`
+            KERNEL_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
+        fi
+        if [ -n "$RAMDISK" ]; then
+            RVAL=`glance add -A $SERVICE_TOKEN name="$IMAGE_NAME-ramdisk" is_public=true container_format=ari disk_format=ari < "$RAMDISK"`
+            RAMDISK_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
+        fi
+        glance add -A $SERVICE_TOKEN name="${IMAGE_NAME%.img}" is_public=true container_format=ami disk_format=ami ${KERNEL_ID:+kernel_id=$KERNEL_ID} ${RAMDISK_ID:+ramdisk_id=$RAMDISK_ID} < <(zcat --force "${IMAGE}")
     done
 fi
 
