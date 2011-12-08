@@ -1219,15 +1219,27 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
         fi
 
         # Extract ami and aki files
-        tar -zxf $FILES/$IMAGE_FNAME -C $FILES/images
+        mkdir -p $FILES/images/$IMAGE_NAME
+        tar -zxf $FILES/$IMAGE_FNAME -C $FILES/images/$IMAGE_NAME
+
+
+        # mustn't assume the img and kernel files are named the same as the tar basename
+        if [ -f $FILES/images/$IMAGE_NAME/*vmlinuz-virtual* ];then
+            KERNEL_FILE=$(basename $(find $FILES/images/$IMAGE_NAME/*vmlinuz-virtual*))
+            IMAGE_BASENAME=$(basename $KERNEL_FILE -vmlinuz-virtual)
+        else
+            KERNEL_FILE=$(basename $(find $FILES/images/$IMAGE_NAME/*vmlinuz*))
+            IMAGE_BASENAME=$(basename $KERNEL_FILE -vmlinuz)
+        fi
+
 
         # Use glance client to add the kernel the root filesystem.
         # We parse the results of the first upload to get the glance ID of the
         # kernel for use when uploading the root filesystem.
-        RVAL=`glance add -A $SERVICE_TOKEN name="$IMAGE_NAME-kernel" is_public=true container_format=aki disk_format=aki < $FILES/images/$IMAGE_NAME-vmlinuz*`
+        RVAL=$(glance add -A $SERVICE_TOKEN name="$IMAGE_BASENAME-kernel" is_public=true container_format=aki disk_format=aki < $FILES/images/$IMAGE_NAME/$KERNEL_FILE)
         KERNEL_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
-        glance add -A $SERVICE_TOKEN name="$IMAGE_NAME" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID < $FILES/images/$IMAGE_NAME.img
-    done
+       glance add -A $SERVICE_TOKEN name="$IMAGE_BASENAME" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID < $FILES/images/$IMAGE_NAME/$IMAGE_BASENAME.img
+
 fi
 
 # Fin
