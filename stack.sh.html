@@ -1279,22 +1279,22 @@ to simulate multiple systems.</p>
 <span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>lxc uses cgroups (a kernel interface via virtual filesystem) configured
-and mounted to <tt class="docutils literal">/cgroup</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>apt_get install lxc
-</pre></div></td></tr><tr><td class=docs>
 <p>The user that nova runs as needs to be member of libvirtd group otherwise
 nova-compute will be unable to use libvirt.</p>
 </td><td class=code><div class=highlight><pre>
-        sudo mkdir -p /cgroup
-        <span class="k">if</span> ! grep -q cgroup /etc/fstab; <span class="k">then</span>
-<span class="k">            </span><span class="nb">echo </span>none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0 | sudo tee -a /etc/fstab
-        <span class="k">fi</span>
-<span class="k">        if</span> ! mount -n | grep -q cgroup; <span class="k">then</span>
-<span class="k">            </span>sudo mount /cgroup
-        <span class="k">fi</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$DISTRO&quot;</span> &gt; natty <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>apt_get install cgroup-lite
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">cgline</span><span class="o">=</span><span class="s2">&quot;none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0&quot;</span>
+            sudo mkdir -p /cgroup
+            <span class="k">if</span> ! grep -q cgroup /etc/fstab; <span class="k">then</span>
+<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;$cgline&quot;</span> | sudo tee -a /etc/fstab
+            <span class="k">fi</span>
+<span class="k">            if</span> ! mount -n | grep -q cgroup; <span class="k">then</span>
+<span class="k">                </span>sudo mount /cgroup
+            <span class="k">fi</span>
+<span class="k">        fi</span>
 <span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
