@@ -521,9 +521,17 @@ Natty uec images sudoers does not have a '#includedir'. add one.</p>
 <span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Specify which services to launch.  These generally correspond to screen tabs</p>
+<p>Default Quantum Port</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_PLUGIN</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_PLUGIN</span><span class="k">:-</span><span class="nv">openvswitch</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Default Quantum Host</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_PORT</span><span class="k">:-</span><span class="nv">9696</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Specify which services to launch.  These generally correspond to screen tabs</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the lvm volume group to use/create for iscsi volumes</p>
@@ -674,8 +682,9 @@ occurring.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Using Quantum networking:</p>
-<p>Make sure that q-svc is enabled in ENABLED_SERVICES.  If it is the network
-manager will be set to the QuantumManager.</p>
+<p>Make sure that quantum is enabled in ENABLED_SERVICES.  If it is the network
+manager will be set to the QuantumManager.  If you want to run Quantum on
+this host, make sure that q-svc is also in ENABLED_SERVICES.</p>
 <p>If you're planning to use the Quantum openvswitch plugin, set Q_PLUGIN to
 &quot;openvswitch&quot; and make sure the q-agt service is enabled in
 ENABLED_SERVICES.</p>
@@ -834,7 +843,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 331)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 340)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -1028,7 +1037,7 @@ that is <em>deprecated</em>.  The code is being moved into python-novaclient &am
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$OPENSTACKX_REPO</span> <span class="nv">$OPENSTACKX_DIR</span> <span class="nv">$OPENSTACKX_BRANCH</span>
 <span class="k">fi</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;quantum&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="initialization">
@@ -1070,7 +1079,7 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/horizon; sudo python setup.py develop
     <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/openstack-dashboard; sudo python setup.py develop
 <span class="k">fi</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;quantum&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$QUANTUM_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
 
@@ -1623,9 +1632,11 @@ add_nova_flag <span class="s2">&quot;--allow_admin_api&quot;</span>
 add_nova_flag <span class="s2">&quot;--scheduler_driver=$SCHEDULER&quot;</span>
 add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
 add_nova_flag <span class="s2">&quot;--fixed_range=$FIXED_RANGE&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;quantum&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--network_manager=nova.network.quantum.manager.QuantumManager&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    add_nova_flag <span class="s2">&quot;--quantum_connection_host=$Q_HOST&quot;</span>
+    add_nova_flag <span class="s2">&quot;--quantum_connection_port=$Q_PORT&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>add_nova_flag <span class="s2">&quot;--libvirt_vif_type=ethernet&quot;</span>
         add_nova_flag <span class="s2">&quot;--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
         add_nova_flag <span class="s2">&quot;--linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver&quot;</span>
@@ -1848,7 +1859,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Quantum</p>
+<p>Quantum service</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-api&quot;</span>
@@ -1864,29 +1875,27 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create database for the plugin/agent</p>
 </td><td class=code><div class=highlight><pre>
-    apt_get install openvswitch-switch openvswitch-datapath-dkms
-
+        apt_get install openvswitch-switch openvswitch-datapath-dkms
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure we're using the openvswitch plugin</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS ovs_quantum;&#39;</span>
         <span class="k">else</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
             <span class="nb">exit </span>1
         <span class="k">fi</span>
-<span class="k">    fi</span>
-
-<span class="k">    </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini
+<span class="k">        </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini
 </pre></div></td></tr><tr><td class=docs>
 <p>Quantum agent (for compute nodes)</p>
 </td><td class=code><div class=highlight><pre>
-    sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
-    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_DIR/etc/quantum.conf&quot;</span>
+        sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
+    <span class="k">fi</span>
+<span class="k">    </span>screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_DIR/etc/quantum.conf&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
