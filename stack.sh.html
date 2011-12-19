@@ -437,10 +437,7 @@ of letting devstack generate random ones for you.</p>
 <span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>OpenStack is designed to be run as a regular user (Horizon will fail to run
-as root, since apache refused to startup serve content from root user).  If
-stack.sh is run as root, it automatically creates a stack user with
-sudo privileges and runs as that user.</p>
+<p>Check to see if we are already running a stack.sh</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>apt_get<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span><span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
@@ -449,6 +446,18 @@ sudo privileges and runs as that user.</p>
         --option <span class="s2">&quot;Dpkg::Options::=--force-confold&quot;</span> --assume-yes <span class="s2">&quot;$@&quot;</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>OpenStack is designed to be run as a regular user (Horizon will fail to run
+as root, since apache refused to startup serve content from root user).  If
+stack.sh is run as root, it automatically creates a stack user with
+sudo privileges and runs as that user.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>screen -ls | egrep -q <span class="s2">&quot;[0-9].stack&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are already running a stack.sh session.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;To rejoin this session type &#39;screen -x stack&#39;.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;To destroy this session, kill the running screen.&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>since this script runs as a normal user, we need to give that user
@@ -545,6 +554,7 @@ also install an <strong>LXC</strong> based system.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VOLUME_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">:-</span><span class="nv">nova</span><span class="p">-volumes</span><span class="k">}</span>
 <span class="nv">VOLUME_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">:-</span><span class="nv">volume</span><span class="p">-</span><span class="k">}</span>
+<span class="nv">INSTANCE_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTANCE_NAME_PREFIX</span><span class="k">:-</span><span class="nv">instance</span><span class="p">-</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>nova supports pluggable schedulers.  <tt class="docutils literal">SimpleScheduler</tt> should work in most
@@ -843,7 +853,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 340)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 344)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -1293,12 +1303,34 @@ our own service token to the configuration.</p>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="virtualization-configuration">
-<h3>Virtualization Configuration</h3>
+<p>Helper to clean iptables rules</p>
 </td><td class=code><div class=highlight><pre>
     cp <span class="nv">$FILES</span>/nova-api-paste.ini <span class="nv">$NOVA_DIR</span>/bin
     sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete rules</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>clean_iptables<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete nat rules</p>
+</td><td class=code><div class=highlight><pre>
+    sudo iptables -S -v | sed <span class="s2">&quot;s/-c [0-9]* [0-9]* //g&quot;</span> | grep <span class="s2">&quot;nova&quot;</span> | grep <span class="s2">&quot;\-A&quot;</span> |  sed <span class="s2">&quot;s/-A/-D/g&quot;</span> | awk <span class="s1">&#39;{print &quot;sudo iptables&quot;,$0}&#39;</span> | bash
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete chains</p>
+</td><td class=code><div class=highlight><pre>
+    sudo iptables -S -v -t nat | sed <span class="s2">&quot;s/-c [0-9]* [0-9]* //g&quot;</span> | grep <span class="s2">&quot;nova&quot;</span> |  grep <span class="s2">&quot;\-A&quot;</span> | sed <span class="s2">&quot;s/-A/-D/g&quot;</span> | awk <span class="s1">&#39;{print &quot;sudo iptables -t nat&quot;,$0}&#39;</span> | bash
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete nat chains</p>
+</td><td class=code><div class=highlight><pre>
+    sudo iptables -S -v | sed <span class="s2">&quot;s/-c [0-9]* [0-9]* //g&quot;</span> | grep <span class="s2">&quot;nova&quot;</span> | grep <span class="s2">&quot;\-N&quot;</span> |  sed <span class="s2">&quot;s/-N/-X/g&quot;</span> | awk <span class="s1">&#39;{print &quot;sudo iptables&quot;,$0}&#39;</span> | bash
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="virtualization-configuration">
+<h3>Virtualization Configuration</h3>
+</td><td class=code><div class=highlight><pre>
+    sudo iptables -S -v -t nat | sed <span class="s2">&quot;s/-c [0-9]* [0-9]* //g&quot;</span> | grep <span class="s2">&quot;nova&quot;</span> |  grep <span class="s2">&quot;\-N&quot;</span> | sed <span class="s2">&quot;s/-N/-X/g&quot;</span> | awk <span class="s1">&#39;{print &quot;sudo iptables -t nat&quot;,$0}&#39;</span> | bash
+<span class="o">}</span>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-cpu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 
@@ -1372,7 +1404,7 @@ mount it (ext filesystems can be labeled via e2label).</p>
     mkdir -p <span class="nv">$NOVA_DIR</span>/instances
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Clean out the instances directory.</p>
+<p>Clean iptables from previous runs</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[</span> -L /dev/disk/by-label/nova-instances <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        if</span> ! mount -n | grep -q <span class="nv">$NOVA_DIR</span>/instances; <span class="k">then</span>
@@ -1382,7 +1414,21 @@ mount it (ext filesystems can be labeled via e2label).</p>
 <span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>delete traces of nova networks from prior runs</p>
+<p>Destroy old instances</p>
+</td><td class=code><div class=highlight><pre>
+    clean_iptables
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean out the instances directory.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">instances</span><span class="o">=</span><span class="sb">`</span>virsh list | grep <span class="nv">$INSTANCE_NAME_PREFIX</span> | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span>
+    <span class="k">if</span> <span class="o">[</span> ! <span class="nv">$instances</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="nv">$instances</span> | xargs -n1 virsh destroy
+        <span class="nb">echo</span> <span class="nv">$instances</span> | xargs -n1 virsh undefine
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete traces of nova networks from prior runs</p>
 </td><td class=code><div class=highlight><pre>
     sudo rm -rf <span class="nv">$NOVA_DIR</span>/instances/*
 <span class="k">fi</span>
@@ -1392,7 +1438,8 @@ mount it (ext filesystems can be labeled via e2label).</p>
 <p>Storage Service</p>
 </td><td class=code><div class=highlight><pre>
     sudo killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>rm -rf <span class="nv">$NOVA_DIR</span>/networks
+<span class="nb">    </span>clean_iptables
+    rm -rf <span class="nv">$NOVA_DIR</span>/networks
     mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 <span class="k">fi</span>
 
@@ -1654,6 +1701,7 @@ add_nova_flag <span class="s2">&quot;--public_interface=$PUBLIC_INTERFACE&quot;<
 add_nova_flag <span class="s2">&quot;--vlan_interface=$VLAN_INTERFACE&quot;</span>
 add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
 add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
+add_nova_flag <span class="s2">&quot;--instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;openstackx&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--osapi_extension=nova.api.openstack.v2.contrib.standard_extensions&quot;</span>
     add_nova_flag <span class="s2">&quot;--osapi_extension=extensions.admin.Admin&quot;</span>
