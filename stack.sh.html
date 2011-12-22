@@ -440,7 +440,8 @@ of letting devstack generate random ones for you.</p>
 <p>Check to see if we are already running a stack.sh</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>apt_get<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
+    <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return</span>
+<span class="k">    </span><span class="nb">local </span><span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
     <span class="o">[</span> <span class="s2">&quot;$(id -u)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;env&quot;</span>
     <span class="nv">$sudo</span> <span class="nv">DEBIAN_FRONTEND</span><span class="o">=</span>noninteractive apt-get <span class="se">\</span>
         --option <span class="s2">&quot;Dpkg::Options::=--force-confold&quot;</span> --assume-yes <span class="s2">&quot;$@&quot;</span>
@@ -503,7 +504,8 @@ Natty uec images sudoers does not have a '#includedir'. add one.</p>
 <span class="k">    </span><span class="nb">exit </span>1
 <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Set the destination directories for openstack projects</p>
+<p>Normalize config values to True or False
+VAR=`trueorfalse default-value test-value`</p>
 </td><td class=code><div class=highlight><pre>
     sudo grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
         <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> | sudo tee -a /etc/sudoers
@@ -514,6 +516,26 @@ Natty uec images sudoers does not have a '#includedir'. add one.</p>
     sudo chown root:root <span class="nv">$TEMPFILE</span>
     sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/stack_sh_nova
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set True to configure stack.sh to run cleanly without Internet access.
+stack.sh must have been previously run with Internet access to install
+prerequisites and initialize $DEST.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>trueorfalse<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">default</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">testval</span><span class="o">=</span><span class="nv">$2</span>
+
+    <span class="o">[[</span> -z <span class="s2">&quot;$testval&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">&quot;$default&quot;</span>; <span class="k">return</span>; <span class="o">}</span>
+    <span class="o">[[</span> <span class="s2">&quot;0 no false False FALSE&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;$testval&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">&quot;False&quot;</span>; <span class="k">return</span>; <span class="o">}</span>
+    <span class="o">[[</span> <span class="s2">&quot;1 yes true True TRUE&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;$testval&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">&quot;True&quot;</span>; <span class="k">return</span>; <span class="o">}</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$default&quot;</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set the destination directories for openstack projects</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">OFFLINE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$OFFLINE</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Default Quantum Plugin</p>
@@ -569,8 +591,7 @@ cases unless you are working on multi-zone mode.</p>
 <span class="nv">SCHEDULER</span><span class="o">=</span><span class="k">${</span><span class="nv">SCHEDULER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.scheduler.simple.SimpleScheduler</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Normalize config values to True or False
-VAR=`trueorfalse default-value test-value`</p>
+<p>Configure services to syslog instead of writing to individual log files</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -n <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="sb">`</span><span class="nv">LC_ALL</span><span class="o">=</span>C /sbin/ifconfig eth0 | grep -m 1 <span class="s1">&#39;inet addr:&#39;</span>| cut -d: -f2 | awk <span class="s1">&#39;{print $1}&#39;</span><span class="sb">`</span>
@@ -582,19 +603,6 @@ VAR=`trueorfalse default-value test-value`</p>
         <span class="nb">exit </span>1
     <span class="k">fi</span>
 <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure services to syslog instead of writing to individual log files</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>trueorfalse<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">default</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">testval</span><span class="o">=</span><span class="nv">$2</span>
-
-    <span class="o">[[</span> -z <span class="s2">&quot;$testval&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">&quot;$default&quot;</span>; <span class="k">return</span>; <span class="o">}</span>
-    <span class="o">[[</span> <span class="s2">&quot;0 no false False FALSE&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;$testval&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">&quot;False&quot;</span>; <span class="k">return</span>; <span class="o">}</span>
-    <span class="o">[[</span> <span class="s2">&quot;1 yes true True TRUE&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;$testval&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">&quot;True&quot;</span>; <span class="k">return</span>; <span class="o">}</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$default&quot;</span>
-<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Service startup timeout</p>
@@ -853,7 +861,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 344)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 350)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -922,6 +930,11 @@ distros (case insensitive).</li>
     <span class="k">done</span>
 <span class="o">}</span>
 
+<span class="k">function </span>pip_install <span class="o">{</span>
+    <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return</span>
+<span class="k">    </span>sudo <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span>/var/cache/pip pip install --use-mirrors <span class="nv">$@</span>
+<span class="o">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>install python requirements</p>
 </td><td class=code><div class=highlight><pre>
@@ -933,14 +946,15 @@ apt_get install <span class="k">$(</span>get_packages<span class="k">)</span>
 be owned by the installation user, we create the directory and change the
 ownership to the proper user.</p>
 </td><td class=code><div class=highlight><pre>
-sudo <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span>/var/cache/pip pip install --use-mirrors <span class="sb">`</span>cat <span class="nv">$FILES</span>/pips/*<span class="sb">`</span>
+pip_install <span class="sb">`</span>cat <span class="nv">$FILES</span>/pips/* | uniq<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If our branch name is a gerrit style refs/changes/...</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>git_clone <span class="o">{</span>
+    <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return</span>
 
-    <span class="nv">GIT_REMOTE</span><span class="o">=</span><span class="nv">$1</span>
+<span class="k">    </span><span class="nv">GIT_REMOTE</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nv">GIT_DEST</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$3</span>
 
