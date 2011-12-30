@@ -569,54 +569,49 @@ cat &gt; <span class="nv">$vm_dir</span>/uec/user-data<span class="s">&lt;&lt;EO
 <span class="s">sed -i &quot;s/127.0.0.1/127.0.0.1 \`hostname\`/&quot; /etc/hosts</span>
 <span class="s">apt-get update</span>
 <span class="s">apt-get install git sudo -y</span>
-<span class="s">if [ ! -d devstack ]; then</span>
-<span class="s">    git clone https://github.com/cloudbuilders/devstack.git</span>
-<span class="s">    cd devstack</span>
-<span class="s">    git remote set-url origin `cd $TOP_DIR; git remote show origin | grep Fetch | awk &#39;{print $3}&#39;`</span>
-<span class="s">    git fetch</span>
-<span class="s">    git checkout `git rev-parse HEAD`</span>
-<span class="s">    cat &gt; localrc &lt;&lt;LOCAL_EOF</span>
-<span class="nv">ROOTSLEEP</span><span class="o">=</span>0
-<span class="sb">`</span>cat <span class="nv">$TOP_DIR</span>/localrc<span class="sb">`</span>
-LOCAL_EOF
-<span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Disable byobu</p>
-</td><td class=code><div class=highlight><pre>
-sudo apt-get remove -y byobu
-EOF
+<span class="s"># DIVIDER</span>
+<span class="s">sudo apt-get remove -y byobu</span>
+<span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Setup stack user with our key</p>
+<p>Disable byobu</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -e ~/.ssh/id_rsa.pub <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">PUB_KEY</span><span class="o">=</span><span class="sb">`</span>cat  ~/.ssh/id_rsa.pub<span class="sb">`</span>
     cat &gt;&gt; <span class="nv">$vm_dir</span>/uec/user-data<span class="s">&lt;&lt;EOF</span>
 <span class="s">mkdir -p /opt/stack</span>
-<span class="s">useradd -U -G sudo -s /bin/bash -d /opt/stack -m stack</span>
-<span class="s">echo stack:pass | chpasswd</span>
-<span class="s">mkdir -p /opt/stack/.ssh</span>
-<span class="s">echo &quot;$PUB_KEY&quot; &gt; /opt/stack/.ssh/authorized_keys</span>
-<span class="s">chown -R stack /opt/stack</span>
-<span class="s">chmod 700 /opt/stack/.ssh</span>
-<span class="s">chmod 600 /opt/stack/.ssh/authorized_keys</span>
+<span class="s">if [ ! -d /opt/stack/devstack ]; then</span>
+<span class="s">    git clone https://github.com/cloudbuilders/devstack.git /opt/stack/devstack</span>
+<span class="s">    cd /opt/stack/devstack</span>
+<span class="s">    cat &gt; localrc &lt;&lt;LOCAL_EOF</span>
+<span class="nv">ROOTSLEEP</span><span class="o">=</span>0
+<span class="sb">`</span>cat <span class="nv">$TOP_DIR</span>/localrc<span class="sb">`</span>
+LOCAL_EOF
+<span class="k">fi</span>
+useradd -U -G sudo -s /bin/bash -d /opt/stack -m stack
+<span class="nb">echo </span>stack:pass | chpasswd
+mkdir -p /opt/stack/.ssh
+<span class="nb">echo</span> <span class="s2">&quot;$PUB_KEY&quot;</span> &gt; /opt/stack/.ssh/authorized_keys
+chown -R stack /opt/stack
+chmod 700 /opt/stack/.ssh
+chmod 600 /opt/stack/.ssh/authorized_keys
 
-<span class="s">grep -q &quot;^#includedir.*/etc/sudoers.d&quot; /etc/sudoers ||</span>
-<span class="s">    echo &quot;#includedir /etc/sudoers.d&quot; &gt;&gt; /etc/sudoers</span>
-<span class="s">( umask 226 &amp;&amp; echo &quot;stack ALL=(ALL) NOPASSWD:ALL&quot; \</span>
-<span class="s">    &gt; /etc/sudoers.d/50_stack_sh )</span>
-<span class="s">EOF</span>
+grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
+    <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> &gt;&gt; /etc/sudoers
+<span class="o">(</span> <span class="nb">umask </span>226 <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;stack ALL=(ALL) NOPASSWD:ALL&quot;</span> <span class="se">\</span>
+    &gt; /etc/sudoers.d/50_stack_sh <span class="o">)</span>
+EOF
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Run stack.sh</p>
+<p>Setup stack user with our key</p>
 </td><td class=code><div class=highlight><pre>
 cat &gt;&gt; <span class="nv">$vm_dir</span>/uec/user-data<span class="s">&lt;&lt;EOF</span>
-<span class="s">./stack.sh</span>
+<span class="s">su -c &quot;cd /opt/stack/devstack &amp;&amp; ./stack.sh&quot; stack</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>(re)start a metadata service</p>
+<p>Run stack.sh</p>
 </td><td class=code><div class=highlight><pre>
 <span class="o">(</span>
   <span class="nv">pid</span><span class="o">=</span><span class="sb">`</span>lsof -iTCP@192.168.<span class="nv">$GUEST_NETWORK</span>.1:4567 -n | awk <span class="s1">&#39;{print $2}&#39;</span> | tail -1<span class="sb">`</span>
@@ -626,18 +621,18 @@ cat &gt;&gt; <span class="nv">$vm_dir</span>/uec/user-data<span class="s">&lt;&l
 python meta.py 192.168.<span class="nv">$GUEST_NETWORK</span>.1:4567 &amp;
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create the instance</p>
+<p>(re)start a metadata service</p>
 </td><td class=code><div class=highlight><pre>
 virsh create <span class="nv">$vm_dir</span>/libvirt.xml
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Tail the console log till we are done</p>
+<p>Create the instance</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">WAIT_TILL_LAUNCH</span><span class="o">=</span><span class="k">${</span><span class="nv">WAIT_TILL_LAUNCH</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$WAIT_TILL_LAUNCH&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">set</span> +o xtrace
 </pre></div></td></tr><tr><td class=docs>
-<p>Done creating the container, let's tail the log</p>
+<p>Tail the console log till we are done</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">echo</span>
 <span class="nb">    echo</span> <span class="s2">&quot;=============================================================&quot;</span>
@@ -677,7 +672,7 @@ virsh create <span class="nv">$vm_dir</span>/libvirt.xml
     <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Let Ctrl-c kill tail and exit</p>
+<p>Done creating the container, let's tail the log</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">trap </span>kill_tail SIGINT
 
@@ -701,8 +696,10 @@ virsh create <span class="nv">$vm_dir</span>/libvirt.xml
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Let Ctrl-c kill tail and exit</p>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </body>
