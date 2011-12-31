@@ -36,10 +36,11 @@ function git_report() {
     local head=""
     if [[ -d $dir/.git ]]; then
         pushd $dir >/dev/null
-        ref=`cat .git/HEAD | cut -d' ' -f2`
-        head=`cat .git/$ref`
+        ref=`git symbolic-ref HEAD`
+        branch=${ref##refs/heads/}
+        head=`git show-branch --sha1-name $branch | cut -d' ' -f1`
         proj=`basename $dir`
-        echo "git|$proj|$head"
+        echo "git|${proj}|${branch}${head}"
         popd >/dev/null
     fi
 }
