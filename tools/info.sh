@@ -17,9 +17,10 @@ fi
 # Keep track of the current directory
 TOOLS_DIR=$(cd $(dirname "$0") && pwd)
 TOP_DIR=`cd $TOOLS_DIR/..; pwd`
+cd $TOP_DIR
 
 # Source params
-source ./stackrc
+source $TOP_DIR/stackrc
 
 DEST=${DEST:-/opt/stack}
 FILES=$TOP_DIR/files
@@ -34,15 +35,14 @@ function git_report() {
     local ref=""
     local head=""
     if [[ -d $dir/.git ]]; then
-        cd $dir
+        pushd $dir
         ref=`cat .git/HEAD | cut -d' ' -f2`
         head=`cat .git/$ref`
         proj=`basename $dir`
         echo "git|$proj|$head"
+        popd >/dev/null
     fi
 }
-
-#set -o xtrace
 
 # Repos
 # -----
@@ -111,7 +111,6 @@ GetOSInfo() {
 function get_packages() {
     local file_to_parse="general"
     local service
-#set -o xtrace
 
     for service in ${ENABLED_SERVICES//,/ }; do
         # Allow individual services to specify dependencies
@@ -168,15 +167,25 @@ for p in $(get_packages); do
     echo "pkg|${p}|${ver}"
 done
 
-for p in $(cat $FILES/pips/* | uniq | tr '-' '_' | tr [:upper:] [:lower:] ); do
-    [[ "$p" = "_e" ]] && continue
-    [[ ver=`echo $p | cut -d'=' -f3` ]] && p=`echo $p | cut -d'=' -f1`
-    ver=""
-    # Attempt to get version
-    pipdir=/usr/local/lib/python2.7/dist-packages
-    d=`ls -d $pipdir/$p-*-info 2>/dev/null | head -1`
-    if [[ -d "$d" && -f $d/PKG-INFO ]]; then
-        ver=`cat $d/PKG-INFO | grep '^Version: ' | cut -d' ' -f2`
+FREEZE_FILE=$(mktemp --tmpdir freeze.XXXXXX)
+pip freeze >$FREEZE_FILE 2>/dev/null
+for p in $(cat $FILES/pips/* | uniq ); do
+    [[ "$p" = "-e" ]] && continue
+    if $(echo $p | grep -q +http); then
+        p=$(echo $p | cut -d'+' -f2 | cut -d'#' -f1)
     fi
-    echo "pip|${p}|${ver}"
+    line="`grep $p $FREEZE_FILE`"
+    if [[ -n "$line" ]]; then
+        if $(echo $line | grep -q +http); then
+            p=$(echo $line | cut -d'+' -f2 | cut -d'@' -f1)
+            ver=$(echo $line | cut -d'#' -f1 | cut -d'@' -f2)
+            egg=$(echo $line | cut -d'#' -f2)
+        else
+            p=$(echo $line | cut -d'=' -f1)
+            ver=$(echo $line | cut -d'=' -f3)
+        fi
+        echo "pip|${p}|${ver}"
+    fi
 done
+
+rm $FREEZE_FILE
