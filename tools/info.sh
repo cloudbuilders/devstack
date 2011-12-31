@@ -35,7 +35,7 @@ function git_report() {
     local ref=""
     local head=""
     if [[ -d $dir/.git ]]; then
-        pushd $dir
+        pushd $dir >/dev/null
         ref=`cat .git/HEAD | cut -d' ' -f2`
         head=`cat .git/$ref`
         proj=`basename $dir`
@@ -52,18 +52,6 @@ for i in $DEST/*; do
         git_report $i
     fi
 done
-
-# localrc
-# -------
-
-if [[ -r $TOP_DIR/localrc ]]; then
-    echo ""
-    echo "localrc:"
-    sed -e '
-        /PASSWORD/d;
-        /^#/d;
-    ' $TOP_DIR/localrc | sort
-fi
 
 # OS
 # --
@@ -140,10 +128,6 @@ function get_packages() {
         OIFS=$IFS
         IFS=$'\n'
         for line in $(<${fname}); do
-            if [[ $line =~ "NOPRIME" ]]; then
-                continue
-            fi
-
             if [[ $line =~ (.*)#.*dist:([^ ]*) ]]; then # We are using BASH regexp matching feature.
                         package=${BASH_REMATCH[1]}
                         distros=${BASH_REMATCH[2]}
@@ -159,7 +143,6 @@ function get_packages() {
     done
 }
 
-echo ""
 GetOSInfo
 
 for p in $(get_packages); do
@@ -174,18 +157,36 @@ for p in $(cat $FILES/pips/* | uniq ); do
     if $(echo $p | grep -q +http); then
         p=$(echo $p | cut -d'+' -f2 | cut -d'#' -f1)
     fi
-    line="`grep $p $FREEZE_FILE`"
+    line="`grep -i $p $FREEZE_FILE`"
     if [[ -n "$line" ]]; then
-        if $(echo $line | grep -q +http); then
-            p=$(echo $line | cut -d'+' -f2 | cut -d'@' -f1)
-            ver=$(echo $line | cut -d'#' -f1 | cut -d'@' -f2)
-            egg=$(echo $line | cut -d'#' -f2)
+        if [[ "$line" =~ \+(.*)@(.*)#egg=(.*) ]]; then
+            p=${BASH_REMATCH[1]}
+            ver=${BASH_REMATCH[2]}
         else
-            p=$(echo $line | cut -d'=' -f1)
-            ver=$(echo $line | cut -d'=' -f3)
+            if [[ "$line" =~ (.*)[=\<\>]=(.*) ]]; then
+                p=${BASH_REMATCH[1]}
+                ver=${BASH_REMATCH[2]}
+            else
+                #echo "unknown: $p"
+                continue
+            fi
         fi
         echo "pip|${p}|${ver}"
+    #else
+        #echo "unknown: $p"
     fi
 done
 
 rm $FREEZE_FILE
+
+# localrc
+# -------
+
+if [[ -r $TOP_DIR/localrc ]]; then
+    echo ""
+    echo "localrc:"
+    sed -e '
+        /PASSWORD/d;
+        /^#/d;
+    ' $TOP_DIR/localrc | sort
+fi
