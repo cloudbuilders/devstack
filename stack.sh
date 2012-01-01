@@ -80,17 +80,22 @@ source ./stackrc
 # Destination path for installation ``DEST``
 DEST=${DEST:-/opt/stack}
 
-# Configure services to syslog instead of writing to individual log files
-SYSLOG=${SYSLOG:-False}
-
 # apt-get wrapper to just get arguments set correctly
 function apt_get() {
+    [[ "$OFFLINE" = "True" ]] && return
     local sudo="sudo"
     [ "$(id -u)" = "0" ] && sudo="env"
     $sudo DEBIAN_FRONTEND=noninteractive apt-get \
         --option "Dpkg::Options::=--force-confold" --assume-yes "$@"
 }
 
+# Check to see if we are already running a stack.sh
+if screen -ls | egrep -q "[0-9].stack"; then
+    echo "You are already running a stack.sh session."
+    echo "To rejoin this session type 'screen -x stack'."
+    echo "To destroy this session, kill the running screen."
+    exit 1
+fi
 
 # OpenStack is designed to be run as a regular user (Horizon will fail to run
 # as root, since apache refused to startup serve content from root user).  If
@@ -121,7 +126,7 @@ if [[ $EUID -eq 0 ]]; then
 
     echo "Copying files to stack user"
     STACK_DIR="$DEST/${PWD##*/}"
-    cp -r -f "$PWD" "$STACK_DIR"
+    cp -r -f -T "$PWD" "$STACK_DIR"
     chown -R stack "$STACK_DIR"
     if [[ "$SHELL_AFTER_RUN" != "no" ]]; then
         exec su -c "set -e; cd $STACK_DIR; bash stack.sh; bash" stack
@@ -143,12 +148,30 @@ else
     sudo mv $TEMPFILE /etc/sudoers.d/stack_sh_nova
 fi
 
+# Normalize config values to True or False
+# VAR=`trueorfalse default-value test-value`
+function trueorfalse() {
+    local default=$1
+    local testval=$2
+
+    [[ -z "$testval" ]] && { echo "$default"; return; }
+    [[ "0 no false False FALSE" =~ "$testval" ]] && { echo "False"; return; }
+    [[ "1 yes true True TRUE" =~ "$testval" ]] && { echo "True"; return; }
+    echo "$default"
+}
+
+# Set True to configure stack.sh to run cleanly without Internet access.
+# stack.sh must have been previously run with Internet access to install
+# prerequisites and initialize $DEST.
+OFFLINE=`trueorfalse False $OFFLINE`
+
 # Set the destination directories for openstack projects
 NOVA_DIR=$DEST/nova
 HORIZON_DIR=$DEST/horizon
 GLANCE_DIR=$DEST/glance
 KEYSTONE_DIR=$DEST/keystone
 NOVACLIENT_DIR=$DEST/python-novaclient
+KEYSTONECLIENT_DIR=$DEST/python-keystoneclient
 OPENSTACKX_DIR=$DEST/openstackx
 NOVNC_DIR=$DEST/noVNC
 SWIFT_DIR=$DEST/swift
@@ -157,12 +180,18 @@ QUANTUM_DIR=$DEST/quantum
 
 # Default Quantum Plugin
 Q_PLUGIN=${Q_PLUGIN:-openvswitch}
+# Default Quantum Port
+Q_PORT=${Q_PORT:-9696}
+# Default Quantum Host
+Q_HOST=${Q_HOST:-localhost}
 
 # Specify which services to launch.  These generally correspond to screen tabs
 ENABLED_SERVICES=${ENABLED_SERVICES:-g-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,horizon,mysql,rabbit,openstackx}
 
 # Name of the lvm volume group to use/create for iscsi volumes
 VOLUME_GROUP=${VOLUME_GROUP:-nova-volumes}
+VOLUME_NAME_PREFIX=${VOLUME_NAME_PREFIX:-volume-}
+INSTANCE_NAME_PREFIX=${INSTANCE_NAME_PREFIX:-instance-}
 
 # Nova hypervisor configuration.  We default to libvirt whth  **kvm** but will
 # drop back to **qemu** if we are unable to load the kvm module.  Stack.sh can
@@ -185,6 +214,14 @@ if [ ! -n "$HOST_IP" ]; then
         exit 1
     fi
 fi
+
+# Allow the use of an alternate hostname (such as localhost/127.0.0.1) for service endpoints.
+SERVICE_HOST=${SERVICE_HOST:-$HOST_IP}
+
+# Configure services to syslog instead of writing to individual log files
+SYSLOG=`trueorfalse False $SYSLOG`
+SYSLOG_HOST=${SYSLOG_HOST:-$HOST_IP}
+SYSLOG_PORT=${SYSLOG_PORT:-516}
 
 # Service startup timeout
 SERVICE_TIMEOUT=${SERVICE_TIMEOUT:-60}
@@ -210,12 +247,17 @@ function read_password {
         echo '################################################################################'
         echo $msg
         echo '################################################################################'
-        echo "This value will be written to your localrc file so you don't have to enter it again."
-        echo "It is probably best to avoid spaces and weird characters."
+        echo "This value will be written to your localrc file so you don't have to enter it "
+        echo "again.  Use only alphanumeric characters."
         echo "If you leave this blank, a random default value will be used."
-        echo "Enter a password now:"
-        read $var
-        pw=${!var}
+        pw=" "
+        while true; do
+            echo "Enter a password now:"
+            read -e $var
+            pw=${!var}
+            [[ "$pw" = "`echo $pw | tr -cd [:alnum:]`" ]] && break
+            echo "Invalid chars in password.  Try again:"
+        done
         if [ ! $pw ]; then
             pw=`openssl rand -hex 10`
         fi
@@ -237,7 +279,7 @@ FIXED_RANGE=${FIXED_RANGE:-10.0.0.0/24}
 FIXED_NETWORK_SIZE=${FIXED_NETWORK_SIZE:-256}
 FLOATING_RANGE=${FLOATING_RANGE:-172.24.4.224/28}
 NET_MAN=${NET_MAN:-FlatDHCPManager}
-EC2_DMZ_HOST=${EC2_DMZ_HOST:-$HOST_IP}
+EC2_DMZ_HOST=${EC2_DMZ_HOST:-$SERVICE_HOST}
 FLAT_NETWORK_BRIDGE=${FLAT_NETWORK_BRIDGE:-br100}
 VLAN_INTERFACE=${VLAN_INTERFACE:-$PUBLIC_INTERFACE}
 
@@ -266,8 +308,9 @@ FLAT_INTERFACE=${FLAT_INTERFACE:-eth0}
 
 # Using Quantum networking:
 #
-# Make sure that q-svc is enabled in ENABLED_SERVICES.  If it is the network
-# manager will be set to the QuantumManager.
+# Make sure that quantum is enabled in ENABLED_SERVICES.  If it is the network
+# manager will be set to the QuantumManager.  If you want to run Quantum on
+# this host, make sure that q-svc is also in ENABLED_SERVICES.
 #
 # If you're planning to use the Quantum openvswitch plugin, set Q_PLUGIN to
 # "openvswitch" and make sure the q-agt service is enabled in
@@ -299,7 +342,7 @@ RABBIT_HOST=${RABBIT_HOST:-localhost}
 read_password RABBIT_PASSWORD "ENTER A PASSWORD TO USE FOR RABBIT."
 
 # Glance connection info.  Note the port must be specified.
-GLANCE_HOSTPORT=${GLANCE_HOSTPORT:-$HOST_IP:9292}
+GLANCE_HOSTPORT=${GLANCE_HOSTPORT:-$SERVICE_HOST:9292}
 
 # SWIFT
 # -----
@@ -378,14 +421,18 @@ fi
 # - We are parsing the packages files and detecting metadatas.
 #  - If there is a NOPRIME as comment mean we are not doing the install
 #    just yet.
-#  - If we have the meta-keyword distro:DISTRO or
-#    distro:DISTRO1,DISTRO2 it will be installed only for those
+#  - If we have the meta-keyword dist:DISTRO or
+#    dist:DISTRO1,DISTRO2 it will be installed only for those
 #    distros (case insensitive).
 function get_packages() {
     local file_to_parse="general"
     local service
 
     for service in ${ENABLED_SERVICES//,/ }; do
+        # Allow individual services to specify dependencies
+        if [[ -e $FILES/apts/${service} ]]; then
+            file_to_parse="${file_to_parse} $service"
+        fi
         if [[ $service == n-* ]]; then
             if [[ ! $file_to_parse =~ nova ]]; then
                 file_to_parse="${file_to_parse} nova"
@@ -398,8 +445,6 @@ function get_packages() {
             if [[ ! $file_to_parse =~ keystone ]]; then
                 file_to_parse="${file_to_parse} keystone"
             fi
-        elif [[ -e $FILES/apts/${service} ]]; then
-            file_to_parse="${file_to_parse} $service"
         fi
     done
 
@@ -430,42 +475,57 @@ function get_packages() {
     done
 }
 
+function pip_install {
+    [[ "$OFFLINE" = "True" ]] && return
+    sudo PIP_DOWNLOAD_CACHE=/var/cache/pip pip install --use-mirrors $@
+}
+
 # install apt requirements
 apt_get update
 apt_get install $(get_packages)
 
 # install python requirements
-sudo PIP_DOWNLOAD_CACHE=/var/cache/pip pip install --use-mirrors `cat $FILES/pips/*`
+pip_install `cat $FILES/pips/* | uniq`
 
 # git clone only if directory doesn't exist already.  Since ``DEST`` might not
 # be owned by the installation user, we create the directory and change the
 # ownership to the proper user.
 function git_clone {
+    [[ "$OFFLINE" = "True" ]] && return
 
     GIT_REMOTE=$1
     GIT_DEST=$2
     GIT_BRANCH=$3
 
-    # do a full clone only if the directory doesn't exist
-    if [ ! -d $GIT_DEST ]; then
-        git clone $GIT_REMOTE $GIT_DEST
-        cd $2
-        # This checkout syntax works for both branches and tags
-        git checkout $GIT_BRANCH
-    elif [[ "$RECLONE" == "yes" ]]; then
-        # if it does exist then simulate what clone does if asked to RECLONE
+    if echo $GIT_BRANCH | egrep -q "^refs"; then
+        # If our branch name is a gerrit style refs/changes/...
+        if [ ! -d $GIT_DEST ]; then
+            git clone $GIT_REMOTE $GIT_DEST
+        fi
         cd $GIT_DEST
-        # set the url to pull from and fetch
-        git remote set-url origin $GIT_REMOTE
-        git fetch origin
-        # remove the existing ignored files (like pyc) as they cause breakage
-        # (due to the py files having older timestamps than our pyc, so python
-        # thinks the pyc files are correct using them)
-        find $GIT_DEST -name '*.pyc' -delete
-        git checkout -f origin/$GIT_BRANCH
-        # a local branch might not exist
-        git branch -D $GIT_BRANCH || true
-        git checkout -b $GIT_BRANCH
+        git fetch $GIT_REMOTE $GIT_BRANCH && git checkout FETCH_HEAD
+    else
+        # do a full clone only if the directory doesn't exist
+        if [ ! -d $GIT_DEST ]; then
+            git clone $GIT_REMOTE $GIT_DEST
+            cd $GIT_DEST
+            # This checkout syntax works for both branches and tags
+            git checkout $GIT_BRANCH
+        elif [[ "$RECLONE" == "yes" ]]; then
+            # if it does exist then simulate what clone does if asked to RECLONE
+            cd $GIT_DEST
+            # set the url to pull from and fetch
+            git remote set-url origin $GIT_REMOTE
+            git fetch origin
+            # remove the existing ignored files (like pyc) as they cause breakage
+            # (due to the py files having older timestamps than our pyc, so python
+            # thinks the pyc files are correct using them)
+            find $GIT_DEST -name '*.pyc' -delete
+            git checkout -f origin/$GIT_BRANCH
+            # a local branch might not exist
+            git branch -D $GIT_BRANCH || true
+            git checkout -b $GIT_BRANCH
+        fi
     fi
 }
 
@@ -500,13 +560,14 @@ fi
 if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
     # django powered web control panel for openstack
     git_clone $HORIZON_REPO $HORIZON_DIR $HORIZON_BRANCH $HORIZON_TAG
+    git_clone $KEYSTONECLIENT_REPO $KEYSTONECLIENT_DIR $KEYSTONECLIENT_BRANCH
 fi
 if [[ "$ENABLED_SERVICES" =~ "openstackx" ]]; then
     # openstackx is a collection of extensions to openstack.compute & nova
     # that is *deprecated*.  The code is being moved into python-novaclient & nova.
     git_clone $OPENSTACKX_REPO $OPENSTACKX_DIR $OPENSTACKX_BRANCH
 fi
-if [[ "$ENABLED_SERVICES" =~ "quantum" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
     # quantum
     git_clone $QUANTUM_REPO $QUANTUM_DIR $QUANTUM_BRANCH
 fi
@@ -537,16 +598,35 @@ if [[ "$ENABLED_SERVICES" =~ "openstackx" ]]; then
     cd $OPENSTACKX_DIR; sudo python setup.py develop
 fi
 if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
-    cd $HORIZON_DIR/django-openstack; sudo python setup.py develop
+    cd $KEYSTONECLIENT_DIR; sudo python setup.py develop
+    cd $HORIZON_DIR/horizon; sudo python setup.py develop
     cd $HORIZON_DIR/openstack-dashboard; sudo python setup.py develop
 fi
-if [[ "$ENABLED_SERVICES" =~ "quantum" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
     cd $QUANTUM_DIR; sudo python setup.py develop
 fi
 
-# Add a useful screenrc.  This isn't required to run openstack but is we do
-# it since we are going to run the services in screen for simple
-cp $FILES/screenrc ~/.screenrc
+# Syslog
+# ---------
+
+if [[ $SYSLOG != "False" ]]; then
+    apt_get install -y rsyslog-relp
+    if [[ "$SYSLOG_HOST" = "$HOST_IP" ]]; then
+        # Configure the master host to receive
+        cat <<EOF >/tmp/90-stack-m.conf
+\$ModLoad imrelp
+\$InputRELPServerRun $SYSLOG_PORT
+EOF
+        sudo mv /tmp/90-stack-m.conf /etc/rsyslog.d
+    else
+        # Set rsyslog to send to remote host
+        cat <<EOF >/tmp/90-stack-s.conf
+*.*		:omrelp:$SYSLOG_HOST:$SYSLOG_PORT
+EOF
+        sudo mv /tmp/90-stack-s.conf /etc/rsyslog.d
+    fi
+    sudo /usr/sbin/service rsyslog restart
+fi
 
 # Rabbit
 # ---------
@@ -621,7 +701,13 @@ if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
 
 
     # ``local_settings.py`` is used to override horizon default settings.
-    cp $FILES/horizon_settings.py $HORIZON_DIR/openstack-dashboard/local/local_settings.py
+    local_settings=$HORIZON_DIR/openstack-dashboard/local/local_settings.py
+    cp $FILES/horizon_settings.py $local_settings
+
+    # Enable quantum in dashboard, if requested
+    if [[ "$ENABLED_SERVICES" =~ "quantum" ]]; then
+        sudo sed -e "s,QUANTUM_ENABLED = False,QUANTUM_ENABLED = True,g" -i $local_settings
+    fi
 
     # Initialize the horizon database (it stores sessions and notices shown to
     # users).  The user system is external (keystone).
@@ -682,10 +768,23 @@ if [[ "$ENABLED_SERVICES" =~ "n-api" ]]; then
     sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $NOVA_DIR/bin/nova-api-paste.ini
 fi
 
+# Helper to clean iptables rules
+function clean_iptables() {
+    # Delete rules
+    sudo iptables -S -v | sed "s/-c [0-9]* [0-9]* //g" | grep "nova" | grep "\-A" |  sed "s/-A/-D/g" | awk '{print "sudo iptables",$0}' | bash
+    # Delete nat rules
+    sudo iptables -S -v -t nat | sed "s/-c [0-9]* [0-9]* //g" | grep "nova" |  grep "\-A" | sed "s/-A/-D/g" | awk '{print "sudo iptables -t nat",$0}' | bash
+    # Delete chains
+    sudo iptables -S -v | sed "s/-c [0-9]* [0-9]* //g" | grep "nova" | grep "\-N" |  sed "s/-N/-X/g" | awk '{print "sudo iptables",$0}' | bash
+    # Delete nat chains
+    sudo iptables -S -v -t nat | sed "s/-c [0-9]* [0-9]* //g" | grep "nova" |  grep "\-N" | sed "s/-N/-X/g" | awk '{print "sudo iptables -t nat",$0}' | bash
+}
+
 if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
 
     # Virtualization Configuration
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    apt_get install libvirt-bin
 
     # attempt to load modules: network block device - used to manage qcow images
     sudo modprobe nbd || true
@@ -694,7 +793,6 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
     # kvm, we drop back to the slower emulation mode (qemu).  Note: many systems
     # come with hardware virtualization disabled in BIOS.
     if [[ "$LIBVIRT_TYPE" == "kvm" ]]; then
-        apt_get install libvirt-bin
         sudo modprobe kvm || true
         if [ ! -e /dev/kvm ]; then
             echo "WARNING: Switching to QEMU"
@@ -706,15 +804,17 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
     # splitting a system into many smaller parts.  LXC uses cgroups and chroot
     # to simulate multiple systems.
     if [[ "$LIBVIRT_TYPE" == "lxc" ]]; then
-        apt_get install lxc
-        # lxc uses cgroups (a kernel interface via virtual filesystem) configured
-        # and mounted to ``/cgroup``
-        sudo mkdir -p /cgroup
-        if ! grep -q cgroup /etc/fstab; then
-            echo none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0 | sudo tee -a /etc/fstab
-        fi
-        if ! mount -n | grep -q cgroup; then
-            sudo mount /cgroup
+        if [[ "$DISTRO" > natty ]]; then
+            apt_get install cgroup-lite
+        else
+            cgline="none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0"
+            sudo mkdir -p /cgroup
+            if ! grep -q cgroup /etc/fstab; then
+                echo "$cgline" | sudo tee -a /etc/fstab
+            fi
+            if ! mount -n | grep -q cgroup; then
+                sudo mount /cgroup
+            fi
         fi
     fi
 
@@ -743,13 +843,24 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
         fi
     fi
 
+    # Clean iptables from previous runs
+    clean_iptables
+
+    # Destroy old instances
+    instances=`virsh list | grep $INSTANCE_NAME_PREFIX | cut -d " " -f3`
+    if [ ! $instances = "" ]; then
+        echo $instances | xargs -n1 virsh destroy
+        echo $instances | xargs -n1 virsh undefine
+    fi
+
     # Clean out the instances directory.
     sudo rm -rf $NOVA_DIR/instances/*
 fi
 
 if [[ "$ENABLED_SERVICES" =~ "n-net" ]]; then
-    # delete traces of nova networks from prior runs
+    # Delete traces of nova networks from prior runs
     sudo killall dnsmasq || true
+    clean_iptables
     rm -rf $NOVA_DIR/networks
     mkdir -p $NOVA_DIR/networks
 fi
@@ -896,12 +1007,29 @@ if [[ "$ENABLED_SERVICES" =~ "n-vol" ]]; then
 
     apt_get install iscsitarget-dkms iscsitarget
 
-    if ! sudo vgdisplay | grep -q $VOLUME_GROUP; then
+    if ! sudo vgs $VOLUME_GROUP; then
         VOLUME_BACKING_FILE=${VOLUME_BACKING_FILE:-$DEST/nova-volumes-backing-file}
         VOLUME_BACKING_FILE_SIZE=${VOLUME_BACKING_FILE_SIZE:-2052M}
-        truncate -s $VOLUME_BACKING_FILE_SIZE $VOLUME_BACKING_FILE
+        # Only create if the file doesn't already exists
+        [[ -f $VOLUME_BACKING_FILE ]] || truncate -s $VOLUME_BACKING_FILE_SIZE $VOLUME_BACKING_FILE
         DEV=`sudo losetup -f --show $VOLUME_BACKING_FILE`
-        sudo vgcreate $VOLUME_GROUP $DEV
+        # Only create if the loopback device doesn't contain $VOLUME_GROUP
+        if ! sudo vgs $VOLUME_GROUP; then sudo vgcreate $VOLUME_GROUP $DEV; fi
+    fi
+
+    if sudo vgs $VOLUME_GROUP; then
+        # Clean out existing volumes
+        for lv in `sudo lvs --noheadings -o lv_name $VOLUME_GROUP`; do
+            # VOLUME_NAME_PREFIX prefixes the LVs we want
+            if [[ "${lv#$VOLUME_NAME_PREFIX}" != "$lv" ]]; then
+                tid=`egrep "^tid.+$lv" /proc/net/iet/volume | cut -f1 -d' ' | tr ':' '='`
+                if [[ -n "$tid" ]]; then
+                    lun=`egrep "lun.+$lv" /proc/net/iet/volume | cut -f1 -d' ' | tr ':' '=' | tr -d '\t'`
+                    sudo ietadm --op delete --$tid --$lun
+                fi
+                sudo lvremove -f $VOLUME_GROUP/$lv
+            fi
+        done
     fi
 
     # Configure iscsitarget
@@ -920,28 +1048,36 @@ add_nova_flag "--allow_admin_api"
 add_nova_flag "--scheduler_driver=$SCHEDULER"
 add_nova_flag "--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf"
 add_nova_flag "--fixed_range=$FIXED_RANGE"
-if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "quantum" ]]; then
     add_nova_flag "--network_manager=nova.network.quantum.manager.QuantumManager"
-    if [[ "$Q_PLUGIN" = "openvswitch" ]]; then
+    add_nova_flag "--quantum_connection_host=$Q_HOST"
+    add_nova_flag "--quantum_connection_port=$Q_PORT"
+    if [[ "$ENABLED_SERVICES" =~ "q-svc" && "$Q_PLUGIN" = "openvswitch" ]]; then
         add_nova_flag "--libvirt_vif_type=ethernet"
         add_nova_flag "--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver"
+        add_nova_flag "--linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver"
+        add_nova_flag "--quantum-use-dhcp"
     fi
 else
     add_nova_flag "--network_manager=nova.network.manager.$NET_MAN"
 fi
 if [[ "$ENABLED_SERVICES" =~ "n-vol" ]]; then
     add_nova_flag "--volume_group=$VOLUME_GROUP"
+    add_nova_flag "--volume_name_template=${VOLUME_NAME_PREFIX}%08x"
 fi
 add_nova_flag "--my_ip=$HOST_IP"
 add_nova_flag "--public_interface=$PUBLIC_INTERFACE"
 add_nova_flag "--vlan_interface=$VLAN_INTERFACE"
 add_nova_flag "--sql_connection=$BASE_SQL_CONN/nova"
 add_nova_flag "--libvirt_type=$LIBVIRT_TYPE"
+add_nova_flag "--instance_name_template=${INSTANCE_NAME_PREFIX}%08x"
 if [[ "$ENABLED_SERVICES" =~ "openstackx" ]]; then
-    add_nova_flag "--osapi_extensions_path=$OPENSTACKX_DIR/extensions"
+    add_nova_flag "--osapi_extension=nova.api.openstack.v2.contrib.standard_extensions"
+    add_nova_flag "--osapi_extension=extensions.admin.Admin"
 fi
 if [[ "$ENABLED_SERVICES" =~ "n-vnc" ]]; then
-    add_nova_flag "--vncproxy_url=http://$HOST_IP:6080"
+    VNCPROXY_URL=${VNCPROXY_URL:-"http://$SERVICE_HOST:6080"}
+    add_nova_flag "--vncproxy_url=$VNCPROXY_URL"
     add_nova_flag "--vncproxy_wwwroot=$NOVNC_DIR/"
 fi
 add_nova_flag "--api_paste_config=$NOVA_DIR/bin/nova-api-paste.ini"
@@ -1012,7 +1148,7 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
     mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'DROP DATABASE IF EXISTS keystone;'
     mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'CREATE DATABASE keystone;'
 
-    # FIXME (anthony) keystone should use keystone.conf.example
+    # Configure keystone.conf
     KEYSTONE_CONF=$KEYSTONE_DIR/etc/keystone.conf
     cp $FILES/keystone.conf $KEYSTONE_CONF
     sudo sed -e "s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g" -i $KEYSTONE_CONF
@@ -1021,11 +1157,21 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
     # keystone_data.sh creates our admin user and our ``SERVICE_TOKEN``.
     KEYSTONE_DATA=$KEYSTONE_DIR/bin/keystone_data.sh
     cp $FILES/keystone_data.sh $KEYSTONE_DATA
-    sudo sed -e "s,%HOST_IP%,$HOST_IP,g" -i $KEYSTONE_DATA
+    sudo sed -e "s,%SERVICE_HOST%,$SERVICE_HOST,g" -i $KEYSTONE_DATA
     sudo sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $KEYSTONE_DATA
     sudo sed -e "s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g" -i $KEYSTONE_DATA
     # initialize keystone with default users/endpoints
-    BIN_DIR=$KEYSTONE_DIR/bin bash $KEYSTONE_DATA
+    ENABLED_SERVICES=$ENABLED_SERVICES BIN_DIR=$KEYSTONE_DIR/bin bash $KEYSTONE_DATA
+
+    if [ "$SYSLOG" != "False" ]; then
+        sed -i -e '/^handlers=devel$/s/=devel/=production/' \
+            $KEYSTONE_DIR/etc/logging.cnf
+        sed -i -e "
+            /^log_file/s/log_file/\#log_file/; \
+            /^log_config/d;/^\[DEFAULT\]/a\
+            log_config=$KEYSTONE_DIR/etc/logging.cnf" \
+            $KEYSTONE_DIR/etc/keystone.conf
+    fi
 fi
 
 
@@ -1057,6 +1203,8 @@ function screen_it {
 # create a new named screen to run processes in
 screen -d -m -S stack -t stack
 sleep 1
+# set a reasonable statusbar
+screen -r stack -X hardstatus alwayslastline "%-Lw%{= BW}%50>%n%f* %t%{-}%+Lw%< %= %H"
 
 # launch the glance registry service
 if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
@@ -1093,26 +1241,24 @@ if [[ "$ENABLED_SERVICES" =~ "n-api" ]]; then
     fi
 fi
 
-# Quantum
+# Quantum service
 if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
-    # Install deps
-    # FIXME add to files/apts/quantum, but don't install if not needed!
-    apt_get install openvswitch-switch openvswitch-datapath-dkms
-
-    # Create database for the plugin/agent
     if [[ "$Q_PLUGIN" = "openvswitch" ]]; then
+        # Install deps
+        # FIXME add to files/apts/quantum, but don't install if not needed!
+        apt_get install openvswitch-switch openvswitch-datapath-dkms
+        # Create database for the plugin/agent
         if [[ "$ENABLED_SERVICES" =~ "mysql" ]]; then
             mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'CREATE DATABASE IF NOT EXISTS ovs_quantum;'
         else
             echo "mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin."
             exit 1
         fi
+        QUANTUM_PLUGIN_INI_FILE=$QUANTUM_DIR/etc/plugins.ini
+        # Make sure we're using the openvswitch plugin
+        sed -i -e "s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g" $QUANTUM_PLUGIN_INI_FILE
     fi
-
-    QUANTUM_PLUGIN_INI_FILE=$QUANTUM_DIR/quantum/plugins.ini
-    # Make sure we're using the openvswitch plugin
-    sed -i -e "s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g" $QUANTUM_PLUGIN_INI_FILE
-    screen_it q-svc "cd $QUANTUM_DIR && export PYTHONPATH=.:$PYTHONPATH; python $QUANTUM_DIR/bin/quantum $QUANTUM_DIR/etc/quantum.conf"
+    screen_it q-svc "cd $QUANTUM_DIR && PYTHONPATH=.:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_DIR/etc/quantum.conf"
 fi
 
 # Quantum agent (for compute nodes)
@@ -1126,7 +1272,7 @@ if [[ "$ENABLED_SERVICES" =~ "q-agt" ]]; then
     fi
 
     # Start up the quantum <-> openvswitch agent
-    screen_it q-agt "sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_DIR/quantum/plugins/openvswitch/ovs_quantum_plugin.ini -v"
+    screen_it q-agt "sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_DIR/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini -v"
 fi
 
 # If we're using Quantum (i.e. q-svc is enabled), network creation has to
@@ -1196,20 +1342,55 @@ if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
     for image_url in ${IMAGE_URLS//,/ }; do
         # Downloads the image (uec ami+aki style), then extracts it.
         IMAGE_FNAME=`basename "$image_url"`
-        IMAGE_NAME=`basename "$IMAGE_FNAME" .tar.gz`
         if [ ! -f $FILES/$IMAGE_FNAME ]; then
             wget -c $image_url -O $FILES/$IMAGE_FNAME
         fi
 
-        # Extract ami and aki files
-        tar -zxf $FILES/$IMAGE_FNAME -C $FILES/images
+        KERNEL=""
+        RAMDISK=""
+        case "$IMAGE_FNAME" in
+            *.tar.gz|*.tgz)
+                # Extract ami and aki files
+                [ "${IMAGE_FNAME%.tar.gz}" != "$IMAGE_FNAME" ] &&
+                    IMAGE_NAME="${IMAGE_FNAME%.tar.gz}" ||
+                    IMAGE_NAME="${IMAGE_FNAME%.tgz}"
+                xdir="$FILES/images/$IMAGE_NAME"
+                rm -Rf "$xdir";
+                mkdir "$xdir"
+                tar -zxf $FILES/$IMAGE_FNAME -C "$xdir"
+                KERNEL=$(for f in "$xdir/"*-vmlinuz*; do
+                         [ -f "$f" ] && echo "$f" && break; done; true)
+                RAMDISK=$(for f in "$xdir/"*-initrd*; do
+                         [ -f "$f" ] && echo "$f" && break; done; true)
+                IMAGE=$(for f in "$xdir/"*.img; do
+                         [ -f "$f" ] && echo "$f" && break; done; true)
+                [ -n "$IMAGE_NAME" ]
+                IMAGE_NAME=$(basename "$IMAGE" ".img")
+                ;;
+            *.img)
+                IMAGE="$FILES/$IMAGE_FNAME";
+                IMAGE_NAME=$(basename "$IMAGE" ".img")
+                ;;
+            *.img.gz)
+                IMAGE="$FILES/${IMAGE_FNAME}"
+                IMAGE_NAME=$(basename "$IMAGE" ".img.gz")
+                ;;
+            *) echo "Do not know what to do with $IMAGE_FNAME"; false;;
+        esac
 
         # Use glance client to add the kernel the root filesystem.
         # We parse the results of the first upload to get the glance ID of the
         # kernel for use when uploading the root filesystem.
-        RVAL=`glance add -A $SERVICE_TOKEN name="$IMAGE_NAME-kernel" is_public=true container_format=aki disk_format=aki < $FILES/images/$IMAGE_NAME-vmlinuz*`
-        KERNEL_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
-        glance add -A $SERVICE_TOKEN name="$IMAGE_NAME" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID < $FILES/images/$IMAGE_NAME.img
+        KERNEL_ID=""; RAMDISK_ID="";
+        if [ -n "$KERNEL" ]; then
+            RVAL=`glance add -A $SERVICE_TOKEN name="$IMAGE_NAME-kernel" is_public=true container_format=aki disk_format=aki < "$KERNEL"`
+            KERNEL_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
+        fi
+        if [ -n "$RAMDISK" ]; then
+            RVAL=`glance add -A $SERVICE_TOKEN name="$IMAGE_NAME-ramdisk" is_public=true container_format=ari disk_format=ari < "$RAMDISK"`
+            RAMDISK_ID=`echo $RVAL | cut -d":" -f2 | tr -d " "`
+        fi
+        glance add -A $SERVICE_TOKEN name="${IMAGE_NAME%.img}" is_public=true container_format=ami disk_format=ami ${KERNEL_ID:+kernel_id=$KERNEL_ID} ${RAMDISK_ID:+ramdisk_id=$RAMDISK_ID} < <(zcat --force "${IMAGE}")
     done
 fi
 
@@ -1233,18 +1414,21 @@ echo ""
 # If you installed the horizon on this server, then you should be able
 # to access the site using your browser.
 if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
-    echo "horizon is now available at http://$HOST_IP/"
+    echo "horizon is now available at http://$SERVICE_HOST/"
 fi
 
 # If keystone is present, you can point nova cli to this server
 if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
-    echo "keystone is serving at http://$HOST_IP:5000/v2.0/"
+    echo "keystone is serving at http://$SERVICE_HOST:5000/v2.0/"
     echo "examples on using novaclient command line is in exercise.sh"
     echo "the default users are: admin and demo"
     echo "the password: $ADMIN_PASSWORD"
 fi
 
-# indicate how long this took to run (bash maintained variable 'SECONDS')
+# Echo HOST_IP - useful for build_uec.sh, which uses dhcp to give the instance an address
+echo "This is your host ip: $HOST_IP"
+
+# Indicate how long this took to run (bash maintained variable 'SECONDS')
 echo "stack.sh completed in $SECONDS seconds."
 
 ) | tee -a "$LOGFILE"
