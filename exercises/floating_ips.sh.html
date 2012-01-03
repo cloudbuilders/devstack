@@ -438,21 +438,25 @@ nova secgroup-create <span class="nv">$SECGROUP</span> <span class="s2">&quot;te
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>and grab the first flavor in the list to launch</p>
+<p>grab the first flavor in the list to launch if default doesn't exist</p>
 </td><td class=code><div class=highlight><pre>
 nova flavor-list
 
+<span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="k">:-</span><span class="nv">m1</span><span class="p">.tiny</span><span class="k">}</span>
+<span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | grep <span class="nv">$DEFAULT_INSTANCE_TYPE</span> | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
 <div class="section" id="testing">
 <h1>Testing</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FLAVOR</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | head -n 4 | tail -n 1 | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
+   <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | head -n 4 | tail -n 1 | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
+<span class="k">fi</span>
 
 <span class="nv">NAME</span><span class="o">=</span><span class="s2">&quot;myserver&quot;</span>
 
-nova boot --flavor <span class="nv">$FLAVOR</span> --image <span class="nv">$IMAGE</span> <span class="nv">$NAME</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span>
+nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> <span class="nv">$NAME</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>First check if it spins up (becomes active and responds to ping on
