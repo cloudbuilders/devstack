@@ -1851,11 +1851,9 @@ only once for an entire cluster.</p>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>sed -i -e <span class="s1">&#39;/^handlers=devel$/s/=devel/=production/&#39;</span> <span class="se">\</span>
             <span class="nv">$KEYSTONE_DIR</span>/etc/logging.cnf
-        sed -i -e <span class="s2">&quot;</span>
-<span class="s2">            /^log_file/s/log_file/\#log_file/; \</span>
-<span class="s2">            /^log_config/d;/^\[DEFAULT\]/a\</span>
-<span class="s2">            log_config=$KEYSTONE_DIR/etc/logging.cnf&quot;</span> <span class="se">\</span>
+        sed -i -e <span class="s2">&quot;/^log_file/s/log_file/\#log_file/&quot;</span> <span class="se">\</span>
             <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
+        <span class="nv">KEYSTONE_LOG_CONFIG</span><span class="o">=</span><span class="s2">&quot;--log-config $KEYSTONE_DIR/etc/logging.cnf&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -1925,7 +1923,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <p>launch the nova-api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF -d&quot;</span>
+<span class="k">    </span>screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget -q -O- http://127.0.0.1:5000; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
