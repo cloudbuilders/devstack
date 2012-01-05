@@ -1476,12 +1476,13 @@ changing the permissions so we can run it as our user.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>We then create a loopback disk and format it to XFS.</p>
+<p>We then create a loopback disk and format it to XFS.
+TODO: Reset disks on new pass.</p>
 </td><td class=code><div class=highlight><pre>
 
     <span class="nv">USER_GROUP</span><span class="o">=</span><span class="k">$(</span>id -g<span class="k">)</span>
     sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives
-    sudo chown -R <span class="nv">$USER</span>:<span class="k">${</span><span class="nv">USER_GROUP</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives
+    sudo chown -R <span class="nv">$USER</span>:<span class="k">${</span><span class="nv">USER_GROUP</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>After the drive being created we mount the disk with a few mount
@@ -1581,13 +1582,8 @@ that help us doing that.</p>
    sed -e <span class="s2">&quot;s/%SWIFT_HASH%/$SWIFT_HASH/&quot;</span> <span class="nv">$FILES</span>/swift/swift.conf &gt; <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/swift.conf
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We create two helper scripts :</p>
-<ul class="simple">
-<li>swift-remakerings
-Allow to recreate rings from scratch.</li>
-<li>swift-startmain
-Restart your full cluster.</li>
-</ul>
+<p>We have some specific configuration for swift for rsyslog. See
+the file /etc/rsyslog.d/10-swift.conf for more info.</p>
 </td><td class=code><div class=highlight><pre>
    <span class="k">function </span>generate_swift_configuration<span class="o">()</span> <span class="o">{</span>
        <span class="nb">local </span><span class="nv">server_type</span><span class="o">=</span><span class="nv">$1</span>
@@ -1607,6 +1603,24 @@ Restart your full cluster.</li>
    generate_swift_configuration container 6011 2
    generate_swift_configuration account 6012 2
 
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We create two helper scripts :</p>
+<ul class="simple">
+<li>swift-remakerings
+Allow to recreate rings from scratch.</li>
+<li>swift-startmain
+Restart your full cluster.</li>
+</ul>
+</td><td class=code><div class=highlight><pre>
+   <span class="nv">swift_log_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/logs
+   rm -rf <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
+   mkdir -p <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>/hourly
+   sudo chown -R syslog:adm <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
+   sed <span class="s2">&quot;s,%SWIFT_LOGDIR%,${swift_log_dir},&quot;</span> <span class="nv">$FILES</span>/swift/rsyslog.conf | sudo <span class="se">\</span>
+       tee /etc/rsyslog.d/10-swift.conf
+   sudo restart rsyslog
+   
 </pre></div></td></tr><tr><td class=docs>
 <p>We then can start rsync.</p>
 </td><td class=code><div class=highlight><pre>
