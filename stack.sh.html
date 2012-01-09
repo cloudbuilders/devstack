@@ -830,13 +830,47 @@ to validate user tokens.</p>
 </td><td class=code><div class=highlight><pre>
 read_password SERVICE_TOKEN <span class="s2">&quot;ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN TOKEN.&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>So that errors don't compound we exit on any errors so you see only the
-first error that occurred.</p>
+</div>
+<div class="section" id="log-files">
+<h2>Log files</h2>
 </td><td class=code><div class=highlight><pre>
 read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS).&quot;</span>
 
-<span class="nv">LOGFILE</span><span class="o">=</span><span class="k">${</span><span class="nv">LOGFILE</span><span class="k">:-</span><span class="s2">&quot;$PWD/stack.sh.$$.log&quot;</span><span class="k">}</span>
-<span class="o">(</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up logging for stack.sh
+Set LOGFILE to turn on logging
+We append '.xxxxxxxx' to the given name to maintain history
+where xxxxxxxx is a representation of the date the file was created</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>First clean up old log files.  Use the user-specified LOGFILE
+as the template to search for, appending '.*' to match the date
+we added on earlier runs.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Redirect stdout/stderr to tee to write the log file</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">LOGDAYS</span><span class="o">=</span><span class="k">${</span><span class="nv">LOGDAYS</span><span class="k">:-</span><span class="nv">7</span><span class="k">}</span>
+    <span class="nv">LOGDIR</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
+    <span class="nv">LOGNAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
+    find <span class="nv">$LOGDIR</span> -maxdepth 1 -name <span class="nv">$LOGNAME</span>.<span class="se">\*</span> -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
+
+    <span class="nv">TIMESTAMP_FORMAT</span><span class="o">=</span><span class="k">${</span><span class="nv">TIMESTAMP_FORMAT</span><span class="k">:-</span><span class="s2">&quot;%F-%H%M%S&quot;</span><span class="k">}</span>
+    <span class="nv">LOGFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">$(</span>date <span class="s2">&quot;+$TIMESTAMP_FORMAT&quot;</span><span class="k">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Specified logfile name always links to the most recent log</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
+    <span class="nb">echo</span> <span class="s2">&quot;stack.sh log $LOGFILE&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>So that errors don't compound we exit on any errors so you see only the
+first error that occurred.</p>
+</td><td class=code><div class=highlight><pre>
+    ln -sf <span class="nv">$LOGFILE</span> <span class="nv">$LOGDIR</span>/<span class="nv">$LOGNAME</span>
+<span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Print the commands being run so that we can see the command that triggers
 an error.  It is also useful for following along as the install occurs.</p>
@@ -872,7 +906,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 354)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 380)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -2150,20 +2184,13 @@ kernel for use when uploading the root filesystem.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Check that the left side of the above pipe succeeded</p>
-</td><td class=code><div class=highlight><pre>
-
-
-<span class="o">)</span> 2&gt;&amp;1 | tee <span class="s2">&quot;${LOGFILE}&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="using-the-cloud">
 <h1>Using the cloud</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="k">for </span>ret in <span class="s2">&quot;${PIPESTATUS[@]}&quot;</span>; <span class="k">do</span> <span class="o">[</span> <span class="nv">$ret</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="nb">exit</span> <span class="nv">$ret</span>; <span class="k">done</span>
 
-<span class="o">(</span>
+<span class="nb">set</span> +o xtrace
+
 </pre></div></td></tr><tr><td class=docs>
 <p>If you installed the horizon on this server, then you should be able
 to access the site using your browser.</p>
@@ -2198,8 +2225,6 @@ to access the site using your browser.</p>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot;</span>
-
-<span class="o">)</span> | tee -a <span class="s2">&quot;$LOGFILE&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
