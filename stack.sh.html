@@ -1358,16 +1358,34 @@ users).  The user system is external (keystone).</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>We are going to use a sample http middleware configuration based on the
 one from the keystone project to launch nova.  This paste config adds
-the configuration required for nova to validate keystone tokens. We add
-our own service token to the configuration.</p>
+the configuration required for nova to validate keystone tokens.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>First we add a some extra data to the default paste config from nova</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Then we add our own service token to the configuration</p>
+</td><td class=code><div class=highlight><pre>
+    cat <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$FILES</span>/nova-api-paste.ini &gt; <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Finally, we change the pipelines in nova to use keystone</p>
+</td><td class=code><div class=highlight><pre>
+    sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Helper to clean iptables rules</p>
 </td><td class=code><div class=highlight><pre>
-    cp <span class="nv">$FILES</span>/nova-api-paste.ini <span class="nv">$NOVA_DIR</span>/bin
-    sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
+    <span class="k">function </span>replace_pipeline<span class="o">()</span> <span class="o">{</span>
+        sed <span class="s2">&quot;/\[pipeline:$1\]/,/\[/s/^pipeline = .*/pipeline = $2/&quot;</span> -i <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
+    <span class="o">}</span>
+    replace_pipeline <span class="s2">&quot;ec2cloud&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext cloudrequest authorizer ec2executor&quot;</span>
+    replace_pipeline <span class="s2">&quot;ec2admin&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext adminrequest authorizer ec2executor&quot;</span>
+    replace_pipeline <span class="s2">&quot;openstack_api_v2&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext ratelimit serialize extensions osapi_app_v2&quot;</span>
+    replace_pipeline <span class="s2">&quot;openstack_compute_api_v2&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext ratelimit serialize compute_extensions osapi_compute_app_v2&quot;</span>
+    replace_pipeline <span class="s2">&quot;openstack_volume_api_v1&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext ratelimit serialize volume_extensions osapi_volume_app_v1&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1654,7 +1672,7 @@ Restart your full cluster.</li>
    sed <span class="s2">&quot;s,%SWIFT_LOGDIR%,${swift_log_dir},&quot;</span> <span class="nv">$FILES</span>/swift/rsyslog.conf | sudo <span class="se">\</span>
        tee /etc/rsyslog.d/10-swift.conf
    sudo restart rsyslog
-   
+
 </pre></div></td></tr><tr><td class=docs>
 <p>We then can start rsync.</p>
 </td><td class=code><div class=highlight><pre>
