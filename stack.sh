@@ -710,7 +710,7 @@ fi
 if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
 
     # Detecting user's default group name.
-    GROUP=`groups | cut -f 1 -d ' '`
+    GROUP=${GROUP:-`groups | cut -f 1 -d ' '`}
 
     # Install apache2, which is NOPRIME'd
     apt_get install apache2 libapache2-mod-wsgi
