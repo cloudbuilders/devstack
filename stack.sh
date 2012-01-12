@@ -390,8 +390,31 @@ read_password SERVICE_TOKEN "ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN 
 # Horizon currently truncates usernames and passwords at 20 characters
 read_password ADMIN_PASSWORD "ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS)."
 
-LOGFILE=${LOGFILE:-"$PWD/stack.sh.$$.log"}
-(
+# Log files
+# ---------
+
+# Set up logging for stack.sh
+# Set LOGFILE to turn on logging
+# We append '.xxxxxxxx' to the given name to maintain history
+# where xxxxxxxx is a representation of the date the file was created
+if [[ -n "$LOGFILE" ]]; then
+    # First clean up old log files.  Use the user-specified LOGFILE
+    # as the template to search for, appending '.*' to match the date
+    # we added on earlier runs.
+    LOGDAYS=${LOGDAYS:-7}
+    LOGDIR=$(dirname "$LOGFILE")
+    LOGNAME=$(basename "$LOGFILE")
+    find $LOGDIR -maxdepth 1 -name $LOGNAME.\* -mtime +$LOGDAYS -exec rm {} \;
+
+    TIMESTAMP_FORMAT=${TIMESTAMP_FORMAT:-"%F-%H%M%S"}
+    LOGFILE=$LOGFILE.$(date "+$TIMESTAMP_FORMAT")
+    # Redirect stdout/stderr to tee to write the log file
+    exec 1> >( tee "${LOGFILE}" ) 2>&1
+    echo "stack.sh log $LOGFILE"
+    # Specified logfile name always links to the most recent log
+    ln -sf $LOGFILE $LOGDIR/$LOGNAME
+fi
+
 # So that errors don't compound we exit on any errors so you see only the
 # first error that occurred.
 trap failed ERR
@@ -712,7 +735,7 @@ if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
     # Initialize the horizon database (it stores sessions and notices shown to
     # users).  The user system is external (keystone).
     cd $HORIZON_DIR/openstack-dashboard
-    dashboard/manage.py syncdb
+    python manage.py syncdb
 
     # create an empty directory that apache uses as docroot
     sudo mkdir -p $HORIZON_DIR/.blackhole
@@ -758,14 +781,26 @@ fi
 
 # Nova
 # ----
-
 if [[ "$ENABLED_SERVICES" =~ "n-api" ]]; then
     # We are going to use a sample http middleware configuration based on the
     # one from the keystone project to launch nova.  This paste config adds
-    # the configuration required for nova to validate keystone tokens. We add
-    # our own service token to the configuration.
-    cp $FILES/nova-api-paste.ini $NOVA_DIR/bin
+    # the configuration required for nova to validate keystone tokens.
+
+    # First we add a some extra data to the default paste config from nova
+    cat $NOVA_DIR/etc/nova/api-paste.ini $FILES/nova-api-paste.ini > $NOVA_DIR/bin/nova-api-paste.ini
+
+    # Then we add our own service token to the configuration
     sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $NOVA_DIR/bin/nova-api-paste.ini
+
+    # Finally, we change the pipelines in nova to use keystone
+    function replace_pipeline() {
+        sed "/\[pipeline:$1\]/,/\[/s/^pipeline = .*/pipeline = $2/" -i $NOVA_DIR/bin/nova-api-paste.ini
+    }
+    replace_pipeline "ec2cloud" "ec2faultwrap logrequest totoken authtoken keystonecontext cloudrequest authorizer ec2executor"
+    replace_pipeline "ec2admin" "ec2faultwrap logrequest totoken authtoken keystonecontext adminrequest authorizer ec2executor"
+    replace_pipeline "openstack_api_v2" "faultwrap authtoken keystonecontext ratelimit serialize extensions osapi_app_v2"
+    replace_pipeline "openstack_compute_api_v2" "faultwrap authtoken keystonecontext ratelimit serialize compute_extensions osapi_compute_app_v2"
+    replace_pipeline "openstack_volume_api_v1" "faultwrap authtoken keystonecontext ratelimit serialize volume_extensions osapi_volume_app_v1"
 fi
 
 # Helper to clean iptables rules
@@ -847,10 +882,10 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
     clean_iptables
 
     # Destroy old instances
-    instances=`virsh list | grep $INSTANCE_NAME_PREFIX | cut -d " " -f3`
+    instances=`virsh list --all | grep $INSTANCE_NAME_PREFIX | sed "s/.*\($INSTANCE_NAME_PREFIX[0-9a-fA-F]*\).*/\1/g"`
     if [ ! $instances = "" ]; then
-        echo $instances | xargs -n1 virsh destroy
-        echo $instances | xargs -n1 virsh undefine
+        echo $instances | xargs -n1 virsh destroy || true
+        echo $instances | xargs -n1 virsh undefine || true
     fi
 
     # Clean out the instances directory.
@@ -872,9 +907,10 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
 
     USER_GROUP=$(id -g)
     sudo mkdir -p ${SWIFT_DATA_LOCATION}/drives
-    sudo chown -R $USER:${USER_GROUP} ${SWIFT_DATA_LOCATION}/drives
+    sudo chown -R $USER:${USER_GROUP} ${SWIFT_DATA_LOCATION}
 
     # We then create a loopback disk and format it to XFS.
+    # TODO: Reset disks on new pass.
     if [[ ! -e ${SWIFT_DATA_LOCATION}/drives/images/swift.img ]]; then
         mkdir -p  ${SWIFT_DATA_LOCATION}/drives/images
         sudo touch  ${SWIFT_DATA_LOCATION}/drives/images/swift.img
@@ -967,6 +1003,17 @@ if [[ "$ENABLED_SERVICES" =~ "swift" ]]; then
    generate_swift_configuration object 6010 2
    generate_swift_configuration container 6011 2
    generate_swift_configuration account 6012 2
+
+
+   # We have some specific configuration for swift for rsyslog. See
+   # the file /etc/rsyslog.d/10-swift.conf for more info.
+   swift_log_dir=${SWIFT_DATA_LOCATION}/logs
+   rm -rf ${swift_log_dir}
+   mkdir -p ${swift_log_dir}/hourly
+   sudo chown -R syslog:adm ${swift_log_dir}
+   sed "s,%SWIFT_LOGDIR%,${swift_log_dir}," $FILES/swift/rsyslog.conf | sudo \
+       tee /etc/rsyslog.d/10-swift.conf
+   sudo restart rsyslog
 
    # We create two helper scripts :
    #
@@ -1166,11 +1213,9 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
     if [ "$SYSLOG" != "False" ]; then
         sed -i -e '/^handlers=devel$/s/=devel/=production/' \
             $KEYSTONE_DIR/etc/logging.cnf
-        sed -i -e "
-            /^log_file/s/log_file/\#log_file/; \
-            /^log_config/d;/^\[DEFAULT\]/a\
-            log_config=$KEYSTONE_DIR/etc/logging.cnf" \
+        sed -i -e "/^log_file/s/log_file/\#log_file/" \
             $KEYSTONE_DIR/etc/keystone.conf
+        KEYSTONE_LOG_CONFIG="--log-config $KEYSTONE_DIR/etc/logging.cnf"
     fi
 fi
 
@@ -1223,7 +1268,7 @@ fi
 
 # launch the keystone and wait for it to answer before continuing
 if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
-    screen_it key "cd $KEYSTONE_DIR && $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF -d"
+    screen_it key "cd $KEYSTONE_DIR && $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d"
     echo "Waiting for keystone to start..."
     if ! timeout $SERVICE_TIMEOUT sh -c "while ! wget -q -O- http://127.0.0.1:5000; do sleep 1; done"; then
       echo "keystone did not start"
@@ -1397,13 +1442,8 @@ fi
 # Fin
 # ===
 
+set +o xtrace
 
-) 2>&1 | tee "${LOGFILE}"
-
-# Check that the left side of the above pipe succeeded
-for ret in "${PIPESTATUS[@]}"; do [ $ret -eq 0 ] || exit $ret; done
-
-(
 # Using the cloud
 # ===============
 
@@ -1430,5 +1470,3 @@ echo "This is your host ip: $HOST_IP"
 
 # Indicate how long this took to run (bash maintained variable 'SECONDS')
 echo "stack.sh completed in $SECONDS seconds."
-
-) | tee -a "$LOGFILE"
