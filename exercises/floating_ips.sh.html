@@ -363,13 +363,20 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="get-a-token-for-clients-that-don-t-support-service-catalog">
-<h1>Get a token for clients that don't support service catalog</h1>
+<p>Set some defaults</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 <span class="nb">source</span> ./openrc
 <span class="nb">popd</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="get-a-token-for-clients-that-don-t-support-service-catalog">
+<h1>Get a token for clients that don't support service catalog</h1>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nv">DEFAULT_FLOATING_POOL</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_FLOATING_POOL</span><span class="k">:-</span><span class="nv">nova</span><span class="k">}</span>
+<span class="nv">TEST_FLOATING_POOL</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_POOL</span><span class="k">:-</span><span class="nv">test</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>manually create a token by querying keystone (sending JSON data).  Keystone
@@ -534,19 +541,22 @@ timeout of a second for each ping.</p>
 nova secgroup-add-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
 
 </pre></div></td></tr><tr><td class=docs>
-<p>allocate a floating ip</p>
+<p>allocate a floating ip from default pool</p>
 </td><td class=code><div class=highlight><pre>
 nova secgroup-list-rules <span class="nv">$SECGROUP</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>store  floating address</p>
+<p>list floating addresses</p>
 </td><td class=code><div class=highlight><pre>
-nova floating-ip-create
+<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create | grep <span class="nv">$DEFAULT_FLOATING_POOL</span> | cut -d <span class="s1">&#39;|&#39;</span> -f2<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>add floating ip to our server</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-list | grep None | head -1 | cut -d <span class="s1">&#39;|&#39;</span> -f2 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
+<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova floating-ip-list | grep -q $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Floating IP not allocated&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
@@ -554,10 +564,23 @@ nova floating-ip-create
 nova add-floating-ip <span class="nv">$NAME</span> <span class="nv">$FLOATING_IP</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>dis-allow icmp traffic (ping)</p>
+<p>Allocate an IP from it</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server with floating ip&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>list floating addresses</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TEST_FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create <span class="nv">$TEST_FLOATING_POOL</span> | grep <span class="nv">$TEST_FLOATING_POOL</span> | cut -d <span class="s1">&#39;|&#39;</span> -f2<span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>dis-allow icmp traffic (ping)</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova floating-ip-list | grep $TEST_FLOATING_POOL | grep -q $TEST_FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Floating IP not allocated&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
@@ -581,9 +604,14 @@ nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>shutdown the server</p>
+<p>Delete second floating IP</p>
 </td><td class=code><div class=highlight><pre>
 nova floating-ip-delete <span class="nv">$FLOATING_IP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>shutdown the server</p>
+</td><td class=code><div class=highlight><pre>
+nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete a secgroup</p>

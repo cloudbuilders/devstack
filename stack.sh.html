@@ -679,9 +679,8 @@ we should make sure we use the same variable names as the flag names.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Multi-host is a mode where each compute node runs its own network node.  This
-allows network operations and routing for a VM to occur on the server that is
-running the VM - removing a SPOF and bandwidth bottleneck.</p>
+<p>Test floating pool and range are used for testing.  They are defined
+here until the admin APIs can replace nova-manage</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
@@ -692,6 +691,14 @@ running the VM - removing a SPOF and bandwidth bottleneck.</p>
 <span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
 <span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">$PUBLIC_INTERFACE</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Multi-host is a mode where each compute node runs its own network node.  This
+allows network operations and routing for a VM to occur on the server that is
+running the VM - removing a SPOF and bandwidth bottleneck.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TEST_FLOATING_POOL</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_POOL</span><span class="k">:-</span><span class="nv">test</span><span class="k">}</span>
+<span class="nv">TEST_FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.253.0/29</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If you are using FlatDHCP on multiple hosts, set the <tt class="docutils literal">FLAT_INTERFACE</tt>
@@ -906,7 +913,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 380)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 385)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -2071,13 +2078,18 @@ happen after we've started the Quantum service.</p>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Not creating floating IPs (not supported by QuantumManager)&quot;</span>
     <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>create a second pool</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Launching nova-compute should be as simple as running <tt class="docutils literal"><span class="pre">nova-compute</span></tt> but
 have to do a little more than that in our script.  Since we add the group
 <tt class="docutils literal">libvirtd</tt> to our user in this script, when nova-compute is run it is
 within the context of our original shell (so our groups won't be updated).
 Use 'sg' to execute nova-compute as a member of the libvirtd group.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+        <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
