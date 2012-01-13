@@ -16,6 +16,13 @@ source xenrc
 # Echo commands
 set -o xtrace
 
+# Check for xva file
+if [ ! -e $XVA ]; then
+    echo "Missing xva file.  Please run build_xva.sh (ideally on a non dom0 host since the build can require lots of space)."
+    echo "Place the resulting xva file in $XVA"
+    exit 1
+fi
+
 # Make sure we have git
 if ! which git; then
     GITDIR=/tmp/git-1.7.7
@@ -129,11 +136,6 @@ if [ "$DO_SHUTDOWN" = "1" ]; then
     for uuid in `xe vdi-list | grep -1 Glance | grep uuid | sed "s/.*\: //g"`; do
         xe vdi-destroy uuid=$uuid
     done
-fi
-
-if [ ! -e $XVA ]; then
-    # Build xva if it does not exist yet
-    ./build_xva.sh
 fi
 
 # Start guest

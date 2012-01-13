@@ -160,3 +160,5 @@ if [ ! -e $XVA ]; then
     rm -rf /tmp/mkxva*
     UID=0 $SCRIPT_DIR/mkxva -o $XVA -t xva -x $OVA $STAGING_DIR $VDI_MB /tmp/
 fi
+
+echo "Built $XVA.  If your dom0 is on a different machine, copy this to [devstackdir]/tools/xen/$XVA"
