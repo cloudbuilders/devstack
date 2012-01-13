@@ -41,27 +41,29 @@
         <p>Things are about to get real!  Using OpenStack in containers or VMs is nice for kicking the tires, but doesn't compare to the feeling you get with hardware.</p>
       </section>
 
-      <section id="requirements">
+      <section id="prerequisites">
         <div class="page-header">
           <h2>Prerequisites <small>Linux & Network</small></h2>
         </div>
         
         <h3>Minimal Ubuntu Install</h3>
-        <p>You need to have a system with a fresh install of Ubuntu 11.04 (Natty).  You can download the <a href="https://help.ubuntu.com/community/Installation/MinimalCD">Minimal CD</a> for Natty (only 19MB) since devstack will download &amp; install all the additional dependencies.</p>
+        <p>You need to have a system with a fresh install of Ubuntu 11.10 (Oneiric).  You can download the <a href="https://help.ubuntu.com/community/Installation/MinimalCD">Minimal CD</a> for Oneiric (only 23MB) since DevStack will download &amp; install all the additional dependencies.</p>
         
         <h3>Network Configuration</h3>
-        <p>Next you need to determine your network configuration for your home router so that your openstack cloud will be integrated with your existing network.</p>
-        <p>For my home network the IPs given out by DHCP are 192.168.1.X - where X is between 100 and 200.  In this case I'll be able to use IPs 201-250 for <b>floating ips</b>.</p>
-        <p>To make things easier switch your node to using a static IP instead of DHCP (192.168.1.200).</p>
+        <p>Determine the network configuration for your home router in order to integrate your 
+        OpenStack cloud your existing network. For example, if the IPs given out on your network 
+        by DHCP are 192.168.1.X - where X is between 100 and 200 you will be able to use IPs 
+        201-254 for <b>floating ips</b>.</p>
+        <p>To make things easier later switch your node to using a static IP instead of DHCP (192.168.1.201).</p>
       </section>
 
-      <section id="requirements">
+      <section id="installation">
         <div class="page-header">
           <h2>Installation <small>shake and bake</small></h2>
         </div>
 
         <h3>Add your user</h3>
-        <p>We need to add a user to install devstack.  (if you created a user during install you can skip this step and just give the user sudo priviledges below)</p>
+        <p>We need to add a user to install DevStack.  (if you created a user during install you can skip this step and just give the user sudo priviledges below)</p>
         <pre>adduser stack</pre>
         <p>Since this user will be making many changes to your system, it will need to have sudo priviledges.</p>
         <pre>apt-get install sudo -y
@@ -69,30 +71,48 @@ echo "stack ALL=(ALL) NOPASSWD: ALL" &gt;&gt; /etc/sudoers</pre>
         <p>From here on you should use the user you created.  <b>Logout</b> and login as the normal user.</p>
 
         <h3>Download DevStack</h3>
-        <p>We'll grab the latest version of devstack via git</p>
+        <p>We'll grab the latest version of DevStack via git</p>
         <pre>sudo apt-get install git -y
 git clone git://github.com/cloudbuilders/devstack.git
 cd devstack</pre>
 
         <h3>Run DevStack</h3>
 
-
-        <p>Now to configure stack.sh.  First we will set our FLOATING_RANGE to a range used by our router.</p>
+        <p>Now to configure <code>stack.sh</code>.  Create <code>localrc</code> as shown below to do the following:</p>
+        <ul>
+          <li>Set <code>FLOATING_RANGE</code> to a range not used by the router, 192.168.1.224/27.  This configures IP addresses ending in 225-254 to be used as floating IPs.</li>
+          <li>Set <code>FIXED_RANGE</code> and <code>FIXED_NETWORK_SIZE</code> to configure the internal address space used by the instances.</li>
+          <li>Set the administrative password.</li>
+          <li>Set the MySQL administrative password.  The default here is a random hex string which is inconvenient if you need to look at the database directly for anything.</li>
+          <li>Set <code>FLAT_INTERFACE</code> to the Ethernet interface that connects the system to your network.  This is the interface that should be configured with the static IP address mentioned above.</li>
+        </ul>
+        <p><code>localrc</code> should look something like this:</p>
         <pre>FLOATING_RANGE=192.168.1.224/27
 FIXED_RANGE=10.0.0.0/24
 FIXED_NETWORK_SIZE=256
 ADMIN_PASSWORD=supersecret
+MYSQL_PASSWORD=iheartdatabases
 FLAT_INTERFACE=eth0</pre>
 
-        <p>Run devstack</p>
+        <p>Run DevStack:</p>
         <pre>./stack.sh</pre>
+        <p>A seemingly endless stream of activity ensues.  When complete you will see a summary of
+        <code>stack.sh</code>'s work, including the relevant URLs, accounts and passwords to poke at your
+        shiny new OpenStack.</p>
 
         <h3>Using OpenStack</h3>
+        <p>At this point you should be able to access the dashboard from other computers on your 
+        home network.  In this example that would be http://192.168.1.201/ for the dashboard (aka Horizon).
+        Launch VMs and if you give them floating IPs access those VMs from other machines on your network.</p>
 
-        <p>At this point you should be able to access the dashboard from other computers on your home network...  Launch VMs and if you give them floating IPs access those VMs from other machines on your network.</p>
+        <p>Some examples of using the OpenStack command-line clients <code>nova</code> and <code>glance</code>
+        are in the shakedown scripts in <code>devstack/exercises</code>.  <code>exercise.sh</code>
+        will run all of those scripts and report on the results.</p>
+
+      </section>
 
       <footer>
-        <p>&copy; Openstack LLC 2011 &mdash; this is not an official OpenStack project...</p>
+        <p>&copy; Openstack LLC 2011-2012 &mdash; this is not an official OpenStack project...</p>
       </footer>
 
     </div> <!-- /container -->
