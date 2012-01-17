@@ -1787,7 +1787,7 @@ add_nova_flag <span class="s2">&quot;--fixed_range=$FIXED_RANGE&quot;</span>
 <span class="k">        </span>add_nova_flag <span class="s2">&quot;--libvirt_vif_type=ethernet&quot;</span>
         add_nova_flag <span class="s2">&quot;--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
         add_nova_flag <span class="s2">&quot;--linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver&quot;</span>
-        add_nova_flag <span class="s2">&quot;--quantum-use-dhcp&quot;</span>
+        add_nova_flag <span class="s2">&quot;--quantum_use_dhcp&quot;</span>
     <span class="k">fi</span>
 <span class="k">else</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
@@ -2056,13 +2056,16 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
         sudo ovs-vsctl --no-wait -- --if-exists del-br <span class="nv">$OVS_BRIDGE</span>
         sudo ovs-vsctl --no-wait add-br <span class="nv">$OVS_BRIDGE</span>
         sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
-    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
 happen after we've started the Quantum service.</p>
 </td><td class=code><div class=highlight><pre>
-    screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_DIR/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini -v&quot;</span>
+       <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini
+       sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
+       screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_OVS_CONFIG_FILE -v&quot;</span>
+    <span class="k">fi</span>
+
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
