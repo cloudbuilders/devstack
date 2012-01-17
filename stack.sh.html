@@ -1720,10 +1720,13 @@ invoking stack.sh.</p>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-vol&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Only create if the file doesn't already exists</p>
+<p>install the package</p>
 </td><td class=code><div class=highlight><pre>
 
-    apt_get install iscsitarget-dkms iscsitarget
+</pre></div></td></tr><tr><td class=docs>
+<p>Only create if the file doesn't already exists</p>
+</td><td class=code><div class=highlight><pre>
+    apt_get install tgt
 
     <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/nova-volumes-backing-file</span><span class="k">}</span>
@@ -1745,7 +1748,8 @@ invoking stack.sh.</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">for </span>lv in <span class="sb">`</span>sudo lvs --noheadings -o lv_name <span class="nv">$VOLUME_GROUP</span><span class="sb">`</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure iscsitarget</p>
+<p>tgt in oneiric doesn't restart properly if tgtd isn't running
+do it in two steps</p>
 </td><td class=code><div class=highlight><pre>
             <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$VOLUME_NAME_PREFIX}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nv">tid</span><span class="o">=</span><span class="sb">`</span>egrep <span class="s2">&quot;^tid.+$lv&quot;</span> /proc/net/iet/volume | cut -f1 -d<span class="s1">&#39; &#39;</span> | tr <span class="s1">&#39;:&#39;</span> <span class="s1">&#39;=&#39;</span><span class="sb">`</span>
@@ -1761,8 +1765,8 @@ invoking stack.sh.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create nova.conf</p>
 </td><td class=code><div class=highlight><pre>
-    sudo sed <span class="s1">&#39;s/ISCSITARGET_ENABLE=false/ISCSITARGET_ENABLE=true/&#39;</span> -i /etc/default/iscsitarget
-    sudo /etc/init.d/iscsitarget restart
+    sudo stop tgt <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>sudo start tgt
 <span class="k">fi</span>
 
 <span class="k">function </span>add_nova_flag <span class="o">{</span>
@@ -1770,8 +1774,7 @@ invoking stack.sh.</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>You can define extra nova conf flags by defining the array EXTRA_FLAGS,
-For Example: EXTRA_FLAGS=(--foo --bar=2)</p>
+<p>oneiric no longer supports ietadm</p>
 </td><td class=code><div class=highlight><pre>
 rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
 add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
@@ -1795,6 +1798,11 @@ add_nova_flag <span class="s2">&quot;--fixed_range=$FIXED_RANGE&quot;</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-vol&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--volume_group=$VOLUME_GROUP&quot;</span>
     add_nova_flag <span class="s2">&quot;--volume_name_template=${VOLUME_NAME_PREFIX}%08x&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>You can define extra nova conf flags by defining the array EXTRA_FLAGS,
+For Example: EXTRA_FLAGS=(--foo --bar=2)</p>
+</td><td class=code><div class=highlight><pre>
+    add_nova_flag <span class="s2">&quot;--iscsi_helper=tgtadm&quot;</span>
 <span class="k">fi</span>
 add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
 add_nova_flag <span class="s2">&quot;--public_interface=$PUBLIC_INTERFACE&quot;</span>
