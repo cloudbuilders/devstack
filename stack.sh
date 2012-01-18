@@ -1262,11 +1262,12 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
 
 
     if [ "$SYSLOG" != "False" ]; then
+        cp $KEYSTONE_DIR/etc/logging.conf.sample $KEYSTONE_DIR/etc/logging.conf
         sed -i -e '/^handlers=devel$/s/=devel/=production/' \
-            $KEYSTONE_DIR/etc/logging.cnf
+            $KEYSTONE_DIR/etc/logging.conf
         sed -i -e "/^log_file/s/log_file/\#log_file/" \
             $KEYSTONE_DIR/etc/keystone.conf
-        KEYSTONE_LOG_CONFIG="--log-config $KEYSTONE_DIR/etc/logging.cnf"
+        KEYSTONE_LOG_CONFIG="--log-config $KEYSTONE_DIR/etc/logging.conf"
     fi
 fi
 
@@ -1286,8 +1287,10 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
     sudo sed -e "s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g" -i $KEYSTONE_DATA
     sudo sed -e "s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g" -i $KEYSTONE_DATA
     # initialize keystone with default users/endpoints
+    pushd $KEYSTONE_DIR
     $KEYSTONE_DIR/bin/keystone-manage db_sync
     ENABLED_SERVICES=$ENABLED_SERVICES BIN_DIR=$KEYSTONE_DIR/bin bash $KEYSTONE_DATA
+    popd
 fi
 
 
