@@ -575,7 +575,7 @@ prerequisites and initialize $DEST.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the lvm volume group to use/create for iscsi volumes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-vnc,horizon,mysql,rabbit,openstackx</span><span class="k">}</span>
+<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-novnc,n-xvnc,n-cauth,horizon,mysql,rabbit,openstackx</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova hypervisor configuration.  We default to libvirt whth  <strong>kvm</strong> but will
@@ -1114,7 +1114,7 @@ git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$GLANCE_REPO</span> <span class="nv">$GLANCE_DIR</span> <span class="nv">$GLANCE_BRANCH</span>
 <span class="k">fi</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-vnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-novnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>django powered web control panel for openstack</p>
 </td><td class=code><div class=highlight><pre>
@@ -1866,11 +1866,20 @@ add_nova_flag <span class="s2">&quot;--instance_name_template=${INSTANCE_NAME_PR
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--osapi_compute_extension=nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
     add_nova_flag <span class="s2">&quot;--osapi_compute_extension=extensions.admin.Admin&quot;</span>
 <span class="k">fi</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-vnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">VNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6080&quot;</span><span class="k">}</span>
-    add_nova_flag <span class="s2">&quot;--vncproxy_url=$VNCPROXY_URL&quot;</span>
-    add_nova_flag <span class="s2">&quot;--vncproxy_wwwroot=$NOVNC_DIR/&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-novnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">NOVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6080/vnc_auto.html&quot;</span><span class="k">}</span>
+    add_nova_flag <span class="s2">&quot;--novncproxy_base_url=$NOVNCPROXY_URL&quot;</span>
 <span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-xvnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">XVPVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">XVPVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6081/console&quot;</span><span class="k">}</span>
+    add_nova_flag <span class="s2">&quot;--xvpvncproxy_base_url=$XVPVNCPROXY_URL&quot;</span>
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=169.254.0.1</span><span class="k">}</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+<span class="k">fi</span>
+add_nova_flag <span class="s2">&quot;--vncserver_proxyclient_address=$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
 add_nova_flag <span class="s2">&quot;--api_paste_config=$NOVA_DIR/bin/nova-api-paste.ini&quot;</span>
 add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
 add_nova_flag <span class="s2">&quot;--ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
@@ -1899,8 +1908,7 @@ add_nova_flag <span class="s2">&quot;--force_dhcp_release&quot;</span>
 <span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="nova-database">
-<h3>Nova Database</h3>
+<p>Need to avoid crash due to new firewall support</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -1913,6 +1921,12 @@ add_nova_flag <span class="s2">&quot;--force_dhcp_release&quot;</span>
     add_nova_flag <span class="s2">&quot;--flat_interface=eth1&quot;</span>
     add_nova_flag <span class="s2">&quot;--flat_network_bridge=xapi1&quot;</span>
     add_nova_flag <span class="s2">&quot;--public_interface=eth3&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="nova-database">
+<h3>Nova Database</h3>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
+    add_nova_flag <span class="s2">&quot;--firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
 <span class="k">else</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
     <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -2025,7 +2039,7 @@ bash isn't running by the time we send the command, nothing happens</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>create a new named screen to run processes in</p>
 </td><td class=code><div class=highlight><pre>
-            sleep 1
+            sleep 1.5
             screen -S stack -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
@@ -2173,8 +2187,14 @@ screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA
 screen_it n-vol <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-volume&quot;</span>
 screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-network&quot;</span>
 screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-scheduler&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-vnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>screen_it n-vnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-wsproxy.py --flagfile $NOVA_DIR/bin/nova.conf --web . 6080&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-novnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>screen_it n-novnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-novncproxy --flagfile $NOVA_DIR/bin/nova.conf --web .&quot;</span>
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-xvnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvncproxy --flagfile $NOVA_DIR/bin/nova.conf&quot;</span>
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-cauth&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-consoleauth&quot;</span>
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;horizon&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/apache2/error.log&quot;</span>
