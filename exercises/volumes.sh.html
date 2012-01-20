@@ -357,13 +357,38 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="get-a-token-for-clients-that-don-t-support-service-catalog">
-<h1>Get a token for clients that don't support service catalog</h1>
+<p>Max time to wait while vm goes from build to active state</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 <span class="nb">source</span> ./openrc
 <span class="nb">popd</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Max time till the vm is bootable</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ACTIVE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">ACTIVE_TIMEOUT</span><span class="k">:-</span><span class="nv">30</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Max time to wait for proper association and dis-association.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">BOOT_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">BOOT_TIMEOUT</span><span class="k">:-</span><span class="nv">30</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Instance type to create</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ASSOCIATE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">ASSOCIATE_TIMEOUT</span><span class="k">:-</span><span class="nv">15</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Boot this image, use first AMi image if unset</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="k">:-</span><span class="nv">m1</span><span class="p">.tiny</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="get-a-token-for-clients-that-don-t-support-service-catalog">
+<h1>Get a token for clients that don't support service catalog</h1>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DEFAULT_IMAGE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_IMAGE_NAME</span><span class="k">:-</span><span class="nv">ami</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>manually create a token by querying keystone (sending JSON data).  Keystone
@@ -399,16 +424,16 @@ nova list
 nova image-list
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Let's grab the id of the first AMI image to launch</p>
+<p>Grab the id of the image to launch</p>
 </td><td class=code><div class=highlight><pre>
-glance -A <span class="nv">$TOKEN</span> index
+glance -f -A <span class="nv">$TOKEN</span> index
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="determinine-instance-type">
 <h2>determinine instance type</h2>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>glance -A <span class="nv">$TOKEN</span> index | egrep ami | head -1 | cut -d<span class="s2">&quot; &quot;</span> -f1<span class="sb">`</span>
+<span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>glance -f -A <span class="nv">$TOKEN</span> index | egrep <span class="nv">$DEFAULT_IMAGE_NAME</span> | head -1 | cut -d<span class="s2">&quot; &quot;</span> -f1<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>List of instance types:</p>
@@ -419,7 +444,6 @@ glance -A <span class="nv">$TOKEN</span> index
 </td><td class=code><div class=highlight><pre>
 nova flavor-list
 
-<span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="k">:-</span><span class="nv">m1</span><span class="p">.tiny</span><span class="k">}</span>
 <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | grep <span class="nv">$DEFAULT_INSTANCE_TYPE</span> | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
 <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -447,28 +471,13 @@ bypass security groups and have direct access to the server.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Max time to wait while vm goes from build to active state</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Max time till the vm is bootable</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">ACTIVE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">ACTIVE_TIMEOUT</span><span class="k">:-</span><span class="nv">30</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Max time to wait for proper association and dis-association.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">BOOT_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">BOOT_TIMEOUT</span><span class="k">:-</span><span class="nv">15</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>check that the status is active within ACTIVE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">ASSOCIATE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">ASSOCIATE_TIMEOUT</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>get the IP of the server</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$BOOT_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become active!&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
@@ -477,7 +486,6 @@ bypass security groups and have direct access to the server.</p>
 <p>for single node deployments, we can ping private ips</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;private network&quot;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3<span class="sb">`</span>
-<span class="c">#VM_UUID=`nova list | grep $NAME | head -1 | cut -d&#39;|&#39; -f2 | sed &#39;s/ //g&#39;`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>sometimes the first ping fails (10 seconds isn't enough time for the VM's
