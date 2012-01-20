@@ -416,6 +416,12 @@ MYSQL_USER=hellaroot
 </pre>
 <p>We try to have sensible defaults, so you should be able to run <tt class="docutils literal">./stack.sh</tt>
 in most cases.</p>
+<p>We support HTTP and HTTPS proxy servers via the usual environment variables
+http_proxy and https_proxy.  They can be set in localrc if necessary or
+on the command line:</p>
+<pre class="literal-block">
+http_proxy=http://proxy.example.com:3128/ ./stack.sh
+</pre>
 <p>We source our settings from <tt class="docutils literal">stackrc</tt>.  This file is distributed with devstack
 and contains locations for what repositories to use.  If you want to use other
 repositories and branches, you can add your own settings with another file called
@@ -443,8 +449,9 @@ of letting devstack generate random ones for you.</p>
     <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return</span>
 <span class="k">    </span><span class="nb">local </span><span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
     <span class="o">[</span> <span class="s2">&quot;$(id -u)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;env&quot;</span>
-    <span class="nv">$sudo</span> <span class="nv">DEBIAN_FRONTEND</span><span class="o">=</span>noninteractive apt-get <span class="se">\</span>
-        --option <span class="s2">&quot;Dpkg::Options::=--force-confold&quot;</span> --assume-yes <span class="s2">&quot;$@&quot;</span>
+    <span class="nv">$sudo</span> <span class="nv">DEBIAN_FRONTEND</span><span class="o">=</span>noninteractive <span class="se">\</span>
+        <span class="nv">http_proxy</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="nv">https_proxy</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
+        apt-get --option <span class="s2">&quot;Dpkg::Options::=--force-confold&quot;</span> --assume-yes <span class="s2">&quot;$@&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -923,7 +930,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 389)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 395)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -994,7 +1001,10 @@ distros (case insensitive).</li>
 
 <span class="k">function </span>pip_install <span class="o">{</span>
     <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return</span>
-<span class="k">    </span>sudo <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span>/var/cache/pip pip install --use-mirrors <span class="nv">$@</span>
+<span class="k">    </span>sudo <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span>/var/cache/pip <span class="se">\</span>
+        <span class="nv">HTTP_PROXY</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="se">\</span>
+        <span class="nv">HTTPS_PROXY</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
+        pip install --use-mirrors <span class="nv">$@</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1666,7 +1676,7 @@ integrated in swift.</p>
 <p>We do the install of the proxy-server and swift configuration
 replacing a few directives to match our configuration.</p>
 </td><td class=code><div class=highlight><pre>
-       sudo curl -s -o/usr/local/bin/swift <span class="se">\</span>
+       sudo <span class="nv">https_proxy</span><span class="o">=</span><span class="nv">$https_proxy</span> curl -s -o/usr/local/bin/swift <span class="se">\</span>
            <span class="s1">&#39;https://review.openstack.org/gitweb?p=openstack/swift.git;a=blob_plain;f=bin/swift;hb=48bfda6e2fdf3886c98bd15649887d54b9a2574e&#39;</span>
    <span class="k">else</span>
 <span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span>tempauth
@@ -2044,7 +2054,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for g-api ($GLANCE_HOSTPORT) to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget -q -O- http://$GLANCE_HOSTPORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://$GLANCE_HOSTPORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;g-api did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
@@ -2056,7 +2066,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget -q -O- $KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- $KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
@@ -2068,7 +2078,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-api&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for nova-api to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget -q -O- http://127.0.0.1:8774; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://127.0.0.1:8774; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;nova-api did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
