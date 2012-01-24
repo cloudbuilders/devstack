@@ -491,12 +491,43 @@ git_clone <span class="nv">$CITEST_REPO</span> <span class="nv">$CITEST_DIR</spa
 <span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create storm.conf</p>
+<p>Set up downloaded images
+Defaults to use first image</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
 <span class="nb">set</span> <span class="sb">`</span><span class="nb">echo</span> <span class="nv">$GLANCE_HOSTPORT</span> | tr <span class="s1">&#39;:&#39;</span> <span class="s1">&#39; &#39;</span><span class="sb">`</span>
 <span class="nv">GLANCE_HOST</span><span class="o">=</span><span class="nv">$1</span>
 <span class="nv">GLANCE_PORT</span><span class="o">=</span><span class="nv">$2</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Save the first image directory that contains a disk image link</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nv">IMAGE_DIR</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="k">for </span>imagedir in <span class="nv">$TOP_DIR</span>/files/images/*; <span class="k">do</span>
+<span class="k">    </span><span class="nv">KERNEL</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">RAMDISK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">IMAGE_RAMDISK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">KERNEL</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$imagedir/&quot;</span>*-vmlinuz*; <span class="k">do</span>
+        <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
+    <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ln -sf <span class="nv">$KERNEL</span> <span class="nv">$imagedir</span>/kernel
+    <span class="nv">RAMDISK</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$imagedir/&quot;</span>*-initrd*; <span class="k">do</span>
+        <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
+    <span class="o">[</span> -n <span class="s2">&quot;$RAMDISK&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ln -sf <span class="nv">$RAMDISK</span> <span class="nv">$imagedir</span>/ramdisk <span class="o">&amp;&amp;</span> <span class="se">\</span>
+                         <span class="nv">IMAGE_RAMDISK</span><span class="o">=</span><span class="s2">&quot;ari_location = $imagedir/ramdisk&quot;</span>
+    <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$imagedir/&quot;</span>*.img; <span class="k">do</span>
+        <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$IMAGE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>ln -sf <span class="nv">$IMAGE</span> <span class="nv">$imagedir</span>/disk
+</pre></div></td></tr><tr><td class=docs>
+<p>Create storm.conf</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$IMAGE_DIR&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">IMAGE_DIR</span><span class="o">=</span><span class="nv">$imagedir</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+<span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create config.ini</p>
@@ -532,9 +563,9 @@ mv <span class="nv">$CONFIG_CONF_TMP</span> <span class="nv">$CONFIG_CONF</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>cat &gt;<span class="nv">$CONFIG_INI_TMP</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">[environment]</span>
-<span class="s">aki_location = $DEST/devstack/files/images/aki-tty/image</span>
-<span class="s">ari_location = $DEST/devstack/files/images/ari-tty/image</span>
-<span class="s">ami_location = $DEST/devstack/files/images/ami-tty/image</span>
+<span class="s">aki_location = $TOP_DIR/files/images/aki-tty/image</span>
+<span class="s">ari_location = $TOP_DIR/files/images/ari-tty/image</span>
+<span class="s">ami_location = $TOP_DIR/files/images/ami-tty/image</span>
 <span class="s">image_ref = 3</span>
 <span class="s">image_ref_alt = 3</span>
 <span class="s">flavor_ref = 1</span>
@@ -551,9 +582,9 @@ mv <span class="nv">$CONFIG_CONF_TMP</span> <span class="nv">$CONFIG_CONF</span>
 <span class="k">else</span>
 <span class="k">    </span>cat &gt;<span class="nv">$CONFIG_INI_TMP</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">[environment]</span>
-<span class="s">aki_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64-vmlinuz-virtual</span>
-<span class="s">#ari_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64-loader</span>
-<span class="s">ami_location = $DEST/openstack-integration-tests/include/sample_vm/$DIST_NAME-server-cloudimg-amd64.img</span>
+<span class="s">aki_location = $IMAGE_DIR/kernel</span>
+<span class="s">ami_location = $IMAGE_DIR/disk</span>
+<span class="s">$IMAGE_RAMDISK</span>
 <span class="s">image_ref = 2</span>
 <span class="s">image_ref_alt = 2</span>
 <span class="s">flavor_ref = 1</span>
@@ -563,8 +594,8 @@ mv <span class="nv">$CONFIG_CONF_TMP</span> <span class="nv">$CONFIG_CONF</span>
 <span class="s">host = $GLANCE_HOST</span>
 <span class="s">apiver = v1</span>
 <span class="s">port = $GLANCE_PORT</span>
-<span class="s">image_id = 1</span>
-<span class="s">image_id_alt = 1</span>
+<span class="s">image_id = 2</span>
+<span class="s">image_id_alt = 2</span>
 <span class="s">tenant_id = 1</span>
 <span class="s">EOF</span>
 <span class="k">fi</span>
