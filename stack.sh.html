@@ -1427,7 +1427,7 @@ the configuration required for nova to validate keystone tokens.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Then we add our own service token to the configuration</p>
 </td><td class=code><div class=highlight><pre>
-    cat <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$FILES</span>/nova-api-paste.ini &gt; <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
+    cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Finally, we change the pipelines in nova to use keystone</p>
@@ -1440,9 +1440,8 @@ the configuration required for nova to validate keystone tokens.</p>
     <span class="k">function </span>replace_pipeline<span class="o">()</span> <span class="o">{</span>
         sed <span class="s2">&quot;/\[pipeline:$1\]/,/\[/s/^pipeline = .*/pipeline = $2/&quot;</span> -i <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
     <span class="o">}</span>
-    replace_pipeline <span class="s2">&quot;ec2cloud&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext cloudrequest authorizer ec2executor&quot;</span>
+    replace_pipeline <span class="s2">&quot;ec2cloud&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext cloudrequest authorizer validator ec2executor&quot;</span>
     replace_pipeline <span class="s2">&quot;ec2admin&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext adminrequest authorizer ec2executor&quot;</span>
-    replace_pipeline <span class="s2">&quot;openstack_api_v2&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext ratelimit osapi_app_v2&quot;</span>
     replace_pipeline <span class="s2">&quot;openstack_compute_api_v2&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext ratelimit osapi_compute_app_v2&quot;</span>
     replace_pipeline <span class="s2">&quot;openstack_volume_api_v1&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext ratelimit osapi_volume_app_v1&quot;</span>
 <span class="k">fi</span>
