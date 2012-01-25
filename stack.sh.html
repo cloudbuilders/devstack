@@ -850,8 +850,8 @@ read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="log-files">
-<h2>Log files</h2>
+<div class="section" id="horizon">
+<h2>Horizon</h2>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">KEYSTONE_AUTH_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">KEYSTONE_AUTH_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_PORT</span><span class="k">:-</span><span class="nv">35357</span><span class="k">}</span>
@@ -859,6 +859,19 @@ read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
 <span class="nv">KEYSTONE_SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">KEYSTONE_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
 <span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">http</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Allow overriding the default Apache user and group, default both to
+current user.</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="log-files">
+<h2>Log files</h2>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">APACHE_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_USER</span><span class="k">:-</span><span class="nv">$USER</span><span class="k">}</span>
+<span class="nv">APACHE_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_GROUP</span><span class="k">:-</span><span class="nv">$APACHE_USER</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up logging for stack.sh
@@ -930,7 +943,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 395)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 405)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -1273,7 +1286,7 @@ of having to specify the username/password each time.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="horizon">
+<div class="section" id="id1">
 <h2>Horizon</h2>
 </td><td class=code><div class=highlight><pre>
     sudo sed -i <span class="s1">&#39;s/127.0.0.1/0.0.0.0/g&#39;</span> /etc/mysql/my.cnf
@@ -1335,8 +1348,11 @@ users).  The user system is external (keystone).</p>
 
     <span class="c">## Configure apache&#39;s 000-default to run horizon</span>
     sudo cp <span class="nv">$FILES</span>/000-default.template /etc/apache2/sites-enabled/000-default
-    sudo sed -e <span class="s2">&quot;s,%USER%,$USER,g&quot;</span> -i /etc/apache2/sites-enabled/000-default
-    sudo sed -e <span class="s2">&quot;s,%HORIZON_DIR%,$HORIZON_DIR,g&quot;</span> -i /etc/apache2/sites-enabled/000-default
+    sudo sed -e <span class="s2">&quot;</span>
+<span class="s2">        s,%USER%,$APACHE_USER,g;</span>
+<span class="s2">        s,%GROUP%,$APACHE_GROUP,g;</span>
+<span class="s2">        s,%HORIZON_DIR%,$HORIZON_DIR,g;</span>
+<span class="s2">    &quot;</span> -i /etc/apache2/sites-enabled/000-default
     sudo service apache2 restart
 <span class="k">fi</span>
 
@@ -1953,7 +1969,7 @@ only once for an entire cluster.</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
-<div class="section" id="id1">
+<div class="section" id="id2">
 <h2>Keystone</h2>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
