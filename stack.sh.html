@@ -576,7 +576,7 @@ prerequisites and initialize $DEST.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the lvm volume group to use/create for iscsi volumes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-cpu,n-net,n-sch,n-novnc,n-xvnc,n-cauth,horizon,mysql,rabbit,openstackx</span><span class="k">}</span>
+<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-crt,n-obj,n-cpu,n-net,n-sch,n-novnc,n-xvnc,n-cauth,horizon,mysql,rabbit,openstackx</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova hypervisor configuration.  We default to libvirt whth  <strong>kvm</strong> but will
@@ -1848,6 +1848,9 @@ add_nova_flag <span class="s2">&quot;--allow_admin_api&quot;</span>
 add_nova_flag <span class="s2">&quot;--scheduler_driver=$SCHEDULER&quot;</span>
 add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf&quot;</span>
 add_nova_flag <span class="s2">&quot;--fixed_range=$FIXED_RANGE&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-obj&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>add_nova_flag <span class="s2">&quot;--s3_host=$SERVICE_HOST&quot;</span>
+<span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;quantum&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--network_manager=nova.network.quantum.manager.QuantumManager&quot;</span>
     add_nova_flag <span class="s2">&quot;--quantum_connection_host=$Q_HOST&quot;</span>
@@ -2200,6 +2203,8 @@ Use 'sg' to execute nova-compute as a member of the libvirtd group.</p>
 <h1>Install Images</h1>
 </td><td class=code><div class=highlight><pre>
 screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_DIR/bin/nova-compute&quot;</span>
+screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-cert&quot;</span>
+screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-objectstore&quot;</span>
 screen_it n-vol <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-volume&quot;</span>
 screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-network&quot;</span>
 screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-scheduler&quot;</span>
