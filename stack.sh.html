@@ -558,6 +558,7 @@ prerequisites and initialize $DEST.</p>
 <span class="nv">SWIFT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift
 <span class="nv">SWIFT_KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift-keystone2
 <span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
+<span class="nv">QUANTUM_CLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-quantumclient
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Default Quantum Port</p>
@@ -1154,6 +1155,7 @@ that is <em>deprecated</em>.  The code is being moved into python-novaclient &am
 <h1>Initialization</h1>
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$QUANTUM_REPO</span> <span class="nv">$QUANTUM_DIR</span> <span class="nv">$QUANTUM_BRANCH</span>
+    git_clone <span class="nv">$QUANTUM_CLIENT_REPO</span> <span class="nv">$QUANTUM_CLIENT_DIR</span> <span class="nv">$QUANTUM_CLIENT_BRANCH</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1305,18 +1307,15 @@ of having to specify the username/password each time.</p>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;horizon&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Horizon currently imports quantum even if you aren't using it.  Instead
-of installing quantum we can create a simple module that will pass the
-initial imports</p>
+<p>Link to quantum client directory.</p>
 </td><td class=code><div class=highlight><pre>
     apt_get install apache2 libapache2-mod-wsgi
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">local_settings.py</tt> is used to override horizon default settings.</p>
 </td><td class=code><div class=highlight><pre>
-    mkdir -p  <span class="nv">$HORIZON_DIR</span>/openstack-dashboard/quantum <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>touch <span class="nv">$HORIZON_DIR</span>/openstack-dashboard/quantum/__init__.py
-    touch <span class="nv">$HORIZON_DIR</span>/openstack-dashboard/quantum/client.py
+    rm -fr <span class="k">${</span><span class="nv">HORIZON_DIR</span><span class="k">}</span>/openstack-dashboard/quantum
+    ln -s <span class="k">${</span><span class="nv">QUANTUM_CLIENT_DIR</span><span class="k">}</span>/quantum <span class="k">${</span><span class="nv">HORIZON_DIR</span><span class="k">}</span>/openstack-dashboard/quantum
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2140,7 +2139,7 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </td><td class=code><div class=highlight><pre>
         sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
     <span class="k">fi</span>
-<span class="k">    </span>screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_DIR/etc/quantum.conf&quot;</span>
+<span class="k">   </span>screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$QUANTUM_CLIENT_DIR:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_DIR/etc/quantum.conf&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
