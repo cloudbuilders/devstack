@@ -553,7 +553,6 @@ prerequisites and initialize $DEST.</p>
 <span class="nv">KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/keystone
 <span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
 <span class="nv">KEYSTONECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-keystoneclient
-<span class="nv">OPENSTACKX_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/openstackx
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
 <span class="nv">SWIFT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift
 <span class="nv">SWIFT_KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift-keystone2
@@ -576,7 +575,7 @@ prerequisites and initialize $DEST.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the lvm volume group to use/create for iscsi volumes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-crt,n-obj,n-cpu,n-net,n-sch,n-novnc,n-xvnc,n-cauth,horizon,mysql,rabbit,openstackx</span><span class="k">}</span>
+<span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">:-</span><span class="nv">g</span><span class="p">-api,g-reg,key,n-api,n-crt,n-obj,n-cpu,n-net,n-sch,n-novnc,n-xvnc,n-cauth,horizon,mysql,rabbit</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova hypervisor configuration.  We default to libvirt whth  <strong>kvm</strong> but will
@@ -1136,17 +1135,10 @@ git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;horizon&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>openstackx is a collection of extensions to openstack.compute &amp; nova
-that is <em>deprecated</em>.  The code is being moved into python-novaclient &amp; nova.</p>
+<p>quantum</p>
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$HORIZON_REPO</span> <span class="nv">$HORIZON_DIR</span> <span class="nv">$HORIZON_BRANCH</span> <span class="nv">$HORIZON_TAG</span>
     git_clone <span class="nv">$KEYSTONECLIENT_REPO</span> <span class="nv">$KEYSTONECLIENT_DIR</span> <span class="nv">$KEYSTONECLIENT_BRANCH</span>
-<span class="k">fi</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;openstackx&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>quantum</p>
-</td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$OPENSTACKX_REPO</span> <span class="nv">$OPENSTACKX_DIR</span> <span class="nv">$OPENSTACKX_BRANCH</span>
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1184,9 +1176,6 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="k">fi</span>
 <span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$NOVA_DIR</span>; sudo python setup.py develop
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;openstackx&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$OPENSTACKX_DIR</span>; sudo python setup.py develop
-<span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;horizon&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$KEYSTONECLIENT_DIR</span>; sudo python setup.py develop
     <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/horizon; sudo python setup.py develop
@@ -1873,16 +1862,13 @@ For multi-host, this should be the management ip of the compute host.</p>
 </td><td class=code><div class=highlight><pre>
     add_nova_flag <span class="s2">&quot;--iscsi_helper=tgtadm&quot;</span>
 <span class="k">fi</span>
+add_nova_flag <span class="s2">&quot;--osapi_compute_extension=nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
 add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
 add_nova_flag <span class="s2">&quot;--public_interface=$PUBLIC_INTERFACE&quot;</span>
 add_nova_flag <span class="s2">&quot;--vlan_interface=$VLAN_INTERFACE&quot;</span>
 add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
 add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
 add_nova_flag <span class="s2">&quot;--instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;openstackx&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--osapi_compute_extension=nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
-    add_nova_flag <span class="s2">&quot;--osapi_compute_extension=extensions.admin.Admin&quot;</span>
-<span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-novnc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NOVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6080/vnc_auto.html&quot;</span><span class="k">}</span>
     add_nova_flag <span class="s2">&quot;--novncproxy_base_url=$NOVNCPROXY_URL&quot;</span>
