@@ -497,7 +497,7 @@ function get_packages() {
 
     for service in ${ENABLED_SERVICES//,/ }; do
         # Allow individual services to specify dependencies
-        if [[ -e $FILES/apts/${service} ]]; then
+        if [[ -e $FILES/$1/${service} ]]; then
             file_to_parse="${file_to_parse} $service"
         fi
         if [[ $service == n-* ]]; then
@@ -516,7 +516,7 @@ function get_packages() {
     done
 
     for file in ${file_to_parse}; do
-        local fname=${FILES}/apts/${file}
+        local fname=${FILES}/$1/${file}
         local OIFS line package distros distro
         [[ -e $fname ]] || { echo "missing: $fname"; exit 1 ;}
 
@@ -552,10 +552,10 @@ function pip_install {
 
 # install apt requirements
 apt_get update
-apt_get install $(get_packages)
+apt_get install $(get_packages 'apts')
 
 # install python requirements
-pip_install `cat $FILES/pips/* | uniq`
+pip_install $(get_packages 'pips' | uniq )
 
 # git clone only if directory doesn't exist already.  Since ``DEST`` might not
 # be owned by the installation user, we create the directory and change the
