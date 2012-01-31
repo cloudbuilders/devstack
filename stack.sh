@@ -580,6 +580,7 @@ function git_clone {
     GIT_DEST=$2
     GIT_BRANCH=$3
 
+    set +e
     if echo $GIT_BRANCH | egrep -q "^refs"; then
         # If our branch name is a gerrit style refs/changes/...
         if [ ! -d $GIT_DEST ]; then
@@ -610,6 +611,7 @@ function git_clone {
             git checkout -b $GIT_BRANCH
         fi
     fi
+    set -e
 }
 
 # compute service
