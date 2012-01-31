@@ -86,6 +86,21 @@ source ./stackrc
 # Destination path for installation ``DEST``
 DEST=${DEST:-/opt/stack}
 
+# Normalize config values to True or False
+# VAR=`trueorfalse default-value test-value`
+function trueorfalse() {
+    local default=$1
+    local testval=$2
+
+    [[ -z "$testval" ]] && { echo "$default"; return; }
+    [[ "0 no false False FALSE" =~ "$testval" ]] && { echo "False"; return; }
+    [[ "1 yes true True TRUE" =~ "$testval" ]] && { echo "True"; return; }
+    echo "$default"
+}
+
+# Whether or not to clean out data from previous runs
+CLEAN=`trueorfalse True $CLEAN`
+
 # apt-get wrapper to just get arguments set correctly
 function apt_get() {
     [[ "$OFFLINE" = "True" ]] && return
@@ -154,18 +169,6 @@ else
     sudo chown root:root $TEMPFILE
     sudo mv $TEMPFILE /etc/sudoers.d/stack_sh_nova
 fi
-
-# Normalize config values to True or False
-# VAR=`trueorfalse default-value test-value`
-function trueorfalse() {
-    local default=$1
-    local testval=$2
-
-    [[ -z "$testval" ]] && { echo "$default"; return; }
-    [[ "0 no false False FALSE" =~ "$testval" ]] && { echo "False"; return; }
-    [[ "1 yes true True TRUE" =~ "$testval" ]] && { echo "True"; return; }
-    echo "$default"
-}
 
 # Set True to configure stack.sh to run cleanly without Internet access.
 # stack.sh must have been previously run with Internet access to install
@@ -409,6 +412,7 @@ KEYSTONE_AUTH_PROTOCOL=${KEYSTONE_AUTH_PROTOCOL:-http}
 KEYSTONE_SERVICE_HOST=${KEYSTONE_SERVICE_HOST:-$SERVICE_HOST}
 KEYSTONE_SERVICE_PORT=${KEYSTONE_SERVICE_PORT:-5000}
 KEYSTONE_SERVICE_PROTOCOL=${KEYSTONE_SERVICE_PROTOCOL:-http}
+KEYSTONE_CONF=$KEYSTONE_DIR/etc/keystone.conf
 
 # Horizon
 # -------
@@ -731,7 +735,7 @@ fi
 
 # Setup the django horizon application to serve via apache/wsgi
 
-if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "horizon" && "$CLEAN" = "True" ]]; then
 
     # Install apache2, which is NOPRIME'd
     apt_get install apache2 libapache2-mod-wsgi
@@ -774,8 +778,9 @@ fi
 # Glance
 # ------
 
-if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "g-reg" && "$CLEAN" = "True" ]]; then
     GLANCE_IMAGE_DIR=$DEST/glance/images
+
     # Delete existing images
     rm -rf $GLANCE_IMAGE_DIR
 
@@ -927,18 +932,20 @@ if [[ "$ENABLED_SERVICES" =~ "n-cpu" ]]; then
         fi
     fi
 
-    # Clean iptables from previous runs
-    clean_iptables
+    if [ "$CLEAN" = "True"]; then
+        # Clean iptables from previous runs
+        clean_iptables
 
-    # Destroy old instances
-    instances=`virsh list --all | grep $INSTANCE_NAME_PREFIX | sed "s/.*\($INSTANCE_NAME_PREFIX[0-9a-fA-F]*\).*/\1/g"`
-    if [ ! "$instances" = "" ]; then
-        echo $instances | xargs -n1 virsh destroy || true
-        echo $instances | xargs -n1 virsh undefine || true
+        # Destroy old instances
+        instances=`virsh list --all | grep $INSTANCE_NAME_PREFIX | sed "s/.*\($INSTANCE_NAME_PREFIX[0-9a-fA-F]*\).*/\1/g"`
+        if [ ! "$instances" = "" ]; then
+            echo $instances | xargs -n1 virsh destroy || true
+            echo $instances | xargs -n1 virsh undefine || true
+        fi
+
+        # Clean out the instances directory.
+        sudo rm -rf $NOVA_DIR/instances/*
     fi
-
-    # Clean out the instances directory.
-    sudo rm -rf $NOVA_DIR/instances/*
 fi
 
 if [[ "$ENABLED_SERVICES" =~ "n-net" ]]; then
@@ -1247,7 +1254,7 @@ fi
 # All nova components talk to a central database.  We will need to do this step
 # only once for an entire cluster.
 
-if [[ "$ENABLED_SERVICES" =~ "mysql" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "mysql" && "$CLEAN" = "True" ]]; then
     # (re)create nova database
     mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'DROP DATABASE IF EXISTS nova;'
     mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'CREATE DATABASE nova;'
@@ -1260,13 +1267,12 @@ fi
 # Keystone
 # --------
 
-if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "key" && "$CLEAN" = "True" ]]; then
     # (re)create keystone database
     mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'DROP DATABASE IF EXISTS keystone;'
     mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'CREATE DATABASE keystone;'
 
     # Configure keystone.conf
-    KEYSTONE_CONF=$KEYSTONE_DIR/etc/keystone.conf
     cp $FILES/keystone.conf $KEYSTONE_CONF
     sudo sed -e "s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g" -i $KEYSTONE_CONF
     sudo sed -e "s,%DEST%,$DEST,g" -i $KEYSTONE_CONF
@@ -1376,8 +1382,10 @@ if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
         apt_get install openvswitch-switch openvswitch-datapath-dkms
         # Create database for the plugin/agent
         if [[ "$ENABLED_SERVICES" =~ "mysql" ]]; then
-            mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'DROP DATABASE IF EXISTS ovs_quantum;'
-            mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'CREATE DATABASE IF NOT EXISTS ovs_quantum;'
+            if "$CLEAN" =  "True"; then
+                mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'DROP DATABASE IF EXISTS ovs_quantum;'
+                mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'CREATE DATABASE IF NOT EXISTS ovs_quantum;'
+            fi
         else
             echo "mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin."
             exit 1
@@ -1408,7 +1416,7 @@ fi
 
 # If we're using Quantum (i.e. q-svc is enabled), network creation has to
 # happen after we've started the Quantum service.
-if [[ "$ENABLED_SERVICES" =~ "mysql" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "mysql" && "$CLEAN" = "True" ]]; then
     # create a small network
     $NOVA_DIR/bin/nova-manage network create private $FIXED_RANGE 1 $FIXED_NETWORK_SIZE
 
@@ -1463,7 +1471,7 @@ fi
 #  * **natty**: http://uec-images.ubuntu.com/natty/current/natty-server-cloudimg-amd64.tar.gz
 #  * **oneiric**: http://uec-images.ubuntu.com/oneiric/current/oneiric-server-cloudimg-amd64.tar.gz
 
-if [[ "$ENABLED_SERVICES" =~ "g-reg" ]]; then
+if [[ "$ENABLED_SERVICES" =~ "g-reg" && "$CLEAN" = "True" ]]; then
     # Create a directory for the downloaded image tarballs.
     mkdir -p $FILES/images
 
