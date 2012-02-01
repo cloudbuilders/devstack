@@ -583,6 +583,13 @@ function git_clone {
     fi
 }
 
+# Cherry-pick a commit
+function cherry_pick {
+    git_dir=$1
+    commit_id=$2
+    cd $git_dir && git cherry-pick $commit_id
+}
+
 # compute service
 git_clone $NOVA_REPO $NOVA_DIR $NOVA_BRANCH
 # python client library to nova that horizon (and others) use
@@ -614,6 +621,8 @@ fi
 if [[ "$ENABLED_SERVICES" =~ "horizon" ]]; then
     # django powered web control panel for openstack
     git_clone $HORIZON_REPO $HORIZON_DIR $HORIZON_BRANCH $HORIZON_TAG
+    # This commit removes the openstackx dep
+    cherry_pick $HORIZON_DIR "c0a3d85d3b0532de08799b02b9e7cf797804fb6e"
     git_clone $KEYSTONECLIENT_REPO $KEYSTONECLIENT_DIR $KEYSTONECLIENT_BRANCH
 fi
 if [[ "$ENABLED_SERVICES" =~ "q-svc" ]]; then
@@ -1287,7 +1296,8 @@ if [[ "$ENABLED_SERVICES" =~ "key" ]]; then
     " -i $KEYSTONE_DATA
 
     # Prepare up the database
-    $KEYSTONE_DIR/bin/keystone-manage sync_database
+    # (anthony) commented this out for e3 release, which uses stable/diablo
+    # $KEYSTONE_DIR/bin/keystone-manage sync_database
 
     # initialize keystone with default users/endpoints
     ENABLED_SERVICES=$ENABLED_SERVICES BIN_DIR=$KEYSTONE_DIR/bin bash $KEYSTONE_DATA
