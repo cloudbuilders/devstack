@@ -558,6 +558,8 @@ prerequisites and initialize $DEST.</p>
 <span class="nv">SWIFT_KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift-keystone2
 <span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
 <span class="nv">QUANTUM_CLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-quantumclient
+<span class="nv">MELANGE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/melange
+<span class="nv">MELANGECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-melangeclient
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Default Quantum Port</p>
@@ -568,9 +570,22 @@ prerequisites and initialize $DEST.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_PORT</span><span class="k">:-</span><span class="nv">9696</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Specify which services to launch.  These generally correspond to screen tabs</p>
+<p>Default Melange Port</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Default Melange Host</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">M_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">M_PORT</span><span class="k">:-</span><span class="nv">9898</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Melange MAC Address Range</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">M_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">M_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Specify which services to launch.  These generally correspond to screen tabs</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">M_MAC_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">M_MAC_RANGE</span><span class="k">:-</span><span class="nv">404040</span><span class="p">/24</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the lvm volume group to use/create for iscsi volumes</p>
@@ -736,6 +751,14 @@ ENABLED_SERVICES.</p>
 <span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
 
 <span class="c">## FIXME(ja): should/can we check that FLAT_INTERFACE is sane?</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Using Melange IPAM:</p>
+<p>Make sure that quantum and melange are enabled in ENABLED_SERVICES.
+If they are then the melange IPAM lib will be set in the QuantumManager.
+Adding m-svc to ENABLED_SERVICES will start the melange service on this
+host.</p>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -943,7 +966,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 405)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 426)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -1142,12 +1165,23 @@ git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>melange</p>
+</td><td class=code><div class=highlight><pre>
+    git_clone <span class="nv">$QUANTUM_REPO</span> <span class="nv">$QUANTUM_DIR</span> <span class="nv">$QUANTUM_BRANCH</span>
+    git_clone <span class="nv">$QUANTUM_CLIENT_REPO</span> <span class="nv">$QUANTUM_CLIENT_DIR</span> <span class="nv">$QUANTUM_CLIENT_BRANCH</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;m-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="initialization">
 <h1>Initialization</h1>
 </td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$QUANTUM_REPO</span> <span class="nv">$QUANTUM_DIR</span> <span class="nv">$QUANTUM_BRANCH</span>
-    git_clone <span class="nv">$QUANTUM_CLIENT_REPO</span> <span class="nv">$QUANTUM_CLIENT_DIR</span> <span class="nv">$QUANTUM_CLIENT_BRANCH</span>
+    git_clone <span class="nv">$MELANGE_REPO</span> <span class="nv">$MELANGE_DIR</span> <span class="nv">$MELANGE_BRANCH</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;melange&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>git_clone <span class="nv">$MELANGECLIENT_REPO</span> <span class="nv">$MELANGECLIENT_DIR</span> <span class="nv">$MELANGECLIENT_BRANCH</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1183,6 +1217,12 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$QUANTUM_DIR</span>; sudo python setup.py develop
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;m-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">cd</span> <span class="nv">$MELANGE_DIR</span>; sudo python setup.py develop
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;melange&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">cd</span> <span class="nv">$MELANGECLIENT_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1848,7 +1888,14 @@ add_nova_flag <span class="s2">&quot;--fixed_range=$FIXED_RANGE&quot;</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--network_manager=nova.network.quantum.manager.QuantumManager&quot;</span>
     add_nova_flag <span class="s2">&quot;--quantum_connection_host=$Q_HOST&quot;</span>
     add_nova_flag <span class="s2">&quot;--quantum_connection_port=$Q_PORT&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;melange&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>add_nova_flag <span class="s2">&quot;--quantum_ipam_lib=nova.network.quantum.melange_ipam_lib&quot;</span>
+        add_nova_flag <span class="s2">&quot;--use_melange_mac_generation&quot;</span>
+        add_nova_flag <span class="s2">&quot;--melange_host=$M_HOST&quot;</span>
+        add_nova_flag <span class="s2">&quot;--melange_port=$M_PORT&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>add_nova_flag <span class="s2">&quot;--libvirt_vif_type=ethernet&quot;</span>
         add_nova_flag <span class="s2">&quot;--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
         add_nova_flag <span class="s2">&quot;--linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver&quot;</span>
@@ -2163,14 +2210,38 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
         sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
-happen after we've started the Quantum service.</p>
+<p>Melange service</p>
 </td><td class=code><div class=highlight><pre>
        <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini
        sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
        screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_OVS_CONFIG_FILE -v&quot;</span>
     <span class="k">fi</span>
 
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
+happen after we've started the Quantum service.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;m-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;mysql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS melange;&#39;</span>
+        mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE melange;&#39;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nv">MELANGE_CONFIG_FILE</span><span class="o">=</span><span class="nv">$MELANGE_DIR</span>/etc/melange/melange.conf
+    cp <span class="nv">$MELANGE_CONFIG_FILE</span>.sample <span class="nv">$MELANGE_CONFIG_FILE</span>
+    sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/melange/g&quot;</span> <span class="nv">$MELANGE_CONFIG_FILE</span>
+    <span class="nb">cd</span> <span class="nv">$MELANGE_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">PYTHONPATH</span><span class="o">=</span>.:<span class="nv">$PYTHONPATH</span> python <span class="nv">$MELANGE_DIR</span>/bin/melange-manage --config-file<span class="o">=</span><span class="nv">$MELANGE_CONFIG_FILE</span> db_sync
+    screen_it m-svc <span class="s2">&quot;cd $MELANGE_DIR &amp;&amp; PYTHONPATH=.:$PYTHONPATH python $MELANGE_DIR/bin/melange-server --config-file=$MELANGE_CONFIG_FILE&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Waiting for melange to start...&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://127.0.0.1:9898; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;melange-server did not start&quot;</span>
+      <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span>melange mac_address_range create <span class="nv">cidr</span><span class="o">=</span><span class="nv">$M_MAC_RANGE</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2200,6 +2271,7 @@ Use 'sg' to execute nova-compute as a member of the libvirtd group.</p>
         <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
