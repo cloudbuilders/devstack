@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
+    <title>build_ramdisk.sh</title>
+    <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
+</head>
+<body>
+<div id=container>
+    <div id=background></div>
+    <table cellspacing=0 cellpadding=0>
+    <thead>
+      <tr>
+        <th class=docs><h1>build_ramdisk.sh</h1></th>
+        <th class=code></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr><td class='docs'><p>build_ramdisk.sh - Build RAM disk images</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="c">#!/bin/bash</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>exit on error to stop unexpected errors</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+
+<span class="k">if</span> <span class="o">[</span> ! <span class="s2">&quot;$#&quot;</span> -eq <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;$0 builds a gziped Ubuntu OpenStack install&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;usage: $0 dest&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Clean up any resources that may be in use</p>
+
+</td><td class=code><div class=highlight><pre>
+cleanup<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">set</span> +o errexit
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Mop up temporary files</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$MNTDIR&quot;</span> -a -d <span class="s2">&quot;$MNTDIR&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>umount <span class="nv">$MNTDIR</span>
+        rmdir <span class="nv">$MNTDIR</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> -n <span class="s2">&quot;$DEV_FILE_TMP&quot;</span> -a -e <span class="s2">&quot;$DEV_FILE_TMP &quot;</span><span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>rm -f <span class="nv">$DEV_FILE_TMP</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> -n <span class="s2">&quot;$IMG_FILE_TMP&quot;</span> -a -e <span class="s2">&quot;$IMG_FILE_TMP&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>rm -f <span class="nv">$IMG_FILE_TMP</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Release NBD devices</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$NBD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>qemu-nbd -d <span class="nv">$NBD</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Kill ourselves to signal any calling process</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
+<span class="o">}</span>
+
+<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up nbd</p>
+
+</td><td class=code><div class=highlight><pre>
+modprobe nbd <span class="nv">max_part</span><span class="o">=</span>63
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Echo commands</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o xtrace
+
+<span class="nv">IMG_FILE</span><span class="o">=</span><span class="nv">$1</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Keep track of the current directory</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Store cwd</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">CWD</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
+
+<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Source params</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> ./stackrc
+
+<span class="nv">CACHEDIR</span><span class="o">=</span><span class="k">${</span><span class="nv">CACHEDIR</span><span class="k">:-</span><span class="p">/opt/stack/cache</span><span class="k">}</span>
+
+<span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure the root password of the vm to be the same as <code>ADMIN_PASSWORD</code></p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ROOT_PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">:-</span><span class="nv">password</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Base image (natty by default)</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DIST_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">DIST_NAME</span><span class="k">:-</span><span class="nv">natty</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Param string to pass to stack.sh.  Like "EC2<em>DMZ</em>HOST=192.168.1.1 MYSQL_USER=nova"</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">STACKSH_PARAMS</span><span class="o">=</span><span class="k">${</span><span class="nv">STACKSH_PARAMS</span><span class="k">:-}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Option to use the version of devstack on which we are currently working</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">USE_CURRENT_DEVSTACK</span><span class="o">=</span><span class="k">${</span><span class="nv">USE_CURRENT_DEVSTACK</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>clean install</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span>-base.img <span class="o">]</span>; <span class="k">then</span>
+    <span class="nv">$TOOLS_DIR</span>/get_uec_image.sh <span class="nv">$DIST_NAME</span> <span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span>-base.img
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Finds the next available NBD device
+Exits script if error connecting or none free
+map_nbd image
+returns full nbd device path</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>map_nbd <span class="o">{</span>
+    <span class="k">for </span>i in <span class="sb">`</span>seq 0 15<span class="sb">`</span>; <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[</span> ! -e /sys/block/nbd<span class="nv">$i</span>/pid <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">NBD</span><span class="o">=</span>/dev/nbd<span class="nv">$i</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Connect to nbd and wait till it is ready</p>
+
+</td><td class=code><div class=highlight><pre>
+            qemu-nbd -c <span class="nv">$NBD</span> <span class="nv">$1</span>
+            <span class="k">if</span> ! timeout 60 sh -c <span class="s2">&quot;while ! [ -e ${NBD}p1 ]; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t connect $NBD&quot;</span>
+                <span class="nb">exit </span>1
+            <span class="k">fi</span>
+<span class="k">            </span><span class="nb">break</span>
+<span class="nb">        </span><span class="k">fi</span>
+<span class="k">    done</span>
+<span class="k">    if</span> <span class="o">[</span> -z <span class="s2">&quot;$NBD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;No free NBD slots&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="nv">$NBD</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>prime image with as many apt/pips as we can</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DEV_FILE</span><span class="o">=</span><span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span>-dev.img
+<span class="nv">DEV_FILE_TMP</span><span class="o">=</span><span class="sb">`</span>mktemp <span class="nv">$DEV_FILE</span>.XXXXXX<span class="sb">`</span>
+<span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$DEV_FILE</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>cp -p <span class="nv">$CACHEDIR</span>/<span class="nv">$DIST_NAME</span>-base.img <span class="nv">$DEV_FILE_TMP</span>
+
+    <span class="nv">NBD</span><span class="o">=</span><span class="sb">`</span>map_nbd <span class="nv">$DEV_FILE_TMP</span><span class="sb">`</span>
+    <span class="nv">MNTDIR</span><span class="o">=</span><span class="sb">`</span>mktemp -d --tmpdir mntXXXXXXXX<span class="sb">`</span>
+    mount -t ext4 <span class="k">${</span><span class="nv">NBD</span><span class="k">}</span>p1 <span class="nv">$MNTDIR</span>
+    cp -p /etc/resolv.conf <span class="nv">$MNTDIR</span>/etc/resolv.conf
+
+    chroot <span class="nv">$MNTDIR</span> apt-get install -y --download-only <span class="sb">`</span>cat files/apts/* | grep NOPRIME | cut -d<span class="se">\#</span> -f1<span class="sb">`</span>
+    chroot <span class="nv">$MNTDIR</span> apt-get install -y --force-yes <span class="sb">`</span>cat files/apts/* | grep -v NOPRIME | cut -d<span class="se">\#</span> -f1<span class="sb">`</span>
+    chroot <span class="nv">$MNTDIR</span> pip install <span class="sb">`</span>cat files/pips/*<span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create a stack user that is a member of the libvirtd group so that stack
+is able to interact with libvirt.</p>
+
+</td><td class=code><div class=highlight><pre>
+    chroot <span class="nv">$MNTDIR</span> groupadd libvirtd
+    chroot <span class="nv">$MNTDIR</span> useradd stack -s /bin/bash -d <span class="nv">$DEST</span> -G libvirtd
+    mkdir -p <span class="nv">$MNTDIR</span>/<span class="nv">$DEST</span>
+    chroot <span class="nv">$MNTDIR</span> chown stack <span class="nv">$DEST</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>a simple password - pass</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">echo </span>stack:pass | chroot <span class="nv">$MNTDIR</span> chpasswd
+    <span class="nb">echo </span>root:<span class="nv">$ROOT_PASSWORD</span> | chroot <span class="nv">$MNTDIR</span> chpasswd
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>and has sudo ability (in the future this should be limited to only what
+stack requires)</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">echo</span> <span class="s2">&quot;stack ALL=(ALL) NOPASSWD: ALL&quot;</span> &gt;&gt; <span class="nv">$MNTDIR</span>/etc/sudoers
+
+    umount <span class="nv">$MNTDIR</span>
+    rmdir <span class="nv">$MNTDIR</span>
+    qemu-nbd -d <span class="nv">$NBD</span>
+    <span class="nv">NBD</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    mv <span class="nv">$DEV_FILE_TMP</span> <span class="nv">$DEV_FILE</span>
+<span class="k">fi</span>
+rm -f <span class="nv">$DEV_FILE_TMP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>clone git repositories onto the system</h1>
+
+</td><td class=code><div class=highlight><pre>
+
+<span class="nv">IMG_FILE_TMP</span><span class="o">=</span><span class="sb">`</span>mktemp <span class="nv">$IMG_FILE</span>.XXXXXX<span class="sb">`</span>
+
+<span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$IMG_FILE</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">NBD</span><span class="o">=</span><span class="sb">`</span>map_nbd <span class="nv">$DEV_FILE</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Pre-create the image file
+FIXME(dt): This should really get the partition size to
+           pre-create the image file</p>
+
+</td><td class=code><div class=highlight><pre>
+    dd <span class="k">if</span><span class="o">=</span>/dev/zero <span class="nv">of</span><span class="o">=</span><span class="nv">$IMG_FILE_TMP</span> <span class="nv">bs</span><span class="o">=</span>1 <span class="nv">count</span><span class="o">=</span>1 <span class="nv">seek</span><span class="o">=</span><span class="k">$((</span><span class="m">2</span><span class="o">*</span><span class="m">1024</span><span class="o">*</span><span class="m">1024</span><span class="o">*</span><span class="m">1024</span><span class="k">))</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create filesystem image for RAM disk</p>
+
+</td><td class=code><div class=highlight><pre>
+    dd <span class="k">if</span><span class="o">=</span><span class="k">${</span><span class="nv">NBD</span><span class="k">}</span>p1 <span class="nv">of</span><span class="o">=</span><span class="nv">$IMG_FILE_TMP</span> <span class="nv">bs</span><span class="o">=</span>1M
+
+    qemu-nbd -d <span class="nv">$NBD</span>
+    <span class="nv">NBD</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    mv <span class="nv">$IMG_FILE_TMP</span> <span class="nv">$IMG_FILE</span>
+<span class="k">fi</span>
+rm -f <span class="nv">$IMG_FILE_TMP</span>
+
+<span class="nv">MNTDIR</span><span class="o">=</span><span class="sb">`</span>mktemp -d --tmpdir mntXXXXXXXX<span class="sb">`</span>
+mount -t ext4 -o loop <span class="nv">$IMG_FILE</span> <span class="nv">$MNTDIR</span>
+cp -p /etc/resolv.conf <span class="nv">$MNTDIR</span>/etc/resolv.conf
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We need to install a non-virtual kernel and modules to boot from</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -r <span class="s2">&quot;`ls $MNTDIR/boot/vmlinuz-*-generic | head -1`&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>chroot <span class="nv">$MNTDIR</span> apt-get install -y linux-generic
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>git clone only if directory doesn't exist already.  Since <code>DEST</code> might not
+be owned by the installation user, we create the directory and change the
+ownership to the proper user.</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>git_clone <span class="o">{</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>clone new copy or fetch latest changes</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">CHECKOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">MNTDIR</span><span class="k">}</span><span class="nv">$2</span>
+    <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$CHECKOUT</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>mkdir -p <span class="nv">$CHECKOUT</span>
+        git clone <span class="nv">$1</span> <span class="nv">$CHECKOUT</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">pushd</span> <span class="nv">$CHECKOUT</span>
+        git fetch
+        <span class="nb">popd</span>
+<span class="nb">    </span><span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>FIXME(ja): checkout specified version (should works for branches and tags)</p>
+
+</td><td class=code><div class=highlight><pre>
+
+    <span class="nb">pushd</span> <span class="nv">$CHECKOUT</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>checkout the proper branch/tag</p>
+
+</td><td class=code><div class=highlight><pre>
+    git checkout <span class="nv">$3</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>force our local version to be the same as the remote version</p>
+
+</td><td class=code><div class=highlight><pre>
+    git reset --hard origin/<span class="nv">$3</span>
+    <span class="nb">popd</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>give ownership to the stack user</p>
+
+</td><td class=code><div class=highlight><pre>
+    chroot <span class="nv">$MNTDIR</span> chown -R stack <span class="nv">$2</span>
+<span class="o">}</span>
+
+git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$DEST</span>/nova <span class="nv">$NOVA_BRANCH</span>
+git_clone <span class="nv">$GLANCE_REPO</span> <span class="nv">$DEST</span>/glance <span class="nv">$GLANCE_BRANCH</span>
+git_clone <span class="nv">$KEYSTONE_REPO</span> <span class="nv">$DEST</span>/keystone <span class="nv">$KEYSTONE_BRANCH</span>
+git_clone <span class="nv">$NOVNC_REPO</span> <span class="nv">$DEST</span>/novnc <span class="nv">$NOVNC_BRANCH</span>
+git_clone <span class="nv">$HORIZON_REPO</span> <span class="nv">$DEST</span>/horizon <span class="nv">$HORIZON_BRANCH</span>
+git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$DEST</span>/python-novaclient <span class="nv">$NOVACLIENT_BRANCH</span>
+git_clone <span class="nv">$OPENSTACKX_REPO</span> <span class="nv">$DEST</span>/openstackx <span class="nv">$OPENSTACKX_BRANCH</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Use this version of devstack</p>
+
+</td><td class=code><div class=highlight><pre>
+rm -rf <span class="nv">$MNTDIR</span>/<span class="nv">$DEST</span>/devstack
+cp -pr <span class="nv">$CWD</span> <span class="nv">$MNTDIR</span>/<span class="nv">$DEST</span>/devstack
+chroot <span class="nv">$MNTDIR</span> chown -R stack <span class="nv">$DEST</span>/devstack
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure host network for DHCP</p>
+
+</td><td class=code><div class=highlight><pre>
+mkdir -p <span class="nv">$MNTDIR</span>/etc/network
+cat &gt; <span class="nv">$MNTDIR</span>/etc/network/interfaces <span class="s">&lt;&lt;EOF</span>
+<span class="s">auto lo</span>
+<span class="s">iface lo inet loopback</span>
+
+<span class="s">auto eth0</span>
+<span class="s">iface eth0 inet dhcp</span>
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set hostname</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">echo</span> <span class="s2">&quot;ramstack&quot;</span> &gt;<span class="nv">$MNTDIR</span>/etc/hostname
+<span class="nb">echo</span> <span class="s2">&quot;127.0.0.1		localhost	ramstack&quot;</span> &gt;<span class="nv">$MNTDIR</span>/etc/hosts
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure the runner</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">RUN_SH</span><span class="o">=</span><span class="nv">$MNTDIR</span>/<span class="nv">$DEST</span>/run.sh
+cat &gt; <span class="nv">$RUN_SH</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">#!/usr/bin/env bash</span>
+
+<span class="s"># DIVIDER</span>
+<span class="s">set \`ip addr show dev eth0 | grep inet\`</span>
+<span class="s">PREFIX=\`echo \$2 | cut -d. -f1,2,3\`</span>
+<span class="s">export FLOATING_RANGE=&quot;\$PREFIX.224/27&quot;</span>
+
+<span class="s"># DIVIDER</span>
+<span class="s">killall screen</span>
+
+<span class="s"># DIVIDER</span>
+<span class="s">cd $DEST/devstack &amp;&amp; \$STACKSH_PARAMS ./stack.sh &gt; $DEST/run.sh.log</span>
+<span class="s">echo &gt;&gt; $DEST/run.sh.log</span>
+<span class="s">echo &gt;&gt; $DEST/run.sh.log</span>
+<span class="s">echo &quot;All done! Time to start clicking.&quot; &gt;&gt; $DEST/run.sh.log</span>
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Get IP range</p>
+
+</td><td class=code><div class=highlight><pre>
+chmod 755 <span class="nv">$RUN_SH</span>
+chroot <span class="nv">$MNTDIR</span> chown stack <span class="nv">$DEST</span>/run.sh
+
+umount <span class="nv">$MNTDIR</span>
+rmdir <span class="nv">$MNTDIR</span>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Kill any existing screens</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Run stack.sh</p>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Make the run.sh executable</p>
+
+</pre></div></td></tr><tr><td class=docs>
+
+</pre></div></td></tr><tr><td class=docs>
+</pre></div></td></tr><tr><td class=docs></td><td class='code'></td></tr>
+    </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
+    <title>build_usb_boot.sh</title>
+    <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
+</head>
+<body>
+<div id=container>
+    <div id=background></div>
+    <table cellspacing=0 cellpadding=0>
+    <thead>
+      <tr>
+        <th class=docs><h1>build_usb_boot.sh</h1></th>
+        <th class=code></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr><td class='docs'><p>build<em>usb</em>boot.sh - Create a syslinux boot environment</p>
+
+<p>build<em>usb</em>boot.sh destdev</p>
+
+<p>Assumes syslinux is installed
+Needs to run as root</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="c">#!/bin/bash -e</span>
+
+<span class="nv">DEST_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="p">/tmp/syslinux-boot</span><span class="k">}</span>
+<span class="nv">PXEDIR</span><span class="o">=</span><span class="k">${</span><span class="nv">PXEDIR</span><span class="k">:-</span><span class="p">/opt/ramstack/pxe</span><span class="k">}</span>
+<span class="nv">PROGDIR</span><span class="o">=</span><span class="sb">`</span>dirname <span class="nv">$0</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Clean up any resources that may be in use</p>
+
+</td><td class=code><div class=highlight><pre>
+cleanup<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">set</span> +o errexit
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Mop up temporary files</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$DEST_DEV&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>umount <span class="nv">$DEST_DIR</span>
+        rmdir <span class="nv">$DEST_DIR</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> -n <span class="s2">&quot;$MNTDIR&quot;</span> -a -d <span class="s2">&quot;$MNTDIR&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>umount <span class="nv">$MNTDIR</span>
+        rmdir <span class="nv">$MNTDIR</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Kill ourselves to signal any calling process</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
+<span class="o">}</span>
+
+<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Keep track of the current directory</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
+
+<span class="k">if</span> <span class="o">[</span> -b <span class="nv">$DEST_DIR</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We have a block device, install syslinux and mount it</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">DEST_DEV</span><span class="o">=</span><span class="nv">$DEST_DIR</span>
+    <span class="nv">DEST_DIR</span><span class="o">=</span><span class="sb">`</span>mktemp -d --tmpdir mntXXXXXX<span class="sb">`</span>
+    mount <span class="nv">$DEST_DEV</span> <span class="nv">$DEST_DIR</span>
+
+    <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$DEST_DIR</span>/syslinux <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>mkdir -p <span class="nv">$DEST_DIR</span>/syslinux
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install syslinux on the device</p>
+
+</td><td class=code><div class=highlight><pre>
+    syslinux --install --directory syslinux <span class="nv">$DEST_DEV</span>
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We have a directory (for sanity checking output)</p>
+
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">DEST_DEV</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$DEST_DIR</span>/syslinux <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>mkdir -p <span class="nv">$DEST_DIR</span>/syslinux
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Get some more stuff from syslinux</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">for </span>i in memdisk menu.c32; <span class="k">do</span>
+<span class="k">    </span>cp -pu /usr/lib/syslinux/<span class="nv">$i</span> <span class="nv">$DEST_DIR</span>/syslinux
+<span class="k">done</span>
+
+<span class="nv">CFG</span><span class="o">=</span><span class="nv">$DEST_DIR</span>/syslinux/syslinux.cfg
+cat &gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">default /syslinux/menu.c32</span>
+<span class="s">prompt 0</span>
+<span class="s">timeout 0</span>
+
+<span class="s">MENU TITLE devstack Boot Menu</span>
+
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Setup devstack boot</p>
+
+</td><td class=code><div class=highlight><pre>
+mkdir -p <span class="nv">$DEST_DIR</span>/ubuntu
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$PXEDIR</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>mkdir -p <span class="nv">$PXEDIR</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Get image into place</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$PXEDIR</span>/stack-initrd.img <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+    <span class="nv">$PROGDIR</span>/build_uec_ramdisk.sh <span class="nv">$PXEDIR</span>/stack-initrd.img
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$PXEDIR</span>/stack-initrd.gz <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>gzip -1 -c <span class="nv">$PXEDIR</span>/stack-initrd.img &gt;<span class="nv">$PXEDIR</span>/stack-initrd.gz
+<span class="k">fi</span>
+cp -pu <span class="nv">$PXEDIR</span>/stack-initrd.gz <span class="nv">$DEST_DIR</span>/ubuntu
+
+<span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$PXEDIR</span>/vmlinuz-*-generic <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">MNTDIR</span><span class="o">=</span><span class="sb">`</span>mktemp -d --tmpdir mntXXXXXXXX<span class="sb">`</span>
+    mount -t ext4 -o loop <span class="nv">$PXEDIR</span>/stack-initrd.img <span class="nv">$MNTDIR</span>
+
+    <span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$MNTDIR</span>/boot/vmlinuz-*-generic <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;No kernel found&quot;</span>
+        umount <span class="nv">$MNTDIR</span>
+        rmdir <span class="nv">$MNTDIR</span>
+        <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$DEST_DEV&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span>umount <span class="nv">$DEST_DIR</span>
+            rmdir <span class="nv">$DEST_DIR</span>
+        <span class="k">fi</span>
+<span class="k">        </span><span class="nb">exit </span>1
+    <span class="k">else</span>
+<span class="k">        </span>cp -pu <span class="nv">$MNTDIR</span>/boot/vmlinuz-*-generic <span class="nv">$PXEDIR</span>
+    <span class="k">fi</span>
+<span class="k">    </span>umount <span class="nv">$MNTDIR</span>
+    rmdir <span class="nv">$MNTDIR</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Get generic kernel version</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KNAME</span><span class="o">=</span><span class="sb">`</span>basename <span class="nv">$PXEDIR</span>/vmlinuz-*-generic<span class="sb">`</span>
+<span class="nv">KVER</span><span class="o">=</span><span class="k">${</span><span class="nv">KNAME</span><span class="p">#vmlinuz-</span><span class="k">}</span>
+cp -pu <span class="nv">$PXEDIR</span>/vmlinuz-<span class="nv">$KVER</span> <span class="nv">$DEST_DIR</span>/ubuntu
+cat &gt;&gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
+
+<span class="s">LABEL devstack</span>
+<span class="s">    MENU LABEL ^devstack</span>
+<span class="s">    MENU DEFAULT</span>
+<span class="s">    KERNEL /ubuntu/vmlinuz-$KVER</span>
+<span class="s">    APPEND initrd=/ubuntu/stack-initrd.gz ramdisk_size=2109600 root=/dev/ram0</span>
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Get Ubuntu</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> -d <span class="nv">$PXEDIR</span> -a -r <span class="nv">$PXEDIR</span>/natty-base-initrd.gz <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>cp -pu <span class="nv">$PXEDIR</span>/natty-base-initrd.gz <span class="nv">$DEST_DIR</span>/ubuntu
+    cat &gt;&gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
+
+<span class="s">LABEL ubuntu</span>
+<span class="s">    MENU LABEL ^Ubuntu Natty</span>
+<span class="s">    KERNEL /ubuntu/vmlinuz-$KVER</span>
+<span class="s">    APPEND initrd=/ubuntu/natty-base-initrd.gz ramdisk_size=419600 root=/dev/ram0</span>
+<span class="s">EOF</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Local disk boot</p>
+
+</td><td class=code><div class=highlight><pre>
+cat &gt;&gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
+
+<span class="s">LABEL local</span>
+<span class="s">    MENU LABEL ^Local disk</span>
+<span class="s">    LOCALBOOT 0</span>
+<span class="s">EOF</span>
+
+<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$DEST_DEV&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>umount <span class="nv">$DEST_DIR</span>
+    rmdir <span class="nv">$DEST_DIR</span>
+<span class="k">fi</span>
+
+<span class="nb">trap</span> - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs></td><td class='code'></td></tr>
+    </tbody>
+    </table>
+</div>
+</body>
+</html>

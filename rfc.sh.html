@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
+    <title>rfc.sh</title>
+    <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
+</head>
+<body>
+<div id=container>
+    <div id=background></div>
+    <table cellspacing=0 cellpadding=0>
+    <thead>
+      <tr>
+        <th class=docs><h1>rfc.sh</h1></th>
+        <th class=code></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr><td class='docs'><p>Copyright (c) 2010-2011 Gluster, Inc. <a href="http://www.gluster.com">http://www.gluster.com</a>
+This initial version of this file was taken from the source tree
+of GlusterFS. It was not directly attributed, but is assumed to be
+Copyright (c) 2010-2011 Gluster, Inc and release GPLv3
+Subsequent modifications are Copyright (c) 2011 OpenStack, LLC.</p>
+
+<p>GlusterFS is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published
+by the Free Software Foundation; either version 3 of the License,
+or (at your option) any later version.</p>
+
+<p>GlusterFS is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.</p>
+
+<p>You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>.</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="c">#!/bin/sh -e</span>
+
+
+<span class="nv">branch</span><span class="o">=</span><span class="s2">&quot;master&quot;</span>;
+
+set_hooks_commit_msg<span class="o">()</span>
+<span class="o">{</span>
+    <span class="nv">top_dir</span><span class="o">=</span><span class="sb">`</span>git rev-parse --show-toplevel<span class="sb">`</span>
+    <span class="nv">f</span><span class="o">=</span><span class="s2">&quot;${top_dir}/.git/hooks/commit-msg&quot;</span>;
+    <span class="nv">u</span><span class="o">=</span><span class="s2">&quot;https://review.openstack.org/tools/hooks/commit-msg&quot;</span>;
+
+    <span class="k">if</span> <span class="o">[</span> -x <span class="s2">&quot;$f&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        return</span>;
+    <span class="k">fi</span>
+
+<span class="k">    </span>curl -o <span class="nv">$f</span> <span class="nv">$u</span> <span class="o">||</span> wget -O <span class="nv">$f</span> <span class="nv">$u</span>;
+
+    chmod +x <span class="nv">$f</span>;
+
+    <span class="nv">GIT_EDITOR</span><span class="o">=</span><span class="nb">true </span>git commit --amend
+<span class="o">}</span>
+
+add_remote<span class="o">()</span>
+<span class="o">{</span>
+    <span class="nv">username</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nv">project</span><span class="o">=</span><span class="nv">$2</span>
+
+    <span class="nb">echo</span> <span class="s2">&quot;No remote set, testing ssh://$username@review.openstack.org:29418&quot;</span>
+    <span class="k">if </span><span class="nv">project_list</span><span class="o">=</span><span class="sb">`</span>ssh -p29418 -o <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no <span class="nv">$username</span>@review.openstack.org gerrit ls-projects 2&gt;/dev/null<span class="sb">`</span>
+    <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;$username@review.openstack.org:29418 worked.&quot;</span>
+        <span class="k">if </span><span class="nb">echo</span> <span class="nv">$project_list</span> | grep <span class="nv">$project</span> &gt;/dev/null
+        <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;Creating a git remote called gerrit that maps to:&quot;</span>
+            <span class="nb">echo</span> <span class="s2">&quot;  ssh://$username@review.openstack.org:29418/$project&quot;</span>
+            git remote add gerrit ssh://<span class="nv">$username</span>@review.openstack.org:29418/<span class="nv">$project</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;The current project name, $project, is not a known project.&quot;</span>
+            <span class="nb">echo</span> <span class="s2">&quot;Please either reclone from github/gerrit or create a&quot;</span>
+            <span class="nb">echo</span> <span class="s2">&quot;remote named gerrit that points to the intended project.&quot;</span>
+            <span class="k">return </span>1
+        <span class="k">fi</span>
+
+<span class="k">        return </span>0
+    <span class="k">fi</span>
+<span class="k">    return </span>1
+<span class="o">}</span>
+
+check_remote<span class="o">()</span>
+<span class="o">{</span>
+    <span class="k">if</span> ! git remote | grep gerrit &gt;/dev/null 2&gt;&amp;1
+    <span class="k">then</span>
+<span class="k">        </span><span class="nv">origin_project</span><span class="o">=</span><span class="sb">`</span>git remote show origin | grep <span class="s1">&#39;Fetch URL&#39;</span> | perl -nle <span class="s1">&#39;@fields = split(m|[:/]|); $len = $#fields; print $fields[$len-1], &quot;/&quot;, $fields[$len];&#39;</span><span class="sb">`</span>
+        <span class="k">if </span>add_remote <span class="nv">$USERNAME</span> <span class="nv">$origin_project</span>
+        <span class="k">then</span>
+<span class="k">            return </span>0
+        <span class="k">else</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;Your local name doesn&#39;t work on Gerrit.&quot;</span>
+            <span class="nb">echo</span> -n <span class="s2">&quot;Enter Gerrit username (same as launchpad): &quot;</span>
+            <span class="nb">read </span>gerrit_user
+            <span class="k">if </span>add_remote <span class="nv">$gerrit_user</span> <span class="nv">$origin_project</span>
+            <span class="k">then</span>
+<span class="k">                return </span>0
+            <span class="k">else</span>
+<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;Can&#39;t infer where gerrit is - please set a remote named&quot;</span>
+                <span class="nb">echo</span> <span class="s2">&quot;gerrit manually and then try again.&quot;</span>
+                <span class="nb">echo</span>
+<span class="nb">                echo</span> <span class="s2">&quot;For more information, please see:&quot;</span>
+                <span class="nb">echo</span> <span class="s2">&quot;\thttp://wiki.openstack.org/GerritWorkflow&quot;</span>
+                <span class="nb">exit </span>1
+            <span class="k">fi</span>
+<span class="k">        fi</span>
+<span class="k">    fi</span>
+<span class="o">}</span>
+
+rebase_changes<span class="o">()</span>
+<span class="o">{</span>
+    git fetch;
+
+    <span class="nv">GIT_EDITOR</span><span class="o">=</span><span class="nb">true </span>git rebase -i origin/<span class="nv">$branch</span> <span class="o">||</span> <span class="nb">exit</span> <span class="nv">$?</span>;
+<span class="o">}</span>
+
+
+assert_diverge<span class="o">()</span>
+<span class="o">{</span>
+    <span class="k">if</span> ! git diff origin/<span class="nv">$branch</span>..HEAD | grep -q .
+    <span class="k">then</span>
+<span class="k">	</span><span class="nb">echo</span> <span class="s2">&quot;No changes between the current branch and origin/$branch.&quot;</span>
+	<span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+
+main<span class="o">()</span>
+<span class="o">{</span>
+    set_hooks_commit_msg;
+
+    check_remote;
+
+    rebase_changes;
+
+    assert_diverge;
+
+    <span class="nv">bug</span><span class="o">=</span><span class="k">$(</span>git show --format<span class="o">=</span><span class="s1">&#39;%s %b&#39;</span> | perl -nle <span class="s1">&#39;if (/\b([Bb]ug|[Ll][Pp])\s*[#:]?\s*(\d+)/) {print &quot;$2&quot;; exit}&#39;</span><span class="k">)</span>
+
+    <span class="nv">bp</span><span class="o">=</span><span class="k">$(</span>git show --format<span class="o">=</span><span class="s1">&#39;%s %b&#39;</span> | perl -nle <span class="s1">&#39;if (/\b([Bb]lue[Pp]rint|[Bb][Pp])\s*[#:]?\s*([0-9a-zA-Z-_]+)/) {print &quot;$2&quot;; exit}&#39;</span><span class="k">)</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$DRY_RUN&quot;</span> <span class="o">=</span> 1 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">drier</span><span class="o">=</span><span class="s1">&#39;echo -e Please use the following command to send your commits to review:\n\n&#39;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">drier</span><span class="o">=</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nv">local_branch</span><span class="o">=</span><span class="sb">`</span>git branch | grep -Ei <span class="s2">&quot;\* (.*)&quot;</span> | cut -f2 -d<span class="s1">&#39; &#39;</span><span class="sb">`</span>
+    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$bug&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">	if</span> <span class="o">[</span> -z <span class="s2">&quot;$bp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+            <span class="nv">$drier</span> git push gerrit HEAD:refs/for/<span class="nv">$branch</span>/<span class="nv">$local_branch</span>;
+	<span class="k">else</span>
+	    <span class="nv">$drier</span> git push gerrit HEAD:refs/for/<span class="nv">$branch</span>/bp/<span class="nv">$bp</span>;
+	<span class="k">fi</span>
+<span class="k">    else</span>
+        <span class="nv">$drier</span> git push gerrit HEAD:refs/for/<span class="nv">$branch</span>/bug/<span class="nv">$bug</span>;
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+main <span class="s2">&quot;$@&quot;</span>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs></td><td class='code'></td></tr>
+    </tbody>
+    </table>
+</div>
+</body>
+</html>

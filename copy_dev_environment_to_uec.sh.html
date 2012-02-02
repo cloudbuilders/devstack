@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
+    <title>copy_dev_environment_to_uec.sh</title>
+    <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
+</head>
+<body>
+<div id=container>
+    <div id=background></div>
+    <table cellspacing=0 cellpadding=0>
+    <thead>
+      <tr>
+        <th class=docs><h1>copy_dev_environment_to_uec.sh</h1></th>
+        <th class=code></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr><td class='docs'><p>Echo commands</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="c">#!/usr/bin/env bash</span>
+
+<span class="nb">set</span> -o xtrace
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Exit on error to stop unexpected errors</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Keep track of the current directory</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Change dir to top of devstack</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Echo usage</p>
+
+</td><td class=code><div class=highlight><pre>
+usage<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Add stack user and keys&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 [full path to raw uec base image]&quot;</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Make sure this is a raw image</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! qemu-img info <span class="nv">$1</span> | grep -q <span class="s2">&quot;file format: raw&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>usage
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Mount the image</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DEST</span><span class="o">=</span>/opt/stack
+<span class="nv">STAGING_DIR</span><span class="o">=</span>/tmp/<span class="sb">`</span><span class="nb">echo</span> <span class="nv">$1</span> | sed  <span class="s2">&quot;s/\//_/g&quot;</span><span class="sb">`</span>.stage.user
+mkdir -p <span class="nv">$STAGING_DIR</span>
+umount <span class="nv">$STAGING_DIR</span> <span class="o">||</span> <span class="nb">true</span>
+sleep 1
+mount -t ext4 -o loop <span class="nv">$1</span> <span class="nv">$STAGING_DIR</span>
+mkdir -p <span class="nv">$STAGING_DIR</span>/<span class="nv">$DEST</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create a stack user that is a member of the libvirtd group so that stack
+is able to interact with libvirt.</p>
+
+</td><td class=code><div class=highlight><pre>
+chroot <span class="nv">$STAGING_DIR</span> groupadd libvirtd <span class="o">||</span> <span class="nb">true</span>
+chroot <span class="nv">$STAGING_DIR</span> useradd stack -s /bin/bash -d <span class="nv">$DEST</span> -G libvirtd <span class="o">||</span> <span class="nb">true</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Add a simple password - pass</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nb">echo </span>stack:pass | chroot <span class="nv">$STAGING_DIR</span> chpasswd
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure sudo</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="o">(</span> <span class="nb">umask </span>226 <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;stack ALL=(ALL) NOPASSWD:ALL&quot;</span> <span class="se">\</span>
+    &gt; <span class="nv">$STAGING_DIR</span>/etc/sudoers.d/50_stack_sh <span class="o">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Gracefully cp only if source file/dir exists</p>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>cp_it <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[</span> -e <span class="nv">$1</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> -d <span class="nv">$1</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>cp -pRL <span class="nv">$1</span> <span class="nv">$2</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Copy over your ssh keys and env if desired</p>
+
+</td><td class=code><div class=highlight><pre>
+cp_it ~/.ssh <span class="nv">$STAGING_DIR</span>/<span class="nv">$DEST</span>/.ssh
+cp_it ~/.ssh/id_rsa.pub <span class="nv">$STAGING_DIR</span>/<span class="nv">$DEST</span>/.ssh/authorized_keys
+cp_it ~/.gitconfig <span class="nv">$STAGING_DIR</span>/<span class="nv">$DEST</span>/.gitconfig
+cp_it ~/.vimrc <span class="nv">$STAGING_DIR</span>/<span class="nv">$DEST</span>/.vimrc
+cp_it ~/.bashrc <span class="nv">$STAGING_DIR</span>/<span class="nv">$DEST</span>/.bashrc
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Copy devstack</p>
+
+</td><td class=code><div class=highlight><pre>
+rm -rf <span class="nv">$STAGING_DIR</span>/<span class="nv">$DEST</span>/devstack
+cp_it . <span class="nv">$STAGING_DIR</span>/<span class="nv">$DEST</span>/devstack
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Give stack ownership over $DEST so it may do the work needed</p>
+
+</td><td class=code><div class=highlight><pre>
+chroot <span class="nv">$STAGING_DIR</span> chown -R stack <span class="nv">$DEST</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Unmount</p>
+
+</td><td class=code><div class=highlight><pre>
+umount <span class="nv">$STAGING_DIR</span>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs></td><td class='code'></td></tr>
+    </tbody>
+    </table>
+</div>
+</body>
+</html>
