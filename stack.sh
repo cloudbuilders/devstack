@@ -100,7 +100,7 @@ function apt_get() {
 if screen -ls | egrep -q "[0-9].stack"; then
     echo "You are already running a stack.sh session."
     echo "To rejoin this session type 'screen -x stack'."
-    echo "To destroy this session, kill the running screen."
+    echo "To destroy this session quit the running screen, 'screen -S stack -X quit'."
     exit 1
 fi
 
