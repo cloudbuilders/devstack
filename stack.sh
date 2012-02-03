@@ -493,11 +493,11 @@ fi
 #    distros (case insensitive).
 function get_packages() {
     local file_to_parse="general"
-    local service
+    local service packages=""
 
     for service in ${ENABLED_SERVICES//,/ }; do
         # Allow individual services to specify dependencies
-        if [[ -e $FILES/apts/${service} ]]; then
+        if [[ -e $FILES/$1/${service} ]]; then
             file_to_parse="${file_to_parse} $service"
         fi
         if [[ $service == n-* ]]; then
@@ -516,7 +516,7 @@ function get_packages() {
     done
 
     for file in ${file_to_parse}; do
-        local fname=${FILES}/apts/${file}
+        local fname=${FILES}/$1/${file}
         local OIFS line package distros distro
         [[ -e $fname ]] || { echo "missing: $fname"; exit 1 ;}
 
@@ -530,16 +530,24 @@ function get_packages() {
             if [[ $line =~ (.*)#.*dist:([^ ]*) ]]; then # We are using BASH regexp matching feature.
                         package=${BASH_REMATCH[1]}
                         distros=${BASH_REMATCH[2]}
-                        for distro in ${distros//,/ }; do  #In bash ${VAR,,} will lowecase VAR
-                            [[ ${distro,,} == ${DISTRO,,} ]] && echo $package
+                        for distro in ${distros//,/$'\n'}; do  #In bash ${VAR,,} will lowecase VAR
+                            # if the package is available for our distro
+                            if [[ ${distro,,} == ${DISTRO,,} ]];then
+                                # pip cannot handle duplicate package names, so we filter them here
+                                # NOTE: the additional space after the package name ensures
+                                # we don't match 'python-suds' when looking for 'python'
+                                if [[ ! $packages =~ "$package " ]]; then
+                                    packages="$packages $package "
+                                fi
+                            fi
                         done
                         continue
             fi
-
-            echo ${line%#*}
+            packages="$packages ${line%#*} "
         done
         IFS=$OIFS
     done
+    echo "$packages"
 }
 
 function pip_install {
@@ -550,12 +558,17 @@ function pip_install {
         pip install --use-mirrors $@
 }
 
+# Allow distro specific modifications and checks to occur
+if [[ -e $FILES/dist/${DISTRO,,} ]]; then
+    source $FILES/dist/${DISTRO,,}
+fi
+
 # install apt requirements
 apt_get update
-apt_get install $(get_packages)
+apt_get install $(get_packages 'apts')
 
 # install python requirements
-pip_install `cat $FILES/pips/* | uniq`
+pip_install $(get_packages 'pips')
 
 # git clone only if directory doesn't exist already.  Since ``DEST`` might not
 # be owned by the installation user, we create the directory and change the
@@ -567,6 +580,7 @@ function git_clone {
     GIT_DEST=$2
     GIT_BRANCH=$3
 
+    set +e
     if echo $GIT_BRANCH | egrep -q "^refs"; then
         # If our branch name is a gerrit style refs/changes/...
         if [ ! -d $GIT_DEST ]; then
@@ -597,6 +611,7 @@ function git_clone {
             git checkout -b $GIT_BRANCH
         fi
     fi
+    set -e
 }
 
 # compute service
