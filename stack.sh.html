@@ -1749,12 +1749,16 @@ invoking stack.sh.</p>
         <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
         <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Clean out existing volumes</p>
+<p>Remove nova iscsi targets</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>; <span class="k">fi</span>
 <span class="k">    fi</span>
 
 <span class="k">    if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean out existing volumes</p>
+</td><td class=code><div class=highlight><pre>
+        sudo tgtadm --op show --mode target | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | grep Target | cut -f3 -d <span class="s1">&#39; &#39;</span> | sudo xargs -n1 tgt-admin --delete <span class="o">||</span> <span class="nb">true</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>VOLUME_NAME_PREFIX prefixes the LVs we want</p>
 </td><td class=code><div class=highlight><pre>
@@ -1764,11 +1768,6 @@ invoking stack.sh.</p>
 do it in two steps</p>
 </td><td class=code><div class=highlight><pre>
             <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$VOLUME_NAME_PREFIX}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">tid</span><span class="o">=</span><span class="sb">`</span>egrep <span class="s2">&quot;^tid.+$lv&quot;</span> /proc/net/iet/volume | cut -f1 -d<span class="s1">&#39; &#39;</span> | tr <span class="s1">&#39;:&#39;</span> <span class="s1">&#39;=&#39;</span><span class="sb">`</span>
-                <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$tid&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                    </span><span class="nv">lun</span><span class="o">=</span><span class="sb">`</span>egrep <span class="s2">&quot;lun.+$lv&quot;</span> /proc/net/iet/volume | cut -f1 -d<span class="s1">&#39; &#39;</span> | tr <span class="s1">&#39;:&#39;</span> <span class="s1">&#39;=&#39;</span> | tr -d <span class="s1">&#39;\t&#39;</span><span class="sb">`</span>
-                    sudo ietadm --op delete --<span class="nv">$tid</span> --<span class="nv">$lun</span>
-                <span class="k">fi</span>
 <span class="k">                </span>sudo lvremove -f <span class="nv">$VOLUME_GROUP</span>/<span class="nv">$lv</span>
             <span class="k">fi</span>
 <span class="k">        done</span>
