@@ -684,14 +684,14 @@ we should make sure we use the same variable names as the flag names.</p>
 here until the admin APIs can replace nova-manage</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+<span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
 <span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">FIXED_NETWORK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_NETWORK_SIZE</span><span class="k">:-</span><span class="nv">256</span><span class="k">}</span>
 <span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.224/28</span><span class="k">}</span>
 <span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">FlatDHCPManager</span><span class="k">}</span>
 <span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
-<span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">$PUBLIC_INTERFACE</span><span class="k">}</span>
+<span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Multi-host is a mode where each compute node runs its own network node.  This
@@ -1032,6 +1032,7 @@ git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_DIR</span> <
 </pre></div></td></tr><tr><td class=docs>
 <p>glance, swift middleware and nova api needs keystone middleware</p>
 </td><td class=code><div class=highlight><pre>
+git_clone <span class="nv">$KEYSTONECLIENT_REPO</span> <span class="nv">$KEYSTONECLIENT_DIR</span> <span class="nv">$KEYSTONECLIENT_BRANCH</span>
 git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_DIR</span> <span class="nv">$NOVACLIENT_BRANCH</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1074,7 +1075,6 @@ git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_
 <p>quantum</p>
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$HORIZON_REPO</span> <span class="nv">$HORIZON_DIR</span> <span class="nv">$HORIZON_BRANCH</span> <span class="nv">$HORIZON_TAG</span>
-    git_clone <span class="nv">$KEYSTONECLIENT_REPO</span> <span class="nv">$KEYSTONECLIENT_DIR</span> <span class="nv">$KEYSTONECLIENT_BRANCH</span>
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1107,6 +1107,8 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <div class="section" id="syslog">
 <h2>Syslog</h2>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">cd</span> <span class="nv">$KEYSTONECLIENT_DIR</span>; sudo python setup.py develop
+<span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; sudo python setup.py develop
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">||</span>
       <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-api&quot;</span> <span class="o">||</span>
       <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">||</span>
@@ -1121,11 +1123,9 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
       <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$GLANCE_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
-<span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; sudo python setup.py develop
 <span class="nb">cd</span> <span class="nv">$NOVA_DIR</span>; sudo python setup.py develop
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;horizon&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$KEYSTONECLIENT_DIR</span>; sudo python setup.py develop
-    <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/horizon; sudo python setup.py develop
+<span class="k">    </span><span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/horizon; sudo python setup.py develop
     <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/openstack-dashboard; sudo python setup.py develop
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1376,10 +1376,20 @@ we cat them together to handle both pre- and post-merge</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Put config files in /etc/nova for everyone to find</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>We are going to use a sample http middleware configuration based on the
 one from the keystone project to launch nova.  This paste config adds
 the configuration required for nova to validate keystone tokens.</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nv">NOVA_CONF</span><span class="o">=</span>/etc/nova
+<span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$NOVA_CONF</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>sudo mkdir -p <span class="nv">$NOVA_CONF</span>
+<span class="k">fi</span>
+sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$NOVA_CONF</span>
+
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>First we add a some extra data to the default paste config from nova</p>
@@ -1388,18 +1398,18 @@ the configuration required for nova to validate keystone tokens.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Then we add our own service token to the configuration</p>
 </td><td class=code><div class=highlight><pre>
-    cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
+    cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_CONF</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Finally, we change the pipelines in nova to use keystone</p>
 </td><td class=code><div class=highlight><pre>
-    sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
+    sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$NOVA_CONF</span>/api-paste.ini
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Helper to clean iptables rules</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">function </span>replace_pipeline<span class="o">()</span> <span class="o">{</span>
-        sed <span class="s2">&quot;/\[pipeline:$1\]/,/\[/s/^pipeline = .*/pipeline = $2/&quot;</span> -i <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
+        sed <span class="s2">&quot;/\[pipeline:$1\]/,/\[/s/^pipeline = .*/pipeline = $2/&quot;</span> -i <span class="nv">$NOVA_CONF</span>/api-paste.ini
     <span class="o">}</span>
     replace_pipeline <span class="s2">&quot;ec2cloud&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext cloudrequest authorizer validator ec2executor&quot;</span>
     replace_pipeline <span class="s2">&quot;ec2admin&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext adminrequest authorizer ec2executor&quot;</span>
@@ -1517,13 +1527,19 @@ mount it (ext filesystems can be labeled via e2label).</p>
     clean_iptables
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Clean out the instances directory.</p>
+<p>Logout and delete iscsi sessions</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">instances</span><span class="o">=</span><span class="sb">`</span>virsh list --all | grep <span class="nv">$INSTANCE_NAME_PREFIX</span> | sed <span class="s2">&quot;s/.*\($INSTANCE_NAME_PREFIX[0-9a-fA-F]*\).*/\1/g&quot;</span><span class="sb">`</span>
     <span class="k">if</span> <span class="o">[</span> ! <span class="s2">&quot;$instances&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="nv">$instances</span> | xargs -n1 virsh destroy <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">        echo</span> <span class="nv">$instances</span> | xargs -n1 virsh undefine <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">    </span><span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean out the instances directory.</p>
+</td><td class=code><div class=highlight><pre>
+    sudo iscsiadm --mode node | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | cut -d <span class="s2">&quot; &quot;</span> -f2 | xargs sudo iscsiadm --mode node --logout <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>sudo iscsiadm --mode node | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | cut -d <span class="s2">&quot; &quot;</span> -f2 | sudo iscsiadm --mode node --op delete <span class="o">||</span> <span class="nb">true</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete traces of nova networks from prior runs</p>
@@ -1626,18 +1642,10 @@ middleware to cache the tokens auths for a long this is needed.</p>
 <span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span>keystone
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We need a special version of bin/swift which understand the
-OpenStack api 2.0, we download it until this is getting
-integrated in swift.</p>
-</td><td class=code><div class=highlight><pre>
-       apt_get install memcached
-
-</pre></div></td></tr><tr><td class=docs>
 <p>We do the install of the proxy-server and swift configuration
 replacing a few directives to match our configuration.</p>
 </td><td class=code><div class=highlight><pre>
-       sudo <span class="nv">https_proxy</span><span class="o">=</span><span class="nv">$https_proxy</span> curl -s -o/usr/local/bin/swift <span class="se">\</span>
-           <span class="s1">&#39;https://review.openstack.org/gitweb?p=openstack/swift.git;a=blob_plain;f=bin/swift;hb=48bfda6e2fdf3886c98bd15649887d54b9a2574e&#39;</span>
+       apt_get install memcached
    <span class="k">else</span>
 <span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span>tempauth
    <span class="k">fi</span>
@@ -1781,13 +1789,13 @@ do it in two steps</p>
 <span class="k">fi</span>
 
 <span class="k">function </span>add_nova_flag <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_DIR</span>/bin/nova.conf
+    <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_CONF</span>/nova.conf
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>oneiric no longer supports ietadm</p>
 </td><td class=code><div class=highlight><pre>
-rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
+rm -f <span class="nv">$NOVA_CONF</span>/nova.conf
 add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
 add_nova_flag <span class="s2">&quot;--allow_admin_api&quot;</span>
 add_nova_flag <span class="s2">&quot;--scheduler_driver=$SCHEDULER&quot;</span>
@@ -1854,7 +1862,7 @@ For Example: EXTRA_FLAGS=(--foo --bar=2)</p>
 <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
 add_nova_flag <span class="s2">&quot;--vncserver_listen=$VNCSERVER_LISTEN&quot;</span>
 add_nova_flag <span class="s2">&quot;--vncserver_proxyclient_address=$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
-add_nova_flag <span class="s2">&quot;--api_paste_config=$NOVA_DIR/bin/nova-api-paste.ini&quot;</span>
+add_nova_flag <span class="s2">&quot;--api_paste_config=$NOVA_CONF/api-paste.ini&quot;</span>
 add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
 add_nova_flag <span class="s2">&quot;--ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
 add_nova_flag <span class="s2">&quot;--rabbit_host=$RABBIT_HOST&quot;</span>
@@ -1930,69 +1938,11 @@ only once for an entire cluster.</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
-<div class="section" id="id2">
-<h2>Keystone</h2>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
-<span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>(re)create keystone database</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure keystone.conf</p>
-</td><td class=code><div class=highlight><pre>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS keystone;&#39;</span>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>keystone_data.sh creates our admin user and our <tt class="docutils literal">SERVICE_TOKEN</tt>.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
-    cp <span class="nv">$FILES</span>/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
-    sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
-    sudo sed -e <span class="s2">&quot;s,%DEST%,$DEST,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Prepare up the database</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">KEYSTONE_DATA</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin/keystone_data.sh
-    cp <span class="nv">$FILES</span>/keystone_data.sh <span class="nv">$KEYSTONE_DATA</span>
-    sudo sed -e <span class="s2">&quot;</span>
-<span class="s2">        s,%KEYSTONE_AUTH_HOST%,$KEYSTONE_AUTH_HOST,g;</span>
-<span class="s2">        s,%KEYSTONE_AUTH_PORT%,$KEYSTONE_AUTH_PORT,g;</span>
-<span class="s2">        s,%KEYSTONE_AUTH_PROTOCOL%,$KEYSTONE_AUTH_PROTOCOL,g;</span>
-<span class="s2">        s,%KEYSTONE_SERVICE_HOST%,$KEYSTONE_SERVICE_HOST,g;</span>
-<span class="s2">        s,%KEYSTONE_SERVICE_PORT%,$KEYSTONE_SERVICE_PORT,g;</span>
-<span class="s2">        s,%KEYSTONE_SERVICE_PROTOCOL%,$KEYSTONE_SERVICE_PROTOCOL,g;</span>
-<span class="s2">        s,%SERVICE_HOST%,$SERVICE_HOST,g;</span>
-<span class="s2">        s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g;</span>
-<span class="s2">        s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g;</span>
-<span class="s2">    &quot;</span> -i <span class="nv">$KEYSTONE_DATA</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>initialize keystone with default users/endpoints</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage sync_database
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
 </div>
 <div class="section" id="launch-services">
 <h1>Launch Services</h1>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> <span class="nv">BIN_DIR</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/bin bash <span class="nv">$KEYSTONE_DATA</span>
-
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>sed -i -e <span class="s1">&#39;/^handlers=devel$/s/=devel/=production/&#39;</span> <span class="se">\</span>
-            <span class="nv">$KEYSTONE_DIR</span>/etc/logging.cnf
-        sed -i -e <span class="s2">&quot;/^log_file/s/log_file/\#log_file/&quot;</span> <span class="se">\</span>
-            <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
-        <span class="nv">KEYSTONE_LOG_CONFIG</span><span class="o">=</span><span class="s2">&quot;--log-config $KEYSTONE_DIR/etc/logging.cnf&quot;</span>
-    <span class="k">fi</span>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
 <span class="k">fi</span>
 
 
@@ -2041,7 +1991,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>launch the keystone and wait for it to answer before continuing</p>
+<p>(re)create keystone database</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
@@ -2052,17 +2002,63 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>launch the nova-api and wait for it to answer before continuing</p>
+<p>Configure keystone.conf</p>
+</td><td class=code><div class=highlight><pre>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS keystone;&#39;</span>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>launch the keystone and wait for it to answer before continuing</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
+    cp <span class="nv">$FILES</span>/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%DEST%,$DEST,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%KEYSTONE_DIR%,$KEYSTONE_DIR,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
+
+    <span class="nv">KEYSTONE_CATALOG</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/default_catalog.templates
+    cp <span class="nv">$FILES</span>/default_catalog.templates <span class="nv">$KEYSTONE_CATALOG</span>
+    sudo sed -e <span class="s2">&quot;s,%SERVICE_HOST%,$SERVICE_HOST,g&quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
+
+
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>cp <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf.sample <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf
+        sed -i -e <span class="s1">&#39;/^handlers=devel$/s/=devel/=production/&#39;</span> <span class="se">\</span>
+            <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf
+        sed -i -e <span class="s2">&quot;/^log_file/s/log_file/\#log_file/&quot;</span> <span class="se">\</span>
+            <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
+        <span class="nv">KEYSTONE_LOG_CONFIG</span><span class="o">=</span><span class="s2">&quot;--log-config $KEYSTONE_DIR/etc/logging.conf&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>initialize keystone with default users/endpoints</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;key&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d&quot;</span>
+<span class="k">    </span>screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- $KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- $KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0/; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>keystone_data.sh creates services, admin and demo users, and roles.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">pushd</span> <span class="nv">$KEYSTONE_DIR</span>
+    <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage db_sync
+    <span class="nb">popd</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>launch the nova-api and wait for it to answer before continuing</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
+    <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span> <span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span> <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> <span class="nv">DEVSTACK_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span> <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> bash <span class="nv">$FILES</span>/keystone_data.sh
 <span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Quantum service</p>
@@ -2231,6 +2227,10 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 </td><td class=code><div class=highlight><pre>
     mkdir -p <span class="nv">$FILES</span>/images
 
+    <span class="nv">ADMIN_USER</span><span class="o">=</span>admin
+    <span class="nv">ADMIN_TENANT</span><span class="o">=</span>admin
+    <span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>curl -s -d  <span class="s2">&quot;{\&quot;auth\&quot;:{\&quot;passwordCredentials\&quot;: {\&quot;username\&quot;: \&quot;$ADMIN_USER\&quot;, \&quot;password\&quot;: \&quot;$ADMIN_PASSWORD\&quot;}, \&quot;tenantName\&quot;: \&quot;$ADMIN_TENANT\&quot;}}&quot;</span> -H <span class="s2">&quot;Content-type: application/json&quot;</span> http://<span class="nv">$HOST_IP</span>:5000/v2.0/tokens | python -c <span class="s2">&quot;import sys; import json; tok = json.loads(sys.stdin.read()); print tok[&#39;access&#39;][&#39;token&#39;][&#39;id&#39;];&quot;</span><span class="sb">`</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Downloads the image (uec ami+aki style), then extracts it.</p>
 </td><td class=code><div class=highlight><pre>
@@ -2240,11 +2240,11 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
         <span class="k">fi</span>
 
 <span class="k">        </span>tar -zxf <span class="nv">$FILES</span>/tty.tgz -C <span class="nv">$FILES</span>/images
-        <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="nv">$FILES</span>/images/aki-tty/image<span class="sb">`</span>
+        <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="nv">$FILES</span>/images/aki-tty/image<span class="sb">`</span>
         <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
-        <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="nv">$FILES</span>/images/ari-tty/image<span class="sb">`</span>
+        <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="nv">$FILES</span>/images/ari-tty/image<span class="sb">`</span>
         <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
-        glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span><span class="nv">$KERNEL_ID</span> <span class="nv">ramdisk_id</span><span class="o">=</span><span class="nv">$RAMDISK_ID</span> &lt; <span class="nv">$FILES</span>/images/ami-tty/image
+        glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span><span class="nv">$KERNEL_ID</span> <span class="nv">ramdisk_id</span><span class="o">=</span><span class="nv">$RAMDISK_ID</span> &lt; <span class="nv">$FILES</span>/images/ami-tty/image
     <span class="k">fi</span>
 
 <span class="k">    for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
@@ -2299,14 +2299,14 @@ kernel for use when uploading the root filesystem.</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>; <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
         <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="s2">&quot;$KERNEL&quot;</span><span class="sb">`</span>
+<span class="k">            </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="s2">&quot;$KERNEL&quot;</span><span class="sb">`</span>
             <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
         <span class="k">fi</span>
 <span class="k">        if</span> <span class="o">[</span> -n <span class="s2">&quot;$RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span><span class="sb">`</span>
+<span class="k">            </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span><span class="sb">`</span>
             <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
         <span class="k">fi</span>
-<span class="k">        </span>glance add -A <span class="nv">$SERVICE_TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
+<span class="k">        </span>glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
     <span class="k">done</span>
 <span class="k">fi</span>
 
