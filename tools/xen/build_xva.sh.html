@@ -426,7 +426,7 @@ mkdir -p <span class="nv">$XVA_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Setup fake grub</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">XVA</span><span class="o">=</span><span class="nv">$XVA_DIR</span>/<span class="nv">$GUEST_NAME</span>.xva 
+<span class="nv">XVA</span><span class="o">=</span><span class="nv">$XVA_DIR</span>/<span class="nv">$GUEST_NAME</span>.xva
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Setup fstab, tty, and other system stuff</p>
@@ -477,26 +477,28 @@ sed -e <span class="s2">&quot;s,@PRODUCT_VERSION@,$PRODUCT_VERSION,g&quot;</span
 sed -e <span class="s2">&quot;s,@BUILD_NUMBER@,$BUILD_NUMBER,g&quot;</span> -i <span class="nv">$OVA</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Clean old xva. In the future may not do this every time.</p>
+<p>network restart required for getting the right gateway</p>
 </td><td class=code><div class=highlight><pre>
 cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/rc.local</span>
-<span class="s">GUEST_PASSWORD=$GUEST_PASSWORD STAGING_DIR=/ DO_TGZ=0 bash /opt/stack/devstack/tools/xen/prepare_guest.sh</span>
+<span class="s"># DIVIDER</span>
+<span class="s">/etc/init.d/networking restart</span>
+<span class="s">GUEST_PASSWORD=$GUEST_PASSWORD STAGING_DIR=/ DO_TGZ=0 bash /opt/stack/devstack/tools/xen/prepare_guest.sh &gt; /opt/stack/prepare_guest.log 2&gt;&amp;1</span>
 <span class="s">su -c &quot;/opt/stack/run.sh &gt; /opt/stack/run.sh.log&quot; stack</span>
 <span class="s">exit 0</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure the hostname</p>
+<p>Clean old xva. In the future may not do this every time.</p>
 </td><td class=code><div class=highlight><pre>
 rm -f <span class="nv">$XVA</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Hostname must resolve for rabbit</p>
+<p>Configure the hostname</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="nv">$GUEST_NAME</span> &gt; <span class="nv">$STAGING_DIR</span>/etc/hostname
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure the network</p>
+<p>Hostname must resolve for rabbit</p>
 </td><td class=code><div class=highlight><pre>
 cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/hosts</span>
 <span class="s">$MGT_IP $GUEST_NAME</span>
@@ -504,19 +506,43 @@ cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/hosts</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Gracefully cp only if source file/dir exists</p>
+<p>Configure the network</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">INTERFACES</span><span class="o">=</span><span class="nv">$STAGING_DIR</span>/etc/network/interfaces
 cp <span class="nv">$TEMPLATES_DIR</span>/interfaces.in  <span class="nv">$INTERFACES</span>
-sed -e <span class="s2">&quot;s,@ETH1_IP@,$VM_IP,g&quot;</span> -i <span class="nv">$INTERFACES</span>
-sed -e <span class="s2">&quot;s,@ETH1_NETMASK@,$VM_NETMASK,g&quot;</span> -i <span class="nv">$INTERFACES</span>
-sed -e <span class="s2">&quot;s,@ETH2_IP@,$MGT_IP,g&quot;</span> -i <span class="nv">$INTERFACES</span>
-sed -e <span class="s2">&quot;s,@ETH2_NETMASK@,$MGT_NETMASK,g&quot;</span> -i <span class="nv">$INTERFACES</span>
-sed -e <span class="s2">&quot;s,@ETH3_IP@,$PUB_IP,g&quot;</span> -i <span class="nv">$INTERFACES</span>
-sed -e <span class="s2">&quot;s,@ETH3_NETMASK@,$PUB_NETMASK,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$VM_IP</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;eth1 on dhcp&#39;</span>
+    sed -e <span class="s2">&quot;s,iface eth1 inet static,iface eth1 inet dhcp,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+    sed -e <span class="s1">&#39;/@ETH1_/d&#39;</span> -i <span class="nv">$INTERFACES</span>
+<span class="k">else</span>
+<span class="k">    </span>sed -e <span class="s2">&quot;s,@ETH1_IP@,$VM_IP,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+    sed -e <span class="s2">&quot;s,@ETH1_NETMASK@,$VM_NETMASK,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$MGT_IP</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;eth2 on dhcp&#39;</span>
+    sed -e <span class="s2">&quot;s,iface eth2 inet static,iface eth2 inet dhcp,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+    sed -e <span class="s1">&#39;/@ETH2_/d&#39;</span> -i <span class="nv">$INTERFACES</span>
+<span class="k">else</span>
+<span class="k">    </span>sed -e <span class="s2">&quot;s,@ETH2_IP@,$MGT_IP,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+    sed -e <span class="s2">&quot;s,@ETH2_NETMASK@,$MGT_NETMASK,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$PUB_IP</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;eth3 on dhcp&#39;</span>
+    sed -e <span class="s2">&quot;s,iface eth3 inet static,iface eth3 inet dhcp,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+    sed -e <span class="s1">&#39;/@ETH3_/d&#39;</span> -i <span class="nv">$INTERFACES</span>
+<span class="k">else</span>
+<span class="k">    </span>sed -e <span class="s2">&quot;s,@ETH3_IP@,$PUB_IP,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+    sed -e <span class="s2">&quot;s,@ETH3_NETMASK@,$PUB_NETMASK,g&quot;</span> -i <span class="nv">$INTERFACES</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[</span> -h <span class="nv">$STAGING_DIR</span>/sbin/dhclient3 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>rm -f <span class="nv">$STAGING_DIR</span>/sbin/dhclient3
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Copy over your ssh keys and env if desired</p>
+<p>Gracefully cp only if source file/dir exists</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>cp_it <span class="o">{</span>
     <span class="k">if</span> <span class="o">[</span> -e <span class="nv">$1</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> -d <span class="nv">$1</span> <span class="o">]</span>; <span class="k">then</span>
@@ -525,7 +551,7 @@ sed -e <span class="s2">&quot;s,@ETH3_NETMASK@,$PUB_NETMASK,g&quot;</span> -i <s
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure run.sh</p>
+<p>Copy over your ssh keys and env if desired</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">COPYENV</span><span class="o">=</span><span class="k">${</span><span class="nv">COPYENV</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$COPYENV&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -537,17 +563,18 @@ sed -e <span class="s2">&quot;s,@ETH3_NETMASK@,$PUB_NETMASK,g&quot;</span> -i <s
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create xva</p>
+<p>Configure run.sh</p>
 </td><td class=code><div class=highlight><pre>
 cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/opt/stack/run.sh</span>
 <span class="s">#!/bin/bash</span>
 <span class="s">cd /opt/stack/devstack</span>
 <span class="s">killall screen</span>
-<span class="s">UPLOAD_LEGACY_TTY=yes HOST_IP=$PUB_IP VIRT_DRIVER=xenserver FORCE=yes MULTI_HOST=1 $STACKSH_PARAMS ./stack.sh</span>
+<span class="s">UPLOAD_LEGACY_TTY=yes HOST_IP=$PUB_IP VIRT_DRIVER=xenserver FORCE=yes MULTI_HOST=1 HOST_IP_IFACE=$HOST_IP_IFACE $STACKSH_PARAMS ./stack.sh</span>
 <span class="s">EOF</span>
 chmod 755 <span class="nv">$STAGING_DIR</span>/opt/stack/run.sh
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Create xva</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$XVA</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>rm -rf /tmp/mkxva*
@@ -558,10 +585,12 @@ chmod 755 <span class="nv">$STAGING_DIR</span>/opt/stack/run.sh
 
 
 </pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 </body>
-</html>
-</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
+</html></td><td class='code'></td></tr>
     </tbody>
     </table>
 </div>

@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>prepare_dom0.sh</title>
+    <title>install_domU_multi.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>prepare_dom0.sh</h1></th>
+        <th class=docs><h1>install_domU_multi.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -331,50 +331,62 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>Install basics for vi and git</p>
+<p>Echo commands</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>Simple but usable vimrc</p>
+<p>Head node host, which runs glance, api, keystone</p>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/bin/sh</span>
+<span class="c">#!/usr/bin/env bash</span>
+
 <span class="nb">set</span> -o xtrace
-<span class="nb">set</span> -o errexit
-
-yum -y  --enablerepo<span class="o">=</span>base install gcc make vim-enhanced zlib-devel openssl-devel
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Use the pretty vim</p>
+<p>Networking params</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -e /root/.vimrc <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>cat &gt; /root/.vimrc <span class="s">&lt;&lt;EOF</span>
-<span class="s">syntax on</span>
-<span class="s">se ts=4</span>
-<span class="s">se expandtab</span>
-<span class="s">se shiftwidth=4</span>
-<span class="s">EOF</span>
-<span class="k">fi</span>
+<span class="nv">HEAD_PUB_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAD_PUB_IP</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.57</span><span class="k">}</span>
+<span class="nv">HEAD_MGT_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAD_MGT_IP</span><span class="k">:-</span><span class="nv">172</span><span class="p">.16.100.57</span><span class="k">}</span>
+
+<span class="nv">COMPUTE_PUB_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">COMPUTE_PUB_IP</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.58</span><span class="k">}</span>
+<span class="nv">COMPUTE_MGT_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">COMPUTE_MGT_IP</span><span class="k">:-</span><span class="nv">172</span><span class="p">.16.100.58</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install git</p>
+<p>Variables common amongst all hosts in the cluster</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> -e /usr/bin/vim <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>rm /bin/vi
-    ln -s /usr/bin/vim /bin/vi
+<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.1.196/30</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Helper to launch containers</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">COMMON_VARS</span><span class="o">=</span><span class="s2">&quot;$STACKSH_PARAMS MYSQL_HOST=$HEAD_MGT_IP RABBIT_HOST=$HEAD_MGT_IP GLANCE_HOSTPORT=$HEAD_MGT_IP:9292 FLOATING_RANGE=$FLOATING_RANGE&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Launch the head node - headnode uses a non-ip domain name,
+because rabbit won't launch with an ip addr hostname :(</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_domU <span class="o">{</span>
+    <span class="nv">GUEST_NAME</span><span class="o">=</span><span class="nv">$1</span> <span class="nv">PUB_IP</span><span class="o">=</span><span class="nv">$2</span> <span class="nv">MGT_IP</span><span class="o">=</span><span class="nv">$3</span> <span class="nv">DO_SHUTDOWN</span><span class="o">=</span><span class="nv">$4</span> <span class="nv">TERMINATE</span><span class="o">=</span><span class="nv">$TERMINATE</span> <span class="nv">STACKSH_PARAMS</span><span class="o">=</span><span class="s2">&quot;$COMMON_VARS $5&quot;</span> ./build_domU.sh
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Wait till the head node is up</p>
+</td><td class=code><div class=highlight><pre>
+install_domU HEADNODE <span class="nv">$HEAD_PUB_IP</span> <span class="nv">$HEAD_MGT_IP</span> 1 <span class="s2">&quot;ENABLED_SERVICES=g-api,g-reg,key,n-api,n-sch,n-vnc,horizon,mysql,rabbit&quot;</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$HEAD_PUB_IP</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>
+<span class="k">then</span>
+<span class="k">    </span><span class="nv">guestnet</span><span class="o">=</span><span class="k">$(</span>xe vm-list --minimal name-label<span class="o">=</span>HEADNODE <span class="nv">params</span><span class="o">=</span>networks<span class="k">)</span>
+    <span class="nv">HEAD_PUB_IP</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$guestnet</span> | grep -w -o --only-matching <span class="s2">&quot;3/ip: [0-9,.]*;&quot;</span> | cut -d <span class="s1">&#39;:&#39;</span> -f2 | cut -d <span class="s1">&#39;;&#39;</span> -f 1<span class="k">)</span>
 <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Build the HA compute host</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">while</span> ! curl -L http://<span class="nv">$HEAD_PUB_IP</span> | grep -q username; <span class="k">do</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for head node ($HEAD_PUB_IP) to start...&quot;</span>
+    sleep 5
+<span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! which git; <span class="k">then</span>
-<span class="k">    </span><span class="nv">DEST</span><span class="o">=</span>/tmp/
-    <span class="nv">GITDIR</span><span class="o">=</span><span class="nv">$DEST</span>/git-1.7.7
-    <span class="nb">cd</span> <span class="nv">$DEST</span>
-    rm -rf <span class="nv">$GITDIR</span>*
-    wget http://git-core.googlecode.com/files/git-1.7.7.tar.gz
-    tar xfv git-1.7.7.tar.gz
-    <span class="nb">cd</span> <span class="nv">$GITDIR</span>
-    ./configure
-    make install
-<span class="k">fi</span>
-
+install_domU COMPUTENODE <span class="nv">$COMPUTE_PUB_IP</span> <span class="nv">$COMPUTE_MGT_IP</span> 0 <span class="s2">&quot;ENABLED_SERVICES=n-cpu,n-net,n-api&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>

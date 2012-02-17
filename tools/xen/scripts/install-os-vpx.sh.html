@@ -374,7 +374,7 @@ usage<span class="o">()</span>
 cat <span class="s">&lt;&lt; EOF</span>
 
 <span class="s">  Usage: $0 [-f FILE_PATH] [-d DISK_SIZE] [-v BRIDGE_NAME] [-m BRIDGE_NAME] [-p BRIDGE_NAME]</span>
-<span class="s">            [-k PARAMS] [-r RAM] [-i|-c] [-w] [-b]</span>
+<span class="s">            [-k PARAMS] [-r RAM] [-i|-c] [-w] [-b] [-l NAME_LABEL]</span>
 
 <span class="s">  Installs XenServer OpenStack VPX.</span>
 
@@ -396,6 +396,7 @@ cat <span class="s">&lt;&lt; EOF</span>
 <span class="s">     -k params    Specifies kernel parameters.</span>
 <span class="s">     -r MiB       Specifies RAM used by the VPX, in MiB.</span>
 <span class="s">                  By default it will take the value from the XVA.</span>
+<span class="s">     -l name      Specifies the name label for the VM.</span>
 
 <span class="s">  EXAMPLES:</span>
 
@@ -423,7 +424,7 @@ cat <span class="s">&lt;&lt; EOF</span>
 
 get_params<span class="o">()</span>
 <span class="o">{</span>
-  <span class="k">while </span><span class="nb">getopts</span> <span class="s2">&quot;hicwbf:d:v:m:p:k:r:&quot;</span> OPTION; 
+  <span class="k">while </span><span class="nb">getopts</span> <span class="s2">&quot;hicwbf:d:v:m:p:k:r:l:&quot;</span> OPTION; 
   <span class="k">do</span>
 <span class="k">    case</span> <span class="nv">$OPTION</span> in
       h<span class="o">)</span> usage
@@ -461,6 +462,9 @@ get_params<span class="o">()</span>
          ;;
       v<span class="o">)</span>
          <span class="nv">BRIDGE_V</span><span class="o">=</span><span class="nv">$OPTARG</span>
+         ;;
+     l<span class="o">)</span>
+         <span class="nv">NAME_LABEL</span><span class="o">=</span><span class="nv">$OPTARG</span>
          ;;
       ?<span class="o">)</span>
          usage
@@ -784,7 +788,7 @@ get_params <span class="s2">&quot;$@&quot;</span>
 
   renumber_system_disk <span class="s2">&quot;$vm_uuid&quot;</span>
 
-  <span class="nv">nl</span><span class="o">=</span><span class="k">$(</span>xe_min vm-list <span class="nv">params</span><span class="o">=</span>name-label <span class="nv">uuid</span><span class="o">=</span><span class="nv">$vm_uuid</span><span class="k">)</span>
+  <span class="nv">nl</span><span class="o">=</span><span class="k">${</span><span class="nv">NAME_LABEL</span><span class="k">:-$(</span>xe_min vm-list <span class="nv">params</span><span class="o">=</span>name-label <span class="nv">uuid</span><span class="o">=</span><span class="nv">$vm_uuid</span><span class="k">)}</span>
   xe vm-param-set <span class="se">\</span>
     <span class="s2">&quot;name-label=${nl/ import/}&quot;</span> <span class="se">\</span>
     other-config:os-vpx<span class="o">=</span><span class="nb">true</span> <span class="se">\</span>

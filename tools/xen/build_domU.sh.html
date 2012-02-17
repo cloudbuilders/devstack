@@ -368,7 +368,8 @@ ul.auto-toc {
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Helper to create networks</p>
+<p>Helper to create networks
+Uses echo trickery to return network uuid</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! which git; <span class="k">then</span>
 <span class="k">    </span><span class="nv">GITDIR</span><span class="o">=</span>/tmp/git-1.7.7
@@ -386,63 +387,94 @@ ul.auto-toc {
 <p>Create host, vm, mgmt, pub networks</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>create_network<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> ! xe network-list | grep bridge | grep -q <span class="nv">$1</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Creating bridge $1&quot;</span>
-        xe network-create name-label<span class="o">=</span><span class="nv">$1</span>
+    <span class="nv">br</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nv">dev</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nv">vlan</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nv">netname</span><span class="o">=</span><span class="nv">$4</span>
+    <span class="k">if</span> <span class="o">[</span> -z <span class="nv">$br</span> <span class="o">]</span>
+    <span class="k">then</span>
+<span class="k">        </span><span class="nv">pif</span><span class="o">=</span><span class="k">$(</span>xe pif-list --minimal <span class="nv">device</span><span class="o">=</span><span class="nv">$dev</span> <span class="nv">VLAN</span><span class="o">=</span><span class="nv">$vlan</span><span class="k">)</span>
+        <span class="k">if</span> <span class="o">[</span> -z <span class="nv">$pif</span> <span class="o">]</span>
+        <span class="k">then</span>
+<span class="k">            </span><span class="nv">net</span><span class="o">=</span><span class="k">$(</span>xe network-create name-label<span class="o">=</span><span class="nv">$netname</span><span class="k">)</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">net</span><span class="o">=</span><span class="k">$(</span>xe network-list --minimal PIF-uuids<span class="o">=</span><span class="nv">$pif</span><span class="k">)</span>
+        <span class="k">fi</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="nv">$net</span>
+        <span class="k">return </span>0
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> ! <span class="k">$(</span>xe network-list --minimal <span class="nv">params</span><span class="o">=</span>bridge | grep -w --only-matching <span class="nv">$br</span><span class="k">)</span> <span class="o">]</span>
+    <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Specified bridge $br does not exist&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;If you wish to use defaults, please keep the bridge name empty&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">net</span><span class="o">=</span><span class="k">$(</span>xe network-list --minimal <span class="nv">bridge</span><span class="o">=</span><span class="nv">$br</span><span class="k">)</span>
+        <span class="nb">echo</span> <span class="nv">$net</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function </span>errorcheck<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">rc</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$rc</span> -ne 0 <span class="o">]</span>
+    <span class="k">then</span>
+<span class="k">        </span><span class="nb">exit</span> <span class="nv">$rc</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Get the uuid for our physical (public) interface</p>
-</td><td class=code><div class=highlight><pre>
-create_network xapi0
-create_network <span class="nv">$VM_BR</span>
-create_network <span class="nv">$MGT_BR</span>
-create_network <span class="nv">$PUB_BR</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create networks/bridges for vm and management</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">PIF</span><span class="o">=</span><span class="sb">`</span>xe pif-list --minimal <span class="nv">device</span><span class="o">=</span>eth0<span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Helper to create vlans</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">VM_NET</span><span class="o">=</span><span class="sb">`</span>xe network-list --minimal <span class="nv">bridge</span><span class="o">=</span><span class="nv">$VM_BR</span><span class="sb">`</span>
-<span class="nv">MGT_NET</span><span class="o">=</span><span class="sb">`</span>xe network-list --minimal <span class="nv">bridge</span><span class="o">=</span><span class="nv">$MGT_BR</span><span class="sb">`</span>
+<span class="nv">VM_NET</span><span class="o">=</span><span class="k">$(</span>create_network <span class="s2">&quot;$VM_BR&quot;</span> <span class="s2">&quot;$VM_DEV&quot;</span> <span class="s2">&quot;$VM_VLAN&quot;</span> <span class="s2">&quot;vmbr&quot;</span><span class="k">)</span>
+errorcheck
+<span class="nv">MGT_NET</span><span class="o">=</span><span class="k">$(</span>create_network <span class="s2">&quot;$MGT_BR&quot;</span> <span class="s2">&quot;$MGT_DEV&quot;</span> <span class="s2">&quot;$MGT_VLAN&quot;</span> <span class="s2">&quot;mgtbr&quot;</span><span class="k">)</span>
+errorcheck
+<span class="nv">PUB_NET</span><span class="o">=</span><span class="k">$(</span>create_network <span class="s2">&quot;$PUB_BR&quot;</span> <span class="s2">&quot;$PUB_DEV&quot;</span> <span class="s2">&quot;$PUB_VLAN&quot;</span> <span class="s2">&quot;pubbr&quot;</span><span class="k">)</span>
+errorcheck
 
+</pre></div></td></tr><tr><td class=docs>
+<p>VLAN -1 refers to no VLAN (physical network)</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>create_vlan<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">dev</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nv">vlan</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nv">net</span><span class="o">=</span><span class="nv">$3</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>We created a brand new network this time</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$vlan</span> -eq -1 <span class="o">]</span>
+    <span class="k">then</span>
+<span class="k">        return</span>
+<span class="k">    fi</span>
+<span class="k">    if</span> <span class="o">[</span> -z <span class="k">$(</span>xe vlan-list --minimal <span class="nv">tag</span><span class="o">=</span><span class="nv">$vlan</span><span class="k">)</span> <span class="o">]</span>
+    <span class="k">then</span>
+<span class="k">        </span><span class="nv">pif</span><span class="o">=</span><span class="k">$(</span>xe pif-list --minimal network-uuid<span class="o">=</span><span class="nv">$net</span><span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create vlans for vm and management</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_vlan<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">pif</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nv">vlan</span><span class="o">=</span><span class="nv">$2</span>
-    <span class="nv">net</span><span class="o">=</span><span class="nv">$3</span>
-    <span class="k">if</span> ! xe vlan-list | grep tag | grep -q <span class="nv">$vlan</span>; <span class="k">then</span>
-<span class="k">        </span>xe vlan-create pif-uuid<span class="o">=</span><span class="nv">$pif</span> <span class="nv">vlan</span><span class="o">=</span><span class="nv">$vlan</span> network-uuid<span class="o">=</span><span class="nv">$net</span>
-    <span class="k">fi</span>
+        <span class="k">if</span> <span class="o">[</span> -z <span class="nv">$pif</span> <span class="o">]</span>
+        <span class="k">then</span>
+<span class="k">            </span><span class="nv">pif</span><span class="o">=</span><span class="k">$(</span>xe pif-list --minimal <span class="nv">device</span><span class="o">=</span><span class="nv">$dev</span> <span class="nv">VLAN</span><span class="o">=</span>-1<span class="k">)</span>
+            xe vlan-create pif-uuid<span class="o">=</span><span class="nv">$pif</span> <span class="nv">vlan</span><span class="o">=</span><span class="nv">$vlan</span> network-uuid<span class="o">=</span><span class="nv">$net</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;VLAN does not exist but PIF attached to this network&quot;</span>
+            <span class="nb">echo</span> <span class="s2">&quot;How did we reach here?&quot;</span>
+            <span class="nb">exit </span>1
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>dom0 ip</p>
 </td><td class=code><div class=highlight><pre>
-create_vlan <span class="nv">$PIF</span> <span class="nv">$VM_VLAN</span> <span class="nv">$VM_NET</span>
-create_vlan <span class="nv">$PIF</span> <span class="nv">$MGT_VLAN</span> <span class="nv">$MGT_NET</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup host-only nat rules</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">HOST_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST_IP</span><span class="k">:-</span><span class="sb">`</span>ifconfig xenbr0 | grep <span class="s2">&quot;inet addr&quot;</span> | cut -d <span class="s2">&quot;:&quot;</span> -f2 | sed <span class="s2">&quot;s/ .*//&quot;</span><span class="sb">`</span><span class="k">}</span>
+create_vlan <span class="nv">$PUB_DEV</span> <span class="nv">$PUB_VLAN</span> <span class="nv">$PUB_NET</span>
+create_vlan <span class="nv">$VM_DEV</span> <span class="nv">$VM_VLAN</span> <span class="nv">$VM_NET</span>
+create_vlan <span class="nv">$MGT_DEV</span> <span class="nv">$MGT_VLAN</span> <span class="nv">$MGT_NET</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up ip forwarding</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">HOST_NET</span><span class="o">=</span>169.254.0.0/16
-<span class="k">if</span> ! iptables -L -v -t nat | grep -q <span class="nv">$HOST_NET</span>; <span class="k">then</span>
-<span class="k">    </span>iptables -t nat -A POSTROUTING -s <span class="nv">$HOST_NET</span> -j SNAT --to-source <span class="nv">$HOST_IP</span>
-    iptables -I FORWARD 1 -s <span class="nv">$HOST_NET</span> -j ACCEPT
-    /etc/init.d/iptables save
-<span class="k">fi</span>
+<span class="nv">HOST_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST_IP</span><span class="k">:-</span><span class="sb">`</span>ifconfig xenbr0 | grep <span class="s2">&quot;inet addr&quot;</span> | cut -d <span class="s2">&quot;:&quot;</span> -f2 | sed <span class="s2">&quot;s/ .*//&quot;</span><span class="sb">`</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>FIXME: This doesn't work on reboot!</p>
@@ -527,7 +559,16 @@ mkdir -p /boot/guest
 </pre></div></td></tr><tr><td class=docs>
 <p>If we have copied our ssh credentials, use ssh to monitor while the installation runs</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$TOP_DIR</span>/scripts/install-os-vpx.sh -f <span class="nv">$XVA</span> -v <span class="nv">$VM_BR</span> -m <span class="nv">$MGT_BR</span> -p <span class="nv">$PUB_BR</span>
+<span class="k">if</span> <span class="o">[</span> -z <span class="nv">$VM_BR</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">VM_BR</span><span class="o">=</span><span class="k">$(</span>xe network-list --minimal <span class="nv">uuid</span><span class="o">=</span><span class="nv">$VM_NET</span> <span class="nv">params</span><span class="o">=</span>bridge<span class="k">)</span>
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[</span> -z <span class="nv">$MGT_BR</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">MGT_BR</span><span class="o">=</span><span class="k">$(</span>xe network-list --minimal <span class="nv">uuid</span><span class="o">=</span><span class="nv">$MGT_NET</span> <span class="nv">params</span><span class="o">=</span>bridge<span class="k">)</span>
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[</span> -z <span class="nv">$PUB_BR</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">PUB_BR</span><span class="o">=</span><span class="k">$(</span>xe network-list --minimal <span class="nv">uuid</span><span class="o">=</span><span class="nv">$PUB_NET</span> <span class="nv">params</span><span class="o">=</span>bridge<span class="k">)</span>
+<span class="k">fi</span>
+<span class="nv">$TOP_DIR</span>/scripts/install-os-vpx.sh -f <span class="nv">$XVA</span> -v <span class="nv">$VM_BR</span> -m <span class="nv">$MGT_BR</span> -p <span class="nv">$PUB_BR</span> -l <span class="nv">$GUEST_NAME</span> -w
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Done creating the container, let's tail the log</p>
