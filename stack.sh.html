@@ -1972,18 +1972,49 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>our screen helper to launch a service in a hidden named screen</p>
+<p>Our screenrc file builder</p>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Name the screen session</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>screen_rc <span class="o">{</span>
+    <span class="nv">SCREENRC</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/stack-screenrc
+    <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$SCREENRC</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set a reasonable statusbar</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="s2">&quot;sessionname stack&quot;</span> &gt; <span class="nv">$SCREENRC</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If this service doesn't already exist in the screenrc file</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="s1">&#39;hardstatus alwayslastline &quot;%-Lw%{= BW}%50&gt;%n%f* %t%{-}%+Lw%&lt; %= %H&quot;&#39;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
+        <span class="nb">echo</span> <span class="s2">&quot;screen -t stack bash&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Our screen helper to launch a service in a hidden named screen</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> ! grep <span class="nv">$1</span> <span class="nv">$SCREENRC</span> 2&gt;&amp;1 &gt; /dev/null; <span class="k">then</span>
+<span class="k">        </span><span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
+        <span class="nb">echo</span> <span class="s2">&quot;screen -t $1 bash&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
+        <span class="nb">echo</span> <span class="s2">&quot;stuff \&quot;$2$NL\&quot;&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Append the service to the screen rc file</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>screen_it <span class="o">{</span>
+    <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
+    <span class="k">if </span>is_service_enabled <span class="nv">$1</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>sleep to allow bash to be ready to be send the command - we are
 creating a new window in screen and then sends characters, so if
 bash isn't running by the time we send the command, nothing happens</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>screen_it <span class="o">{</span>
-    <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
-    <span class="k">if </span>is_service_enabled <span class="nv">$1</span>; <span class="k">then</span>
-<span class="k">        </span>screen -S stack -X screen -t <span class="nv">$1</span>
+        screen_rc <span class="s2">&quot;$1&quot;</span> <span class="s2">&quot;$2&quot;</span>
+
+        screen -S stack -X screen -t <span class="nv">$1</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>create a new named screen to run processes in</p>
 </td><td class=code><div class=highlight><pre>
