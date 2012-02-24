@@ -628,18 +628,21 @@ nova floating-ip-delete <span class="nv">$FLOATING_IP</span>
 nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Delete a secgroup</p>
+<p>make sure the VM shuts down within a reasonable time</p>
 </td><td class=code><div class=highlight><pre>
 nova delete <span class="nv">$VM_UUID</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>FIXME: validate shutdown within 5 seconds
-(nova show $NAME returns 1 or status != ACTIVE)?</p>
+<p>Delete a secgroup</p>
 </td><td class=code><div class=highlight><pre>
-nova secgroup-delete <span class="nv">$SECGROUP</span>
+<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova show $VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t shut down!&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
+nova secgroup-delete <span class="nv">$SECGROUP</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
