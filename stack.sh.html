@@ -851,9 +851,17 @@ By default we define 9 for the partition count (which mean 512).</p>
 <span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">1000000</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We only ask for Swift Hash if we have enabled swift service.</p>
+<p>This variable allows you to configure how many replicas you want to be
+configured for your Swift cluster.  By default the three replicas would need a
+bit of IO and Memory on a VM you may want to lower that to 1 if you want to do
+only some quick testing.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">:-</span><span class="nv">9</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We only ask for Swift Hash if we have enabled swift service.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SWIFT_REPLICAS</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">:-</span><span class="nv">3</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>SWIFT_HASH is a random unique string for a swift cluster that
@@ -977,7 +985,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 435)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 442)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -1623,25 +1631,26 @@ where to go.</p>
 <p>We now have to emulate a few different servers into one we
 create all the directories needed for swift</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>x in <span class="o">{</span>1..4<span class="o">}</span>; <span class="k">do </span>sudo ln -sf <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="nv">$x</span> <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="nv">$x</span>; <span class="k">done</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>We do want to make sure this is all owned by our user.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">tmpd</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">for </span>d in <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="o">{</span>1..4<span class="o">}</span> <span class="se">\</span>
-        <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/<span class="o">{</span>object,container,account<span class="o">}</span>-server <span class="se">\</span>
-        <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="o">{</span>1..4<span class="o">}</span>/node/sdb1 /var/run/swift; <span class="k">do</span>
-        <span class="o">[[</span> -d <span class="nv">$d</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">continue</span>
-<span class="k">        </span>sudo install -o <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> -g <span class="nv">$USER_GROUP</span> -d <span class="nv">$d</span>
-    <span class="k">done</span>
+    <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
+<span class="k">        </span>sudo ln -sf <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="nv">$x</span> <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="nv">$x</span>; <span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>swift-init has a bug using /etc/swift until bug #885595 is fixed
 we have to create a link</p>
 </td><td class=code><div class=highlight><pre>
-   sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="o">{</span>1..4<span class="o">}</span>/node
-   sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>
+    <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">drive</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/drives/sdb1/<span class="k">${</span><span class="nv">x</span><span class="k">}</span>
+            <span class="nv">node</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="k">${</span><span class="nv">x</span><span class="k">}</span>/node
+            <span class="nv">node_device</span><span class="o">=</span><span class="k">${</span><span class="nv">node</span><span class="k">}</span>/sdb1
+            <span class="o">[[</span> -d <span class="nv">$node</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">continue</span>
+            <span class="o">[[</span> -d <span class="nv">$drive</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">continue</span>
+<span class="k">            </span>sudo install -o <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> -g <span class="nv">$USER_GROUP</span> -d <span class="nv">$drive</span>
+            sudo install -o <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> -g <span class="nv">$USER_GROUP</span> -d <span class="nv">$node_device</span>
+            sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">node</span><span class="k">}</span>
+    <span class="k">done</span>
+
+<span class="k">   </span>sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/<span class="o">{</span>object,container,account<span class="o">}</span>-server /var/run/swift
+   sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span> /var/run/swift
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Swift use rsync to syncronize between all the different
@@ -1694,7 +1703,7 @@ the file /etc/rsyslog.d/10-swift.conf for more info.</p>
        <span class="nb">local </span><span class="nv">log_facility</span><span class="o">=</span><span class="nv">$3</span>
        <span class="nb">local </span>node_number
 
-       <span class="k">for </span>node_number in <span class="o">{</span>1..4<span class="o">}</span>; <span class="k">do</span>
+       <span class="k">for </span>node_number in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
 <span class="k">           </span><span class="nv">node_path</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
            sed -e <span class="s2">&quot;s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},;s,%USER%,$USER,;s,%NODE_PATH%,${node_path},;s,%BIND_PORT%,${bind_port},;s,%LOG_FACILITY%,${log_facility},&quot;</span> <span class="se">\</span>
                <span class="nv">$FILES</span>/swift/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server.conf &gt; <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
@@ -1708,13 +1717,8 @@ the file /etc/rsyslog.d/10-swift.conf for more info.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We create two helper scripts :</p>
-<ul class="simple">
-<li>swift-remakerings
-Allow to recreate rings from scratch.</li>
-<li>swift-startmain
-Restart your full cluster.</li>
-</ul>
+<p>This is where we create three different rings for swift with
+different object servers binding on different ports.</p>
 </td><td class=code><div class=highlight><pre>
    <span class="nv">swift_log_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_LOCATION</span><span class="k">}</span>/logs
    rm -rf <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
@@ -1727,21 +1731,43 @@ Restart your full cluster.</li>
 </pre></div></td></tr><tr><td class=docs>
 <p>We then can start rsync.</p>
 </td><td class=code><div class=highlight><pre>
-   sed -e <span class="s2">&quot;s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},;s/%SWIFT_PARTITION_POWER_SIZE%/$SWIFT_PARTITION_POWER_SIZE/&quot;</span> <span class="nv">$FILES</span>/swift/swift-remakerings | <span class="se">\</span>
-       sudo tee /usr/local/bin/swift-remakerings
-   sudo install -m755 <span class="nv">$FILES</span>/swift/swift-startmain /usr/local/bin/
+   <span class="nb">pushd</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span> &gt;/dev/null <span class="o">&amp;&amp;</span> <span class="o">{</span>
+
+       rm -f *.builder *.ring.gz backups/*.builder backups/*.ring.gz
+
+       <span class="nv">port_number</span><span class="o">=</span>6010
+       swift-ring-builder object.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
+       <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
+<span class="k">           </span>swift-ring-builder object.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
+           <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
+       <span class="k">done</span>
+<span class="k">       </span>swift-ring-builder object.builder rebalance
+
+       <span class="nv">port_number</span><span class="o">=</span>6011
+       swift-ring-builder container.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
+       <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
+<span class="k">           </span>swift-ring-builder container.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
+           <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
+       <span class="k">done</span>
+<span class="k">       </span>swift-ring-builder container.builder rebalance
+
+       <span class="nv">port_number</span><span class="o">=</span>6012
+       swift-ring-builder account.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
+       <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
+<span class="k">           </span>swift-ring-builder account.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
+           <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
+       <span class="k">done</span>
+<span class="k">       </span>swift-ring-builder account.builder rebalance
+
+   <span class="o">}</span> <span class="o">&amp;&amp;</span> <span class="nb">popd</span> &gt;/dev/null
+
    sudo chmod +x /usr/local/bin/swift-*
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create our ring for the object/container/account.</p>
+<p>TODO: Bring some services in foreground.
+Launch all services.</p>
 </td><td class=code><div class=highlight><pre>
    sudo /etc/init.d/rsync restart <span class="o">||</span> :
-
-</pre></div></td></tr><tr><td class=docs>
-<p>And now we launch swift-startmain to get our cluster running
-ready to be tested.</p>
-</td><td class=code><div class=highlight><pre>
-   /usr/local/bin/swift-remakerings
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1749,9 +1775,9 @@ ready to be tested.</p>
 <div class="section" id="volume-service">
 <h2>Volume Service</h2>
 </td><td class=code><div class=highlight><pre>
-   /usr/local/bin/swift-startmain <span class="o">||</span> :
+   swift-init all start
 
-   <span class="nb">unset </span>s swift_hash swift_auth_server tmpd
+   <span class="nb">unset </span>s swift_hash swift_auth_server
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
