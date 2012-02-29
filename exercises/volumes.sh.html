@@ -422,15 +422,32 @@ glance -f index
 <span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>glance -f index | egrep <span class="nv">$DEFAULT_IMAGE_NAME</span> | head -1 | cut -d<span class="s2">&quot; &quot;</span> -f1<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Helper function to grab a numbered field from python novaclient cli result
+Fields are numbered starting with 1
+Reverse syntax is supported: -1 is the last field, -2 is second to last, etc.</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>List of instance types:</p>
 </td><td class=code><div class=highlight><pre>
+<span class="k">function </span>get_field <span class="o">()</span> <span class="o">{</span>
+    <span class="k">while </span><span class="nb">read </span>data
+    <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[</span> <span class="s2">&quot;$1&quot;</span> -lt 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">field</span><span class="o">=</span><span class="s2">&quot;(\$(NF$1))&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">field</span><span class="o">=</span><span class="s2">&quot;\$$(($1 + 1))&quot;</span>
+        <span class="k">fi</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;$data&quot;</span> | awk -F<span class="s1">&#39;[ \t]*\\|[ \t]*&#39;</span> <span class="s2">&quot;{print $field}&quot;</span>
+    <span class="k">done</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>grab the first flavor in the list to launch if default doesn't exist</p>
 </td><td class=code><div class=highlight><pre>
 nova flavor-list
 
-<span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | grep <span class="nv">$DEFAULT_INSTANCE_TYPE</span> | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
+<span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | grep <span class="nv">$DEFAULT_INSTANCE_TYPE</span> | get_field 1<span class="sb">`</span>
 <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -438,12 +455,12 @@ nova flavor-list
 <div class="section" id="testing">
 <h1>Testing</h1>
 </td><td class=code><div class=highlight><pre>
-   <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | head -n 4 | tail -n 1 | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
+   <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | head -n 4 | tail -n 1 | get_field 1<span class="sb">`</span>
 <span class="k">fi</span>
 
 <span class="nv">NAME</span><span class="o">=</span><span class="s2">&quot;myserver&quot;</span>
 
-<span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> <span class="nv">$NAME</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> | grep <span class="s1">&#39; id &#39;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
+<span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> <span class="nv">$NAME</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>First check if it spins up (becomes active and responds to ping on
@@ -471,7 +488,7 @@ bypass security groups and have direct access to the server.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>for single node deployments, we can ping private ips</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;private network&quot;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3<span class="sb">`</span>
+<span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;private network&quot;</span> | get_field 2<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>sometimes the first ping fails (10 seconds isn't enough time for the VM's
@@ -505,7 +522,7 @@ timeout of a second for each ping.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a new volume</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;`nova volume-list | grep $VOL_NAME | head -1 | cut -d&#39;|&#39; -f3 | sed &#39;s/ //g&#39;`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;`nova volume-list | grep $VOL_NAME | head -1 | get_field 2`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume $VOL_NAME already exists&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
@@ -522,7 +539,7 @@ nova volume-create --display_name <span class="nv">$VOL_NAME</span> --display_de
 </pre></div></td></tr><tr><td class=docs>
 <p>Attach to server</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">VOL_ID</span><span class="o">=</span><span class="sb">`</span>nova volume-list | grep <span class="nv">$VOL_NAME</span> | head -1 | cut -d<span class="s1">&#39;|&#39;</span> -f2 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
+<span class="nv">VOL_ID</span><span class="o">=</span><span class="sb">`</span>nova volume-list | grep <span class="nv">$VOL_NAME</span> | head -1 | get_field 1<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Detach volume</p>
@@ -534,7 +551,7 @@ nova volume-attach <span class="nv">$VM_UUID</span> <span class="nv">$VOL_ID</sp
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
-<span class="nv">VOL_ATTACH</span><span class="o">=</span><span class="sb">`</span>nova volume-list | grep <span class="nv">$VOL_NAME</span> | head -1 | cut -d<span class="s1">&#39;|&#39;</span> -f6 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
+<span class="nv">VOL_ATTACH</span><span class="o">=</span><span class="sb">`</span>nova volume-list | grep <span class="nv">$VOL_NAME</span> | head -1 | get_field -1<span class="sb">`</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VOL_ATTACH&quot;</span> !<span class="o">=</span> <span class="nv">$VM_UUID</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume not attached to correct instance&quot;</span>
     <span class="nb">exit </span>1

@@ -534,7 +534,6 @@ prerequisites and initialize $DEST.</p>
 <span class="nv">KEYSTONECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-keystoneclient
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
 <span class="nv">SWIFT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift
-<span class="nv">SWIFT_KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift-keystone2
 <span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
 <span class="nv">QUANTUM_CLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-quantumclient
 <span class="nv">MELANGE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/melange
@@ -1086,13 +1085,9 @@ git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>swift + keystone middleware</p>
-</td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$SWIFT_REPO</span> <span class="nv">$SWIFT_DIR</span> <span class="nv">$SWIFT_BRANCH</span>
-</pre></div></td></tr><tr><td class=docs>
 <p>image catalog service</p>
 </td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$SWIFT_KEYSTONE_REPO</span> <span class="nv">$SWIFT_KEYSTONE_DIR</span> <span class="nv">$SWIFT_KEYSTONE_BRANCH</span>
+    git_clone <span class="nv">$SWIFT_REPO</span> <span class="nv">$SWIFT_DIR</span> <span class="nv">$SWIFT_BRANCH</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled g-api n-api; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1152,15 +1147,13 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$SWIFT_DIR</span>; sudo python setup.py develop
-    <span class="nb">cd</span> <span class="nv">$SWIFT_KEYSTONE_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled g-api n-api; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$GLANCE_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
 <span class="nb">cd</span> <span class="nv">$NOVA_DIR</span>; sudo python setup.py develop
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/horizon; sudo python setup.py develop
-    <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/openstack-dashboard; sudo python setup.py develop
+<span class="k">    </span><span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$QUANTUM_DIR</span>; sudo python setup.py develop
@@ -1293,18 +1286,18 @@ of having to specify the username/password each time.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Remove stale session database.</p>
 </td><td class=code><div class=highlight><pre>
-    rm -fr <span class="k">${</span><span class="nv">HORIZON_DIR</span><span class="k">}</span>/openstack-dashboard/quantum
-    ln -s <span class="k">${</span><span class="nv">QUANTUM_CLIENT_DIR</span><span class="k">}</span>/quantum <span class="k">${</span><span class="nv">HORIZON_DIR</span><span class="k">}</span>/openstack-dashboard/quantum
+    rm -fr <span class="k">${</span><span class="nv">HORIZON_DIR</span><span class="k">}</span>/openstack_dashboard/quantum
+    ln -s <span class="k">${</span><span class="nv">QUANTUM_CLIENT_DIR</span><span class="k">}</span>/quantum <span class="k">${</span><span class="nv">HORIZON_DIR</span><span class="k">}</span>/openstack_dashboard/quantum
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">local_settings.py</tt> is used to override horizon default settings.</p>
 </td><td class=code><div class=highlight><pre>
-    rm -f <span class="nv">$HORIZON_DIR</span>/openstack-dashboard/local/dashboard_openstack.sqlite3
+    rm -f <span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/dashboard_openstack.sqlite3
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Enable quantum in dashboard, if requested</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack-dashboard/local/local_settings.py
+    <span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/local_settings.py
     cp <span class="nv">$FILES</span>/horizon_settings.py <span class="nv">$local_settings</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1318,7 +1311,7 @@ users).  The user system is external (keystone).</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>create an empty directory that apache uses as docroot</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>/openstack-dashboard
+    <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>
     python manage.py syncdb
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1438,15 +1431,19 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
     sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$NOVA_CONF</span>/api-paste.ini
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Helper to clean iptables rules</p>
+<p>allow people to turn off rate limiting for testing, like when using tempest, by setting OSAPI_RATE_LIMIT=&quot; &quot;</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">function </span>replace_pipeline<span class="o">()</span> <span class="o">{</span>
         sed <span class="s2">&quot;/\[pipeline:$1\]/,/\[/s/^pipeline = .*/pipeline = $2/&quot;</span> -i <span class="nv">$NOVA_CONF</span>/api-paste.ini
     <span class="o">}</span>
     replace_pipeline <span class="s2">&quot;ec2cloud&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext cloudrequest authorizer validator ec2executor&quot;</span>
     replace_pipeline <span class="s2">&quot;ec2admin&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext adminrequest authorizer ec2executor&quot;</span>
-    replace_pipeline <span class="s2">&quot;openstack_compute_api_v2&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext ratelimit osapi_compute_app_v2&quot;</span>
-    replace_pipeline <span class="s2">&quot;openstack_volume_api_v1&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext ratelimit osapi_volume_app_v1&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Helper to clean iptables rules</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">OSAPI_RATE_LIMIT</span><span class="o">=</span><span class="k">${</span><span class="nv">OSAPI_RATE_LIMIT</span><span class="k">:-</span><span class="s2">&quot;ratelimit&quot;</span><span class="k">}</span>
+    replace_pipeline <span class="s2">&quot;openstack_compute_api_v2&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext $OSAPI_RATE_LIMIT osapi_compute_app_v2&quot;</span>
+    replace_pipeline <span class="s2">&quot;openstack_volume_api_v1&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext $OSAPI_RATE_LIMIT osapi_volume_app_v1&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1668,17 +1665,11 @@ configured keystone it will checkout the directory.</p>
    sudo sed -i <span class="s1">&#39;/^RSYNC_ENABLE=false/ { s/false/true/ }&#39;</span> /etc/default/rsync
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We install the memcache server as this is will be used by the
-middleware to cache the tokens auths for a long this is needed.</p>
-</td><td class=code><div class=highlight><pre>
-   <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span>keystone
-
-</pre></div></td></tr><tr><td class=docs>
 <p>We do the install of the proxy-server and swift configuration
 replacing a few directives to match our configuration.</p>
 </td><td class=code><div class=highlight><pre>
-       apt_get install memcached
+   <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
+<span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span><span class="s2">&quot;s3token tokenauth keystone&quot;</span>
    <span class="k">else</span>
 <span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span>tempauth
    <span class="k">fi</span>
@@ -1688,8 +1679,17 @@ replacing a few directives to match our configuration.</p>
 emulating 4 nodes on different ports we have a little function
 that help us doing that.</p>
 </td><td class=code><div class=highlight><pre>
-   sed <span class="s2">&quot;s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},;s/%USER%/$USER/;s/%SERVICE_TOKEN%/${SERVICE_TOKEN}/;s/%AUTH_SERVER%/${swift_auth_server}/&quot;</span> <span class="se">\</span>
-       <span class="nv">$FILES</span>/swift/proxy-server.conf|sudo tee  <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/proxy-server.conf
+   sed -e <span class="s2">&quot;s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},g;</span>
+<span class="s2">        s,%USER%,$USER,g;</span>
+<span class="s2">        s,%SERVICE_TOKEN%,${SERVICE_TOKEN},g;</span>
+<span class="s2">        s,%KEYSTONE_SERVICE_PORT%,${KEYSTONE_SERVICE_PORT},g;</span>
+<span class="s2">        s,%KEYSTONE_SERVICE_HOST%,${KEYSTONE_SERVICE_HOST},g;</span>
+<span class="s2">        s,%KEYSTONE_AUTH_PORT%,${KEYSTONE_AUTH_PORT},g;</span>
+<span class="s2">        s,%KEYSTONE_AUTH_HOST%,${KEYSTONE_AUTH_HOST},g;</span>
+<span class="s2">        s,%KEYSTONE_AUTH_PROTOCOL%,${KEYSTONE_AUTH_PROTOCOL},g;</span>
+<span class="s2">        s/%AUTH_SERVER%/${swift_auth_server}/g;&quot;</span> <span class="se">\</span>
+          <span class="nv">$FILES</span>/swift/proxy-server.conf | <span class="se">\</span>
+       sudo tee  <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/proxy-server.conf
 
    sed -e <span class="s2">&quot;s/%SWIFT_HASH%/$SWIFT_HASH/&quot;</span> <span class="nv">$FILES</span>/swift/swift.conf &gt; <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/swift.conf
 
