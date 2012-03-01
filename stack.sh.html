@@ -881,19 +881,29 @@ to validate user tokens.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Horizon currently truncates usernames and passwords at 20 characters</p>
+<p>Services authenticate to Identity with servicename/SERVICE_PASSWORD</p>
 </td><td class=code><div class=highlight><pre>
 read_password SERVICE_TOKEN <span class="s2">&quot;ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN TOKEN.&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Set Keystone interface configuration</p>
+<p>Horizon currently truncates usernames and passwords at 20 characters</p>
+</td><td class=code><div class=highlight><pre>
+read_password SERVICE_PASSWORD <span class="s2">&quot;ENTER A SERVICE_PASSWORD TO USE FOR THE SERVICE AUTHENTICATION.&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set the tenant for service accounts in Keystone</p>
 </td><td class=code><div class=highlight><pre>
 read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS).&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set Keystone interface configuration</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TENANT_NAME</span><span class="k">:-</span><span class="nv">service</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="horizon">
 <h2>Horizon</h2>
 </td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_API_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
 <span class="nv">KEYSTONE_AUTH_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">KEYSTONE_AUTH_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_PORT</span><span class="k">:-</span><span class="nv">35357</span><span class="k">}</span>
 <span class="nv">KEYSTONE_AUTH_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_PROTOCOL</span><span class="k">:-</span><span class="nv">http</span><span class="k">}</span>
@@ -984,7 +994,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 442)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 450)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -1356,6 +1366,7 @@ users).  The user system is external (keystone).</p>
 
     <span class="k">function </span>glance_config <span class="o">{</span>
         sudo sed -e <span class="s2">&quot;</span>
+<span class="s2">            s,%KEYSTONE_API_PORT%,$KEYSTONE_API_PORT,g;</span>
 <span class="s2">            s,%KEYSTONE_AUTH_HOST%,$KEYSTONE_AUTH_HOST,g;</span>
 <span class="s2">            s,%KEYSTONE_AUTH_PORT%,$KEYSTONE_AUTH_PORT,g;</span>
 <span class="s2">            s,%KEYSTONE_AUTH_PROTOCOL%,$KEYSTONE_AUTH_PROTOCOL,g;</span>
@@ -1363,6 +1374,9 @@ users).  The user system is external (keystone).</p>
 <span class="s2">            s,%KEYSTONE_SERVICE_PORT%,$KEYSTONE_SERVICE_PORT,g;</span>
 <span class="s2">            s,%KEYSTONE_SERVICE_PROTOCOL%,$KEYSTONE_SERVICE_PROTOCOL,g;</span>
 <span class="s2">            s,%SQL_CONN%,$BASE_SQL_CONN/glance,g;</span>
+<span class="s2">            s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
+<span class="s2">            s,%SERVICE_USERNAME%,glance,g;</span>
+<span class="s2">            s,%SERVICE_PASSWORD%,$SERVICE_PASSWORD,g;</span>
 <span class="s2">            s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g;</span>
 <span class="s2">            s,%DEST%,$DEST,g;</span>
 <span class="s2">            s,%SYSLOG%,$SYSLOG,g;</span>
@@ -1428,7 +1442,14 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 </pre></div></td></tr><tr><td class=docs>
 <p>Finally, we change the pipelines in nova to use keystone</p>
 </td><td class=code><div class=highlight><pre>
-    sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$NOVA_CONF</span>/api-paste.ini
+    sed -e <span class="s2">&quot;</span>
+<span class="s2">        /^admin_token/i admin_tenant_name = $SERVICE_TENANT_NAME</span>
+<span class="s2">        /admin_tenant_name/s/^.*$/admin_tenant_name = $SERVICE_TENANT_NAME/;</span>
+<span class="s2">        /admin_user/s/^.*$/admin_user = nova/;</span>
+<span class="s2">        /admin_password/s/^.*$/admin_password = $SERVICE_PASSWORD/;</span>
+<span class="s2">        s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
+<span class="s2">        s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g;</span>
+<span class="s2">    &quot;</span> -i <span class="nv">$NOVA_CONF</span>/api-paste.ini
 
 </pre></div></td></tr><tr><td class=docs>
 <p>allow people to turn off rate limiting for testing, like when using tempest, by setting OSAPI_RATE_LIMIT=&quot; &quot;</p>
@@ -1679,16 +1700,21 @@ replacing a few directives to match our configuration.</p>
 emulating 4 nodes on different ports we have a little function
 that help us doing that.</p>
 </td><td class=code><div class=highlight><pre>
-   sed -e <span class="s2">&quot;s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},g;</span>
-<span class="s2">        s,%USER%,$USER,g;</span>
-<span class="s2">        s,%SERVICE_TOKEN%,${SERVICE_TOKEN},g;</span>
-<span class="s2">        s,%KEYSTONE_SERVICE_PORT%,${KEYSTONE_SERVICE_PORT},g;</span>
-<span class="s2">        s,%KEYSTONE_SERVICE_HOST%,${KEYSTONE_SERVICE_HOST},g;</span>
-<span class="s2">        s,%KEYSTONE_AUTH_PORT%,${KEYSTONE_AUTH_PORT},g;</span>
-<span class="s2">        s,%KEYSTONE_AUTH_HOST%,${KEYSTONE_AUTH_HOST},g;</span>
-<span class="s2">        s,%KEYSTONE_AUTH_PROTOCOL%,${KEYSTONE_AUTH_PROTOCOL},g;</span>
-<span class="s2">        s/%AUTH_SERVER%/${swift_auth_server}/g;&quot;</span> <span class="se">\</span>
-          <span class="nv">$FILES</span>/swift/proxy-server.conf | <span class="se">\</span>
+   sed -e <span class="s2">&quot;</span>
+<span class="s2">       s,%SWIFT_CONFIG_LOCATION%,${SWIFT_CONFIG_LOCATION},g;</span>
+<span class="s2">       s,%USER%,$USER,g;</span>
+<span class="s2">       s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
+<span class="s2">       s,%SERVICE_USERNAME%,swift,g;</span>
+<span class="s2">       s,%SERVICE_PASSWORD%,$SERVICE_PASSWORD,g;</span>
+<span class="s2">       s,%SERVICE_TOKEN%,${SERVICE_TOKEN},g;</span>
+<span class="s2">       s,%KEYSTONE_SERVICE_PORT%,${KEYSTONE_SERVICE_PORT},g;</span>
+<span class="s2">       s,%KEYSTONE_SERVICE_HOST%,${KEYSTONE_SERVICE_HOST},g;</span>
+<span class="s2">       s,%KEYSTONE_API_PORT%,${KEYSTONE_API_PORT},g;</span>
+<span class="s2">       s,%KEYSTONE_AUTH_HOST%,${KEYSTONE_AUTH_HOST},g;</span>
+<span class="s2">       s,%KEYSTONE_AUTH_PORT%,${KEYSTONE_AUTH_PORT},g;</span>
+<span class="s2">       s,%KEYSTONE_AUTH_PROTOCOL%,${KEYSTONE_AUTH_PROTOCOL},g;</span>
+<span class="s2">       s/%AUTH_SERVER%/${swift_auth_server}/g;</span>
+<span class="s2">    &quot;</span> <span class="nv">$FILES</span>/swift/proxy-server.conf | <span class="se">\</span>
        sudo tee  <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/proxy-server.conf
 
    sed -e <span class="s2">&quot;s/%SWIFT_HASH%/$SWIFT_HASH/&quot;</span> <span class="nv">$FILES</span>/swift/swift.conf &gt; <span class="k">${</span><span class="nv">SWIFT_CONFIG_LOCATION</span><span class="k">}</span>/swift.conf
@@ -2147,7 +2173,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
 <span class="k">    </span>screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- $KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0/; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
@@ -2163,7 +2189,8 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <p>launch the nova-api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
-    <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span> <span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span> <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> <span class="nv">DEVSTACK_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span> <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> bash <span class="nv">$FILES</span>/keystone_data.sh
+    <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span> <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> <span class="nv">SERVICE_PASSWORD</span><span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> <span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span> <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> <span class="nv">DEVSTACK_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span> <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> <span class="se">\</span>
+        bash <span class="nv">$FILES</span>/keystone_data.sh
 <span class="k">fi</span>
 
 
@@ -2445,7 +2472,7 @@ to access the site using your browser.</p>
 <p>Echo HOST_IP - useful for build_uec.sh, which uses dhcp to give the instance an address</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;keystone is serving at $KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0/&quot;</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;keystone is serving at $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;examples on using novaclient command line is in exercise.sh&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;the default users are: admin and demo&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;the password: $ADMIN_PASSWORD&quot;</span>

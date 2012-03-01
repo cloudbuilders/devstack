@@ -359,6 +359,7 @@ and ec2-create-credentials were renamed</blockquote>
 <span class="k">fi</span>
 
 <span class="nv">ADMIN_TENANT</span><span class="o">=</span><span class="sb">`</span>get_id keystone tenant-create --name<span class="o">=</span>admin<span class="sb">`</span>
+<span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="sb">`</span>get_id keystone tenant-create --name<span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span><span class="sb">`</span>
 <span class="nv">DEMO_TENANT</span><span class="o">=</span><span class="sb">`</span>get_id keystone tenant-create --name<span class="o">=</span>demo<span class="sb">`</span>
 <span class="nv">INVIS_TENANT</span><span class="o">=</span><span class="sb">`</span>get_id keystone tenant-create --name<span class="o">=</span>invisible_to_admin<span class="sb">`</span>
 
@@ -429,6 +430,14 @@ keystone service-create <span class="se">\</span>
                                  --name<span class="o">=</span>nova <span class="se">\</span>
                                  --type<span class="o">=</span>compute <span class="se">\</span>
                                  --description<span class="o">=</span><span class="s2">&quot;Nova Compute Service&quot;</span>
+<span class="nv">NOVA_USER</span><span class="o">=</span><span class="sb">`</span>get_id keystone user-create <span class="se">\</span>
+                                 --name<span class="o">=</span>nova <span class="se">\</span>
+                                 --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+                                 --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                                 --email<span class="o">=</span>nova@example.com<span class="sb">`</span>
+keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                                 --user <span class="nv">$NOVA_USER</span> <span class="se">\</span>
+                                 --role <span class="nv">$ADMIN_ROLE</span>
 
 keystone service-create <span class="se">\</span>
                                  --name<span class="o">=</span>ec2 <span class="se">\</span>
@@ -439,6 +448,14 @@ keystone service-create <span class="se">\</span>
                                  --name<span class="o">=</span>glance <span class="se">\</span>
                                  --type<span class="o">=</span>image <span class="se">\</span>
                                  --description<span class="o">=</span><span class="s2">&quot;Glance Image Service&quot;</span>
+<span class="nv">GLANCE_USER</span><span class="o">=</span><span class="sb">`</span>get_id keystone user-create <span class="se">\</span>
+                                 --name<span class="o">=</span>glance <span class="se">\</span>
+                                 --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+                                 --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                                 --email<span class="o">=</span>glance@example.com<span class="sb">`</span>
+keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                                 --user <span class="nv">$GLANCE_USER</span> <span class="se">\</span>
+                                 --role <span class="nv">$ADMIN_ROLE</span>
 
 keystone service-create <span class="se">\</span>
                                  --name<span class="o">=</span>keystone <span class="se">\</span>
@@ -457,12 +474,28 @@ keystone service-create <span class="se">\</span>
                                  --name<span class="o">=</span>swift <span class="se">\</span>
                                  --type<span class="o">=</span><span class="s2">&quot;object-store&quot;</span> <span class="se">\</span>
                                  --description<span class="o">=</span><span class="s2">&quot;Swift Service&quot;</span>
+    <span class="nv">SWIFT_USER</span><span class="o">=</span><span class="sb">`</span>get_id keystone user-create <span class="se">\</span>
+                                 --name<span class="o">=</span>swift <span class="se">\</span>
+                                 --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+                                 --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                                 --email<span class="o">=</span>swift@example.com<span class="sb">`</span>
+    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                                 --user <span class="nv">$SWIFT_USER</span> <span class="se">\</span>
+                                 --role <span class="nv">$ADMIN_ROLE</span>
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;quantum&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>keystone service-create <span class="se">\</span>
                                  --name<span class="o">=</span>quantum <span class="se">\</span>
                                  --type<span class="o">=</span>network <span class="se">\</span>
                                  --description<span class="o">=</span><span class="s2">&quot;Quantum Service&quot;</span>
+    <span class="nv">QUANTUM_USER</span><span class="o">=</span><span class="sb">`</span>get_id keystone user-create <span class="se">\</span>
+                                 --name<span class="o">=</span>quantum <span class="se">\</span>
+                                 --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+                                 --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                                 --email<span class="o">=</span>quantum@example.com<span class="sb">`</span>
+    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                                 --user <span class="nv">$QUANTUM_USER</span> <span class="se">\</span>
+                                 --role <span class="nv">$ADMIN_ROLE</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
