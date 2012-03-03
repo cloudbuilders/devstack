@@ -711,18 +711,32 @@ we should make sure we use the same variable names as the flag names.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>allow build_domU.sh to specify the flat network bridge via kernel args</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">PUBLIC_INTERFACE_DEFAULT</span><span class="o">=</span>eth3
+</pre></div></td></tr><tr><td class=docs>
 <p>Test floating pool and range are used for testing.  They are defined
 here until the admin APIs can replace nova-manage</p>
 </td><td class=code><div class=highlight><pre>
+    <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span><span class="k">$(</span>grep -o <span class="s1">&#39;flat_network_bridge=[^.]*&#39;</span> /proc/cmdline | cut -d<span class="o">=</span> -f 2<span class="k">)</span>
+    <span class="nv">GUEST_INTERFACE_DEFAULT</span><span class="o">=</span>eth1
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">PUBLIC_INTERFACE_DEFAULT</span><span class="o">=</span>br100
+    <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span>br100
+    <span class="nv">GUEST_INTERFACE_DEFAULT</span><span class="o">=</span>eth0
+<span class="k">fi</span>
 
+<span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">$PUBLIC_INTERFACE_DEFAULT</span><span class="k">}</span>
 <span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
 <span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">FIXED_NETWORK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_NETWORK_SIZE</span><span class="k">:-</span><span class="nv">256</span><span class="k">}</span>
 <span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.224/28</span><span class="k">}</span>
 <span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">FlatDHCPManager</span><span class="k">}</span>
 <span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
-<span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
-<span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+<span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">$FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="k">}</span>
+<span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Multi-host is a mode where each compute node runs its own network node.  This
@@ -758,7 +772,7 @@ this host, make sure that q-svc is also in ENABLED_SERVICES.</p>
 ENABLED_SERVICES.</p>
 <p>With Quantum networking the NET_MAN variable is ignored.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+<span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
 
 <span class="c">## FIXME(ja): should/can we check that FLAT_INTERFACE is sane?</span>
 
@@ -994,7 +1008,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 450)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 454)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -1918,6 +1932,10 @@ add_nova_flag <span class="s2">&quot;--osapi_compute_extension=nova.api.openstac
 add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
 add_nova_flag <span class="s2">&quot;--public_interface=$PUBLIC_INTERFACE&quot;</span>
 add_nova_flag <span class="s2">&quot;--vlan_interface=$VLAN_INTERFACE&quot;</span>
+add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
+<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
+<span class="k">fi</span>
 add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
 add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
 add_nova_flag <span class="s2">&quot;--instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
@@ -1971,23 +1989,16 @@ add_nova_flag <span class="s2">&quot;--force_dhcp_release&quot;</span>
 <span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Get the VM bridge</p>
+<p>Need to avoid crash due to new firewall support</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Need to avoid crash due to new firewall support</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">$(</span>grep -o <span class="s1">&#39;flat_network_bridge=[^.]*&#39;</span> /proc/cmdline | cut -d<span class="o">=</span> -f 2<span class="k">)</span>
-    read_password XENAPI_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR XEN.&quot;</span>
+<span class="k">    </span>read_password XENAPI_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR XEN.&quot;</span>
     add_nova_flag <span class="s2">&quot;--connection_type=xenapi&quot;</span>
     add_nova_flag <span class="s2">&quot;--xenapi_connection_url=http://169.254.0.1&quot;</span>
     add_nova_flag <span class="s2">&quot;--xenapi_connection_username=root&quot;</span>
     add_nova_flag <span class="s2">&quot;--xenapi_connection_password=$XENAPI_PASSWORD&quot;</span>
     add_nova_flag <span class="s2">&quot;--noflat_injected&quot;</span>
-    add_nova_flag <span class="s2">&quot;--flat_interface=eth1&quot;</span>
-    add_nova_flag <span class="s2">&quot;--flat_network_bridge=${FLAT_NETWORK_BRIDGE}&quot;</span>
-    add_nova_flag <span class="s2">&quot;--public_interface=${HOST_IP_IFACE}&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="nova-database">
 <h3>Nova Database</h3>
@@ -1998,10 +2009,6 @@ add_nova_flag <span class="s2">&quot;--force_dhcp_release&quot;</span>
 <span class="k">    </span>add_nova_flag <span class="s2">&quot;--connection_type=libvirt&quot;</span>
     <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     add_nova_flag <span class="s2">&quot;--firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
-    add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
-    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
