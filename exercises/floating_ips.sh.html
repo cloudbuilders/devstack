@@ -345,6 +345,10 @@ only the first error that occured.</p>
 </td><td class=code><div class=highlight><pre>
 
 
+<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;Begin DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Print the commands being run so that we can see the command that triggers
 an error.  It is also useful for following allowing as the install occurs.</p>
@@ -363,11 +367,20 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Import common functions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span> &gt;/dev/null
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import configuration</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> ./functions
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Max time to wait while vm goes from build to active state</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 <span class="nb">source</span> ./openrc
-<span class="nb">popd</span>
+<span class="nb">popd</span> &gt;/dev/null
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Max time till the vm is bootable</p>
@@ -473,7 +486,7 @@ nova secgroup-list
 </td><td class=code><div class=highlight><pre>
 nova flavor-list
 
-<span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | grep <span class="nv">$DEFAULT_INSTANCE_TYPE</span> | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
+<span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | grep <span class="nv">$DEFAULT_INSTANCE_TYPE</span> | get_field 1<span class="sb">`</span>
 <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -481,12 +494,13 @@ nova flavor-list
 <div class="section" id="testing">
 <h1>Testing</h1>
 </td><td class=code><div class=highlight><pre>
-   <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | head -n 4 | tail -n 1 | cut -d<span class="s2">&quot;|&quot;</span> -f2<span class="sb">`</span>
+   <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | head -n 4 | tail -n 1 | get_field 1<span class="sb">`</span>
 <span class="k">fi</span>
 
-<span class="nv">NAME</span><span class="o">=</span><span class="s2">&quot;myserver&quot;</span>
+<span class="nv">NAME</span><span class="o">=</span><span class="s2">&quot;ex-float&quot;</span>
 
-<span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> <span class="nv">$NAME</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> | grep <span class="s1">&#39; id &#39;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
+<span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> <span class="nv">$NAME</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="sb">`</span>
+die_if_not_set VM_UUID <span class="s2">&quot;Failure launching $NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>First check if it spins up (becomes active and responds to ping on
@@ -514,7 +528,8 @@ bypass security groups and have direct access to the server.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>for single node deployments, we can ping private ips</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;private network&quot;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3<span class="sb">`</span>
+<span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;private network&quot;</span> | get_field 2<span class="sb">`</span>
+die_if_not_set IP <span class="s2">&quot;Failure retrieving IP address&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>sometimes the first ping fails (10 seconds isn't enough time for the VM's
@@ -562,7 +577,8 @@ nova secgroup-list-rules <span class="nv">$SECGROUP</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>list floating addresses</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create | grep <span class="nv">$DEFAULT_FLOATING_POOL</span> | cut -d <span class="s1">&#39;|&#39;</span> -f2<span class="sb">`</span>
+<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create | grep <span class="nv">$DEFAULT_FLOATING_POOL</span> | get_field 1<span class="sb">`</span>
+die_if_not_set FLOATING_IP <span class="s2">&quot;Failure creating floating IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>add floating ip to our server</p>
@@ -576,6 +592,7 @@ nova secgroup-list-rules <span class="nv">$SECGROUP</span>
 <p>test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
 nova add-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING_IP</span>
+die_if_error <span class="s2">&quot;Failure adding floating IP $FLOATING_IP to $NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Allocate an IP from second floating pool</p>
@@ -588,7 +605,8 @@ nova add-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING
 </pre></div></td></tr><tr><td class=docs>
 <p>list floating addresses</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">TEST_FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create <span class="nv">$TEST_FLOATING_POOL</span> | grep <span class="nv">$TEST_FLOATING_POOL</span> | cut -d <span class="s1">&#39;|&#39;</span> -f2<span class="sb">`</span>
+<span class="nv">TEST_FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create <span class="nv">$TEST_FLOATING_POOL</span> | grep <span class="nv">$TEST_FLOATING_POOL</span> | get_field 1<span class="sb">`</span>
+die_if_not_set TEST_FLOATING_IP <span class="s2">&quot;Failure creating floating IP in $TEST_FLOATING_POOL&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>dis-allow icmp traffic (ping)</p>
@@ -602,6 +620,7 @@ nova add-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING
 <p>FIXME (anthony): make xs support security groups</p>
 </td><td class=code><div class=highlight><pre>
 nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
+die_if_error <span class="s2">&quot;Failure deleting security group rule from $SECGROUP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>test we can aren't able to ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
@@ -621,16 +640,19 @@ nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
 <p>Delete second floating IP</p>
 </td><td class=code><div class=highlight><pre>
 nova floating-ip-delete <span class="nv">$FLOATING_IP</span>
+die_if_error <span class="s2">&quot;Failure deleting floating IP $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>shutdown the server</p>
 </td><td class=code><div class=highlight><pre>
 nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span>
+die_if_error <span class="s2">&quot;Failure deleting floating IP $TEST_FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>make sure the VM shuts down within a reasonable time</p>
 </td><td class=code><div class=highlight><pre>
 nova delete <span class="nv">$VM_UUID</span>
+die_if_error <span class="s2">&quot;Failure deleting instance $NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete a secgroup</p>
@@ -643,6 +665,12 @@ nova delete <span class="nv">$VM_UUID</span>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 nova secgroup-delete <span class="nv">$SECGROUP</span>
+die_if_error <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+
+<span class="nb">set</span> +o xtrace
+<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;End DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>

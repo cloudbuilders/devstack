@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>swift.sh</title>
+    <title>functions.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>swift.sh</h1></th>
+        <th class=docs><h1>functions.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -331,101 +331,69 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>Test swift via the command line tools that ship with it.</p>
+<p>Tests for DevStack functions</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>This script exits on an error so that errors don't compound and you see
-only the first error that occured.</p>
+<p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
 
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;Begin DevStack Exercise: $0&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Print the commands being run so that we can see the command that triggers
-an error.  It is also useful for following allowing as the install occurs.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o errexit
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="settings">
-<h1>Settings</h1>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o xtrace
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Use openrc + stackrc + localrc for settings</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Import common functions</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span> &gt;/dev/null
+<span class="nv">TOP</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import configuration</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./functions
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Container name</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./openrc
-<span class="nb">popd</span> &gt;/dev/null
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="testing-swift">
-<h1>Testing Swift</h1>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">CONTAINER</span><span class="o">=</span>ex-swift
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Check if we have to swift via keystone</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>We start by creating a test container</p>
-</td><td class=code><div class=highlight><pre>
-swift stat
-die_if_error <span class="s2">&quot;Failure geting status&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>add some files into it.</p>
-</td><td class=code><div class=highlight><pre>
-swift post <span class="nv">$CONTAINER</span>
-die_if_error <span class="s2">&quot;Failure creating container $CONTAINER&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>list them</p>
-</td><td class=code><div class=highlight><pre>
-swift upload <span class="nv">$CONTAINER</span> /etc/issue
-die_if_error <span class="s2">&quot;Failure uploading file to container $CONTAINER&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>And we may want to delete them now that we have tested that
-everything works.</p>
-</td><td class=code><div class=highlight><pre>
-swift list <span class="nv">$CONTAINER</span>
-die_if_error <span class="s2">&quot;Failure listing contents of container $CONTAINER&quot;</span>
+<span class="nb">source</span> <span class="nv">$TOP</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
-swift delete <span class="nv">$CONTAINER</span>
-die_if_error <span class="s2">&quot;Failure deleting container $CONTAINER&quot;</span>
+<span class="nb">source</span> <span class="nv">$TOP</span>/openrc
 
-<span class="nb">set</span> +o xtrace
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;End DevStack Exercise: $0&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+
+<span class="nb">echo</span> <span class="s2">&quot;Testing die_if_error()&quot;</span>
+
+bash -c <span class="s2">&quot;source $TOP/functions; true; die_if_error &#39;not OK&#39;&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> !<span class="o">=</span> 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;die_if_error [true] Failed&quot;</span>
+<span class="k">fi</span>
+
+bash -c <span class="s2">&quot;source $TOP/functions; false; die_if_error &#39;OK&#39;&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> <span class="o">=</span> 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;die_if_error [false] Failed&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;OK&#39;</span>
+<span class="k">fi</span>
+
+
+<span class="nb">echo</span> <span class="s2">&quot;Testing die_if_not_set()&quot;</span>
+
+bash -c <span class="s2">&quot;source $TOP/functions; X=`echo Y &amp;&amp; true`; die_if_not_set X &#39;not OK&#39;&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> !<span class="o">=</span> 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;die_if_not_set [X=&#39;Y&#39; true] Failed&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;OK&#39;</span>
+<span class="k">fi</span>
+
+bash -c <span class="s2">&quot;source $TOP/functions; X=`true`; die_if_not_set X &#39;OK&#39;&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> <span class="o">=</span> 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;die_if_not_set [X=&#39;&#39; true] Failed&quot;</span>
+<span class="k">fi</span>
+
+bash -c <span class="s2">&quot;source $TOP/functions; X=`echo Y &amp;&amp; false`; die_if_not_set X &#39;not OK&#39;&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> !<span class="o">=</span> 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;die_if_not_set [X=&#39;Y&#39; false] Failed&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;OK&#39;</span>
+<span class="k">fi</span>
+
+bash -c <span class="s2">&quot;source $TOP/functions; X=`false`; die_if_not_set X &#39;OK&#39;&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> <span class="o">=</span> 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;die_if_not_set [X=&#39;&#39; false] Failed&quot;</span>
+<span class="k">fi</span>
+
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
 </div>
 </body>
 </html>

@@ -340,6 +340,10 @@ only the first error that occured.</p>
 <span class="c">#!/usr/bin/env bash</span>
 
 
+<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;Begin DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Print the commands being run so that we can see the command that triggers
 an error.  It is also useful for following allowing as the install occurs.</p>
@@ -357,11 +361,20 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Import common functions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span> &gt;/dev/null
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import configuration</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> ./functions
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Max time to wait while vm goes from build to active state</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 <span class="nb">source</span> ./openrc
-<span class="nb">popd</span>
+<span class="nb">popd</span> &gt;/dev/null
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Max time till the vm is bootable</p>
@@ -408,6 +421,7 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <p>Assure it has booted within a reasonable time</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">INSTANCE</span><span class="o">=</span><span class="sb">`</span>euca-run-instances -g <span class="nv">$SECGROUP</span> -t <span class="nv">$DEFAULT_INSTANCE_TYPE</span> <span class="nv">$IMAGE</span> | grep INSTANCE | cut -f2<span class="sb">`</span>
+die_if_not_set INSTANCE <span class="s2">&quot;Failure launching instance&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Allocate floating address</p>
@@ -421,16 +435,19 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <p>Associate floating address</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>euca-allocate-address | cut -f2<span class="sb">`</span>
+die_if_not_set FLOATING_IP <span class="s2">&quot;Failure allocating floating IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Authorize pinging</p>
 </td><td class=code><div class=highlight><pre>
 euca-associate-address -i <span class="nv">$INSTANCE</span> <span class="nv">$FLOATING_IP</span>
+die_if_error <span class="s2">&quot;Failure associating address $FLOATING_IP to $INSTANCE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
 euca-authorize -P icmp -s 0.0.0.0/0 -t -1:-1 <span class="nv">$SECGROUP</span>
+die_if_error <span class="s2">&quot;Failure authorizing rule in $SECGROUP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Revoke pinging</p>
@@ -444,11 +461,13 @@ euca-authorize -P icmp -s 0.0.0.0/0 -t -1:-1 <span class="nv">$SECGROUP</span>
 <p>Release floating address</p>
 </td><td class=code><div class=highlight><pre>
 euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 <span class="nv">$SECGROUP</span>
+die_if_error <span class="s2">&quot;Failure revoking rule in $SECGROUP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait just a tick for everything above to complete so release doesn't fail</p>
 </td><td class=code><div class=highlight><pre>
 euca-disassociate-address <span class="nv">$FLOATING_IP</span>
+die_if_error <span class="s2">&quot;Failure disassociating address $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Release floating address</p>
@@ -462,6 +481,7 @@ euca-disassociate-address <span class="nv">$FLOATING_IP</span>
 <p>Wait just a tick for everything above to complete so terminate doesn't fail</p>
 </td><td class=code><div class=highlight><pre>
 euca-release-address <span class="nv">$FLOATING_IP</span>
+die_if_error <span class="s2">&quot;Failure releasing address $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Terminate instance</p>
@@ -475,6 +495,7 @@ euca-release-address <span class="nv">$FLOATING_IP</span>
 <p>Assure it has terminated within a reasonable time</p>
 </td><td class=code><div class=highlight><pre>
 euca-terminate-instances <span class="nv">$INSTANCE</span>
+die_if_error <span class="s2">&quot;Failure terminating instance $INSTANCE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete group</p>
@@ -487,6 +508,12 @@ euca-terminate-instances <span class="nv">$INSTANCE</span>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 euca-delete-group <span class="nv">$SECGROUP</span>
+die_if_error <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+
+<span class="nb">set</span> +o xtrace
+<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;End DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
