@@ -1432,11 +1432,11 @@ users).  The user system is external (keystone).</p>
 one from the keystone project to launch nova.  This paste config adds
 the configuration required for nova to validate keystone tokens.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">NOVA_CONF</span><span class="o">=</span>/etc/nova
-<span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$NOVA_CONF</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>sudo mkdir -p <span class="nv">$NOVA_CONF</span>
+<span class="nv">NOVA_CONF_DIR</span><span class="o">=</span>/etc/nova
+<span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$NOVA_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>sudo mkdir -p <span class="nv">$NOVA_CONF_DIR</span>
 <span class="k">fi</span>
-sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$NOVA_CONF</span>
+sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$NOVA_CONF_DIR</span>
 
 <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1451,7 +1451,7 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 </pre></div></td></tr><tr><td class=docs>
 <p>Then we add our own service token to the configuration</p>
 </td><td class=code><div class=highlight><pre>
-    cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_CONF</span>
+    cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_CONF_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Finally, we change the pipelines in nova to use keystone</p>
@@ -1463,13 +1463,13 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 <span class="s2">        /admin_password/s/^.*$/admin_password = $SERVICE_PASSWORD/;</span>
 <span class="s2">        s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
 <span class="s2">        s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g;</span>
-<span class="s2">    &quot;</span> -i <span class="nv">$NOVA_CONF</span>/api-paste.ini
+<span class="s2">    &quot;</span> -i <span class="nv">$NOVA_CONF_DIR</span>/api-paste.ini
 
 </pre></div></td></tr><tr><td class=docs>
 <p>allow people to turn off rate limiting for testing, like when using tempest, by setting OSAPI_RATE_LIMIT=&quot; &quot;</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">function </span>replace_pipeline<span class="o">()</span> <span class="o">{</span>
-        sed <span class="s2">&quot;/\[pipeline:$1\]/,/\[/s/^pipeline = .*/pipeline = $2/&quot;</span> -i <span class="nv">$NOVA_CONF</span>/api-paste.ini
+        sed <span class="s2">&quot;/\[pipeline:$1\]/,/\[/s/^pipeline = .*/pipeline = $2/&quot;</span> -i <span class="nv">$NOVA_CONF_DIR</span>/api-paste.ini
     <span class="o">}</span>
     replace_pipeline <span class="s2">&quot;ec2cloud&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext cloudrequest authorizer validator ec2executor&quot;</span>
     replace_pipeline <span class="s2">&quot;ec2admin&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext adminrequest authorizer ec2executor&quot;</span>
@@ -1878,8 +1878,9 @@ do it in two steps</p>
 <span class="nb">    </span>sudo start tgt
 <span class="k">fi</span>
 
-<span class="k">function </span>add_nova_flag <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_CONF</span>/nova.conf
+<span class="nv">NOVA_CONF</span><span class="o">=</span>nova.conf
+<span class="k">function </span>add_nova_opt <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1890,65 +1891,65 @@ rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
 </pre></div></td></tr><tr><td class=docs>
 <p>oneiric no longer supports ietadm</p>
 </td><td class=code><div class=highlight><pre>
-rm -f <span class="nv">$NOVA_CONF</span>/nova.conf
-add_nova_flag <span class="s2">&quot;--verbose&quot;</span>
-add_nova_flag <span class="s2">&quot;--allow_admin_api&quot;</span>
-add_nova_flag <span class="s2">&quot;--allow_resize_to_same_host&quot;</span>
-add_nova_flag <span class="s2">&quot;--scheduler_driver=$SCHEDULER&quot;</span>
-add_nova_flag <span class="s2">&quot;--dhcpbridge_flagfile=$NOVA_CONF/nova.conf&quot;</span>
-add_nova_flag <span class="s2">&quot;--fixed_range=$FIXED_RANGE&quot;</span>
+rm -f <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span>
+add_nova_opt <span class="s2">&quot;[DEFAULT]&quot;</span>
+add_nova_opt <span class="s2">&quot;verbose=True&quot;</span>
+add_nova_opt <span class="s2">&quot;allow_resize_to_same_host=True&quot;</span>
+add_nova_opt <span class="s2">&quot;scheduler_driver=$SCHEDULER&quot;</span>
+add_nova_opt <span class="s2">&quot;dhcpbridge_flagfile=$NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
+add_nova_opt <span class="s2">&quot;fixed_range=$FIXED_RANGE&quot;</span>
 <span class="k">if </span>is_service_enabled n-obj; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--s3_host=$SERVICE_HOST&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;s3_host=$SERVICE_HOST&quot;</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--network_manager=nova.network.quantum.manager.QuantumManager&quot;</span>
-    add_nova_flag <span class="s2">&quot;--quantum_connection_host=$Q_HOST&quot;</span>
-    add_nova_flag <span class="s2">&quot;--quantum_connection_port=$Q_PORT&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.quantum.manager.QuantumManager&quot;</span>
+    add_nova_opt <span class="s2">&quot;quantum_connection_host=$Q_HOST&quot;</span>
+    add_nova_opt <span class="s2">&quot;quantum_connection_port=$Q_PORT&quot;</span>
 
     <span class="k">if </span>is_service_enabled melange; <span class="k">then</span>
-<span class="k">        </span>add_nova_flag <span class="s2">&quot;--quantum_ipam_lib=nova.network.quantum.melange_ipam_lib&quot;</span>
-        add_nova_flag <span class="s2">&quot;--use_melange_mac_generation&quot;</span>
-        add_nova_flag <span class="s2">&quot;--melange_host=$M_HOST&quot;</span>
-        add_nova_flag <span class="s2">&quot;--melange_port=$M_PORT&quot;</span>
+<span class="k">        </span>add_nova_opt <span class="s2">&quot;quantum_ipam_lib=nova.network.quantum.melange_ipam_lib&quot;</span>
+        add_nova_opt <span class="s2">&quot;use_melange_mac_generation=True&quot;</span>
+        add_nova_opt <span class="s2">&quot;melange_host=$M_HOST&quot;</span>
+        add_nova_opt <span class="s2">&quot;melange_port=$M_PORT&quot;</span>
     <span class="k">fi</span>
 <span class="k">    if </span>is_service_enabled q-svc <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>add_nova_flag <span class="s2">&quot;--libvirt_vif_type=ethernet&quot;</span>
-        add_nova_flag <span class="s2">&quot;--libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
-        add_nova_flag <span class="s2">&quot;--linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver&quot;</span>
-        add_nova_flag <span class="s2">&quot;--quantum_use_dhcp&quot;</span>
+<span class="k">        </span>add_nova_opt <span class="s2">&quot;libvirt_vif_type=ethernet&quot;</span>
+        add_nova_opt <span class="s2">&quot;libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
+        add_nova_opt <span class="s2">&quot;linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_use_dhcp=True&quot;</span>
     <span class="k">fi</span>
 <span class="k">else</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--network_manager=nova.network.manager.$NET_MAN&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.manager.$NET_MAN&quot;</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled n-vol; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--volume_group=$VOLUME_GROUP&quot;</span>
-    add_nova_flag <span class="s2">&quot;--volume_name_template=${VOLUME_NAME_PREFIX}%08x&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;volume_group=$VOLUME_GROUP&quot;</span>
+    add_nova_opt <span class="s2">&quot;volume_name_template=${VOLUME_NAME_PREFIX}%08x&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>All nova-compute workers need to know the vnc configuration options
 These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
 </td><td class=code><div class=highlight><pre>
-    add_nova_flag <span class="s2">&quot;--iscsi_helper=tgtadm&quot;</span>
+    add_nova_opt <span class="s2">&quot;iscsi_helper=tgtadm&quot;</span>
 <span class="k">fi</span>
-add_nova_flag <span class="s2">&quot;--osapi_compute_extension=nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
-add_nova_flag <span class="s2">&quot;--my_ip=$HOST_IP&quot;</span>
-add_nova_flag <span class="s2">&quot;--public_interface=$PUBLIC_INTERFACE&quot;</span>
-add_nova_flag <span class="s2">&quot;--vlan_interface=$VLAN_INTERFACE&quot;</span>
-add_nova_flag <span class="s2">&quot;--flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
+add_nova_opt <span class="s2">&quot;osapi_compute_extension=nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
+add_nova_opt <span class="s2">&quot;my_ip=$HOST_IP&quot;</span>
+add_nova_opt <span class="s2">&quot;public_interface=$PUBLIC_INTERFACE&quot;</span>
+add_nova_opt <span class="s2">&quot;vlan_interface=$VLAN_INTERFACE&quot;</span>
+add_nova_opt <span class="s2">&quot;flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--flat_interface=$FLAT_INTERFACE&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;flat_interface=$FLAT_INTERFACE&quot;</span>
 <span class="k">fi</span>
-add_nova_flag <span class="s2">&quot;--sql_connection=$BASE_SQL_CONN/nova&quot;</span>
-add_nova_flag <span class="s2">&quot;--libvirt_type=$LIBVIRT_TYPE&quot;</span>
-add_nova_flag <span class="s2">&quot;--instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
+add_nova_opt <span class="s2">&quot;sql_connection=$BASE_SQL_CONN/nova&quot;</span>
+add_nova_opt <span class="s2">&quot;libvirt_type=$LIBVIRT_TYPE&quot;</span>
+add_nova_opt <span class="s2">&quot;instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Address on which instance vncservers will listen on compute hosts.
 For multi-host, this should be the management ip of the compute host.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NOVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6080/vnc_auto.html&quot;</span><span class="k">}</span>
-    add_nova_flag <span class="s2">&quot;--novncproxy_base_url=$NOVNCPROXY_URL&quot;</span>
+    add_nova_opt <span class="s2">&quot;novncproxy_base_url=$NOVNCPROXY_URL&quot;</span>
     <span class="nv">XVPVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">XVPVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6081/console&quot;</span><span class="k">}</span>
-    add_nova_flag <span class="s2">&quot;--xvpvncproxy_base_url=$XVPVNCPROXY_URL&quot;</span>
+    add_nova_opt <span class="s2">&quot;xvpvncproxy_base_url=$XVPVNCPROXY_URL&quot;</span>
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=169.254.0.1</span><span class="k">}</span>
@@ -1956,37 +1957,47 @@ For multi-host, this should be the management ip of the compute host.</p>
 <span class="k">    </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
 <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>You can define extra nova conf flags by defining the array EXTRA_FLAGS,
-For Example: EXTRA_FLAGS=(--foo --bar=2)</p>
+<p>Provide some transition from EXTRA_FLAGS to EXTRA_OPTS</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
-add_nova_flag <span class="s2">&quot;--vncserver_listen=$VNCSERVER_LISTEN&quot;</span>
-add_nova_flag <span class="s2">&quot;--vncserver_proxyclient_address=$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
-add_nova_flag <span class="s2">&quot;--api_paste_config=$NOVA_CONF/api-paste.ini&quot;</span>
-add_nova_flag <span class="s2">&quot;--image_service=nova.image.glance.GlanceImageService&quot;</span>
-add_nova_flag <span class="s2">&quot;--ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
-add_nova_flag <span class="s2">&quot;--rabbit_host=$RABBIT_HOST&quot;</span>
-add_nova_flag <span class="s2">&quot;--rabbit_password=$RABBIT_PASSWORD&quot;</span>
-add_nova_flag <span class="s2">&quot;--glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
-add_nova_flag <span class="s2">&quot;--force_dhcp_release&quot;</span>
+add_nova_opt <span class="s2">&quot;vncserver_listen=$VNCSERVER_LISTEN&quot;</span>
+add_nova_opt <span class="s2">&quot;vncserver_proxyclient_address=$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
+add_nova_opt <span class="s2">&quot;api_paste_config=$NOVA_CONF_DIR/api-paste.ini&quot;</span>
+add_nova_opt <span class="s2">&quot;image_service=nova.image.glance.GlanceImageService&quot;</span>
+add_nova_opt <span class="s2">&quot;ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
+add_nova_opt <span class="s2">&quot;rabbit_host=$RABBIT_HOST&quot;</span>
+add_nova_opt <span class="s2">&quot;rabbit_password=$RABBIT_PASSWORD&quot;</span>
+add_nova_opt <span class="s2">&quot;glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
+add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$INSTANCES_PATH&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--instances_path=$INSTANCES_PATH&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;instances_path=$INSTANCES_PATH&quot;</span>
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$MULTI_HOST&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--multi_host&quot;</span>
-    add_nova_flag <span class="s2">&quot;--send_arp_for_ha&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;multi_host=True&quot;</span>
+    add_nova_opt <span class="s2">&quot;send_arp_for_ha=True&quot;</span>
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--use_syslog&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;use_syslog=True&quot;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>You can define extra nova conf flags by defining the array EXTRA_OPTS,
+For Example: EXTRA_OPTS=(foo=true bar=2)</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$EXTRA_OPTS&quot;</span> <span class="o">&amp;&amp;</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">	</span><span class="nv">EXTRA_OPTS</span><span class="o">=</span><span class="nv">$EXTRA_FLAGS</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Attempt to convert flags to options</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">for </span>I in <span class="s2">&quot;${EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="xenserver">
 <h2>XenServer</h2>
 </td><td class=code><div class=highlight><pre>
-<span class="k">for </span>I in <span class="s2">&quot;${EXTRA_FLAGS[@]}&quot;</span>; <span class="k">do</span>
-<span class="k">    </span>add_nova_flag <span class="nv">$I</span>
+    add_nova_opt <span class="k">${</span><span class="nv">I</span><span class="p">//-</span><span class="k">}</span>
 <span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1995,22 +2006,22 @@ add_nova_flag <span class="s2">&quot;--force_dhcp_release&quot;</span>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>read_password XENAPI_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR XEN.&quot;</span>
-    add_nova_flag <span class="s2">&quot;--connection_type=xenapi&quot;</span>
+    add_nova_opt <span class="s2">&quot;connection_type=xenapi&quot;</span>
     <span class="nv">XENAPI_CONNECTION_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">XENAPI_CONNECTION_URL</span><span class="k">:-</span><span class="s2">&quot;http://169.254.0.1&quot;</span><span class="k">}</span>
-    add_nova_flag <span class="s2">&quot;--xenapi_connection_url=$XENAPI_CONNECTION_URL&quot;</span>
-    add_nova_flag <span class="s2">&quot;--xenapi_connection_username=root&quot;</span>
-    add_nova_flag <span class="s2">&quot;--xenapi_connection_password=$XENAPI_PASSWORD&quot;</span>
-    add_nova_flag <span class="s2">&quot;--noflat_injected&quot;</span>
+    add_nova_opt <span class="s2">&quot;xenapi_connection_url=$XENAPI_CONNECTION_URL&quot;</span>
+    add_nova_opt <span class="s2">&quot;xenapi_connection_username=root&quot;</span>
+    add_nova_opt <span class="s2">&quot;xenapi_connection_password=$XENAPI_PASSWORD&quot;</span>
+    add_nova_opt <span class="s2">&quot;flat_injected=False&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="nova-database">
 <h3>Nova Database</h3>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
-    add_nova_flag <span class="s2">&quot;--firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
+    add_nova_opt <span class="s2">&quot;firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
 <span class="k">else</span>
-<span class="k">    </span>add_nova_flag <span class="s2">&quot;--connection_type=libvirt&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;connection_type=libvirt&quot;</span>
     <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
-    add_nova_flag <span class="s2">&quot;--firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
+    add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2337,10 +2348,10 @@ screen_it n-vol <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nov
 screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-network&quot;</span>
 screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-scheduler&quot;</span>
 <span class="k">if </span>is_service_enabled n-novnc; <span class="k">then</span>
-<span class="k">    </span>screen_it n-novnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-novncproxy --flagfile $NOVA_CONF/nova.conf --web .&quot;</span>
+<span class="k">    </span>screen_it n-novnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-novncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF --web .&quot;</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled n-xvnc; <span class="k">then</span>
-<span class="k">    </span>screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvncproxy --flagfile $NOVA_CONF/nova.conf&quot;</span>
+<span class="k">    </span>screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled n-cauth; <span class="k">then</span>
 <span class="k">    </span>screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-consoleauth&quot;</span>
@@ -2492,9 +2503,16 @@ to access the site using your browser.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Indicate how long this took to run (bash maintained variable 'SECONDS')</p>
+<p>Warn that EXTRA_FLAGS needs to be converted to EXTRA_OPTS</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;This is your host ip: $HOST_IP&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Indicate how long this took to run (bash maintained variable 'SECONDS')</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: EXTRA_FLAGS is defined and may need to be converted to EXTRA_OPTS&quot;</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
