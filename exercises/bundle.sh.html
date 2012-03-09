@@ -333,9 +333,6 @@ ul.auto-toc {
 
 <p>we will use the <tt class="docutils literal">euca2ools</tt> cli tool that wraps the python boto
 library to test ec2 compatibility</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>This script exits on an error so that errors don't compound and you see
-only the first error that occured.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
@@ -345,52 +342,53 @@ only the first error that occured.</p>
 <span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>This script exits on an error so that errors don't compound and you see
+only the first error that occured.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Print the commands being run so that we can see the command that triggers
 an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o errexit
+<span class="nb">set</span> -o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="settings">
 <h1>Settings</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Use openrc + stackrc + localrc for settings</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span> &gt;/dev/null
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span> &gt;/dev/null
+<span class="nb">source</span> ./functions
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import configuration</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./functions
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Remove old certificates</p>
-</td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> ./openrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Get Certificates</p>
+<p>Remove old certificates</p>
 </td><td class=code><div class=highlight><pre>
 rm -f cacert.pem
 rm -f cert.pem
 rm -f pk.pem
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Max time to wait for image to be registered</p>
+<p>Get Certificates</p>
 </td><td class=code><div class=highlight><pre>
 nova x509-get-root-cert
 nova x509-create-cert
 <span class="nb">popd</span> &gt;/dev/null
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Wait for the image to become available</p>
+<p>Max time to wait for image to be registered</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">REGISTER_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">REGISTER_TIMEOUT</span><span class="k">:-</span><span class="nv">15</span><span class="k">}</span>
 
@@ -408,7 +406,7 @@ die_if_error <span class="s2">&quot;Failure uploading bundle $IMAGE to $BUCKET&q
 die_if_not_set AMI <span class="s2">&quot;Failure registering $BUCKET/$IMAGE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Clean up</p>
+<p>Wait for the image to become available</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$REGISTER_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-images | grep &#39;$AMI&#39; | grep &#39;available&#39;; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Image $AMI not available within $REGISTER_TIMEOUT seconds&quot;</span>
@@ -416,6 +414,7 @@ die_if_not_set AMI <span class="s2">&quot;Failure registering $BUCKET/$IMAGE&quo
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Clean up</p>
 </td><td class=code><div class=highlight><pre>
 euca-deregister <span class="nv">$AMI</span>
 die_if_error <span class="s2">&quot;Failure deregistering $AMI&quot;</span>
@@ -427,11 +426,13 @@ die_if_error <span class="s2">&quot;Failure deregistering $AMI&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
 </body>
-</html>
-</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
+</html></td><td class='code'></td></tr>
     </tbody>
     </table>
 </div>

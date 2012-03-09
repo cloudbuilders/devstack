@@ -332,8 +332,6 @@ ul.auto-toc {
 
 
 <p>Configurable nuggets</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Debootstrap base system</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
@@ -345,7 +343,7 @@ ul.auto-toc {
 <span class="nv">KERNEL_VERSION</span><span class="o">=</span>3.0.0-12-virtual
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Sources.list</p>
+<p>Debootstrap base system</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$STAGING_DIR</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>apt-get install debootstrap
@@ -353,7 +351,7 @@ ul.auto-toc {
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install basics</p>
+<p>Sources.list</p>
 </td><td class=code><div class=highlight><pre>
 cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/apt/sources.list</span>
 <span class="s">deb http://us.archive.ubuntu.com/ubuntu/ oneiric main restricted</span>
@@ -367,7 +365,7 @@ cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/apt/sources.list</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install guest utilities</p>
+<p>Install basics</p>
 </td><td class=code><div class=highlight><pre>
 chroot <span class="nv">$STAGING_DIR</span> apt-get update
 chroot <span class="nv">$STAGING_DIR</span> apt-get install -y linux-image-<span class="nv">$KERNEL_VERSION</span>
@@ -376,8 +374,7 @@ chroot <span class="nv">$STAGING_DIR</span> apt-get install -y curl wget ssh ope
 chroot <span class="nv">$STAGING_DIR</span> pip install xenapi
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Make a small cracklib dictionary, so that passwd still works, but we don't
-have the big dictionary.</p>
+<p>Install guest utilities</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">XEGUEST</span><span class="o">=</span>xe-guest-utilities_5.6.100-651_amd64.deb
 wget http://images.ansolabs.com/xen/<span class="nv">$XEGUEST</span> -O <span class="nv">$XEGUEST</span>
@@ -387,24 +384,25 @@ chroot <span class="nv">$STAGING_DIR</span> update-rc.d -f xe-linux-distribution
 chroot <span class="nv">$STAGING_DIR</span> update-rc.d xe-linux-distribution defaults
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Make /etc/shadow, and set the root password</p>
+<p>Make a small cracklib dictionary, so that passwd still works, but we don't
+have the big dictionary.</p>
 </td><td class=code><div class=highlight><pre>
 mkdir -p <span class="nv">$STAGING_DIR</span>/usr/share/cracklib
 <span class="nb">echo </span>a | chroot <span class="nv">$STAGING_DIR</span> cracklib-packer
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Put the VPX into UTC.</p>
+<p>Make /etc/shadow, and set the root password</p>
 </td><td class=code><div class=highlight><pre>
 chroot <span class="nv">$STAGING_DIR</span> <span class="s2">&quot;pwconv&quot;</span>
 <span class="nb">echo</span> <span class="s2">&quot;root:$GUEST_PASSWORD&quot;</span> | chroot <span class="nv">$STAGING_DIR</span> chpasswd
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Add stack user</p>
+<p>Put the VPX into UTC.</p>
 </td><td class=code><div class=highlight><pre>
 rm -f <span class="nv">$STAGING_DIR</span>/etc/localtime
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Give ownership of /opt/stack to stack user</p>
+<p>Add stack user</p>
 </td><td class=code><div class=highlight><pre>
 chroot <span class="nv">$STAGING_DIR</span> groupadd libvirtd
 chroot <span class="nv">$STAGING_DIR</span> useradd stack -s /bin/bash -d /opt/stack -G libvirtd
@@ -412,12 +410,12 @@ chroot <span class="nv">$STAGING_DIR</span> useradd stack -s /bin/bash -d /opt/s
 <span class="nb">echo</span> <span class="s2">&quot;stack ALL=(ALL) NOPASSWD: ALL&quot;</span> &gt;&gt; <span class="nv">$STAGING_DIR</span>/etc/sudoers
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Make our ip address hostnames look nice at the command prompt</p>
+<p>Give ownership of /opt/stack to stack user</p>
 </td><td class=code><div class=highlight><pre>
 chroot <span class="nv">$STAGING_DIR</span> chown -R stack /opt/stack
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Simple but usable vimrc</p>
+<p>Make our ip address hostnames look nice at the command prompt</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;export PS1=&#39;${debian_chroot:+($debian_chroot)}\\u@\\H:\\w\\$ &#39;&quot;</span> &gt;&gt; <span class="nv">$STAGING_DIR</span>/opt/stack/.bashrc
 <span class="nb">echo</span> <span class="s2">&quot;export PS1=&#39;${debian_chroot:+($debian_chroot)}\\u@\\H:\\w\\$ &#39;&quot;</span> &gt;&gt; <span class="nv">$STAGING_DIR</span>/root/.bashrc
@@ -426,7 +424,7 @@ chroot <span class="nv">$STAGING_DIR</span> chown -R stack /opt/stack
 <span class="k">function </span>setup_vimrc <span class="o">{</span>
     <span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$1</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Setup simple .vimrcs</p>
+<p>Simple but usable vimrc</p>
 </td><td class=code><div class=highlight><pre>
         cat &gt; <span class="nv">$1</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">syntax on</span>
@@ -438,13 +436,14 @@ chroot <span class="nv">$STAGING_DIR</span> chown -R stack /opt/stack
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Compress</p>
+<p>Setup simple .vimrcs</p>
 </td><td class=code><div class=highlight><pre>
 setup_vimrc <span class="nv">$STAGING_DIR</span>/root/.vimrc
 setup_vimrc <span class="nv">$STAGING_DIR</span>/opt/stack/.vimrc
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$DO_TGZ&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>Compress</p>
 </td><td class=code><div class=highlight><pre>
     rm -f stage.tgz
     tar cfz stage.tgz stage
@@ -452,10 +451,12 @@ setup_vimrc <span class="nv">$STAGING_DIR</span>/opt/stack/.vimrc
 
 
 </pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 </body>
-</html>
-</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
+</html></td><td class='code'></td></tr>
     </tbody>
     </table>
 </div>

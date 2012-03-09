@@ -335,8 +335,6 @@ ul.auto-toc {
 <p>build_pxe_env.sh destdir</p>
 <p>Requires Ubuntu Oneiric</p>
 <p>Only needs to run as root if the destdir permissions require it</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean up any resources that may be in use</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash -e</span>
 
@@ -347,13 +345,13 @@ dpkg -l syslinux <span class="o">||</span> apt-get install -y syslinux
 <span class="nv">PROGDIR</span><span class="o">=</span><span class="sb">`</span>dirname <span class="nv">$0</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Mop up temporary files</p>
+<p>Clean up any resources that may be in use</p>
 </td><td class=code><div class=highlight><pre>
 cleanup<span class="o">()</span> <span class="o">{</span>
     <span class="nb">set</span> +o errexit
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Kill ourselves to signal any calling process</p>
+<p>Mop up temporary files</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$MNTDIR&quot;</span> -a -d <span class="s2">&quot;$MNTDIR&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>umount <span class="nv">$MNTDIR</span>
@@ -361,7 +359,7 @@ cleanup<span class="o">()</span> <span class="o">{</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Keep track of the current directory</p>
+<p>Kill ourselves to signal any calling process</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
 <span class="o">}</span>
@@ -369,7 +367,7 @@ cleanup<span class="o">()</span> <span class="o">{</span>
 <span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Setup devstack boot</p>
+<p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 <span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
@@ -391,7 +389,7 @@ cat &gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Get image into place</p>
+<p>Setup devstack boot</p>
 </td><td class=code><div class=highlight><pre>
 mkdir -p <span class="nv">$DEST_DIR</span>/ubuntu
 <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$PXEDIR</span> <span class="o">]</span>; <span class="k">then</span>
@@ -399,7 +397,7 @@ mkdir -p <span class="nv">$DEST_DIR</span>/ubuntu
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Get generic kernel version</p>
+<p>Get image into place</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$PXEDIR</span>/stack-initrd.img <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
@@ -427,7 +425,7 @@ cp -pu <span class="nv">$PXEDIR</span>/stack-initrd.gz <span class="nv">$DEST_DI
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Get Ubuntu</p>
+<p>Get generic kernel version</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">KNAME</span><span class="o">=</span><span class="sb">`</span>basename <span class="nv">$PXEDIR</span>/vmlinuz-*-generic<span class="sb">`</span>
 <span class="nv">KVER</span><span class="o">=</span><span class="k">${</span><span class="nv">KNAME</span><span class="p">#vmlinuz-</span><span class="k">}</span>
@@ -442,7 +440,7 @@ cat &gt;&gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local disk boot</p>
+<p>Get Ubuntu</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> -d <span class="nv">$PXEDIR</span> -a -r <span class="nv">$PXEDIR</span>/natty-base-initrd.gz <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>cp -pu <span class="nv">$PXEDIR</span>/natty-base-initrd.gz <span class="nv">$DEST_DIR</span>/ubuntu
@@ -456,6 +454,7 @@ cat &gt;&gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Local disk boot</p>
 </td><td class=code><div class=highlight><pre>
 cat &gt;&gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
 
@@ -468,10 +467,12 @@ cat &gt;&gt;<span class="nv">$CFG</span> <span class="s">&lt;&lt;EOF</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 </body>
-</html>
-</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
+</html></td><td class='code'></td></tr>
     </tbody>
     </table>
 </div>

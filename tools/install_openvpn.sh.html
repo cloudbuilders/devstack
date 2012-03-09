@@ -338,13 +338,11 @@ install_openvpn.sh --server [name]</p>
 the configuration, certificate and key files.</p>
 <p>--server mode configures the host with a running OpenVPN server instance
 --client mode creates a tarball of a client configuration for this server</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Get config file</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Do some IP manipulation</p>
+<p>Get config file</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> -e localrc <span class="o">]</span>; <span class="k">then</span>
     . localrc
@@ -354,7 +352,7 @@ the configuration, certificate and key files.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>VPN Config</p>
+<p>Do some IP manipulation</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>cidr2netmask<span class="o">()</span> <span class="o">{</span>
     <span class="nb">set</span> -- <span class="k">$((</span> <span class="m">5</span> <span class="o">-</span> <span class="o">(</span><span class="nv">$1</span> <span class="o">/</span> <span class="m">8</span><span class="o">)</span> <span class="k">))</span> 255 255 255 255 <span class="k">$((</span> <span class="o">(</span><span class="m">255</span> &lt;&lt; <span class="o">(</span><span class="m">8</span> <span class="o">-</span> <span class="o">(</span><span class="nv">$1</span> <span class="o">%</span> <span class="m">8</span><span class="k">))</span><span class="o">)</span> &amp; 255 <span class="o">))</span> 0 0 0
@@ -371,7 +369,7 @@ the configuration, certificate and key files.</p>
 <span class="nv">FIXED_MASK</span><span class="o">=</span><span class="sb">`</span>cidr2netmask <span class="nv">$FIXED_CIDR</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install OpenVPN</p>
+<p>VPN Config</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VPN_SERVER</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_SERVER</span><span class="k">:-</span><span class="sb">`</span>ifconfig eth0 | awk <span class="s2">&quot;/inet addr:/ { print \$2 }&quot;</span> | cut -d: -f2<span class="sb">`</span><span class="k">}</span>  <span class="c"># 50.56.12.212</span>
 <span class="nv">VPN_PROTO</span><span class="o">=</span><span class="k">${</span><span class="nv">VPN_PROTO</span><span class="k">:-</span><span class="nv">tcp</span><span class="k">}</span>
@@ -402,7 +400,7 @@ usage<span class="o">()</span> <span class="o">{</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Keep track of the current directory</p>
+<p>Install OpenVPN</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VPN_EXEC</span><span class="o">=</span><span class="sb">`</span>which openvpn<span class="sb">`</span>
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$VPN_EXEC&quot;</span> -o ! -x <span class="s2">&quot;$VPN_EXEC&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -413,7 +411,7 @@ usage<span class="o">()</span> <span class="o">{</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Override the defaults</p>
+<p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
@@ -428,7 +426,7 @@ usage<span class="o">()</span> <span class="o">{</span>
 <span class="nb">source</span> ./vars
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Initialize a new CA</p>
+<p>Override the defaults</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">export </span><span class="nv">KEY_COUNTRY</span><span class="o">=</span><span class="s2">&quot;US&quot;</span>
 <span class="nb">export </span><span class="nv">KEY_PROVINCE</span><span class="o">=</span><span class="s2">&quot;TX&quot;</span>
@@ -438,7 +436,7 @@ usage<span class="o">()</span> <span class="o">{</span>
 
 <span class="k">if</span> <span class="o">[</span> ! -r <span class="nv">$CA_DIR</span>/keys/dh1024.pem <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Generate server certificate</p>
+<p>Initialize a new CA</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$CA_DIR</span>/clean-all
     <span class="nv">$CA_DIR</span>/build-dh
@@ -449,7 +447,7 @@ usage<span class="o">()</span> <span class="o">{</span>
 do_server<span class="o">()</span> <span class="o">{</span>
     <span class="nv">NAME</span><span class="o">=</span><span class="nv">$1</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Generate a client certificate</p>
+<p>Generate server certificate</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$CA_DIR</span>/pkitool --server <span class="nv">$NAME</span>
 
@@ -511,7 +509,7 @@ do_server<span class="o">()</span> <span class="o">{</span>
 do_client<span class="o">()</span> <span class="o">{</span>
     <span class="nv">NAME</span><span class="o">=</span><span class="nv">$1</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Process command line args</p>
+<p>Generate a client certificate</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$CA_DIR</span>/pkitool <span class="nv">$NAME</span>
 
@@ -548,7 +546,7 @@ do_client<span class="o">()</span> <span class="o">{</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Save for --client use</p>
+<p>Process command line args</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">case</span> <span class="nv">$1</span> in
     --client<span class="o">)</span>   <span class="k">if</span> <span class="o">[</span> -z <span class="nv">$2</span> <span class="o">]</span>; <span class="k">then</span>
@@ -561,6 +559,7 @@ do_client<span class="o">()</span> <span class="o">{</span>
                 <span class="k">else</span>
 <span class="k">                    </span><span class="nv">NAME</span><span class="o">=</span><span class="nv">$2</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>Save for --client use</p>
 </td><td class=code><div class=highlight><pre>
                     <span class="nb">echo</span> <span class="nv">$NAME</span> &gt;<span class="nv">$VPN_DIR</span>/hostname
                 <span class="k">fi</span>
@@ -573,10 +572,12 @@ do_client<span class="o">()</span> <span class="o">{</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 </body>
-</html>
-</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
+</html></td><td class='code'></td></tr>
     </tbody>
     </table>
 </div>
