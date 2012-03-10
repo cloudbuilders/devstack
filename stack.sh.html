@@ -946,20 +946,24 @@ Set LOGFILE to turn on logging
 We append '.xxxxxxxx' to the given name to maintain history
 where xxxxxxxx is a representation of the date the file was created</p>
 </td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">||</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">LOGDAYS</span><span class="o">=</span><span class="k">${</span><span class="nv">LOGDAYS</span><span class="k">:-</span><span class="nv">7</span><span class="k">}</span>
+    <span class="nv">TIMESTAMP_FORMAT</span><span class="o">=</span><span class="k">${</span><span class="nv">TIMESTAMP_FORMAT</span><span class="k">:-</span><span class="s2">&quot;%F-%H%M%S&quot;</span><span class="k">}</span>
+    <span class="nv">CURRENT_LOG_TIME</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+$TIMESTAMP_FORMAT&quot;</span><span class="k">)</span>
+<span class="k">fi</span>
+
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>First clean up old log files.  Use the user-specified LOGFILE
 as the template to search for, appending '.*' to match the date
 we added on earlier runs.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">LOGDAYS</span><span class="o">=</span><span class="k">${</span><span class="nv">LOGDAYS</span><span class="k">:-</span><span class="nv">7</span><span class="k">}</span>
     <span class="nv">LOGDIR</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
     <span class="nv">LOGNAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
     mkdir -p <span class="nv">$LOGDIR</span>
     find <span class="nv">$LOGDIR</span> -maxdepth 1 -name <span class="nv">$LOGNAME</span>.<span class="se">\*</span> -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
 
-    <span class="nv">TIMESTAMP_FORMAT</span><span class="o">=</span><span class="k">${</span><span class="nv">TIMESTAMP_FORMAT</span><span class="k">:-</span><span class="s2">&quot;%F-%H%M%S&quot;</span><span class="k">}</span>
-    <span class="nv">LOGFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">$(</span>date <span class="s2">&quot;+$TIMESTAMP_FORMAT&quot;</span><span class="k">)</span>
+    <span class="nv">LOGFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Redirect stdout/stderr to tee to write the log file</p>
 </td><td class=code><div class=highlight><pre>
@@ -969,6 +973,29 @@ we added on earlier runs.</p>
 <p>Specified logfile name always links to the most recent log</p>
 </td><td class=code><div class=highlight><pre>
     ln -sf <span class="nv">$LOGFILE</span> <span class="nv">$LOGDIR</span>/<span class="nv">$LOGNAME</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up logging of screen windows
+Set SCREEN_LOGDIR to turn on logging of screen windows to the
+directory specified in SCREEN_LOGDIR, we will log to the the file
+screen-$SERVICE_NAME-$TIMESTAMP.log in that dir and have a link
+screen-$SERVICE_NAME.log to the latest log file.
+Logs are kept for as long specified in LOGDAYS.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We make sure the directory is created.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> -d <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>We cleanup the old logs</p>
+</td><td class=code><div class=highlight><pre>
+        find <span class="nv">$SCREEN_LOGDIR</span> -maxdepth 1 -name screen-<span class="se">\*</span>.log -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
+    <span class="k">else</span>
+<span class="k">        </span>mkdir -p <span class="nv">$SCREEN_LOGDIR</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1011,7 +1038,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 454)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 471)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -2105,7 +2132,13 @@ creating a new window in screen and then sends characters, so if
 bash isn't running by the time we send the command, nothing happens</p>
 </td><td class=code><div class=highlight><pre>
         sleep 1.5
-        screen -S stack -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
+
+        <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>screen -S stack -p <span class="nv">$1</span> -X logfile <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log
+            screen -S stack -p <span class="nv">$1</span> -X log on
+            ln -sf <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.log
+        <span class="k">fi</span>
+<span class="k">        </span>screen -S stack -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
