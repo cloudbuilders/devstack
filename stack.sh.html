@@ -1051,14 +1051,16 @@ distros (case insensitive).</li>
 </blockquote>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>get_packages<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;general&quot;</span>
+    <span class="nb">local </span><span class="nv">package_dir</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span>file_to_parse
     <span class="nb">local </span>service
 
-    <span class="k">for </span>service in <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Allow individual services to specify dependencies</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$FILES</span>/apts/<span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$package_dir&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;No package directory supplied&quot;</span>
+        <span class="k">return </span>1
+    <span class="k">fi</span>
+<span class="k">    for </span>service in general <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>        <span class="c"># Allow individual services to specify dependencies</span>
+        <span class="k">if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">package_dir</span><span class="k">}</span>/<span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} $service&quot;</span>
         <span class="k">fi</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> n-* <span class="o">]]</span>; <span class="k">then</span>
@@ -1077,11 +1079,11 @@ distros (case insensitive).</li>
 <span class="k">    done</span>
 
 <span class="k">    for </span>file in <span class="k">${</span><span class="nv">file_to_parse</span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">        </span><span class="nb">local </span><span class="nv">fname</span><span class="o">=</span><span class="k">${</span><span class="nv">FILES</span><span class="k">}</span>/apts/<span class="k">${</span><span class="nv">file</span><span class="k">}</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">fname</span><span class="o">=</span><span class="k">${</span><span class="nv">package_dir</span><span class="k">}</span>/<span class="k">${</span><span class="nv">file</span><span class="k">}</span>
         <span class="nb">local </span>OIFS line package distros distro
-        <span class="o">[[</span> -e <span class="nv">$fname</span> <span class="o">]]</span> <span class="o">||</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">&quot;missing: $fname&quot;</span>; <span class="nb">exit </span>1 ;<span class="o">}</span>
+        <span class="o">[[</span> -e <span class="nv">$fname</span> <span class="o">]]</span> <span class="o">||</span> <span class="k">continue</span>
 
-        <span class="nv">OIFS</span><span class="o">=</span><span class="nv">$IFS</span>
+<span class="k">        </span><span class="nv">OIFS</span><span class="o">=</span><span class="nv">$IFS</span>
         <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\n&#39;</span>
         <span class="k">for </span>line in <span class="k">$(</span>&lt;<span class="k">${</span><span class="nv">fname</span><span class="k">})</span>; <span class="k">do</span>
 <span class="k">            if</span> <span class="o">[[</span> <span class="nv">$line</span> <span class="o">=</span>~ <span class="s2">&quot;NOPRIME&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1107,12 +1109,12 @@ distros (case insensitive).</li>
 <p>install apt requirements</p>
 </td><td class=code><div class=highlight><pre>
 apt_get update
-apt_get install <span class="k">$(</span>get_packages<span class="k">)</span>
+apt_get install <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/apts<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install python requirements</p>
 </td><td class=code><div class=highlight><pre>
-pip_install <span class="sb">`</span>cat <span class="nv">$FILES</span>/pips/* | uniq<span class="sb">`</span>
+pip_install <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/pips | sort -u<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>compute service</p>
