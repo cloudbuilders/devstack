@@ -351,20 +351,20 @@ ul.auto-toc {
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Use openrc + stackrc + localrc for settings</p>
+<p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">pushd</span> <span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span> &gt;/dev/null
+<span class="nv">EXERCISE_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$EXERCISE_DIR</span>/..; <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./functions
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import configuration</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./openrc
-<span class="nb">popd</span> &gt;/dev/null
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Unset all of the known <a href="#id1"><span class="problematic" id="id2">NOVA_</span></a> vars</p>
@@ -403,7 +403,7 @@ ul.auto-toc {
 <span class="k">        </span><span class="nv">STATUS_KEYSTONE</span><span class="o">=</span><span class="s2">&quot;Skipped&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> -e <span class="s2">&quot;\nTest Keystone&quot;</span>
-        <span class="k">if </span>keystone service-list; <span class="k">then</span>
+        <span class="k">if </span>keystone catalog --service identity; <span class="k">then</span>
 <span class="k">            </span><span class="nv">STATUS_KEYSTONE</span><span class="o">=</span><span class="s2">&quot;Succeeded&quot;</span>
         <span class="k">else</span>
 <span class="k">            </span><span class="nv">STATUS_KEYSTONE</span><span class="o">=</span><span class="s2">&quot;Failed&quot;</span>
@@ -421,15 +421,40 @@ ul.auto-toc {
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$SKIP_EXERCISES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span> ; <span class="k">then</span>
 <span class="k">        </span><span class="nv">STATUS_NOVA</span><span class="o">=</span><span class="s2">&quot;Skipped&quot;</span>
+        <span class="nv">STATUS_EC2</span><span class="o">=</span><span class="s2">&quot;Skipped&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span><span class="nb">echo</span> -e <span class="s2">&quot;\nTest Nova&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Test OSAPI</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> -e <span class="s2">&quot;\nTest Nova&quot;</span>
         <span class="k">if </span>nova flavor-list; <span class="k">then</span>
 <span class="k">            </span><span class="nv">STATUS_NOVA</span><span class="o">=</span><span class="s2">&quot;Succeeded&quot;</span>
         <span class="k">else</span>
 <span class="k">            </span><span class="nv">STATUS_NOVA</span><span class="o">=</span><span class="s2">&quot;Failed&quot;</span>
             <span class="nv">RETURN</span><span class="o">=</span>1
         <span class="k">fi</span>
-<span class="k">    fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test EC2 API</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> -e <span class="s2">&quot;\nTest EC2&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Get EC2 creds</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/eucarc
+
+        <span class="k">if </span>euca-describe-images; <span class="k">then</span>
+<span class="k">            </span><span class="nv">STATUS_EC2</span><span class="o">=</span><span class="s2">&quot;Succeeded&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">STATUS_EC2</span><span class="o">=</span><span class="s2">&quot;Failed&quot;</span>
+            <span class="nv">RETURN</span><span class="o">=</span>1
+        <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean up side effects</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">unset </span>NOVA_VERSION
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -487,6 +512,7 @@ ul.auto-toc {
 <span class="nb">echo</span> -e <span class="s2">&quot;\n&quot;</span>
 report <span class="s2">&quot;Keystone&quot;</span> <span class="nv">$STATUS_KEYSTONE</span>
 report <span class="s2">&quot;Nova&quot;</span> <span class="nv">$STATUS_NOVA</span>
+report <span class="s2">&quot;EC2&quot;</span> <span class="nv">$STATUS_EC2</span>
 report <span class="s2">&quot;Glance&quot;</span> <span class="nv">$STATUS_GLANCE</span>
 report <span class="s2">&quot;Swift&quot;</span> <span class="nv">$STATUS_SWIFT</span>
 
