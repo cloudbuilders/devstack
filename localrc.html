@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>DevStack - localrc</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+    <link href="assets/css/bootstrap.css" rel="stylesheet">
+    <link href="assets/css/local.css" rel="stylesheet">
+    <style type="text/css">
+      body { padding-top: 60px; }
+      dd { padding: 10px; }
+    </style>
+    
+    <!-- Le javascripts -->
+    <script src="../assets/js/jquery-1.7.1.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../assets/js/bootstrap.js" type="text/javascript" charset="utf-8"></script>
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="brand" href="/">DevStack</a>
+          <ul class="nav">
+            <li><a href="http://github.com/openstack-dev/devstack">GitHub</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <section class="span12">
+        <div class="page-header">
+          <h2>localrc <small>User settings</small></h2>
+          <p><code>localrc</code> is a user-maintained setings file that is
+          sourced at the end of <code>stackrc</code>.  This gives it the ability
+          to override any variables set in <code>stackrc</code>.  Also, most of
+          the settings in <code>stack.sh</code> are written to only be set if
+          no value has already been set; this lets anything set in <code>localrc</code>
+          remain in effect.</p>
+        </div>
+        <dl>
+          <dt>Minimal contents</dt>
+          <dd>While stack.sh is happy to run without <code>localrc</code>, devlife
+            is better when there are a few minimal variables set.
+            <pre>ADMIN_PASSWORD=nomoresecrete
+MYSQL_PASSWORD=stackdb
+RABBIT_PASSWORD=stackqueue
+SERVICE_PASSWORD=$ADMIN_PASSWORD
+HOST_IP=w.x.y.z</pre>
+            If the <code>*_PASSWORD</code> variables are not set here you will
+            be prompted to enter values for them by <code>stack.sh</code>.
+            <br /><br />
+            <code>HOST_IP</code> is normally detected on the first run of
+            <code>stack.sh</code>
+            but often is indeterminate on later runs due to the IP being moved from
+            an Ethernet integace to a bridge on the host.  Setting it here also
+            makes it available for <code>openrc</code> to set
+            <code>OS_AUTH_URL</code>.  <code>HOST_IP</code> is not set by
+            default.</dd><br />
+
+          <dt>Set DevStack install directory</dt>
+          <dd>The DevStack install directory is set by the <code>DEST</code> variable.
+            By setting it early in localrc you can reference it in later variables.
+            The default value is <code>/opt/stack</code>.  It can be useful to
+            set it even though it is not changed from the default value.
+            <pre>DEST=/opt/stack</pre></dd>
+
+          <dt>stack.sh logging</dt>
+          <dd>By default <code>stack.sh</code> output is only to the console
+            where is runs.  It can be made to to a file in addition to the console
+            by setting <code>LOGFILE</code> to the fully-qualified name of the
+            destination log file.  A timestamp will be appended to the given filename.
+            <code>LOGFILE</code> is not set by default.
+            <pre>LOGFILE=stack.sh.log</pre>
+            Old log files are cleaned automatically if <code>LOGDAYS</code> is
+            set to the number of days of old log files to keep.  <code>LOGDAYS</code>
+            defaults to 7.
+            <pre>LOGDAYS=1</pre></dd>
+
+          <dt>Screen logging</dt>
+          <dd>DevStack runs the OpenStack services under <code>screen</code> which
+            is useful for watching log and debug output.  However, in automated
+            testing the interactive <code>screen</code> sessions may not be available
+            after the fact; setting <code>SCREEN_LOGDIR</code> enables logging
+            of the <code>screen</code> sessions in the specified diretory.  There
+            will be one file per <code>screen</code> session named for the session
+            name and a timestamp.  <code>SCREEN_LOGDIR</code> is not set by default.
+            <pre>SCREEN_LOGDIR=$DEST/logs/screen</pre>
+            Note the use of <code>DEST</code> to locate the main install directory;
+            this is why we set it in <code>localrc</code></dd><br />
+
+          <dt>One syslog to bind them all</dt>
+          <dd>Logging all services to a single syslog can be convenient.  Enable
+            syslogging by seting <code>SYSLOG</code> to <code>True</code>.
+            If the destination log host is not localhost <code>SYSLOG_HOST</code>
+            and <code>SYSLOG_PORT</code> can be used to direct the message stream
+            to the log host.  By default <code>SYSLOG</code> is set to <code>False</code>,
+            <code>SYSLOG_HOST</code> is set to <code>$HOST_IP</code> and
+            <code>SYSLOG_PORT</code> is set to <code>516</code>.
+            <pre>SYSLOG=True
+SYSLOG_HOST=$HOST_IP
+SYSLOG_PORT=516</pre></dd>
+
+          <dt>A clean install every time</dt>
+          <dd>By default <code>stack.sh</code> only clones the project repos if
+            they do not exist in <code>$DEST</code>.  <code>stack.sh</code> will
+            freshen each repo on each run if <code>RECLONE</code>
+            is set to <code>yes</code>.
+            This avoids having to remove and re-download all of the repo objects
+            from GitHub.  By default, <code>RECLONE</code> is not set.
+            <pre>RECLONE=yes</code></dd>
+
+          <dt>Multi-host DevStack</dt>
+          <dd>Running DevStack with multiple hosts requires a custom <code>localrc</code>
+            file for each host.  The master is the same as a single host installation
+            with code>MULTI_HOST</code> set to <code>True</code>.  The slaves have
+            fewer services enabled and a couple of host variables pointing to
+            the master.  By default <code<MULTI_HOST</code> is set to <code>False</code>.
+            <br /><br />
+            <strong>Master</strong>
+            <pre>MULTI_HOST=True</pre>
+
+            <strong>Slave</strong>
+            <pre>MYSQL_HOST=w.x.y.z
+RABBIT_HOST=w.x.y.z
+GLANCE_HOSTPORT=w.x.y.z:9292
+ENABLED_SERVICES=n-vol,n-cpu,n-net,n-api</pre></dd>
+
+          <dt>API rate limits</dt>
+          <dd>Interation tests such as Tempest will likely run afoul of the
+            default rate limits configured for Nova.  Turn off rate limiting
+            during testing by setting <code>OSAPI_RATE_LIMIT</code>.  Note that
+            due to the implementation, you must set the variable to a space
+            to actually turn off rate limiting.  By default <code>OSAPI_RATE_LIMIT</code>
+            is set to <code>ratelimit</code>.
+            <pre>OSAPI_RATE_LIMIT=" "</pre></dd>
+
+        </dl>
+      </section
+
+      <footer>
+        <p>&copy; Openstack LLC 2011-2012 &mdash; this is not an official OpenStack project...</p>
+      </footer>
+
+    </div> <!-- /container -->
+
+  </body>
+</html>
