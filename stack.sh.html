@@ -331,13 +331,14 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>stack.sh</strong> is an opinionated openstack developer installation.</p>
+<p><strong>stack.sh</strong> is an opinionated OpenStack developer installation.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This script installs and configures <em>nova</em>, <em>glance</em>, <em>horizon</em> and <em>keystone</em></p>
+<p>This script installs and configures various combinations of <em>Glance</em>,
+<em>Horizon</em>, <em>Keystone</em>, <em>Melange</em>, <em>Nova</em>, <em>Quantum</em> and <em>Swift</em></p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -358,6 +359,7 @@ in this repo.  So start by grabbing this script and the dependencies.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Learn more and get the most recent version at <a class="reference external" href="http://devstack.org">http://devstack.org</a></p>
 </td><td class=code><div class=highlight><pre>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="sanity-check">
@@ -401,7 +403,6 @@ directory using the <tt class="docutils literal">FILES</tt> variable in this scr
 <span class="k">fi</span>
 
 
-
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="settings">
@@ -409,36 +410,35 @@ directory using the <tt class="docutils literal">FILES</tt> variable in this scr
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This script is customizable through setting environment variables.  If you
-want to override a setting you can either:</p>
+<p><tt class="docutils literal">stack.sh</tt> is customizable through setting environment variables.  If you
+want to override a setting you can set and export it:</p>
 <pre class="literal-block">
 export MYSQL_PASSWORD=anothersecret
 ./stack.sh
 </pre>
 <p>You can also pass options on a single line <tt class="docutils literal">MYSQL_PASSWORD=simple ./stack.sh</tt></p>
-<p>Additionally, you can put any local variables into a <tt class="docutils literal">localrc</tt> file, like:</p>
+<p>Additionally, you can put any local variables into a <tt class="docutils literal">localrc</tt> file:</p>
 <pre class="literal-block">
 MYSQL_PASSWORD=anothersecret
 MYSQL_USER=hellaroot
 </pre>
 <p>We try to have sensible defaults, so you should be able to run <tt class="docutils literal">./stack.sh</tt>
 in most cases.</p>
+<p>DevStack distributes <tt class="docutils literal">stackrc</tt> which contains locations for the OpenStack
+repositories and branches to configure.  <tt class="docutils literal">stackrc</tt> sources <tt class="docutils literal">localrc</tt> to
+allow you to override those settings and not have your changes overwritten
+when updating DevStack.</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>We support HTTP and HTTPS proxy servers via the usual environment variables
-http_proxy and https_proxy.  They can be set in localrc if necessary or
+<strong>http_proxy</strong> and <strong>https_proxy</strong>.  They can be set in <tt class="docutils literal">localrc</tt> if necessary or
 on the command line:</p>
 <pre class="literal-block">
 http_proxy=http://proxy.example.com:3128/ ./stack.sh
 </pre>
-<p>We source our settings from <tt class="docutils literal">stackrc</tt>.  This file is distributed with devstack
-and contains locations for what repositories to use.  If you want to use other
-repositories and branches, you can add your own settings with another file called
-<tt class="docutils literal">localrc</tt></p>
-<p>If <tt class="docutils literal">localrc</tt> exists, then <tt class="docutils literal">stackrc</tt> will load those settings.  This is
-useful for changing a branch or repository to test other versions.  Also you
-can store your other settings like <strong>MYSQL_PASSWORD</strong> or <strong>ADMIN_PASSWORD</strong> instead
-of letting devstack generate random ones for you. You can customize
-which services to install as well in your localrc.</p>
 </td><td class=code><div class=highlight><pre>
+
 <span class="nb">source</span> ./stackrc
 
 </pre></div></td></tr><tr><td class=docs>
@@ -459,7 +459,7 @@ which services to install as well in your localrc.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>OpenStack is designed to be run as a regular user (Horizon will fail to run
 as root, since apache refused to startup serve content from root user).  If
-stack.sh is run as root, it automatically creates a stack user with
+<tt class="docutils literal">stack.sh</tt> is run as <strong>root</strong>, it automatically creates a <strong>stack</strong> user with
 sudo privileges and runs as that user.</p>
 </td><td class=code><div class=highlight><pre>
 
@@ -537,9 +537,9 @@ ability to run sudo</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Set True to configure stack.sh to run cleanly without Internet access.
-stack.sh must have been previously run with Internet access to install
-prerequisites and initialize $DEST.</p>
+<p>Set True to configure <tt class="docutils literal">stack.sh</tt> to run cleanly without Internet access.
+<tt class="docutils literal">stack.sh</tt> must have been previously run with Internet access to install
+prerequisites and initialize <tt class="docutils literal">$DEST</tt>.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">OFFLINE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$OFFLINE</span><span class="sb">`</span>
 
@@ -593,8 +593,8 @@ prerequisites and initialize $DEST.</p>
 <span class="nv">INSTANCE_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTANCE_NAME_PREFIX</span><span class="k">:-</span><span class="nv">instance</span><span class="p">-</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Nova hypervisor configuration.  We default to libvirt whth  <strong>kvm</strong> but will
-drop back to <strong>qemu</strong> if we are unable to load the kvm module.  Stack.sh can
+<p>Nova hypervisor configuration.  We default to libvirt with <strong>kvm</strong> but will
+drop back to <strong>qemu</strong> if we are unable to load the kvm module.  <tt class="docutils literal">stack.sh</tt> can
 also install an <strong>LXC</strong> based system.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VIRT_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">VIRT_DRIVER</span><span class="k">:-</span><span class="nv">libvirt</span><span class="k">}</span>
@@ -625,7 +625,7 @@ cases.</p>
 <span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure services to syslog instead of writing to individual log files</p>
+<p>Configure services to use syslog instead of writing to individual log files</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SYSLOG</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$SYSLOG</span><span class="sb">`</span>
 <span class="nv">SYSLOG_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSLOG_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
@@ -686,28 +686,19 @@ the required password.  Prompt user for a password and write to localrc.</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This function will check if the service(s) specified in argument is
-enabled by the user in ENABLED_SERVICES.</p>
-<p>If there is multiple services specified as argument it will act as a
+<p>is_service_enabled() checks if the service(s) specified as arguments are
+enabled by the user in <strong>ENABLED_SERVICES</strong>.</p>
+<p>If there are multiple services specified as arguments the test performs a
 boolean OR or if any of the services specified on the command line
 return true.</p>
 <dl class="docutils">
-<dt>There is a special cases for some 'catch-all' services :</dt>
-<dd><blockquote class="first">
-<blockquote>
-nova would catch if any service enabled start by n-</blockquote>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 228)</p>
-Block quote ends without a blank line; unexpected unindent.</div>
-<p>glance would catch if any service enabled start by g-</p>
-</blockquote>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 229)</p>
-Block quote ends without a blank line; unexpected unindent.</div>
-<p class="last">quantum would catch if any service enabled start by q-</p>
-</dd>
+<dt>There is a special cases for some 'catch-all' services::</dt>
+<dd><strong>nova</strong> returns true if any service enabled start with <strong>n-</strong>
+<strong>glance</strong> returns true if any service enabled start with <strong>g-</strong>
+<strong>quantum</strong> returns true if any service enabled start with <strong>q-</strong></dd>
 </dl>
 </td><td class=code><div class=highlight><pre>
+
 <span class="k">function </span>is_service_enabled<span class="o">()</span> <span class="o">{</span>
     <span class="nv">services</span><span class="o">=</span><span class="nv">$@</span>
     <span class="k">for </span>service in <span class="k">${</span><span class="nv">services</span><span class="k">}</span>; <span class="k">do</span>
@@ -719,14 +710,15 @@ Block quote ends without a blank line; unexpected unindent.</div>
 <span class="k">    return </span>1
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="nova-network-configuration">
 <h2>Nova Network Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>FIXME: more documentation about why these are important flags.  Also
-we should make sure we use the same variable names as the flag names.</p>
+<p>FIXME: more documentation about why these are important options.  Also
+we should make sure we use the same variable names as the option names.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -760,7 +752,7 @@ here until the admin APIs can replace nova-manage</p>
 <span class="nv">TEST_FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.253.0/29</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Multi-host is a mode where each compute node runs its own network node.  This
+<p><strong>MULTI_HOST</strong> is a mode where each compute node runs its own network node.  This
 allows network operations and routing for a VM to occur on the server that is
 running the VM - removing a SPOF and bandwidth bottleneck.</p>
 </td><td class=code><div class=highlight><pre>
@@ -820,14 +812,14 @@ database and tables.</p>
 <p>By default this script will install and configure MySQL.  If you want to
 use an existing server, you can pass in the user/password/host parameters.
 You will need to send the same <tt class="docutils literal">MYSQL_PASSWORD</tt> to every host if you are doing
-a multi-node devstack installation.</p>
+a multi-node DevStack installation.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">MYSQL_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
 <span class="nv">MYSQL_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_USER</span><span class="k">:-</span><span class="nv">root</span><span class="k">}</span>
 read_password MYSQL_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR MYSQL.&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>don't specify /db in this string, so we can use it for multiple services</p>
+<p>NOTE: Don't specify /db in this string so we can use it for multiple services</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">BASE_SQL_CONN</span><span class="o">=</span><span class="k">${</span><span class="nv">BASE_SQL_CONN</span><span class="k">:-</span><span class="nv">mysql</span><span class="p">://</span><span class="nv">$MYSQL_USER</span><span class="p">:</span><span class="nv">$MYSQL_PASSWORD</span><span class="p">@</span><span class="nv">$MYSQL_HOST</span><span class="k">}</span>
 
@@ -841,6 +833,7 @@ read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR
 <p>Glance connection info.  Note the port must be specified.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -902,6 +895,7 @@ can never change.</p>
     read_password SWIFT_HASH <span class="s2">&quot;ENTER A RANDOM SWIFT HASH.&quot;</span>
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="keystone">
@@ -938,6 +932,7 @@ read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
 <span class="nv">KEYSTONE_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
 <span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">http</span><span class="k">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="horizon">
@@ -950,6 +945,7 @@ current user.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">APACHE_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_USER</span><span class="k">:-</span><span class="nv">$USER</span><span class="k">}</span>
 <span class="nv">APACHE_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_GROUP</span><span class="k">:-</span><span class="nv">$APACHE_USER</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1041,6 +1037,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$DEST</span>
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
@@ -1050,22 +1047,18 @@ sudo mkdir -p <span class="nv">$DEST</span>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<ul class="simple">
-<li>We are going to install packages only for the services needed.</li>
-<li>We are parsing the packages files and detecting metadatas.</li>
-</ul>
+<p>get_packages() collects a list of package names of any type from the
+prerequisite files in <tt class="docutils literal"><span class="pre">files/{apts|pips}</span></tt>.  The list is intended
+to be passed to a package installer such as apt or pip.</p>
+<p>Only packages required for the services in ENABLED_SERVICES will be
+included.  Two bits of metadata are recognized in the prerequisite files:
+- <tt class="docutils literal"># NOPRIME</tt> defers installation to be performed later in stack.sh
+- <tt class="docutils literal"># dist:DISTRO</tt> or <tt class="docutils literal">dist:DISTRO1,DISTRO2</tt> limits the selection</p>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 482)</p>
-Bullet list ends without a blank line; unexpected unindent.</div>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 485)</p>
+Unexpected indentation.</div>
 <blockquote>
-<ul class="simple">
-<li>If there is a NOPRIME as comment mean we are not doing the install
-just yet.</li>
-<li>If we have the meta-keyword dist:DISTRO or
-dist:DISTRO1,DISTRO2 it will be installed only for those
-distros (case insensitive).</li>
-</ul>
-</blockquote>
+of the package to the distros listed.  The distro names are case insensitive.</blockquote>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>get_packages<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span><span class="nv">package_dir</span><span class="o">=</span><span class="nv">$1</span>
@@ -1197,12 +1190,12 @@ git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_
 <span class="k">    </span>git_clone <span class="nv">$MELANGECLIENT_REPO</span> <span class="nv">$MELANGECLIENT_DIR</span> <span class="nv">$MELANGECLIENT_BRANCH</span>
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="initialization">
 <h1>Initialization</h1>
 </td><td class=code><div class=highlight><pre>
-
 
 </pre></div></td></tr><tr><td class=docs>
 <p>setup our checkouts so they are installed into python path
@@ -1236,6 +1229,7 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$MELANGECLIENT_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="syslog">
 <h2>Syslog</h2>
@@ -1264,6 +1258,7 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="k">    </span>sudo /usr/sbin/service rsyslog restart
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="rabbit">
@@ -1284,6 +1279,7 @@ the temp file is necessary due to LP: #878600</p>
 </td><td class=code><div class=highlight><pre>
     sudo rabbitmqctl change_password guest <span class="nv">$RABBIT_PASSWORD</span>
 <span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1466,6 +1462,7 @@ users).  The user system is external (keystone).</p>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="nova">
@@ -1483,23 +1480,30 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 
 <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>We are going to use a sample http middleware configuration based on the
-one from the keystone project to launch nova.  This paste config adds
-the configuration required for nova to validate keystone tokens.</p>
+<p>Use the sample http middleware configuration supplied in the
+Nova sources.  This paste config adds the configuration required
+for Nova to validate Keystone tokens.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Remove legacy paste config</p>
+<p>Allow rate limiting to be turned off for testing, like for Tempest
+NOTE: Set OSAPI_RATE_LIMIT=&quot; &quot; to turn OFF rate limiting</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">OSAPI_RATE_LIMIT</span><span class="o">=</span><span class="k">${</span><span class="nv">OSAPI_RATE_LIMIT</span><span class="k">:-</span><span class="s2">&quot;ratelimit&quot;</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove legacy paste config if present</p>
 </td><td class=code><div class=highlight><pre>
     rm -f <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
 
 </pre></div></td></tr><tr><td class=docs>
-<p>First we add a some extra data to the default paste config from nova</p>
+<p>Get the sample configuration file in place</p>
 </td><td class=code><div class=highlight><pre>
     cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_CONF_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Then we add our own service token to the configuration</p>
+<p>Rewrite the authtoken configration for our Keystone service.
+This is a bit defensive to allow the sample file some varaince.</p>
 </td><td class=code><div class=highlight><pre>
     sed -e <span class="s2">&quot;</span>
 <span class="s2">        /^admin_token/i admin_tenant_name = $SERVICE_TENANT_NAME</span>
@@ -1511,17 +1515,13 @@ the configuration required for nova to validate keystone tokens.</p>
 <span class="s2">    &quot;</span> -i <span class="nv">$NOVA_CONF_DIR</span>/api-paste.ini
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Finally, we change the pipelines in nova to use keystone</p>
+<p>Finally, change the Nova pipelines to use Keystone</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">function </span>replace_pipeline<span class="o">()</span> <span class="o">{</span>
         sed <span class="s2">&quot;/\[pipeline:$1\]/,/\[/s/^pipeline = .*/pipeline = $2/&quot;</span> -i <span class="nv">$NOVA_CONF_DIR</span>/api-paste.ini
     <span class="o">}</span>
     replace_pipeline <span class="s2">&quot;ec2cloud&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext cloudrequest authorizer validator ec2executor&quot;</span>
     replace_pipeline <span class="s2">&quot;ec2admin&quot;</span> <span class="s2">&quot;ec2faultwrap logrequest totoken authtoken keystonecontext adminrequest authorizer ec2executor&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>allow people to turn off rate limiting for testing, like when using tempest, by setting OSAPI_RATE_LIMIT=&quot; &quot;</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">OSAPI_RATE_LIMIT</span><span class="o">=</span><span class="k">${</span><span class="nv">OSAPI_RATE_LIMIT</span><span class="k">:-</span><span class="s2">&quot;ratelimit&quot;</span><span class="k">}</span>
     replace_pipeline <span class="s2">&quot;openstack_compute_api_v2&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext $OSAPI_RATE_LIMIT osapi_compute_app_v2&quot;</span>
     replace_pipeline <span class="s2">&quot;openstack_volume_api_v1&quot;</span> <span class="s2">&quot;faultwrap authtoken keystonecontext $OSAPI_RATE_LIMIT osapi_volume_app_v1&quot;</span>
 <span class="k">fi</span>
@@ -1872,6 +1872,7 @@ Launch all services.</p>
    <span class="nb">unset </span>s swift_hash swift_auth_server
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
@@ -2055,6 +2056,7 @@ For Example: EXTRA_OPTS=(foo=true bar=2)</p>
     add_nova_opt <span class="k">${</span><span class="nv">I</span><span class="p">//-</span><span class="k">}</span>
 <span class="k">done</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="xenserver">
@@ -2079,6 +2081,7 @@ For Example: EXTRA_OPTS=(foo=true bar=2)</p>
     <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
 <span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="nova-database">
@@ -2280,7 +2283,6 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
         bash <span class="nv">$FILES</span>/keystone_data.sh
 <span class="k">fi</span>
 
-
 </pre></div></td></tr><tr><td class=docs>
 <p>launch the nova-api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
@@ -2390,7 +2392,6 @@ happen after we've started the Quantum service.</p>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
 <span class="k">fi</span>
 
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Launching nova-compute should be as simple as running <tt class="docutils literal"><span class="pre">nova-compute</span></tt> but
 have to do a little more than that in our script.  Since we add the group
@@ -2410,6 +2411,7 @@ screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvn
 screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-consoleauth&quot;</span>
 screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/apache2/error.log&quot;</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="install-images">
@@ -2420,7 +2422,7 @@ screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f
 <p>Upload an image to glance.</p>
 <p>The default image is a small <strong>*TTY*</strong> testing image, which lets you login
 the username/password of root/password.</p>
-<p>TTY also uses cloud-init, supporting login via keypair and sending scripts as
+<p>TTY also uses <tt class="docutils literal"><span class="pre">cloud-init</span></tt>, supporting login via keypair and sending scripts as
 userdata.  See <a class="reference external" href="https://help.ubuntu.com/community/CloudInit">https://help.ubuntu.com/community/CloudInit</a> for more on cloud-init</p>
 <p>Override <tt class="docutils literal">IMAGE_URLS</tt> with a comma-separated list of uec images.</p>
 <blockquote>
@@ -2518,6 +2520,7 @@ kernel for use when uploading the root filesystem.</p>
     <span class="k">done</span>
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="fin">
@@ -2525,6 +2528,7 @@ kernel for use when uploading the root filesystem.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">set</span> +o xtrace
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -2537,21 +2541,21 @@ kernel for use when uploading the root filesystem.</p>
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If you installed the horizon on this server, then you should be able
+<p>If you installed Horizon on this server you should be able
 to access the site using your browser.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;horizon is now available at http://$SERVICE_HOST/&quot;</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Horizon is now available at http://$SERVICE_HOST/&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If keystone is present, you can point nova cli to this server</p>
+<p>If Keystone is present you can point <tt class="docutils literal">nova</tt> cli to this server</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;keystone is serving at $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;examples on using novaclient command line is in exercise.sh&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;the default users are: admin and demo&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;the password: $ADMIN_PASSWORD&quot;</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Keystone is serving at $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Examples on using novaclient command line is in exercise.sh&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;The default users are: admin and demo&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;The password: $ADMIN_PASSWORD&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2560,7 +2564,7 @@ to access the site using your browser.</p>
 <span class="nb">echo</span> <span class="s2">&quot;This is your host ip: $HOST_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Warn that EXTRA_FLAGS needs to be converted to EXTRA_OPTS</p>
+<p>Warn that <tt class="docutils literal">EXTRA_FLAGS</tt> needs to be converted to <tt class="docutils literal">EXTRA_OPTS</tt></p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: EXTRA_FLAGS is defined and may need to be converted to EXTRA_OPTS&quot;</span>
