@@ -501,18 +501,39 @@ ability to run sudo</p>
 <span class="k">    </span><span class="nb">exit </span>1
 <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Our user needs passwordless priviledges for certain commands which nova
-uses internally.
-Natty uec images sudoers does not have a '#includedir'. add one.</p>
+<p>We're not root, make sure sudo is available</p>
+</td><td class=code><div class=highlight><pre>
+    dpkg -l sudo
+    die_if_error <span class="s2">&quot;Sudo is required.  Re-run stack.sh as root ONE TIME ONLY to set up sudo.&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>UEC images /etc/sudoers does not have a '#includedir'. add one.</p>
 </td><td class=code><div class=highlight><pre>
     sudo grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
         <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> | sudo tee -a /etc/sudoers
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up devstack sudoers</p>
+</td><td class=code><div class=highlight><pre>
     <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-    cat <span class="nv">$FILES</span>/sudo/nova &gt; <span class="nv">$TEMPFILE</span>
-    sed -e <span class="s2">&quot;s,%USER%,$USER,g&quot;</span> -i <span class="nv">$TEMPFILE</span>
+    <span class="nb">echo</span> <span class="s2">&quot;`whoami` ALL=(root) NOPASSWD:ALL&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
     chmod 0440 <span class="nv">$TEMPFILE</span>
     sudo chown root:root <span class="nv">$TEMPFILE</span>
-    sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/stack_sh_nova
+    sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/50_stack_sh
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up the rootwrap sudoers</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$USER ALL=(root) NOPASSWD: /usr/local/bin/nova-rootwrap&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+    chmod 0440 <span class="nv">$TEMPFILE</span>
+    sudo chown root:root <span class="nv">$TEMPFILE</span>
+    sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove old file</p>
+</td><td class=code><div class=highlight><pre>
+    sudo rm -f /etc/sudoers.d/stack_sh_nova
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -676,12 +697,12 @@ return true.</p>
 <blockquote>
 nova would catch if any service enabled start by n-</blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 214)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 228)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p>glance would catch if any service enabled start by g-</p>
 </blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 215)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 229)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p class="last">quantum would catch if any service enabled start by q-</p>
 </dd>
@@ -1034,7 +1055,7 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 468)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 482)</p>
 Bullet list ends without a blank line; unexpected unindent.</div>
 <blockquote>
 <ul class="simple">
@@ -1930,6 +1951,7 @@ add_nova_opt <span class="s2">&quot;[DEFAULT]&quot;</span>
 add_nova_opt <span class="s2">&quot;verbose=True&quot;</span>
 add_nova_opt <span class="s2">&quot;auth_strategy=keystone&quot;</span>
 add_nova_opt <span class="s2">&quot;allow_resize_to_same_host=True&quot;</span>
+add_nova_opt <span class="s2">&quot;root_helper=sudo /usr/local/bin/nova-rootwrap&quot;</span>
 add_nova_opt <span class="s2">&quot;compute_scheduler_driver=$SCHEDULER&quot;</span>
 add_nova_opt <span class="s2">&quot;dhcpbridge_flagfile=$NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
 add_nova_opt <span class="s2">&quot;fixed_range=$FIXED_RANGE&quot;</span>
@@ -2357,19 +2379,15 @@ happen after we've started the Quantum service.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span>
 
-    <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Not creating floating IPs (not supported by QuantumManager)&quot;</span>
-    <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>create some floating ips</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create a second pool</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
-    <span class="k">fi</span>
+    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
 <span class="k">fi</span>
 
 
