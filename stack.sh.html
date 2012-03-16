@@ -884,17 +884,24 @@ only some quick testing.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SWIFT_REPLICAS</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">:-</span><span class="nv">3</span><span class="k">}</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>We only ask for Swift Hash if we have enabled swift service.</p>
-</td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>SWIFT_HASH is a random unique string for a swift cluster that
+<p>If we are using swift, we can default the s3 port to swift instead
+of nova-objectstore</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">S3_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">S3_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>We only ask for Swift Hash if we have enabled swift service.
+SWIFT_HASH is a random unique string for a swift cluster that
 can never change.</p>
 </td><td class=code><div class=highlight><pre>
     read_password SWIFT_HASH <span class="s2">&quot;ENTER A RANDOM SWIFT HASH.&quot;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Set default port for nova-objectstore</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">S3_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">S3_SERVICE_PORT</span><span class="k">:-</span><span class="nv">3333</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1055,7 +1062,7 @@ included.  Two bits of metadata are recognized in the prerequisite files:
 - <tt class="docutils literal"># NOPRIME</tt> defers installation to be performed later in stack.sh
 - <tt class="docutils literal"># dist:DISTRO</tt> or <tt class="docutils literal">dist:DISTRO1,DISTRO2</tt> limits the selection</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 485)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 491)</p>
 Unexpected indentation.</div>
 <blockquote>
 of the package to the distros listed.  The distro names are case insensitive.</blockquote>
@@ -1670,6 +1677,11 @@ mount it (ext filesystems can be labeled via e2label).</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>Install memcached for swift.</p>
+</td><td class=code><div class=highlight><pre>
+    apt_get install memcached
+
+</pre></div></td></tr><tr><td class=docs>
 <p>We first do a bit of setup by creating the directories and
 changing the permissions so we can run it as our user.</p>
 </td><td class=code><div class=highlight><pre>
@@ -1853,12 +1865,15 @@ different object servers binding on different ports.</p>
    sudo /etc/init.d/rsync restart <span class="o">||</span> :
 
 </pre></div></td></tr><tr><td class=docs>
-<p>TODO: Bring some services in foreground.
-Launch all services.</p>
+<p>First spawn all the swift services then kill the
+proxy service so we can run it in foreground in screen.
+<tt class="docutils literal"><span class="pre">swift-init</span> ... {stop|restart}</tt> exits with '1' if no servers are running,
+ignore it just in case</p>
 </td><td class=code><div class=highlight><pre>
-   swift-init all start
+   swift-init all restart <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">   </span>swift-init proxy stop <span class="o">||</span> <span class="nb">true</span>
 
-   <span class="nb">unset </span>s swift_hash swift_auth_server
+<span class="nb">   unset </span>s swift_hash swift_auth_server
 <span class="k">fi</span>
 
 
@@ -1945,9 +1960,8 @@ add_nova_opt <span class="s2">&quot;root_helper=sudo /usr/local/bin/nova-rootwra
 add_nova_opt <span class="s2">&quot;compute_scheduler_driver=$SCHEDULER&quot;</span>
 add_nova_opt <span class="s2">&quot;dhcpbridge_flagfile=$NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
 add_nova_opt <span class="s2">&quot;fixed_range=$FIXED_RANGE&quot;</span>
-<span class="k">if </span>is_service_enabled n-obj; <span class="k">then</span>
-<span class="k">    </span>add_nova_opt <span class="s2">&quot;s3_host=$SERVICE_HOST&quot;</span>
-<span class="k">fi</span>
+add_nova_opt <span class="s2">&quot;s3_host=$SERVICE_HOST&quot;</span>
+add_nova_opt <span class="s2">&quot;s3_port=$S3_SERVICE_PORT&quot;</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.quantum.manager.QuantumManager&quot;</span>
     add_nova_opt <span class="s2">&quot;quantum_connection_host=$Q_HOST&quot;</span>
@@ -2082,7 +2096,7 @@ For Example: EXTRA_OPTS=(foo=true bar=2)</p>
 only once for an entire cluster.</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create nova database</p>
 </td><td class=code><div class=highlight><pre>
@@ -2235,6 +2249,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 
 <span class="k">    </span>sudo sed -e <span class="s2">&quot;s,%SERVICE_HOST%,$SERVICE_HOST,g&quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
 
+    sudo sed -e <span class="s2">&quot;s,%S3_SERVICE_PORT%,$S3_SERVICE_PORT,g&quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
 
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>cp <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf.sample <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf
@@ -2270,6 +2285,18 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
     <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
     <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span> <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> <span class="nv">SERVICE_PASSWORD</span><span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> <span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span> <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> <span class="nv">DEVSTACK_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span> <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> <span class="se">\</span>
         bash <span class="nv">$FILES</span>/keystone_data.sh
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create an access key and secret key for nova ec2 register image</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled swift <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
+<span class="k">        </span><span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone --os_auth_url<span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> --os_username<span class="o">=</span>nova --os_password<span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> --os_tenant_name<span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> ec2-credentials-create<span class="k">)</span>
+        <span class="nv">ACCESS_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ access / { print $4 }&#39;</span><span class="k">)</span>
+        <span class="nv">SECRET_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ secret / { print $4 }&#39;</span><span class="k">)</span>
+        add_nova_opt <span class="s2">&quot;s3_access_key=$ACCESS_KEY&quot;</span>
+        add_nova_opt <span class="s2">&quot;s3_secret_key=$SECRET_KEY&quot;</span>
+        add_nova_opt <span class="s2">&quot;s3_affix_tenant=True&quot;</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2391,7 +2418,6 @@ We don't check for is_service_enable as screen_it does it for us</p>
 </td><td class=code><div class=highlight><pre>
 screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_DIR/bin/nova-compute&quot;</span>
 screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-cert&quot;</span>
-screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-objectstore&quot;</span>
 screen_it n-vol <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-volume&quot;</span>
 screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-network&quot;</span>
 screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-scheduler&quot;</span>
@@ -2399,7 +2425,14 @@ screen_it n-novnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-n
 screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
 screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-consoleauth&quot;</span>
 screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/apache2/error.log&quot;</span>
+screen_it swift <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; $SWIFT_DIR/bin/swift-proxy-server ${SWIFT_CONFIG_LOCATION}/proxy-server.conf -v&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Starting the nova-objectstore only if swift service is not enabled.
+Swift will act as s3 objectstore.</p>
+</td><td class=code><div class=highlight><pre>
+is_service_enabled swift <span class="o">||</span> <span class="se">\</span>
+    screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-objectstore&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>

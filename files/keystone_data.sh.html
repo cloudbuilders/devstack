@@ -336,11 +336,11 @@ ul.auto-toc {
 <h1>Tenant               User      Roles</h1>
 <p>admin                admin     admin
 service              glance    admin
-service              nova      admin
+service              nova      admin, [ResellerAdmin (swift only)]
 service              quantum   admin        # if enabled
 service              swift     admin        # if enabled
 demo                 admin     admin
-demo                 demo      Member,anotherrole
+demo                 demo      Member, anotherrole
 invisible_to_admin   demo      Member</p>
 <p>Variables set before calling this script:
 SERVICE_TOKEN - aka admin_token in keystone.conf
@@ -443,6 +443,17 @@ keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span
     keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
                            --user <span class="nv">$SWIFT_USER</span> <span class="se">\</span>
                            --role <span class="nv">$ADMIN_ROLE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Nova needs ResellerAdmin role to download images when accessing
+swift through the s3 api. The admin role in swift allows a user
+to act as an admin for their tenant, but ResellerAdmin is needed
+for a user to act as any tenant. The name of this role is also
+configurable in swift-proxy.conf</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">RESELLER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>ResellerAdmin<span class="k">)</span>
+    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                           --user <span class="nv">$NOVA_USER</span> <span class="se">\</span>
+                           --role <span class="nv">$RESELLER_ROLE</span>
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;quantum&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
