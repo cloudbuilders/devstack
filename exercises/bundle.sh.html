@@ -331,15 +331,19 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>we will use the <tt class="docutils literal">euca2ools</tt> cli tool that wraps the python boto
-library to test ec2 compatibility</p>
+<p><strong>bundle.sh</strong></p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
 
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>we will use the <tt class="docutils literal">euca2ools</tt> cli tool that wraps the python boto
+library to test ec2 bundle upload compatibility</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 <span class="nb">echo</span> <span class="s2">&quot;Begin DevStack Exercise: $0&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This script exits on an error so that errors don't compound and you see
@@ -400,12 +404,9 @@ nova x509-create-cert <span class="nv">$TOP_DIR</span>/pk.pem <span class="nv">$
 <span class="nv">BUCKET</span><span class="o">=</span>testbucket
 <span class="nv">IMAGE</span><span class="o">=</span>bundle.img
 truncate -s 5M /tmp/<span class="nv">$IMAGE</span>
-euca-bundle-image -i /tmp/<span class="nv">$IMAGE</span>
-die_if_error <span class="s2">&quot;Failure bundling image $IMAGE&quot;</span>
+euca-bundle-image -i /tmp/<span class="nv">$IMAGE</span> <span class="o">||</span> die <span class="s2">&quot;Failure bundling image $IMAGE&quot;</span>
 
-
-euca-upload-bundle -b <span class="nv">$BUCKET</span> -m /tmp/<span class="nv">$IMAGE</span>.manifest.xml
-die_if_error <span class="s2">&quot;Failure uploading bundle $IMAGE to $BUCKET&quot;</span>
+euca-upload-bundle -b <span class="nv">$BUCKET</span> -m /tmp/<span class="nv">$IMAGE</span>.manifest.xml <span class="o">||</span> die <span class="s2">&quot;Failure uploading bundle $IMAGE to $BUCKET&quot;</span>
 
 <span class="nv">AMI</span><span class="o">=</span><span class="sb">`</span>euca-register <span class="nv">$BUCKET</span>/<span class="nv">$IMAGE</span>.manifest.xml | cut -f2<span class="sb">`</span>
 die_if_not_set AMI <span class="s2">&quot;Failure registering $BUCKET/$IMAGE&quot;</span>
@@ -421,13 +422,12 @@ die_if_not_set AMI <span class="s2">&quot;Failure registering $BUCKET/$IMAGE&quo
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean up</p>
 </td><td class=code><div class=highlight><pre>
-euca-deregister <span class="nv">$AMI</span>
-die_if_error <span class="s2">&quot;Failure deregistering $AMI&quot;</span>
+euca-deregister <span class="nv">$AMI</span> <span class="o">||</span> die <span class="s2">&quot;Failure deregistering $AMI&quot;</span>
 
 <span class="nb">set</span> +o xtrace
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;End DevStack Exercise: $0&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;SUCCESS: End DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>

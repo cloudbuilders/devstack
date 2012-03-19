@@ -349,9 +349,9 @@ ul.auto-toc {
 </dl>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 <span class="nb">echo</span> <span class="s2">&quot;Begin DevStack Exercise: $0&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This script exits on an error so that errors don't compound and you see
@@ -407,11 +407,17 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEFAULT_FLOATING_POOL</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_FLOATING_POOL</span><span class="k">:-</span><span class="nv">nova</span><span class="k">}</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="launching-servers">
+<h1>Launching servers</h1>
+</td><td class=code><div class=highlight><pre>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Grab the id of the image to launch</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>glance -f index | egrep <span class="nv">$DEFAULT_IMAGE_NAME</span> | head -1 | cut -d<span class="s2">&quot; &quot;</span> -f1<span class="sb">`</span>
-
 die_if_not_set IMAGE <span class="s2">&quot;Failure getting image&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -467,7 +473,8 @@ chmod 600 <span class="nv">$KEY_FILE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Boot our instance</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> --key_name <span class="nv">$KEY_NAME</span> <span class="nv">$INSTANCE_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
+<span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> --key_name <span class="nv">$KEY_NAME</span> <span class="nv">$INSTANCE_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="sb">`</span>
+die_if_not_set VM_UUID <span class="s2">&quot;Failure launching $INSTANCE_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>check that the status is active within ACTIVE_TIMEOUT seconds</p>
@@ -492,7 +499,7 @@ nova volume-delete <span class="nv">$VOL_NAME</span> <span class="o">||</span> <
 </pre></div></td></tr><tr><td class=docs>
 <p>Allocate floating ip</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create | grep <span class="nv">$DEFAULT_FLOATING_POOL</span> | cut -d <span class="s1">&#39;|&#39;</span> -f2 | tr -d <span class="s1">&#39; &#39;</span><span class="sb">`</span>
+<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create | grep <span class="nv">$DEFAULT_FLOATING_POOL</span> | get_field 1<span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure the ip gets allocated</p>
@@ -532,7 +539,7 @@ nova volume-create --display_name<span class="o">=</span><span class="nv">$VOL_N
 <p>FIXME (anthony) - python-novaclient should accept a volume_name for the attachment param?</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEVICE</span><span class="o">=</span>/dev/vdb
-<span class="nv">VOLUME_ID</span><span class="o">=</span><span class="sb">`</span>nova volume-list | grep <span class="nv">$VOL_NAME</span>  | cut -d <span class="s1">&#39;|&#39;</span> -f 2 | tr -d <span class="s1">&#39; &#39;</span><span class="sb">`</span>
+<span class="nv">VOLUME_ID</span><span class="o">=</span><span class="sb">`</span>nova volume-list | grep <span class="nv">$VOL_NAME</span>  | get_field 1<span class="sb">`</span>
 nova volume-attach <span class="nv">$INSTANCE_NAME</span> <span class="nv">$VOLUME_ID</span> <span class="nv">$DEVICE</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -602,7 +609,8 @@ nova volume-detach <span class="nv">$INSTANCE_NAME</span> <span class="nv">$VOLU
 </pre></div></td></tr><tr><td class=docs>
 <p>Copy cirros into our volume</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">VOL_VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --block_device_mapping <span class="nv">vda</span><span class="o">=</span><span class="nv">$VOLUME_ID</span>:::0 --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> --key_name <span class="nv">$KEY_NAME</span> <span class="nv">$VOL_INSTANCE_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
+<span class="nv">VOL_VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --block_device_mapping <span class="nv">vda</span><span class="o">=</span><span class="nv">$VOLUME_ID</span>:::0 --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> --key_name <span class="nv">$KEY_NAME</span> <span class="nv">$VOL_INSTANCE_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="sb">`</span>
+die_if_not_set VOL_VM_UUID <span class="s2">&quot;Failure launching $VOL_INSTANCE_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The following typically fails.  Don't know why.</p>
@@ -615,7 +623,7 @@ nova volume-detach <span class="nv">$INSTANCE_NAME</span> <span class="nv">$VOLU
 </pre></div></td></tr><tr><td class=docs>
 <p>Detach the volume from the builder instance</p>
 </td><td class=code><div class=highlight><pre>
-nova remove-floating-ip  <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING_IP</span>
+nova remove-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING_IP</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Boot instance from volume!  This is done with the --block_device_mapping param.
@@ -648,7 +656,8 @@ ssh -o <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no -
 </pre></div></td></tr><tr><td class=docs>
 <p>Add floating ip to our server</p>
 </td><td class=code><div class=highlight><pre>
-nova delete <span class="nv">$VOL_INSTANCE_NAME</span>
+nova delete <span class="nv">$VOL_INSTANCE_NAME</span> <span class="o">||</span> <span class="se">\</span>
+    die <span class="s2">&quot;Failure deleting instance volume $VOL_INSTANCE_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
@@ -661,12 +670,14 @@ nova delete <span class="nv">$VOL_INSTANCE_NAME</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure our volume-backed instance launched</p>
 </td><td class=code><div class=highlight><pre>
-nova volume-delete <span class="nv">$VOL_NAME</span>
+nova volume-delete <span class="nv">$VOL_NAME</span> <span class="o">||</span> <span class="se">\</span>
+    die <span class="s2">&quot;Failure deleting volume $VOLUME_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete volume backed instance</p>
 </td><td class=code><div class=highlight><pre>
-nova delete <span class="nv">$INSTANCE_NAME</span>
+nova delete <span class="nv">$INSTANCE_NAME</span> <span class="o">||</span> <span class="se">\</span>
+    die <span class="s2">&quot;Failure deleting instance $INSTANCE_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait till our volume is no longer in-use</p>
@@ -679,17 +690,19 @@ nova delete <span class="nv">$INSTANCE_NAME</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete the volume</p>
 </td><td class=code><div class=highlight><pre>
-nova floating-ip-delete <span class="nv">$FLOATING_IP</span>
+nova floating-ip-delete <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
+    die <span class="s2">&quot;Failure deleting floating IP $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete instance</p>
 </td><td class=code><div class=highlight><pre>
-nova secgroup-delete <span class="nv">$SECGROUP</span>
+nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
+    die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
 
 <span class="nb">set</span> +o xtrace
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;End DevStack Exercise: $0&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;SUCCESS: End DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -699,7 +712,7 @@ nova secgroup-delete <span class="nv">$SECGROUP</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>De-allocate the floating ip</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>Delete secgroup</p>
+<p>Delete a secgroup</p>
 </pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </div>

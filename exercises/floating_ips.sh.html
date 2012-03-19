@@ -331,20 +331,19 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>exercise.sh</strong> - using the cloud can be fun</p>
+<p><strong>floating_ips.sh</strong> - using the cloud can be fun</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p>we will use the <tt class="docutils literal">nova</tt> cli tool provided by the <tt class="docutils literal"><span class="pre">python-novaclient</span></tt>
-package</p>
+package to work out the instance connectivity</p>
 </td><td class=code><div class=highlight><pre>
 
-
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 <span class="nb">echo</span> <span class="s2">&quot;Begin DevStack Exercise: $0&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This script exits on an error so that errors don't compound and you see
@@ -409,6 +408,7 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <p>Additional floating IP pool and range</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TEST_FLOATING_POOL</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_POOL</span><span class="k">:-</span><span class="nv">test</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -579,8 +579,8 @@ die_if_not_set FLOATING_IP <span class="s2">&quot;Failure creating floating IP&q
 </pre></div></td></tr><tr><td class=docs>
 <p>add floating ip to our server</p>
 </td><td class=code><div class=highlight><pre>
-nova add-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING_IP</span>
-die_if_error <span class="s2">&quot;Failure adding floating IP $FLOATING_IP to $NAME&quot;</span>
+nova add-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
+    die <span class="s2">&quot;Failure adding floating IP $FLOATING_IP to $NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
@@ -607,8 +607,7 @@ die_if_not_set TEST_FLOATING_IP <span class="s2">&quot;Failure creating floating
 </pre></div></td></tr><tr><td class=docs>
 <p>dis-allow icmp traffic (ping)</p>
 </td><td class=code><div class=highlight><pre>
-nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
-die_if_error <span class="s2">&quot;Failure deleting security group rule from $SECGROUP&quot;</span>
+nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0 <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group rule from $SECGROUP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>FIXME (anthony): make xs support security groups</p>
@@ -627,20 +626,17 @@ die_if_error <span class="s2">&quot;Failure deleting security group rule from $S
 </pre></div></td></tr><tr><td class=docs>
 <p>de-allocate the floating ip</p>
 </td><td class=code><div class=highlight><pre>
-nova floating-ip-delete <span class="nv">$FLOATING_IP</span>
-die_if_error <span class="s2">&quot;Failure deleting floating IP $FLOATING_IP&quot;</span>
+nova floating-ip-delete <span class="nv">$FLOATING_IP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting floating IP $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete second floating IP</p>
 </td><td class=code><div class=highlight><pre>
-nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span>
-die_if_error <span class="s2">&quot;Failure deleting floating IP $TEST_FLOATING_IP&quot;</span>
+nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting floating IP $TEST_FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>shutdown the server</p>
 </td><td class=code><div class=highlight><pre>
-nova delete <span class="nv">$VM_UUID</span>
-die_if_error <span class="s2">&quot;Failure deleting instance $NAME&quot;</span>
+nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting instance $NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>make sure the VM shuts down within a reasonable time</p>
@@ -653,13 +649,12 @@ die_if_error <span class="s2">&quot;Failure deleting instance $NAME&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete a secgroup</p>
 </td><td class=code><div class=highlight><pre>
-nova secgroup-delete <span class="nv">$SECGROUP</span>
-die_if_error <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
 
 <span class="nb">set</span> +o xtrace
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;End DevStack Exercise: $0&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;SUCCESS: End DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
