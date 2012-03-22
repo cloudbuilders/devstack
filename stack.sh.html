@@ -1396,7 +1396,12 @@ users).  The user system is external (keystone).</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-<span class="k">    </span><span class="nv">GLANCE_IMAGE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance/images
+<span class="k">    </span><span class="nv">GLANCE_CONF_DIR</span><span class="o">=</span>/etc/glance
+    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$GLANCE_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo mkdir -p <span class="nv">$GLANCE_CONF_DIR</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$GLANCE_CONF_DIR</span>
+    <span class="nv">GLANCE_IMAGE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance/images
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete existing images</p>
 </td><td class=code><div class=highlight><pre>
@@ -1435,22 +1440,22 @@ users).  The user system is external (keystone).</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Copy over our glance configurations and update them</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">GLANCE_REGISTRY_CONF</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-registry.conf
+    <span class="nv">GLANCE_REGISTRY_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry.conf
     cp <span class="nv">$FILES</span>/glance-registry.conf <span class="nv">$GLANCE_REGISTRY_CONF</span>
     glance_config <span class="nv">$GLANCE_REGISTRY_CONF</span>
 
     <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$FILES</span>/glance-registry-paste.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">GLANCE_REGISTRY_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-registry-paste.ini
+<span class="k">        </span><span class="nv">GLANCE_REGISTRY_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry-paste.ini
         cp <span class="nv">$FILES</span>/glance-registry-paste.ini <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
         glance_config <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
     <span class="k">fi</span>
 
-<span class="k">    </span><span class="nv">GLANCE_API_CONF</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-api.conf
+<span class="k">    </span><span class="nv">GLANCE_API_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api.conf
     cp <span class="nv">$FILES</span>/glance-api.conf <span class="nv">$GLANCE_API_CONF</span>
     glance_config <span class="nv">$GLANCE_API_CONF</span>
 
     <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$FILES</span>/glance-api-paste.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/etc/glance-api-paste.ini
+<span class="k">        </span><span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api-paste.ini
         cp <span class="nv">$FILES</span>/glance-api-paste.ini <span class="nv">$GLANCE_API_PASTE_INI</span>
         glance_config <span class="nv">$GLANCE_API_PASTE_INI</span>
     <span class="k">fi</span>
@@ -2184,14 +2189,14 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <p>launch the glance registry service</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-<span class="k">    </span>screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=etc/glance-registry.conf&quot;</span>
+<span class="k">    </span>screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>launch the glance api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled g-api; <span class="k">then</span>
-<span class="k">    </span>screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=etc/glance-api.conf&quot;</span>
+<span class="k">    </span>screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for g-api ($GLANCE_HOSTPORT) to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://$GLANCE_HOSTPORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;g-api did not start&quot;</span>
