@@ -2311,7 +2311,12 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <p>Quantum service</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">QUANTUM_CONF_DIR</span><span class="o">=</span>/etc/quantum
+    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$QUANTUM_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo mkdir -p <span class="nv">$QUANTUM_CONF_DIR</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$QUANTUM_CONF_DIR</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install deps
 FIXME add to files/apts/quantum, but don't install if not needed!</p>
@@ -2327,13 +2332,15 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
             <span class="nb">exit </span>1
         <span class="k">fi</span>
-<span class="k">        </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini
+<span class="k">        </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/plugins.ini
+        sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure we're using the openvswitch plugin</p>
 </td><td class=code><div class=highlight><pre>
-        sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
+        sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
     <span class="k">fi</span>
-<span class="k">   </span>screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$QUANTUM_CLIENT_DIR:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_DIR/etc/quantum.conf&quot;</span>
+<span class="k">   </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$QUANTUM_CONF_DIR</span>/quantum.conf
+   screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$QUANTUM_CLIENT_DIR:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_CONF_DIR/quantum.conf&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2352,8 +2359,9 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start up the quantum &lt;-&gt; openvswitch agent</p>
 </td><td class=code><div class=highlight><pre>
-       <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini
-       sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
+       <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/ovs_quantum_plugin.ini
+       sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
+       sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
        screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_OVS_CONFIG_FILE -v&quot;</span>
     <span class="k">fi</span>
 
