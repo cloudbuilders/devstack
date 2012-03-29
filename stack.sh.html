@@ -2446,17 +2446,8 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 </pre></div></td></tr><tr><td class=docs>
 <p>Option to upload legacy ami-tty, which works with xenserver</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$UPLOAD_LEGACY_TTY</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[</span> ! -f <span class="nv">$FILES</span>/tty.tgz <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>wget -c http://images.ansolabs.com/tty.tgz -O <span class="nv">$FILES</span>/tty.tgz
-        <span class="k">fi</span>
-
-<span class="k">        </span>tar -zxf <span class="nv">$FILES</span>/tty.tgz -C <span class="nv">$FILES</span>/images
-        <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="nv">$FILES</span>/images/aki-tty/image<span class="sb">`</span>
-        <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
-        <span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="nv">$FILES</span>/images/ari-tty/image<span class="sb">`</span>
-        <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
-        glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;tty&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="nv">kernel_id</span><span class="o">=</span><span class="nv">$KERNEL_ID</span> <span class="nv">ramdisk_id</span><span class="o">=</span><span class="nv">$RAMDISK_ID</span> &lt; <span class="nv">$FILES</span>/images/ami-tty/image
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}http://images.ansolabs.com/tty.tgz&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
@@ -2484,14 +2475,15 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
                 rm -Rf <span class="s2">&quot;$xdir&quot;</span>;
                 mkdir <span class="s2">&quot;$xdir&quot;</span>
                 tar -zxf <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> -C <span class="s2">&quot;$xdir&quot;</span>
-                <span class="nv">KERNEL</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-vmlinuz*; <span class="k">do</span>
+                <span class="nv">KERNEL</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-vmlinuz* <span class="s2">&quot;$xdir/&quot;</span>aki-*/image; <span class="k">do</span>
                          <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
-                <span class="nv">RAMDISK</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-initrd*; <span class="k">do</span>
+                <span class="nv">RAMDISK</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-initrd* <span class="s2">&quot;$xdir/&quot;</span>ari-*/image; <span class="k">do</span>
                          <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
-                <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*.img; <span class="k">do</span>
+                <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*.img <span class="s2">&quot;$xdir/&quot;</span>ami-*/image; <span class="k">do</span>
                          <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
-                <span class="o">[</span> -n <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="o">]</span>
-                <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
+                <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                    </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
+                <span class="k">fi</span>
                 ;;
             *.img<span class="o">)</span>
                 <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/$IMAGE_FNAME&quot;</span>;
