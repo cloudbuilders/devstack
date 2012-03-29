@@ -2494,30 +2494,44 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
             *.img<span class="o">)</span>
                 <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/$IMAGE_FNAME&quot;</span>;
                 <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
+                <span class="nv">DISK_FORMAT</span><span class="o">=</span>raw
+                <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
                 ;;
             *.img.gz<span class="o">)</span>
                 <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
                 <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img.gz&quot;</span><span class="k">)</span>
+                <span class="nv">DISK_FORMAT</span><span class="o">=</span>raw
+                <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
+                ;;
+            *.qcow2<span class="o">)</span>
+                <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
+                <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.qcow2&quot;</span><span class="k">)</span>
+                <span class="nv">DISK_FORMAT</span><span class="o">=</span>qcow2
+                <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
                 ;;
             *<span class="o">)</span> <span class="nb">echo</span> <span class="s2">&quot;Do not know what to do with $IMAGE_FNAME&quot;</span>; <span class="nb">false</span>;;
         <span class="k">esac</span>
 
+<span class="k">        if</span> <span class="o">[</span> <span class="s2">&quot;$CONTAINER_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;bare&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> <span class="nv">disk_format</span><span class="o">=</span><span class="nv">$DISK_FORMAT</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
+        <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Use glance client to add the kernel the root filesystem.
 We parse the results of the first upload to get the glance ID of the
 kernel for use when uploading the root filesystem.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>; <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
-        <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="s2">&quot;$KERNEL&quot;</span><span class="sb">`</span>
-            <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
+            <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>; <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
+            <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="s2">&quot;$KERNEL&quot;</span><span class="sb">`</span>
+                <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
+            <span class="k">fi</span>
+<span class="k">            if</span> <span class="o">[</span> -n <span class="s2">&quot;$RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span><span class="sb">`</span>
+                <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
+            <span class="k">fi</span>
+<span class="k">            </span>glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
         <span class="k">fi</span>
-<span class="k">        if</span> <span class="o">[</span> -n <span class="s2">&quot;$RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span><span class="sb">`</span>
-            <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
-        <span class="k">fi</span>
-<span class="k">        </span>glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
-    <span class="k">done</span>
+<span class="k">    done</span>
 <span class="k">fi</span>
 
 
