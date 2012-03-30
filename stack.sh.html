@@ -1389,7 +1389,7 @@ users).  The user system is external (keystone).</p>
 <p>(re)create glance database</p>
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS glance;&#39;</span>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE glance;&#39;</span>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE glance CHARACTER SET utf8;&#39;</span>
 
     <span class="k">function </span>glance_config <span class="o">{</span>
         sudo sed -e <span class="s2">&quot;</span>
@@ -1400,7 +1400,7 @@ users).  The user system is external (keystone).</p>
 <span class="s2">            s,%KEYSTONE_SERVICE_HOST%,$KEYSTONE_SERVICE_HOST,g;</span>
 <span class="s2">            s,%KEYSTONE_SERVICE_PORT%,$KEYSTONE_SERVICE_PORT,g;</span>
 <span class="s2">            s,%KEYSTONE_SERVICE_PROTOCOL%,$KEYSTONE_SERVICE_PROTOCOL,g;</span>
-<span class="s2">            s,%SQL_CONN%,$BASE_SQL_CONN/glance,g;</span>
+<span class="s2">            s,%SQL_CONN%,$BASE_SQL_CONN/glance?charset=utf8,g;</span>
 <span class="s2">            s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
 <span class="s2">            s,%SERVICE_USERNAME%,glance,g;</span>
 <span class="s2">            s,%SERVICE_PASSWORD%,$SERVICE_PASSWORD,g;</span>
@@ -1964,7 +1964,7 @@ add_nova_opt <span class="s2">&quot;flat_network_bridge=$FLAT_NETWORK_BRIDGE&quo
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;flat_interface=$FLAT_INTERFACE&quot;</span>
 <span class="k">fi</span>
-add_nova_opt <span class="s2">&quot;sql_connection=$BASE_SQL_CONN/nova&quot;</span>
+add_nova_opt <span class="s2">&quot;sql_connection=$BASE_SQL_CONN/nova?charset=utf8&quot;</span>
 add_nova_opt <span class="s2">&quot;libvirt_type=$LIBVIRT_TYPE&quot;</span>
 add_nova_opt <span class="s2">&quot;instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -2182,14 +2182,14 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <p>(re)create keystone database</p>
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS keystone;&#39;</span>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE keystone;&#39;</span>
+    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE keystone CHARACTER SET utf8;&#39;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure keystone.conf</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
     cp <span class="nv">$FILES</span>/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
-    sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/keystone,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
+    sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/keystone?charset=utf8,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%DEST%,$DEST,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
     sudo sed -e <span class="s2">&quot;s,%KEYSTONE_DIR%,$KEYSTONE_DIR,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
@@ -2301,7 +2301,7 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
 <span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS ovs_quantum;&#39;</span>
-            mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS ovs_quantum;&#39;</span>
+            mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS ovs_quantum CHARACTER SET utf8;&#39;</span>
         <span class="k">else</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
             <span class="nb">exit </span>1
@@ -2335,7 +2335,7 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </td><td class=code><div class=highlight><pre>
        <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/ovs_quantum_plugin.ini
        sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
-       sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
+       sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum?charset=utf8/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
        screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_OVS_CONFIG_FILE -v&quot;</span>
     <span class="k">fi</span>
 
@@ -2347,14 +2347,14 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 <span class="k">if </span>is_service_enabled m-svc; <span class="k">then</span>
 <span class="k">    if </span>is_service_enabled mysql; <span class="k">then</span>
 <span class="k">        </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS melange;&#39;</span>
-        mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE melange;&#39;</span>
+        mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE melange CHARACTER SET utf8;&#39;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
         <span class="nb">exit </span>1
     <span class="k">fi</span>
 <span class="k">    </span><span class="nv">MELANGE_CONFIG_FILE</span><span class="o">=</span><span class="nv">$MELANGE_DIR</span>/etc/melange/melange.conf
     cp <span class="nv">$MELANGE_CONFIG_FILE</span>.sample <span class="nv">$MELANGE_CONFIG_FILE</span>
-    sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/melange/g&quot;</span> <span class="nv">$MELANGE_CONFIG_FILE</span>
+    sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/melange?charset=utf8/g&quot;</span> <span class="nv">$MELANGE_CONFIG_FILE</span>
     <span class="nb">cd</span> <span class="nv">$MELANGE_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">PYTHONPATH</span><span class="o">=</span>.:<span class="nv">$PYTHONPATH</span> python <span class="nv">$MELANGE_DIR</span>/bin/melange-manage --config-file<span class="o">=</span><span class="nv">$MELANGE_CONFIG_FILE</span> db_sync
     screen_it m-svc <span class="s2">&quot;cd $MELANGE_DIR &amp;&amp; PYTHONPATH=.:$PYTHONPATH python $MELANGE_DIR/bin/melange-server --config-file=$MELANGE_CONFIG_FILE&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for melange to start...&quot;</span>
