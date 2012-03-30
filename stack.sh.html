@@ -1309,6 +1309,69 @@ of having to specify the username/password each time.</p>
     sudo service mysql restart
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Our screenrc file builder</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>screen_rc <span class="o">{</span>
+    <span class="nv">SCREENRC</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/stack-screenrc
+    <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$SCREENRC</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Name the screen session</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="s2">&quot;sessionname stack&quot;</span> &gt; <span class="nv">$SCREENRC</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set a reasonable statusbar</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="s1">&#39;hardstatus alwayslastline &quot;%-Lw%{= BW}%50&gt;%n%f* %t%{-}%+Lw%&lt; %= %H&quot;&#39;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
+        <span class="nb">echo</span> <span class="s2">&quot;screen -t stack bash&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If this service doesn't already exist in the screenrc file</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> ! grep <span class="nv">$1</span> <span class="nv">$SCREENRC</span> 2&gt;&amp;1 &gt; /dev/null; <span class="k">then</span>
+<span class="k">        </span><span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
+        <span class="nb">echo</span> <span class="s2">&quot;screen -t $1 bash&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
+        <span class="nb">echo</span> <span class="s2">&quot;stuff \&quot;$2$NL\&quot;&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Our screen helper to launch a service in a hidden named screen</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>screen_it <span class="o">{</span>
+    <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
+    <span class="k">if </span>is_service_enabled <span class="nv">$1</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Append the service to the screen rc file</p>
+</td><td class=code><div class=highlight><pre>
+        screen_rc <span class="s2">&quot;$1&quot;</span> <span class="s2">&quot;$2&quot;</span>
+
+        screen -S stack -X screen -t <span class="nv">$1</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>sleep to allow bash to be ready to be send the command - we are
+creating a new window in screen and then sends characters, so if
+bash isn't running by the time we send the command, nothing happens</p>
+</td><td class=code><div class=highlight><pre>
+        sleep 1.5
+
+        <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>screen -S stack -p <span class="nv">$1</span> -X logfile <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log
+            screen -S stack -p <span class="nv">$1</span> -X log on
+            ln -sf <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.log
+        <span class="k">fi</span>
+<span class="k">        </span>screen -S stack -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create a new named screen to run processes in</p>
+</td><td class=code><div class=highlight><pre>
+screen -d -m -S stack -t stack -s /bin/bash
+sleep 1
+</pre></div></td></tr><tr><td class=docs>
+<p>set a reasonable statusbar</p>
+</td><td class=code><div class=highlight><pre>
+screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%50&gt;%n%f* %t%{-}%+Lw%&lt; %= %H&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1433,6 +1496,99 @@ users).  The user system is external (keystone).</p>
         glance_config <span class="nv">$GLANCE_API_PASTE_INI</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="quantum">
+<h2>Quantum</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Quantum service</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
+<span class="k">    </span><span class="nv">QUANTUM_CONF_DIR</span><span class="o">=</span>/etc/quantum
+    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$QUANTUM_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo mkdir -p <span class="nv">$QUANTUM_CONF_DIR</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$QUANTUM_CONF_DIR</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install deps
+FIXME add to files/apts/quantum, but don't install if not needed!</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">kernel_version</span><span class="o">=</span><span class="sb">`</span>cat /proc/version | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span>
+        apt_get install linux-headers-<span class="nv">$kernel_version</span>
+        apt_get install openvswitch-switch openvswitch-datapath-dkms
+</pre></div></td></tr><tr><td class=docs>
+<p>Create database for the plugin/agent</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
+<span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS ovs_quantum;&#39;</span>
+            mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS ovs_quantum CHARACTER SET utf8;&#39;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
+            <span class="nb">exit </span>1
+        <span class="k">fi</span>
+<span class="k">        </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/plugins.ini
+        sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure we're using the openvswitch plugin</p>
+</td><td class=code><div class=highlight><pre>
+        sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
+    <span class="k">fi</span>
+<span class="k">   </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$QUANTUM_CONF_DIR</span>/quantum.conf
+   screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$QUANTUM_CLIENT_DIR:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_CONF_DIR/quantum.conf&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Quantum agent (for compute nodes)</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled q-agt; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up integration bridge</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
+        sudo ovs-vsctl --no-wait -- --if-exists del-br <span class="nv">$OVS_BRIDGE</span>
+        sudo ovs-vsctl --no-wait add-br <span class="nv">$OVS_BRIDGE</span>
+        sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Start up the quantum &lt;-&gt; openvswitch agent</p>
+</td><td class=code><div class=highlight><pre>
+       <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/ovs_quantum_plugin.ini
+       sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
+       sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum?charset=utf8/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
+       screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_OVS_CONFIG_FILE -v&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Melange service</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled m-svc; <span class="k">then</span>
+<span class="k">    if </span>is_service_enabled mysql; <span class="k">then</span>
+<span class="k">        </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS melange;&#39;</span>
+        mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE melange CHARACTER SET utf8;&#39;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nv">MELANGE_CONFIG_FILE</span><span class="o">=</span><span class="nv">$MELANGE_DIR</span>/etc/melange/melange.conf
+    cp <span class="nv">$MELANGE_CONFIG_FILE</span>.sample <span class="nv">$MELANGE_CONFIG_FILE</span>
+    sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/melange?charset=utf8/g&quot;</span> <span class="nv">$MELANGE_CONFIG_FILE</span>
+    <span class="nb">cd</span> <span class="nv">$MELANGE_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">PYTHONPATH</span><span class="o">=</span>.:<span class="nv">$PYTHONPATH</span> python <span class="nv">$MELANGE_DIR</span>/bin/melange-manage --config-file<span class="o">=</span><span class="nv">$MELANGE_CONFIG_FILE</span> db_sync
+    screen_it m-svc <span class="s2">&quot;cd $MELANGE_DIR &amp;&amp; PYTHONPATH=.:$PYTHONPATH python $MELANGE_DIR/bin/melange-server --config-file=$MELANGE_CONFIG_FILE&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Waiting for melange to start...&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://127.0.0.1:9898; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;melange-server did not start&quot;</span>
+      <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span>melange mac_address_range create <span class="nv">cidr</span><span class="o">=</span><span class="nv">$M_MAC_RANGE</span>
+<span class="k">fi</span>
+
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2095,70 +2251,6 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Our screenrc file builder</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>screen_rc <span class="o">{</span>
-    <span class="nv">SCREENRC</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/stack-screenrc
-    <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$SCREENRC</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Name the screen session</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="s2">&quot;sessionname stack&quot;</span> &gt; <span class="nv">$SCREENRC</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set a reasonable statusbar</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="s1">&#39;hardstatus alwayslastline &quot;%-Lw%{= BW}%50&gt;%n%f* %t%{-}%+Lw%&lt; %= %H&quot;&#39;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
-        <span class="nb">echo</span> <span class="s2">&quot;screen -t stack bash&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
-    <span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>If this service doesn't already exist in the screenrc file</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> ! grep <span class="nv">$1</span> <span class="nv">$SCREENRC</span> 2&gt;&amp;1 &gt; /dev/null; <span class="k">then</span>
-<span class="k">        </span><span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
-        <span class="nb">echo</span> <span class="s2">&quot;screen -t $1 bash&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
-        <span class="nb">echo</span> <span class="s2">&quot;stuff \&quot;$2$NL\&quot;&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Our screen helper to launch a service in a hidden named screen</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>screen_it <span class="o">{</span>
-    <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
-    <span class="k">if </span>is_service_enabled <span class="nv">$1</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Append the service to the screen rc file</p>
-</td><td class=code><div class=highlight><pre>
-        screen_rc <span class="s2">&quot;$1&quot;</span> <span class="s2">&quot;$2&quot;</span>
-
-        screen -S stack -X screen -t <span class="nv">$1</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>sleep to allow bash to be ready to be send the command - we are
-creating a new window in screen and then sends characters, so if
-bash isn't running by the time we send the command, nothing happens</p>
-</td><td class=code><div class=highlight><pre>
-        sleep 1.5
-
-        <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>screen -S stack -p <span class="nv">$1</span> -X logfile <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log
-            screen -S stack -p <span class="nv">$1</span> -X log on
-            ln -sf <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.log
-        <span class="k">fi</span>
-<span class="k">        </span>screen -S stack -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2$NL&quot;</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>create a new named screen to run processes in</p>
-</td><td class=code><div class=highlight><pre>
-screen -d -m -S stack -t stack -s /bin/bash
-sleep 1
-</pre></div></td></tr><tr><td class=docs>
-<p>set a reasonable statusbar</p>
-</td><td class=code><div class=highlight><pre>
-screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%50&gt;%n%f* %t%{-}%+Lw%&lt; %= %H&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>launch the glance registry service</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
@@ -2279,90 +2371,6 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;nova-api did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Quantum service</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
-<span class="k">    </span><span class="nv">QUANTUM_CONF_DIR</span><span class="o">=</span>/etc/quantum
-    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$QUANTUM_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mkdir -p <span class="nv">$QUANTUM_CONF_DIR</span>
-    <span class="k">fi</span>
-<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$QUANTUM_CONF_DIR</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install deps
-FIXME add to files/apts/quantum, but don't install if not needed!</p>
-</td><td class=code><div class=highlight><pre>
-        apt_get install openvswitch-switch openvswitch-datapath-dkms
-</pre></div></td></tr><tr><td class=docs>
-<p>Create database for the plugin/agent</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
-<span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS ovs_quantum;&#39;</span>
-            mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS ovs_quantum CHARACTER SET utf8;&#39;</span>
-        <span class="k">else</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
-            <span class="nb">exit </span>1
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/plugins.ini
-        sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Make sure we're using the openvswitch plugin</p>
-</td><td class=code><div class=highlight><pre>
-        sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
-    <span class="k">fi</span>
-<span class="k">   </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$QUANTUM_CONF_DIR</span>/quantum.conf
-   screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$QUANTUM_CLIENT_DIR:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_CONF_DIR/quantum.conf&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Quantum agent (for compute nodes)</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled q-agt; <span class="k">then</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up integration bridge</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
-        sudo ovs-vsctl --no-wait -- --if-exists del-br <span class="nv">$OVS_BRIDGE</span>
-        sudo ovs-vsctl --no-wait add-br <span class="nv">$OVS_BRIDGE</span>
-        sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Start up the quantum &lt;-&gt; openvswitch agent</p>
-</td><td class=code><div class=highlight><pre>
-       <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/ovs_quantum_plugin.ini
-       sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
-       sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum?charset=utf8/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
-       screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_OVS_CONFIG_FILE -v&quot;</span>
-    <span class="k">fi</span>
-
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Melange service</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled m-svc; <span class="k">then</span>
-<span class="k">    if </span>is_service_enabled mysql; <span class="k">then</span>
-<span class="k">        </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS melange;&#39;</span>
-        mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE melange CHARACTER SET utf8;&#39;</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nv">MELANGE_CONFIG_FILE</span><span class="o">=</span><span class="nv">$MELANGE_DIR</span>/etc/melange/melange.conf
-    cp <span class="nv">$MELANGE_CONFIG_FILE</span>.sample <span class="nv">$MELANGE_CONFIG_FILE</span>
-    sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/melange?charset=utf8/g&quot;</span> <span class="nv">$MELANGE_CONFIG_FILE</span>
-    <span class="nb">cd</span> <span class="nv">$MELANGE_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">PYTHONPATH</span><span class="o">=</span>.:<span class="nv">$PYTHONPATH</span> python <span class="nv">$MELANGE_DIR</span>/bin/melange-manage --config-file<span class="o">=</span><span class="nv">$MELANGE_CONFIG_FILE</span> db_sync
-    screen_it m-svc <span class="s2">&quot;cd $MELANGE_DIR &amp;&amp; PYTHONPATH=.:$PYTHONPATH python $MELANGE_DIR/bin/melange-server --config-file=$MELANGE_CONFIG_FILE&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Waiting for melange to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://127.0.0.1:9898; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;melange-server did not start&quot;</span>
-      <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">    </span>melange mac_address_range create <span class="nv">cidr</span><span class="o">=</span><span class="nv">$M_MAC_RANGE</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
