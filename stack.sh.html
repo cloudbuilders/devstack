@@ -473,7 +473,7 @@ sudo privileges and runs as that user.</p>
 <p>since this script runs as a normal user, we need to give that user
 ability to run sudo</p>
 </td><td class=code><div class=highlight><pre>
-    dpkg -l sudo <span class="o">||</span> apt_get update <span class="o">&amp;&amp;</span> apt_get install sudo
+    dpkg -l sudo <span class="o">||</span> apt_get update <span class="o">&amp;&amp;</span> install_package sudo
 
     <span class="k">if</span> ! getent passwd stack &gt;/dev/null; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Creating a user called stack&quot;</span>
@@ -683,6 +683,7 @@ the required password.  Prompt user for a password and write to localrc.</p>
     <span class="k">fi</span>
 <span class="k">    </span><span class="nb">set</span> -o xtrace
 <span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="nova-network-configuration">
@@ -1099,7 +1100,7 @@ of the package to the distros listed.  The distro names are case insensitive.</b
 <p>install apt requirements</p>
 </td><td class=code><div class=highlight><pre>
 apt_get update
-apt_get install <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/apts<span class="k">)</span>
+install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/apts<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install python requirements</p>
@@ -1215,7 +1216,7 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$SYSLOG</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>apt_get install -y rsyslog-relp
+<span class="k">    </span>install_package rsyslog-relp
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SYSLOG_HOST&quot;</span> <span class="o">=</span> <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure the master host to receive</p>
@@ -1234,7 +1235,7 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="s">EOF</span>
         sudo mv /tmp/90-stack-s.conf /etc/rsyslog.d
     <span class="k">fi</span>
-<span class="k">    </span>sudo /usr/sbin/service rsyslog restart
+<span class="k">    </span>restart_service rsyslog
 <span class="k">fi</span>
 
 
@@ -1250,7 +1251,7 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 the temp file is necessary due to LP: #878600</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">tfile</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
-    apt_get install rabbitmq-server &gt; <span class="s2">&quot;$tfile&quot;</span> 2&gt;&amp;1
+    install_package rabbitmq-server &gt; <span class="s2">&quot;$tfile&quot;</span> 2&gt;&amp;1
     cat <span class="s2">&quot;$tfile&quot;</span>
     rm -f <span class="s2">&quot;$tfile&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1296,7 +1297,7 @@ of having to specify the username/password each time.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install and start mysql-server</p>
 </td><td class=code><div class=highlight><pre>
-    apt_get install mysql-server
+    install_package mysql-server
 </pre></div></td></tr><tr><td class=docs>
 <p>Update the DB to give user ‘$MYSQL_USER’&#64;’%’ full control of the all databases:</p>
 </td><td class=code><div class=highlight><pre>
@@ -1306,7 +1307,7 @@ of having to specify the username/password each time.</p>
 <p>Edit /etc/mysql/my.cnf to change ‘bind-address’ from localhost (127.0.0.1) to any (0.0.0.0) and restart the mysql service:</p>
 </td><td class=code><div class=highlight><pre>
     sudo sed -i <span class="s1">&#39;s/127.0.0.1/0.0.0.0/g&#39;</span> /etc/mysql/my.cnf
-    sudo service mysql restart
+    restart_service mysql
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1388,7 +1389,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;%-Lw%{= BW}%
 </pre></div></td></tr><tr><td class=docs>
 <p>Install apache2, which is NOPRIME'd</p>
 </td><td class=code><div class=highlight><pre>
-    apt_get install apache2 libapache2-mod-wsgi
+    install_package apache2 libapache2-mod-wsgi
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1421,7 +1422,7 @@ users).  The user system is external (keystone).</p>
 <span class="s2">        s,%GROUP%,$APACHE_GROUP,g;</span>
 <span class="s2">        s,%HORIZON_DIR%,$HORIZON_DIR,g;</span>
 <span class="s2">    &quot;</span> -i /etc/apache2/sites-enabled/000-default
-    sudo service apache2 restart
+    restart_service apache2
 <span class="k">fi</span>
 
 
@@ -1518,8 +1519,7 @@ users).  The user system is external (keystone).</p>
 FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">kernel_version</span><span class="o">=</span><span class="sb">`</span>cat /proc/version | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span>
-        apt_get install linux-headers-<span class="nv">$kernel_version</span>
-        apt_get install openvswitch-switch openvswitch-datapath-dkms
+        install_package openvswitch-switch openvswitch-datapath-dkms linux-headers-<span class="nv">$kernel_version</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create database for the plugin/agent</p>
 </td><td class=code><div class=highlight><pre>
@@ -1671,7 +1671,7 @@ This is a bit defensive to allow the sample file some varaince.</p>
 <div class="section" id="virtualization-configuration">
 <h3>Virtualization Configuration</h3>
 </td><td class=code><div class=highlight><pre>
-    apt_get install libvirt-bin
+    install_package libvirt-bin
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Force IP forwarding on, just on case</p>
@@ -1703,7 +1703,7 @@ to simulate multiple systems.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$DISTRO&quot;</span> &gt; natty <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>apt_get install cgroup-lite
+<span class="k">            </span>install_package cgroup-lite
         <span class="k">else</span>
 <span class="k">            </span><span class="nv">cgline</span><span class="o">=</span><span class="s2">&quot;none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0&quot;</span>
             sudo mkdir -p /cgroup
@@ -1726,7 +1726,7 @@ nova-compute will be unable to use libvirt.</p>
 the system configuration (modules, filesystems), we need to restart
 libvirt to detect those changes.</p>
 </td><td class=code><div class=highlight><pre>
-    sudo /etc/init.d/libvirt-bin restart
+    restart_service libvirt-bin
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1800,7 +1800,7 @@ mount it (ext filesystems can be labeled via e2label).</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install memcached for swift.</p>
 </td><td class=code><div class=highlight><pre>
-    apt_get install memcached
+    install_package memcached
 
 </pre></div></td></tr><tr><td class=docs>
 <p>We first do a bit of setup by creating the directories and
@@ -2018,7 +2018,7 @@ invoking stack.sh.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install the package</p>
 </td><td class=code><div class=highlight><pre>
-    apt_get install tgt
+    install_package tgt
 
     <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/nova-volumes-backing-file</span><span class="k">}</span>
