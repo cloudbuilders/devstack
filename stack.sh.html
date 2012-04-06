@@ -2291,18 +2291,54 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS keystone;&#39;</span>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE keystone CHARACTER SET utf8;&#39;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure keystone.conf</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
-    cp <span class="nv">$FILES</span>/keystone.conf <span class="nv">$KEYSTONE_CONF</span>
-    sudo sed -e <span class="s2">&quot;s,%SQL_CONN%,$BASE_SQL_CONN/keystone?charset=utf8,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
-    sudo sed -e <span class="s2">&quot;s,%DEST%,$DEST,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
-    sudo sed -e <span class="s2">&quot;s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
-    sudo sed -e <span class="s2">&quot;s,%KEYSTONE_DIR%,$KEYSTONE_DIR,g&quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
+    <span class="nv">KEYSTONE_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/keystone</span><span class="k">}</span>
+    <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_CONF_DIR</span>/keystone.conf
+    <span class="nv">KEYSTONE_CATALOG</span><span class="o">=</span><span class="nv">$KEYSTONE_CONF_DIR</span>/default_catalog.templates
 
-    <span class="nv">KEYSTONE_CATALOG</span><span class="o">=</span><span class="nv">$KEYSTONE_DIR</span>/etc/default_catalog.templates
-    cp <span class="nv">$FILES</span>/default_catalog.templates <span class="nv">$KEYSTONE_CATALOG</span>
+    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$KEYSTONE_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo mkdir -p <span class="nv">$KEYSTONE_CONF_DIR</span>
+        sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$KEYSTONE_CONF_DIR</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CONF_DIR&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$KEYSTONE_DIR/etc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<dl class="docutils">
+<dt>FIXME(dtroyer): etc/keystone.conf causes trouble if the config files</dt>
+<dd>are located anywhere else (say, /etc/keystone).
+LP 966670 fixes this in keystone, we fix it
+here until the bug fix is committed.</dd>
+</dl>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Get the sample config file out of the way</p>
+</td><td class=code><div class=highlight><pre>
+            mv <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf.sample
+        <span class="k">fi</span>
+<span class="k">        </span>cp -p <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf.sample <span class="nv">$KEYSTONE_CONF</span>
+        cp -p <span class="nv">$KEYSTONE_DIR</span>/etc/policy.json <span class="nv">$KEYSTONE_CONF_DIR</span>
+    <span class="k">fi</span>
+<span class="k">    </span>cp -p <span class="nv">$FILES</span>/default_catalog.templates <span class="nv">$KEYSTONE_CATALOG</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Rewrite stock keystone.conf:</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_token <span class="s2">&quot;$SERVICE_TOKEN&quot;</span>
+    iniset <span class="nv">$KEYSTONE_CONF</span> sql connection <span class="s2">&quot;$BASE_SQL_CONN/keystone?charset=utf8&quot;</span>
+    iniset <span class="nv">$KEYSTONE_CONF</span> catalog template_file <span class="s2">&quot;$KEYSTONE_CATALOG&quot;</span>
+    iniset <span class="nv">$KEYSTONE_CONF</span> ec2 driver <span class="s2">&quot;keystone.contrib.ec2.backends.sql.Ec2&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure keystone.conf to use templates</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$KEYSTONE_CONF</span> catalog driver <span class="s2">&quot;keystone.catalog.backends.templated.TemplatedCatalog&quot;</span>
+    iniset <span class="nv">$KEYSTONE_CONF</span> catalog template_file <span class="s2">&quot;$KEYSTONE_CATALOG&quot;</span>
+    sed -e <span class="s2">&quot;</span>
+<span class="s2">        /^pipeline.*ec2_extension crud_/s|ec2_extension crud_extension|ec2_extension s3_extension crud_extension|;</span>
+<span class="s2">    &quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Append the S3 bits</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$KEYSTONE_CONF</span> filter:s3_extension paste.filter_factory <span class="s2">&quot;keystone.contrib.s3:S3Extension.factory&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Add swift endpoints to service catalog if swift is enabled</p>
@@ -2324,37 +2360,37 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
         <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.name = Quantum Service&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
     <span class="k">fi</span>
 
-<span class="k">    </span>sudo sed -e <span class="s2">&quot;s,%SERVICE_HOST%,$SERVICE_HOST,g&quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
-
-    sudo sed -e <span class="s2">&quot;s,%S3_SERVICE_PORT%,$S3_SERVICE_PORT,g&quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
-
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>cp <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf.sample <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf
-        sed -i -e <span class="s1">&#39;/^handlers=devel$/s/=devel/=production/&#39;</span> <span class="se">\</span>
-            <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf
-        sed -i -e <span class="s2">&quot;/^log_file/s/log_file/\#log_file/&quot;</span> <span class="se">\</span>
-            <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf
-        <span class="nv">KEYSTONE_LOG_CONFIG</span><span class="o">=</span><span class="s2">&quot;--log-config $KEYSTONE_DIR/etc/logging.conf&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
+<span class="k">    </span>sudo sed -e <span class="s2">&quot;</span>
+<span class="s2">        s,%SERVICE_HOST%,$SERVICE_HOST,g;</span>
+<span class="s2">        s,%S3_SERVICE_PORT%,$S3_SERVICE_PORT,g;</span>
+<span class="s2">    &quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>launch the keystone and wait for it to answer before continuing</p>
+<p>Set up logging</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">    </span>screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
+    <span class="nv">LOGGING_ROOT</span><span class="o">=</span><span class="s2">&quot;devel&quot;</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">LOGGING_ROOT</span><span class="o">=</span><span class="s2">&quot;$LOGGING_ROOT,production&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nv">KEYSTONE_LOG_CONFIG</span><span class="o">=</span><span class="s2">&quot;--log-config $KEYSTONE_CONF_DIR/logging.conf&quot;</span>
+    cp <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf.sample <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf
+    iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root level <span class="s2">&quot;DEBUG&quot;</span>
+    iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root handlers <span class="s2">&quot;devel,production&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>initialize keystone database</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage db_sync
+
+</pre></div></td></tr><tr><td class=docs>
+<p>launch keystone and wait for it to answer before continuing</p>
+</td><td class=code><div class=highlight><pre>
+    screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while http_proxy= wget -O- $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/ 2&gt;&amp;1 | grep -q &#39;refused&#39;; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>initialize keystone with default users/endpoints</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">pushd</span> <span class="nv">$KEYSTONE_DIR</span>
-    <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage db_sync
-    <span class="nb">popd</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>keystone_data.sh creates services, admin and demo users, and roles.</p>
