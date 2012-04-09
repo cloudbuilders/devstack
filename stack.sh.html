@@ -1459,47 +1459,44 @@ users).  The user system is external (keystone).</p>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS glance;&#39;</span>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE glance CHARACTER SET utf8;&#39;</span>
 
-    <span class="k">function </span>glance_config <span class="o">{</span>
-        sudo sed -e <span class="s2">&quot;</span>
-<span class="s2">            s,%KEYSTONE_API_PORT%,$KEYSTONE_API_PORT,g;</span>
-<span class="s2">            s,%KEYSTONE_AUTH_HOST%,$KEYSTONE_AUTH_HOST,g;</span>
-<span class="s2">            s,%KEYSTONE_AUTH_PORT%,$KEYSTONE_AUTH_PORT,g;</span>
-<span class="s2">            s,%KEYSTONE_AUTH_PROTOCOL%,$KEYSTONE_AUTH_PROTOCOL,g;</span>
-<span class="s2">            s,%KEYSTONE_SERVICE_HOST%,$KEYSTONE_SERVICE_HOST,g;</span>
-<span class="s2">            s,%KEYSTONE_SERVICE_PORT%,$KEYSTONE_SERVICE_PORT,g;</span>
-<span class="s2">            s,%KEYSTONE_SERVICE_PROTOCOL%,$KEYSTONE_SERVICE_PROTOCOL,g;</span>
-<span class="s2">            s,%SQL_CONN%,$BASE_SQL_CONN/glance?charset=utf8,g;</span>
-<span class="s2">            s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
-<span class="s2">            s,%SERVICE_USERNAME%,glance,g;</span>
-<span class="s2">            s,%SERVICE_PASSWORD%,$SERVICE_PASSWORD,g;</span>
-<span class="s2">            s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g;</span>
-<span class="s2">            s,%DEST%,$DEST,g;</span>
-<span class="s2">            s,%SYSLOG%,$SYSLOG,g;</span>
-<span class="s2">        &quot;</span> -i <span class="nv">$1</span>
-    <span class="o">}</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Copy over our glance configurations and update them</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">GLANCE_REGISTRY_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry.conf
-    cp <span class="nv">$FILES</span>/glance-registry.conf <span class="nv">$GLANCE_REGISTRY_CONF</span>
-    glance_config <span class="nv">$GLANCE_REGISTRY_CONF</span>
+    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-registry.conf <span class="nv">$GLANCE_REGISTRY_CONF</span>
+    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT debug True
+    inicomment <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT log_file
+    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/glance?charset<span class="o">=</span>utf8
+    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
+    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> paste_deploy flavor keystone
 
-    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$FILES</span>/glance-registry-paste.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">GLANCE_REGISTRY_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry-paste.ini
-        cp <span class="nv">$FILES</span>/glance-registry-paste.ini <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
-        glance_config <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
-    <span class="k">fi</span>
+    <span class="nv">GLANCE_REGISTRY_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry-paste.ini
+    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-registry-paste.ini <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
+    iniset <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+    iniset <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span> filter:authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
+    iniset <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniset <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span> filter:authtoken admin_user glance
+    iniset <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
 
-<span class="k">    </span><span class="nv">GLANCE_API_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api.conf
-    cp <span class="nv">$FILES</span>/glance-api.conf <span class="nv">$GLANCE_API_CONF</span>
-    glance_config <span class="nv">$GLANCE_API_CONF</span>
+    <span class="nv">GLANCE_API_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api.conf
+    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-api.conf <span class="nv">$GLANCE_API_CONF</span>
+    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT debug True
+    inicomment <span class="nv">$GLANCE_API_CONF</span> DEFAULT log_file
+    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
+    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
+    iniset <span class="nv">$GLANCE_API_CONF</span> paste_deploy flavor keystone
 
-    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$FILES</span>/glance-api-paste.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api-paste.ini
-        cp <span class="nv">$FILES</span>/glance-api-paste.ini <span class="nv">$GLANCE_API_PASTE_INI</span>
-        glance_config <span class="nv">$GLANCE_API_PASTE_INI</span>
-    <span class="k">fi</span>
+    <span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api-paste.ini
+    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-api-paste.ini <span class="nv">$GLANCE_API_PASTE_INI</span>
+    iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+    iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
+    iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken admin_user glance
+    iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
