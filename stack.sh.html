@@ -331,15 +331,12 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>stack.sh</strong> is an opinionated OpenStack developer installation.</p>
+<p><tt class="docutils literal">stack.sh</tt> is an opinionated OpenStack developer installation.  It
+installs and configures various combinations of <strong>Glance</strong>, <strong>Horizon</strong>,
+<strong>Keystone</strong>, <strong>Melange</strong>, <strong>Nova</strong>, <strong>Quantum</strong> and <strong>Swift</strong></p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
-
-</pre></div></td></tr><tr><td class=docs>
-<p>This script installs and configures various combinations of <em>Glance</em>,
-<em>Horizon</em>, <em>Keystone</em>, <em>Melange</em>, <em>Nova</em>, <em>Quantum</em> and <em>Swift</em></p>
-</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This script allows you to specify configuration options of what git
@@ -351,60 +348,49 @@ developer install.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>To keep this script simple we assume you are running on an <strong>Ubuntu 11.10
-Oneiric</strong> machine.  It should work in a VM or physical server.  Additionally
-we put the list of <em>apt</em> and <em>pip</em> dependencies and other configuration files
-in this repo.  So start by grabbing this script and the dependencies.</p>
+Oneiric</strong> or <strong>Ubuntu 12.04 Precise</strong> machine.  It should work in a VM or
+physical server.  Additionally we put the list of <tt class="docutils literal">apt</tt> and <tt class="docutils literal">pip</tt>
+dependencies and other configuration files in this repo.  So start by
+grabbing this script and the dependencies.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Learn more and get the most recent version at <a class="reference external" href="http://devstack.org">http://devstack.org</a></p>
 </td><td class=code><div class=highlight><pre>
 
-
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="sanity-check">
-<h1>Sanity Check</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Warn users who aren't on oneiric, but allow them to override check and attempt
-installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">DISTRO</span><span class="o">=</span><span class="k">$(</span>lsb_release -c -s<span class="k">)</span>
-
-<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>oneiric|precise<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: this script has only been tested on oneiric&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$FORCE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;If you wish to run this script anyway run with FORCE=yes&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Keep track of the current devstack directory.</p>
+<p>Keep track of the devstack directory</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
-. <span class="nv">$TOP_DIR</span>/functions
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
-<p>stack.sh keeps the list of <strong>apt</strong> and <strong>pip</strong> dependencies in external
-files, along with config templates and other useful files.  You can find these
-in the <tt class="docutils literal">files</tt> directory (next to this script).  We will reference this
-directory using the <tt class="docutils literal">FILES</tt> variable in this script.</p>
+<p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
+<tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
-<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$FILES</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing devstack/files - did you grab more than just stack.sh?&quot;</span>
-    <span class="nb">exit </span>1
+GetOSVersion
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Translate the OS version values into common nomenclature</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>Ubuntu<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>'Everyone' refers to Ubuntu releases by the code name adjective</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">DISTRO</span><span class="o">=</span><span class="nv">$os_CODENAME</span>
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Catch-all for now is Vendor + Release + Update</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">DISTRO</span><span class="o">=</span><span class="s2">&quot;$os_VENDOR-$os_RELEASE.$os_UPDATE&quot;</span>
 <span class="k">fi</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
 <div class="section" id="settings">
 <h1>Settings</h1>
 </td><td class=code><div class=highlight><pre>
@@ -426,19 +412,23 @@ MYSQL_USER=hellaroot
 in most cases.</p>
 <p>DevStack distributes <tt class="docutils literal">stackrc</tt> which contains locations for the OpenStack
 repositories and branches to configure.  <tt class="docutils literal">stackrc</tt> sources <tt class="docutils literal">localrc</tt> to
-allow you to override those settings and not have your changes overwritten
+allow you to safely override those settings without being overwritten
 when updating DevStack.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We support HTTP and HTTPS proxy servers via the usual environment variables
-<strong>http_proxy</strong> and <strong>https_proxy</strong>.  They can be set in <tt class="docutils literal">localrc</tt> if necessary or
-on the command line:</p>
+<p>HTTP and HTTPS proxy servers are supported via the usual environment variables
+<tt class="docutils literal">http_proxy</tt> and <tt class="docutils literal">https_proxy</tt>.  They can be set in <tt class="docutils literal">localrc</tt> if necessary
+or on the command line:</p>
 <pre class="literal-block">
 http_proxy=http://proxy.example.com:3128/ ./stack.sh
 </pre>
 </td><td class=code><div class=highlight><pre>
 
+<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$TOP_DIR</span>/stackrc <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing $TOP_DIR/stackrc - did you grab more than just stack.sh?&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 <span class="nb">source</span> ./stackrc
 
 </pre></div></td></tr><tr><td class=docs>
@@ -446,8 +436,39 @@ http_proxy=http://proxy.example.com:3128/ ./stack.sh
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Check to see if we are already running a stack.sh</p>
+</div>
+<div class="section" id="sanity-check">
+<h1>Sanity Check</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Warn users who aren't on an explicitly supported distro, but allow them to
+override check and attempt installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>oneiric|precise<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: this script has only been tested on oneiric and precise&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$FORCE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;If you wish to run this script anyway run with FORCE=yes&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>stack.sh keeps the list of <tt class="docutils literal">apt</tt> and <tt class="docutils literal">pip</tt> dependencies in external
+files, along with config templates and other useful files.  You can find these
+in the <tt class="docutils literal">files</tt> directory (next to this script).  We will reference this
+directory using the <tt class="docutils literal">FILES</tt> variable in this script.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$FILES</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing devstack/files - did you grab more than just stack.sh?&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Check to see if we are already running DevStack</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span><span class="nb">type</span> -p screen &gt;/dev/null <span class="o">&amp;&amp;</span> screen -ls | egrep -q <span class="s2">&quot;[0-9].stack&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are already running a stack.sh session.&quot;</span>
@@ -1036,7 +1057,7 @@ included.  Two bits of metadata are recognized in the prerequisite files:
 - <tt class="docutils literal"># NOPRIME</tt> defers installation to be performed later in stack.sh
 - <tt class="docutils literal"># dist:DISTRO</tt> or <tt class="docutils literal">dist:DISTRO1,DISTRO2</tt> limits the selection</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 477)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 492)</p>
 Unexpected indentation.</div>
 <blockquote>
 of the package to the distros listed.  The distro names are case insensitive.</blockquote>
