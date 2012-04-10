@@ -113,7 +113,7 @@
         <p>This user will be making many changes to your system during installation and operation
         so it needs to have sudo priviledges to root without a password:</p>
         <pre>echo "stack ALL=(ALL) NOPASSWD: ALL" &gt;&gt; /etc/sudoers</pre>
-        <p>From here on use the <code>stack</code> user.  <b>Logout</b> and login as the 
+        <p>From here on use the <code>stack</code> user.  <b>Logout</b> and <b>login</b> as the 
         <code>stack</code> user.</p>
 
         <h3>Set Up Ssh</h3>
@@ -123,7 +123,7 @@ echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCyYjfgyPazTvGpd8OaAvtU2utL8W6gWC4JdR
 
         <h3>Download DevStack</h3>
         <p>Grab the latest version of DevStack from github:</p>
-        <pre>git clone git://github.com/cloudbuilders/devstack.git
+        <pre>git clone git://github.com/openstack-dev/devstack.git
 cd devstack</pre>
 
         <p>Up to this point all of the steps apply to each node in the cluster.  From here on
@@ -139,21 +139,24 @@ FIXED_RANGE=10.4.128.0/20
 FIXED_NETWORK_SIZE=4096
 FLOATING_RANGE=192.168.42.128/25
 MULTI_HOST=1
+LOGFILE=/opt/stack/logs/stack.sh.log
+ADMIN_PASSWORD=labstack
 MYSQL_PASS=supersecret
 RABBIT_PASS=supersecrete
+SERVICE_PASSWORD=supersecrete
 SERVICE_TOKEN=xyzpdqlazydog</pre>
 <!-- save for vlan
 FLAT_INTERFACE=eth0.926
 -->
+
+        <p>In the multi-node configuration the first 10 or so IPs in the private subnet are usually reserved.  Add this to <code>local.sh</code> to have it run after every <code>stack.sh</code> run:</p>
+        <pre>for i in `seq 2 10`; do /opt/stack/nova/bin/nova-manage fixed reserve 10.4.128.$i; done</pre>
 
         <p>Fire up OpenStack:</p>
         <pre>./stack.sh</pre>
         <p>A stream of activity ensues.  When complete you will see a summary of
         <code>stack.sh</code>'s work, including the relevant URLs, accounts and passwords to poke at your
         shiny new OpenStack.  The most recent log file is available in <code>stack.sh.log</code>.</p>
-
-        <p>In the multi-node configuration the first 10 or so IPs in the private subnet are usually reserved:</p>
-        <pre>for i in `seq 2 10`; do /opt/stack/nova/bin/nova-manage fixed reserve 10.4.96.$i; done</pre>
 
         <h3>Configure Compute Nodes</h3>
         <p>The compute nodes only run the OpenStack worker services.  For additional machines, create a localrc with:</p>
@@ -163,8 +166,11 @@ FIXED_RANGE=10.4.128.0/20
 FIXED_NETWORK_SIZE=4096
 FLOATING_RANGE=192.168.42.128/25
 MULTI_HOST=1
+LOGFILE=/opt/stack/logs/stack.sh.log
+ADMIN_PASSWORD=labstack
 MYSQL_PASS=supersecret
 RABBIT_PASS=supersecrete
+SERVICE_PASSWORD=supersecrete
 SERVICE_TOKEN=xyzpdqlazydog
 MYSQL_HOST=192.168.42.11
 RABBIT_HOST=192.168.42.11
@@ -181,9 +187,8 @@ FLAT_INTERFACE=eth0.926
         shiny new OpenStack.  The most recent log file is available in <code>stack.sh.log</code>.</p>
 
         <h3>Cleaning Up After DevStack</h3>
-        <p>Shutting down OpenStack and re-running <code>stack.sh</code> requires a couple of steps.</p>
-        <p>Kill OpenStack processes:</p>
-        <pre>killall screen; screen -wipe</pre>
+        <p>Shutting down OpenStack is now as simple as running the included <code>unstack.sh</code> script:</p>
+        <pre>./unstack.sh</pre>
 
         <p>Sometimes running instances are not cleaned up.  DevStack attempts to do this when it
         runs but there are times it needs to still be done by hand:</p>
@@ -198,45 +203,40 @@ sudo virsh list | grep inst | awk '{print $1}' | xargs -n1 virsh destroy</pre>
         </div>
 
         <h3>Additional Users</h3>
-        <p>DevStack creates two users and two tenants, admin and demo.  admin is exactly what it 
+        <p>DevStack creates two users and two tenants, <code>admin</code> and <code>demo</code>.  admin is exactly what it 
         sounds like, a priveleged administrative account that is a member of both the admin and
         demo tenants.  demo is a normal user account that is only a menber of the demo tenant.
         Creating additional OpenStack users can be done through the dashboard, sometimes it is
         easier to do them in bulk from a script, especially since they get blown away every time
-        <code>stack.sh</code> is run.  The following steps are ripe for scripting:</p>
-        <pre># List existing tenants
-/opt/dest/keystone/bin/keystone-manage tenant list
+        <code>stack.sh</code> runs.  The following steps are ripe for scripting:</p>
+        <pre># Get admin creds
+. openrc admin admin
+        
+# List existing tenants
+keystone tenant-list
 
 # List existing users
-/opt/dest/keystone/bin/keystone-manage user list
+keystone user-list
 
 # Add a user and tenant
 NAME=bob
 PASSWORD=BigSecrete
 TENANT=$NAME
-/opt/dest/keystone/bin/keystone-manage tenant add $NAME
-/opt/dest/keystone/bin/keystone-manage user add $NAME $PASSWORD
-/opt/dest/keystone/bin/keystone-manage credentials add $NAME EC2 $NAME $PASSWORD $TENANT
-/opt/dest/keystone/bin/keystone-manage role grant Member $NAME $TENANT
-
-# In order to do most of the interesting things the following also need to be included
-# Basic users may not always need these.  See Keystone & Nova docs for more
-/opt/dest/keystone/bin/keystone-manage role grant sysadmin $NAME $TENANT
-/opt/dest/keystone/bin/keystone-manage role grant netadmin $NAME $TENANT</pre>
+keystone tenant-create --name=$NAME
+keystone user-create --name=$NAME --pass=$PASSWORD
+keystone user-role-add --user=user-id --tenant_id=tenant-id --role=role-id</pre>
 
         <h3>Swift</h3>
         <p>Swift requires a significant amount of resources and is disabled by default in DevStack.
         The support in DevStack is geared toward a minimal installation but can be used for
         testing.  To implement a true multi-node test of Swift required more than DevStack provides.  
-        Enabling it is as simple as setting <code>ENABLED_SERVICES</code> in <code>localrc</code>.
-        The default for <code>ENABLED_SERVICES</code> is hard-coded in <code>stack.sh</code>
-        and can be copied to <code>localrc</code> and swift added with a bit of shell goodness:</p>
-        <pre>echo "ENABLED_SERVICES=`grep ^ENABLED_SERVICES stack.sh | cut -d':' -f2 | tail -c +2 | head -c -2`,swift" >>localrc</pre>
+        Enabling it is as simple as setting <code>ENABLED_SERVICES</code> in <code>localrc</code>:
+        <pre>ENABLED_SERVICES=${ENABLED_SERVICES},swift</pre>
 
-        <p>Swift will put its data files in <code>SWIFT_DATA_LOCATION</code> (default <code>/opt/stack/swift/data</code>).
+        <p>Swift will put its data files in <code>SWIFT_DATA_DIR</code> (default <code>/opt/stack/data/swift</code>).
         The size of the data 'partition' created (really a loop-mounted file) is set by
         <code>SWIFT_LOOPBACK_DISK_SIZE</code>.  The Swift config files are located in 
-        <code>SWIFT_CONFIG_LOCATION</code>.  All of these settings can be overridden in
+        <code>SWIFT_CONFIG_DIR</code>.  All of these settings can be overridden in
         (wait for it...) <code>localrc</code>.</p>
 
         <h3>Volumes</h3>
