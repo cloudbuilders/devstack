@@ -1588,7 +1588,18 @@ users).  The user system is external (keystone).</p>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
     iniset <span class="nv">$GLANCE_API_CONF</span> paste_deploy flavor keystone
 
-    <span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api-paste.ini
+</pre></div></td></tr><tr><td class=docs>
+<p>Store the images in swift if enabled.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT default_store swift
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_auth_address <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_user <span class="nv">$SERVICE_TENANT_NAME</span>:glance
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_key <span class="nv">$SERVICE_PASSWORD</span>
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_create_container_on_put True
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api-paste.ini
     cp <span class="nv">$GLANCE_DIR</span>/etc/glance-api-paste.ini <span class="nv">$GLANCE_API_PASTE_INI</span>
     iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
     iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
