@@ -370,7 +370,7 @@ usage<span class="o">()</span>
 cat <span class="s">&lt;&lt; EOF</span>
 
 <span class="s">  Usage: $0 [-f FILE_PATH] [-d DISK_SIZE] [-v BRIDGE_NAME] [-m BRIDGE_NAME] [-p BRIDGE_NAME]</span>
-<span class="s">            [-k PARAMS] [-r RAM] [-i|-c] [-w] [-b] [-l NAME_LABEL]</span>
+<span class="s">            [-k PARAMS] [-r RAM] [-i|-c] [-w] [-b] [-l NAME_LABEL] [-t TEMPLATE_NW_INSTALL]</span>
 
 <span class="s">  Installs XenServer OpenStack VPX.</span>
 
@@ -393,6 +393,7 @@ cat <span class="s">&lt;&lt; EOF</span>
 <span class="s">     -r MiB       Specifies RAM used by the VPX, in MiB.</span>
 <span class="s">                  By default it will take the value from the XVA.</span>
 <span class="s">     -l name      Specifies the name label for the VM.</span>
+<span class="s">     -t template  Network install an openstack domU from this template</span>
 
 <span class="s">  EXAMPLES:</span>
 
@@ -420,7 +421,7 @@ cat <span class="s">&lt;&lt; EOF</span>
 
 get_params<span class="o">()</span>
 <span class="o">{</span>
-  <span class="k">while </span><span class="nb">getopts</span> <span class="s2">&quot;hicwbf:d:v:m:p:k:r:l:&quot;</span> OPTION;
+  <span class="k">while </span><span class="nb">getopts</span> <span class="s2">&quot;hicwbf:d:v:m:p:k:r:l:t:&quot;</span> OPTION;
   <span class="k">do</span>
 <span class="k">    case</span> <span class="nv">$OPTION</span> in
       h<span class="o">)</span> usage
@@ -459,8 +460,11 @@ get_params<span class="o">()</span>
       v<span class="o">)</span>
          <span class="nv">BRIDGE_V</span><span class="o">=</span><span class="nv">$OPTARG</span>
          ;;
-     l<span class="o">)</span>
+      l<span class="o">)</span>
          <span class="nv">NAME_LABEL</span><span class="o">=</span><span class="nv">$OPTARG</span>
+         ;;
+      t<span class="o">)</span>
+         <span class="nv">TEMPLATE_NAME</span><span class="o">=</span><span class="nv">$OPTARG</span>
          ;;
       ?<span class="o">)</span>
          usage
@@ -760,6 +764,16 @@ get_params <span class="s2">&quot;$@&quot;</span>
 
   destroy_vifs <span class="s2">&quot;$vm_uuid&quot;</span>
   set_all <span class="s2">&quot;$vm_uuid&quot;</span>
+<span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$TEMPLATE_NAME&quot;</span> <span class="o">]</span>
+<span class="k">then</span>
+<span class="k">  </span><span class="nb">echo</span> <span class="nv">$TEMPLATE_NAME</span>
+  <span class="nv">vm_uuid</span><span class="o">=</span><span class="k">$(</span>xe_min vm-install <span class="nv">template</span><span class="o">=</span><span class="s2">&quot;$TEMPLATE_NAME&quot;</span> new-name-label<span class="o">=</span><span class="s2">&quot;DevstackOSDomu&quot;</span><span class="k">)</span>
+  destroy_vifs <span class="s2">&quot;$vm_uuid&quot;</span>
+  set_auto_start <span class="s2">&quot;$vm_uuid&quot;</span>
+  create_gi_vif <span class="s2">&quot;$vm_uuid&quot;</span>
+  create_vm_vif <span class="s2">&quot;$vm_uuid&quot;</span>
+  create_management_vif <span class="s2">&quot;$vm_uuid&quot;</span>
+  create_public_vif <span class="s2">&quot;$vm_uuid&quot;</span>
 <span class="k">else</span>
 <span class="k">  if</span> <span class="o">[</span> ! -f <span class="s2">&quot;$VPX_FILE&quot;</span> <span class="o">]</span>
   <span class="k">then</span>
