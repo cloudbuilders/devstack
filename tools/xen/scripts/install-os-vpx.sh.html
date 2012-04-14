@@ -668,17 +668,11 @@ set_kernel_params<span class="o">()</span>
 <span class="o">{</span>
   <span class="nb">local </span><span class="nv">v</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
   <span class="nb">local </span><span class="nv">args</span><span class="o">=</span><span class="nv">$KERNEL_PARAMS</span>
-  <span class="nb">local </span><span class="nv">cmdline</span><span class="o">=</span><span class="k">$(</span>cat /proc/cmdline<span class="k">)</span>
-  <span class="k">for </span>word in <span class="nv">$cmdline</span>
-  <span class="k">do</span>
-<span class="k">    if </span><span class="nb">echo</span> <span class="s2">&quot;$word&quot;</span> | grep -q <span class="s2">&quot;geppetto&quot;</span>
-    <span class="k">then</span>
-<span class="k">      </span><span class="nv">args</span><span class="o">=</span><span class="s2">&quot;$word $args&quot;</span>
-    <span class="k">fi</span>
-<span class="k">  done</span>
-<span class="k">  if</span> <span class="o">[</span> <span class="s2">&quot;$args&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$args&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>
   <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Passing Geppetto args to VPX: $args.&quot;</span>
+    <span class="nv">pvargs</span><span class="o">=</span><span class="k">$(</span>xe vm-param-get param-name<span class="o">=</span>PV-args <span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$v&quot;</span><span class="k">)</span>
+    <span class="nv">args</span><span class="o">=</span><span class="s2">&quot;$pvargs $args&quot;</span>
     xe vm-param-set PV-args<span class="o">=</span><span class="s2">&quot;$args&quot;</span> <span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$v&quot;</span>
   <span class="k">fi</span>
 <span class="o">}</span>
@@ -767,13 +761,17 @@ get_params <span class="s2">&quot;$@&quot;</span>
 <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$TEMPLATE_NAME&quot;</span> <span class="o">]</span>
 <span class="k">then</span>
 <span class="k">  </span><span class="nb">echo</span> <span class="nv">$TEMPLATE_NAME</span>
-  <span class="nv">vm_uuid</span><span class="o">=</span><span class="k">$(</span>xe_min vm-install <span class="nv">template</span><span class="o">=</span><span class="s2">&quot;$TEMPLATE_NAME&quot;</span> new-name-label<span class="o">=</span><span class="s2">&quot;DevstackOSDomu&quot;</span><span class="k">)</span>
+  <span class="nv">vm_uuid</span><span class="o">=</span><span class="k">$(</span>xe_min vm-install <span class="nv">template</span><span class="o">=</span><span class="s2">&quot;$TEMPLATE_NAME&quot;</span> new-name-label<span class="o">=</span><span class="s2">&quot;$NAME_LABEL&quot;</span><span class="k">)</span>
   destroy_vifs <span class="s2">&quot;$vm_uuid&quot;</span>
   set_auto_start <span class="s2">&quot;$vm_uuid&quot;</span>
   create_gi_vif <span class="s2">&quot;$vm_uuid&quot;</span>
   create_vm_vif <span class="s2">&quot;$vm_uuid&quot;</span>
   create_management_vif <span class="s2">&quot;$vm_uuid&quot;</span>
   create_public_vif <span class="s2">&quot;$vm_uuid&quot;</span>
+  set_kernel_params <span class="s2">&quot;$vm_uuid&quot;</span>
+  xe vm-param-set other-config:os-vpx<span class="o">=</span><span class="nb">true </span><span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$vm_uuid&quot;</span>
+  xe vm-param-set actions-after-reboot<span class="o">=</span>Destroy <span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$vm_uuid&quot;</span>
+  set_memory <span class="s2">&quot;$vm_uuid&quot;</span>
 <span class="k">else</span>
 <span class="k">  if</span> <span class="o">[</span> ! -f <span class="s2">&quot;$VPX_FILE&quot;</span> <span class="o">]</span>
   <span class="k">then</span>
