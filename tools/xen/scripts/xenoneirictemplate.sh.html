@@ -339,6 +339,9 @@ ul.auto-toc {
 <span class="c">## Author: Renuka Apte &lt;renuka.apte@citrix.com&gt;</span>
 <span class="c">## This is not an officially supported guest OS on XenServer 6.02</span>
 
+<span class="nv">BASE_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nb">source</span> <span class="nv">$BASE_DIR</span>/../../../localrc
+
 <span class="nv">LENNY</span><span class="o">=</span><span class="k">$(</span>xe template-list name-label<span class="o">=</span>Debian<span class="se">\ </span>Lenny<span class="se">\ </span>5.0<span class="se">\ \(</span>32-bit<span class="se">\)</span> --minimal<span class="k">)</span>
 
 <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$LENNY</span> <span class="o">]]</span> ; <span class="k">then</span>
@@ -356,11 +359,21 @@ ul.auto-toc {
 <span class="k">if</span> <span class="o">[[</span> -n <span class="k">$(</span>xe template-list name-label<span class="o">=</span><span class="s2">&quot;$distro ($arch)&quot;</span> <span class="nv">params</span><span class="o">=</span>uuid --minimal<span class="k">)</span> <span class="o">]]</span> ; <span class="k">then</span>
 <span class="nb">echo</span> <span class="s2">&quot;$distro ($arch)&quot;</span> already exists, Skipping
 <span class="k">else</span>
-
+<span class="k">if</span> <span class="o">[</span> -z <span class="nv">$NETINSTALLIP</span> <span class="o">]</span>
+<span class="k">then</span>
+<span class="nb">echo</span> <span class="s2">&quot;NETINSTALLIP not set in localrc&quot;</span>
+<span class="nb">exit </span>1
+<span class="k">fi</span>
+<span class="nv">pvargs</span><span class="o">=</span><span class="s2">&quot;-- quiet console=hvc0 partman/default_filesystem=ext3 locale=en_US console-setup/ask_detect=false keyboard-configuration/layoutcode=us netcfg/choose_interface=eth3 netcfg/get_hostname=os netcfg/get_domain=os auto url=${preseedurl}&quot;</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$NETINSTALLIP&quot;</span> !<span class="o">=</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>
+<span class="k">then</span>
+<span class="nv">netcfgargs</span><span class="o">=</span><span class="s2">&quot;netcfg/disable_autoconfig=true netcfg/get_nameservers=${NAMESERVERS} netcfg/get_ipaddress=${NETINSTALLIP} netcfg/get_netmask=${NETMASK} netcfg/get_gateway=${GATEWAY} netcfg/confirm_static=true&quot;</span>
+<span class="nv">pvargs</span><span class="o">=</span><span class="s2">&quot;${pvargs} ${netcfgargs}&quot;</span>
+<span class="k">fi</span>
 <span class="nv">NEWUUID</span><span class="o">=</span><span class="k">$(</span>xe vm-clone <span class="nv">uuid</span><span class="o">=</span><span class="nv">$LENNY</span> new-name-label<span class="o">=</span><span class="s2">&quot;$distro ($arch)&quot;</span><span class="k">)</span>
 xe template-param-set <span class="nv">uuid</span><span class="o">=</span><span class="nv">$NEWUUID</span> other-config:install-methods<span class="o">=</span>http,ftp <span class="se">\</span>
 other-config:install-repository<span class="o">=</span>http://archive.ubuntu.net/ubuntu <span class="se">\</span>
-PV-args<span class="o">=</span><span class="s2">&quot;-- quiet console=hvc0 partman/default_filesystem=ext3 locale=en_US console-setup/ask_detect=false keyboard-configuration/layoutcode=us netcfg/choose_interface=eth3 netcfg/get_hostname=os netcfg/get_domain=os auto url=${preseedurl}&quot;</span> <span class="se">\</span>
+PV-args<span class="o">=</span><span class="s2">&quot;$pvargs&quot;</span> <span class="se">\</span>
 other-config:debian-release<span class="o">=</span>oneiric <span class="se">\</span>
 other-config:default_template<span class="o">=</span><span class="nb">true</span>
 
