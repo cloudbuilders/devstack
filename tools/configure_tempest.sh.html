@@ -382,15 +382,22 @@ cleanup<span class="o">()</span> <span class="o">{</span>
 <p>Abort if localrc is not set</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$TOP_DIR</span>/localrc <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You must have a localrc with ALL necessary passwords and configuration defined before proceeding.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;See stack.sh for required passwords.&quot;</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You must have a localrc with necessary basic configuration defined before proceeding.&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Source params</p>
+<p>Abort if openrc is not set</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./stackrc
+<span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$TOP_DIR</span>/openrc <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You must have an openrc with ALL necessary passwords and credentials defined before proceeding.&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Source params. openrc sources stackrc which sources localrc</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set defaults not configured by stackrc</p>
@@ -501,8 +508,8 @@ Defaults to use first image</p>
 <span class="k">fi</span>
 
 <span class="nv">IDENTITY_USE_SSL</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_USE_SSL</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-<span class="nv">IDENTITY_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
-<span class="nv">IDENTITY_API_VERSION</span><span class="o">={</span><span class="nv">$IDENTITY_API_VERSION</span>:-v2.0<span class="o">}</span> <span class="c"># Note: need v for now...</span>
+<span class="nv">TEMPEST_IDENTITY_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
+<span class="nv">TEMPEST_IDENTITY_API_VERSION</span><span class="o">=</span><span class="s2">&quot;v2.0&quot;</span> <span class="c"># Note: need v for now...</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(jaypipes): This is dumb and needs to be removed
 from the Tempest configuration file entirely...</p>
@@ -548,14 +555,16 @@ the IMAGE_UUID into both the image_ref and image_ref_alt slots</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">COMPUTE_CATALOG_TYPE</span><span class="o">=</span>compute
 <span class="nv">COMPUTE_CREATE_IMAGE_ENABLED</span><span class="o">=</span>True
-<span class="nv">COMPUTE_RESIZE_AVAILABLE</span><span class="o">=</span>True
+<span class="nv">COMPUTE_RESIZE_AVAILABLE</span><span class="o">=</span>False  <span class="c"># not supported with QEMU...</span>
 <span class="nv">COMPUTE_LOG_LEVEL</span><span class="o">=</span>ERROR
+<span class="nv">BUILD_INTERVAL</span><span class="o">=</span>10
+<span class="nv">BUILD_TIMEOUT</span><span class="o">=</span>600
 
 sed -e <span class="s2">&quot;</span>
 <span class="s2">    s,%IDENTITY_USE_SSL%,$IDENTITY_USE_SSL,g;</span>
-<span class="s2">    s,%IDENTITY_HOST%,$HOST_IP,g;</span>
+<span class="s2">    s,%IDENTITY_HOST%,$TEMPEST_IDENTITY_HOST,g;</span>
 <span class="s2">    s,%IDENTITY_PORT%,$IDENTITY_PORT,g;</span>
-<span class="s2">    s,%IDENTITY_API_VERSION%,$IDENTITY_API_VERSION,g;</span>
+<span class="s2">    s,%IDENTITY_API_VERSION%,$TEMPEST_IDENTITY_API_VERSION,g;</span>
 <span class="s2">    s,%IDENTITY_PATH%,$IDENTITY_PATH,g;</span>
 <span class="s2">    s,%IDENTITY_STRATEGY%,$IDENTITY_STRATEGY,g;</span>
 <span class="s2">    s,%USERNAME%,$OS_USERNAME,g;</span>
@@ -568,6 +577,8 @@ sed -e <span class="s2">&quot;</span>
 <span class="s2">    s,%COMPUTE_CREATE_IMAGE_ENABLED%,$COMPUTE_CREATE_IMAGE_ENABLED,g;</span>
 <span class="s2">    s,%COMPUTE_RESIZE_AVAILABLE%,$COMPUTE_RESIZE_AVAILABLE,g;</span>
 <span class="s2">    s,%COMPUTE_LOG_LEVEL%,$COMPUTE_LOG_LEVEL,g;</span>
+<span class="s2">    s,%BUILD_INTERVAL%,$BUILD_INTERVAL,g;</span>
+<span class="s2">    s,%BUILD_TIMEOUT%,$BUILD_TIMEOUT,g;</span>
 <span class="s2">    s,%IMAGE_ID%,$IMAGE_UUID,g;</span>
 <span class="s2">    s,%IMAGE_ID_ALT%,$IMAGE_UUID_ALT,g;</span>
 <span class="s2">    s,%FLAVOR_REF%,$FLAVOR_REF,g;</span>
@@ -576,6 +587,10 @@ sed -e <span class="s2">&quot;</span>
 <span class="s2">    s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g;</span>
 <span class="s2">    s,%ADMIN_TENANT_NAME%,$ADMIN_TENANT_NAME,g;</span>
 <span class="s2">&quot;</span> -i <span class="nv">$TEMPEST_CONF</span>
+
+<span class="nb">echo</span> <span class="s2">&quot;Created tempest configuration file:&quot;</span>
+cat <span class="nv">$TEMPEST_CONF</span>
+<span class="nb">echo</span> <span class="s2">&quot;\n\n&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create config.ini</p>
