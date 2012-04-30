@@ -593,6 +593,7 @@ prerequisites and initialize <tt class="docutils literal">$DEST</tt>.</p>
 <span class="nv">NOVA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
 <span class="nv">HORIZON_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/horizon
 <span class="nv">GLANCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance
+<span class="nv">GLANCECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-glanceclient
 <span class="nv">KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/keystone
 <span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
 <span class="nv">KEYSTONECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-keystoneclient
@@ -745,7 +746,7 @@ we should make sure we use the same variable names as the option names.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>allow build_domU.sh to specify the flat network bridge via kernel args</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span><span class="k">$(</span>grep -o <span class="s1">&#39;flat_network_bridge=[^.]*&#39;</span> /proc/cmdline | cut -d<span class="o">=</span> -f 2<span class="k">)</span>
+    <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span><span class="k">$(</span>grep -o <span class="s1">&#39;flat_network_bridge=[[:alnum:]]*&#39;</span> /proc/cmdline | cut -d<span class="o">=</span> -f 2 | sort -u<span class="k">)</span>
     <span class="nv">GUEST_INTERFACE_DEFAULT</span><span class="o">=</span>eth1
 <span class="k">else</span>
 <span class="k">    </span><span class="nv">PUBLIC_INTERFACE_DEFAULT</span><span class="o">=</span>br100
@@ -1169,6 +1170,7 @@ git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_DIR</span> <
 </td><td class=code><div class=highlight><pre>
 git_clone <span class="nv">$KEYSTONECLIENT_REPO</span> <span class="nv">$KEYSTONECLIENT_DIR</span> <span class="nv">$KEYSTONECLIENT_BRANCH</span>
 git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_DIR</span> <span class="nv">$NOVACLIENT_BRANCH</span>
+git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLIENT_DIR</span> <span class="nv">$GLANCECLIENT_BRANCH</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>glance, swift middleware and nova api needs keystone middleware</p>
@@ -1261,6 +1263,11 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="k">if </span>is_service_enabled melange; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$MELANGECLIENT_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Do this _after_ glance is installed to override the old binary</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">cd</span> <span class="nv">$GLANCECLIENT_DIR</span>; sudo python setup.py develop
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1588,18 +1595,7 @@ users).  The user system is external (keystone).</p>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
     iniset <span class="nv">$GLANCE_API_CONF</span> paste_deploy flavor keystone
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Store the images in swift if enabled.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT default_store swift
-        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_auth_address <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/
-        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_user <span class="nv">$SERVICE_TENANT_NAME</span>:glance
-        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_key <span class="nv">$SERVICE_PASSWORD</span>
-        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_create_container_on_put True
-    <span class="k">fi</span>
-
-<span class="k">    </span><span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api-paste.ini
+    <span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api-paste.ini
     cp <span class="nv">$GLANCE_DIR</span>/etc/glance-api-paste.ini <span class="nv">$GLANCE_API_PASTE_INI</span>
     iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
     iniset <span class="nv">$GLANCE_API_PASTE_INI</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
@@ -2714,7 +2710,7 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
         <span class="k">esac</span>
 
 <span class="k">        if</span> <span class="o">[</span> <span class="s2">&quot;$CONTAINER_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;bare&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> <span class="nv">disk_format</span><span class="o">=</span><span class="nv">$DISK_FORMAT</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
+<span class="k">            </span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --public --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
         <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Use glance client to add the kernel the root filesystem.
@@ -2723,14 +2719,12 @@ kernel for use when uploading the root filesystem.</p>
 </td><td class=code><div class=highlight><pre>
             <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>; <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
             <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>aki <span class="nv">disk_format</span><span class="o">=</span>aki &lt; <span class="s2">&quot;$KERNEL&quot;</span><span class="sb">`</span>
-                <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
+<span class="k">                </span><span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> --public --container-format aki --disk-format aki &lt; <span class="s2">&quot;$KERNEL&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
             <span class="k">fi</span>
 <span class="k">            if</span> <span class="o">[</span> -n <span class="s2">&quot;$RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">RVAL</span><span class="o">=</span><span class="sb">`</span>glance add --silent-upload -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ari <span class="nv">disk_format</span><span class="o">=</span>ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span><span class="sb">`</span>
-                <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$RVAL</span> | cut -d<span class="s2">&quot;:&quot;</span> -f2 | tr -d <span class="s2">&quot; &quot;</span><span class="sb">`</span>
+<span class="k">                </span><span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> --public --container-format ari --disk-format ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
             <span class="k">fi</span>
-<span class="k">            </span>glance add -A <span class="nv">$TOKEN</span> <span class="nv">name</span><span class="o">=</span><span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> <span class="nv">is_public</span><span class="o">=</span><span class="nb">true </span><span class="nv">container_format</span><span class="o">=</span>ami <span class="nv">disk_format</span><span class="o">=</span>ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
+<span class="k">            </span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> --public --container-format ami --disk-format ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+--property kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+--property ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
         <span class="k">fi</span>
 <span class="k">    done</span>
 <span class="k">fi</span>

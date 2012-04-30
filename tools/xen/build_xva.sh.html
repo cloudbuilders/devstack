@@ -335,6 +335,28 @@ ul.auto-toc {
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
+<span class="nb">set</span> -e
+
+<span class="nb">declare</span> -a on_exit_hooks
+
+on_exit<span class="o">()</span>
+<span class="o">{</span>
+<span class="k">for </span>i in <span class="k">$(</span>seq <span class="k">$((${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span> <span class="o">-</span> <span class="m">1</span><span class="k">))</span> -1 0<span class="k">)</span>
+<span class="k">do</span>
+<span class="nb">eval</span> <span class="s2">&quot;${on_exit_hooks[$i]}&quot;</span>
+<span class="k">done</span>
+<span class="o">}</span>
+
+add_on_exit<span class="o">()</span>
+<span class="o">{</span>
+<span class="nb">local </span><span class="nv">n</span><span class="o">=</span><span class="k">${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span>
+on_exit_hooks<span class="o">[</span><span class="nv">$n</span><span class="o">]=</span><span class="s2">&quot;$*&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$n</span> -eq 0 <span class="o">]]</span>
+<span class="k">then</span>
+<span class="nb">trap </span>on_exit EXIT
+<span class="k">fi</span>
+<span class="o">}</span>
+
 <span class="k">if</span> <span class="o">[</span> ! -e ../../localrc <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You must have a localrc with ALL necessary passwords defined before proceeding.&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;See the xen README for required passwords.&quot;</span>
@@ -356,35 +378,13 @@ ul.auto-toc {
 </td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o xtrace
 
+<span class="nv">GUEST_NAME</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Directory where we stage the build</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">STAGING_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/stage
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Option to clean out old stuff</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">CLEAN</span><span class="o">=</span><span class="k">${</span><span class="nv">CLEAN</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CLEAN&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>rm -rf <span class="nv">$STAGING_DIR</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Download our base image.  This image is made using prepare_guest.sh</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">BASE_IMAGE_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">BASE_IMAGE_URL</span><span class="k">:-</span><span class="nv">http</span><span class="p">://images.ansolabs.com/xen/stage.tgz</span><span class="k">}</span>
-<span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$STAGING_DIR</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    if</span> <span class="o">[</span> ! -e /tmp/stage.tgz <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>wget <span class="nv">$BASE_IMAGE_URL</span> -O /tmp/stage.tgz
-    <span class="k">fi</span>
-<span class="k">    </span>tar xfz /tmp/stage.tgz
-    <span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Free up precious disk space</p>
-</td><td class=code><div class=highlight><pre>
-rm -f /tmp/stage.tgz
+<span class="nv">STAGING_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nv">$TOP_DIR</span>/scripts/manage-vdi open <span class="nv">$GUEST_NAME</span> 0 1 | grep -o <span class="s2">&quot;/tmp/tmp.[[:alnum:]]*&quot;</span><span class="k">)</span>
+add_on_exit <span class="s2">&quot;$TOP_DIR/scripts/manage-vdi close $GUEST_NAME 0 1&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure we have a stage</p>
@@ -412,40 +412,6 @@ rm -f /tmp/stage.tgz
 <span class="nv">KERNEL_VERSION</span><span class="o">=</span><span class="sb">`</span>ls <span class="nv">$STAGING_DIR</span>/boot/vmlinuz* | head -1 | sed <span class="s2">&quot;s/.*vmlinuz-//&quot;</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Directory for xvas</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">XVA_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/xvas
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create xva dir</p>
-</td><td class=code><div class=highlight><pre>
-mkdir -p <span class="nv">$XVA_DIR</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Path to xva</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">XVA</span><span class="o">=</span><span class="nv">$XVA_DIR</span>/<span class="nv">$GUEST_NAME</span>.xva
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup fake grub</p>
-</td><td class=code><div class=highlight><pre>
-rm -rf <span class="nv">$STAGING_DIR</span>/boot/grub/
-mkdir -p <span class="nv">$STAGING_DIR</span>/boot/grub/
-cp <span class="nv">$TEMPLATES_DIR</span>/menu.lst.in <span class="nv">$STAGING_DIR</span>/boot/grub/menu.lst
-sed -e <span class="s2">&quot;s,@KERNEL_VERSION@,$KERNEL_VERSION,g&quot;</span> -i <span class="nv">$STAGING_DIR</span>/boot/grub/menu.lst
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup fstab, tty, and other system stuff</p>
-</td><td class=code><div class=highlight><pre>
-cp <span class="nv">$FILES_DIR</span>/fstab <span class="nv">$STAGING_DIR</span>/etc/fstab
-cp <span class="nv">$FILES_DIR</span>/hvc0.conf <span class="nv">$STAGING_DIR</span>/etc/init/
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Put the VPX into UTC.</p>
-</td><td class=code><div class=highlight><pre>
-rm -f <span class="nv">$STAGING_DIR</span>/etc/localtime
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Configure dns (use same dns as dom0)</p>
 </td><td class=code><div class=highlight><pre>
 cp /etc/resolv.conf <span class="nv">$STAGING_DIR</span>/etc/resolv.conf
@@ -454,25 +420,11 @@ cp /etc/resolv.conf <span class="nv">$STAGING_DIR</span>/etc/resolv.conf
 <p>Copy over devstack</p>
 </td><td class=code><div class=highlight><pre>
 rm -f /tmp/devstack.tar
-tar --exclude<span class="o">=</span><span class="s1">&#39;stage&#39;</span> --exclude<span class="o">=</span><span class="s1">&#39;xen/xvas&#39;</span> --exclude<span class="o">=</span><span class="s1">&#39;xen/nova&#39;</span> -cvf /tmp/devstack.tar <span class="nv">$TOP_DIR</span>/../../../devstack
-<span class="nb">cd</span> <span class="nv">$STAGING_DIR</span>/opt/stack/
-tar xf /tmp/devstack.tar
+<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>/../../
+tar --exclude<span class="o">=</span><span class="s1">&#39;stage&#39;</span> --exclude<span class="o">=</span><span class="s1">&#39;xen/xvas&#39;</span> --exclude<span class="o">=</span><span class="s1">&#39;xen/nova&#39;</span> -cvf /tmp/devstack.tar .
+mkdir -p <span class="nv">$STAGING_DIR</span>/opt/stack/devstack
+tar xf /tmp/devstack.tar -C <span class="nv">$STAGING_DIR</span>/opt/stack/devstack
 <span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure OVA</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">VDI_SIZE</span><span class="o">=</span><span class="k">$((</span><span class="nv">$VDI_MB</span><span class="o">*</span><span class="m">1024</span><span class="o">*</span><span class="m">1024</span><span class="k">))</span>
-<span class="nv">PRODUCT_BRAND</span><span class="o">=</span><span class="k">${</span><span class="nv">PRODUCT_BRAND</span><span class="k">:-</span><span class="nv">openstack</span><span class="k">}</span>
-<span class="nv">PRODUCT_VERSION</span><span class="o">=</span><span class="k">${</span><span class="nv">PRODUCT_VERSION</span><span class="k">:-</span><span class="nv">001</span><span class="k">}</span>
-<span class="nv">BUILD_NUMBER</span><span class="o">=</span><span class="k">${</span><span class="nv">BUILD_NUMBER</span><span class="k">:-</span><span class="nv">001</span><span class="k">}</span>
-<span class="nv">LABEL</span><span class="o">=</span><span class="s2">&quot;$PRODUCT_BRAND $PRODUCT_VERSION-$BUILD_NUMBER&quot;</span>
-<span class="nv">OVA</span><span class="o">=</span><span class="nv">$STAGING_DIR</span>/tmp/ova.xml
-cp <span class="nv">$TEMPLATES_DIR</span>/ova.xml.in  <span class="nv">$OVA</span>
-sed -e <span class="s2">&quot;s,@VDI_SIZE@,$VDI_SIZE,g&quot;</span> -i <span class="nv">$OVA</span>
-sed -e <span class="s2">&quot;s,@PRODUCT_BRAND@,$PRODUCT_BRAND,g&quot;</span> -i <span class="nv">$OVA</span>
-sed -e <span class="s2">&quot;s,@PRODUCT_VERSION@,$PRODUCT_VERSION,g&quot;</span> -i <span class="nv">$OVA</span>
-sed -e <span class="s2">&quot;s,@BUILD_NUMBER@,$BUILD_NUMBER,g&quot;</span> -i <span class="nv">$OVA</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Run devstack on launch</p>
@@ -481,17 +433,12 @@ cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/rc.local</span>
 <span class="s"># DIVIDER</span>
 <span class="s">/etc/init.d/networking restart</span>
 <span class="s">GUEST_PASSWORD=$GUEST_PASSWORD STAGING_DIR=/ DO_TGZ=0 bash /opt/stack/devstack/tools/xen/prepare_guest.sh &gt; /opt/stack/prepare_guest.log 2&gt;&amp;1</span>
-<span class="s">su -c &quot;/opt/stack/run.sh &gt; /opt/stack/run.sh.log&quot; stack</span>
+<span class="s">su -c &quot;/opt/stack/run.sh &gt; /opt/stack/run.sh.log 2&gt;&amp;1&quot; stack</span>
 <span class="s">exit 0</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>network restart required for getting the right gateway</p>
-</td><td class=code><div class=highlight><pre>
-rm -f <span class="nv">$XVA</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean old xva. In the future may not do this every time.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="nv">$GUEST_NAME</span> &gt; <span class="nv">$STAGING_DIR</span>/etc/hostname
 
@@ -535,10 +482,6 @@ cp <span class="nv">$TEMPLATES_DIR</span>/interfaces.in  <span class="nv">$INTER
     sed -e <span class="s2">&quot;s,@ETH3_NETMASK@,$PUB_NETMASK,g&quot;</span> -i <span class="nv">$INTERFACES</span>
 <span class="k">fi</span>
 
-<span class="k">if</span> <span class="o">[</span> -h <span class="nv">$STAGING_DIR</span>/sbin/dhclient3 <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>rm -f <span class="nv">$STAGING_DIR</span>/sbin/dhclient3
-<span class="k">fi</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure the network</p>
 </td><td class=code><div class=highlight><pre>
@@ -567,24 +510,15 @@ cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/opt/stack/run.sh</span>
 <span class="s">#!/bin/bash</span>
 <span class="s">cd /opt/stack/devstack</span>
 <span class="s">killall screen</span>
-<span class="s">UPLOAD_LEGACY_TTY=yes HOST_IP=$PUB_IP VIRT_DRIVER=xenserver FORCE=yes MULTI_HOST=1 HOST_IP_IFACE=$HOST_IP_IFACE $STACKSH_PARAMS ./stack.sh</span>
+<span class="s">UPLOAD_LEGACY_TTY=yes HOST_IP=$PUB_IP VIRT_DRIVER=xenserver FORCE=yes MULTI_HOST=$MULTI_HOST HOST_IP_IFACE=$HOST_IP_IFACE $STACKSH_PARAMS ./stack.sh</span>
 <span class="s">EOF</span>
 chmod 755 <span class="nv">$STAGING_DIR</span>/opt/stack/run.sh
 
+<span class="nb">echo</span> <span class="s2">&quot;Done&quot;</span>
+
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure run.sh</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$XVA</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>rm -rf /tmp/mkxva*
-    <span class="nv">UID</span><span class="o">=</span>0 <span class="nv">$SCRIPT_DIR</span>/mkxva -o <span class="nv">$XVA</span> -t xva -x <span class="nv">$OVA</span> <span class="nv">$STAGING_DIR</span> <span class="nv">$VDI_MB</span> /tmp/
-<span class="k">fi</span>
-
-<span class="nb">echo</span> <span class="s2">&quot;Built $(basename $XVA).  If your dom0 is on a different machine, copy this to [devstackdir]/tools/xen/$(basename $XVA)&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;Also copy your localrc to [devstackdir]&quot;</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create xva</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
