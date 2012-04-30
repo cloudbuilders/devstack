@@ -335,32 +335,37 @@ ul.auto-toc {
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;Configuring Tempest&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>This script exits on an error so that errors don't compound and you see
-only the first error that occured.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o errexit
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Print the commands being run so that we can see the command that triggers
-an error.  It is also useful for following allowing as the install occurs.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o xtrace
-
 <span class="k">function </span>usage <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$0 - Build tempest.conf&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 [configdir]&quot;</span>
     <span class="nb">exit </span>1
 <span class="o">}</span>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">=</span> <span class="s2">&quot;-h&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>usage
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean up any resources that may be in use</p>
+</td><td class=code><div class=highlight><pre>
+cleanup<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">set</span> +o errexit
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Mop up temporary files</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$CONFIG_INI_TMP&quot;</span> -a -e <span class="s2">&quot;$CONFIG_INI_TMP&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>rm -f <span class="nv">$CONFIG_INI_TMP</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Kill ourselves to signal any calling process</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
+<span class="o">}</span>
+
+<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the current directory</p>
@@ -377,22 +382,24 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <p>Abort if localrc is not set</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$TOP_DIR</span>/localrc <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You must have a localrc with necessary basic configuration defined before proceeding.&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Abort if openrc is not set</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$TOP_DIR</span>/openrc <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You must have an openrc with ALL necessary passwords and credentials defined before proceeding.&quot;</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You must have a localrc with ALL necessary passwords and configuration defined before proceeding.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;See stack.sh for required passwords.&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Source params</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
+<span class="nb">source</span> ./stackrc
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set defaults not configured by stackrc</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TENANT</span><span class="o">=</span><span class="k">${</span><span class="nv">TENANT</span><span class="k">:-</span><span class="nv">admin</span><span class="k">}</span>
+<span class="nv">USERNAME</span><span class="o">=</span><span class="k">${</span><span class="nv">USERNAME</span><span class="k">:-</span><span class="nv">admin</span><span class="k">}</span>
+<span class="nv">IDENTITY_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
+<span class="nv">IDENTITY_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
+<span class="nv">IDENTITY_API_VERSION</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_API_VERSION</span><span class="k">:-</span><span class="nv">2</span><span class="p">.0</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Where Openstack code lives</p>
@@ -400,8 +407,26 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
 
 <span class="nv">TEMPEST_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/tempest
-<span class="nv">CONFIG_DIR</span><span class="o">=</span><span class="nv">$TEMPEST_DIR</span>/etc
+
+<span class="nv">CONFIG_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="nv">$TEMPEST_DIR</span><span class="p">/etc</span><span class="k">}</span>
+<span class="nv">CONFIG_INI</span><span class="o">=</span><span class="nv">$CONFIG_DIR</span>/config.ini
 <span class="nv">TEMPEST_CONF</span><span class="o">=</span><span class="nv">$CONFIG_DIR</span>/tempest.conf
+
+<span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$DEST</span>/.ramdisk <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Process network configuration vars</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">GUEST_NETWORK</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_NETWORK</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+    <span class="nv">GUEST_RECREATE_NET</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_RECREATE_NET</span><span class="k">:-</span><span class="nv">yes</span><span class="k">}</span>
+
+    <span class="nv">GUEST_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_IP</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.</span><span class="nv">$GUEST_NETWORK</span><span class="p">.50</span><span class="k">}</span>
+    <span class="nv">GUEST_CIDR</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_CIDR</span><span class="k">:-</span><span class="nv">$GUEST_IP</span><span class="p">/24</span><span class="k">}</span>
+    <span class="nv">GUEST_NETMASK</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_NETMASK</span><span class="k">:-</span><span class="nv">255</span><span class="p">.255.255.0</span><span class="k">}</span>
+    <span class="nv">GUEST_GATEWAY</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_GATEWAY</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.</span><span class="nv">$GUEST_NETWORK</span><span class="p">.1</span><span class="k">}</span>
+    <span class="nv">GUEST_MAC</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_MAC</span><span class="k">:-</span><span class="s2">&quot;02:16:3e:07:69:`printf &#39;%02X&#39; $GUEST_NETWORK`&quot;</span><span class="k">}</span>
+    <span class="nv">GUEST_RAM</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_RAM</span><span class="k">:-</span><span class="nv">1524288</span><span class="k">}</span>
+    <span class="nv">GUEST_CORES</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_CORES</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Use the GUEST_IP unless an explicit IP is set by <tt class="docutils literal">HOST_IP</tt></p>
@@ -414,48 +439,70 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="k">    </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="sb">`</span><span class="nv">LC_ALL</span><span class="o">=</span>C /sbin/ifconfig  | grep -m 1 <span class="s1">&#39;inet addr:&#39;</span>| cut -d: -f2 | awk <span class="s1">&#39;{print $1}&#39;</span><span class="sb">`</span>
 <span class="k">fi</span>
 
+<span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Glance should already contain images to be used in tempest
-testing. Here we simply look for images stored in Glance
-and set the appropriate variables for use in the tempest config
-We ignore ramdisk and kernel images and set the IMAGE_UUID to
-the first image returned and set IMAGE_UUID_ALT to the second,
-if there is more than one returned...</p>
+<p>Glance connection info.  Note the port must be specified.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">IMAGE_LINES</span><span class="o">=</span><span class="sb">`</span>glance image-list<span class="sb">`</span>
-<span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot;$(echo -e &quot;</span><span class="se">\n\r</span><span class="s2">&quot;)&quot;</span>
-<span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-<span class="k">for </span>line in <span class="nv">$IMAGE_LINES</span>; <span class="k">do</span>
-<span class="k">    </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+<span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
+<span class="nb">set</span> <span class="sb">`</span><span class="nb">echo</span> <span class="nv">$GLANCE_HOSTPORT</span> | tr <span class="s1">&#39;:&#39;</span> <span class="s1">&#39; &#39;</span><span class="sb">`</span>
+<span class="nv">GLANCE_HOST</span><span class="o">=</span><span class="nv">$1</span>
+<span class="nv">GLANCE_PORT</span><span class="o">=</span><span class="nv">$2</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up downloaded images
+Defaults to use first image</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nv">IMAGE_DIR</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="k">for </span>imagedir in <span class="nv">$TOP_DIR</span>/files/images/*; <span class="k">do</span>
+<span class="k">    </span><span class="nv">KERNEL</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">RAMDISK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">IMAGE_RAMDISK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">KERNEL</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$imagedir/&quot;</span>*-vmlinuz*; <span class="k">do</span>
+        <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
+    <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ln -sf <span class="nv">$KERNEL</span> <span class="nv">$imagedir</span>/kernel
+    <span class="nv">RAMDISK</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$imagedir/&quot;</span>*-initrd*; <span class="k">do</span>
+        <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
+    <span class="o">[</span> -n <span class="s2">&quot;$RAMDISK&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ln -sf <span class="nv">$RAMDISK</span> <span class="nv">$imagedir</span>/ramdisk <span class="o">&amp;&amp;</span> <span class="se">\</span>
+                         <span class="nv">IMAGE_RAMDISK</span><span class="o">=</span><span class="s2">&quot;ari_location = $imagedir/ramdisk&quot;</span>
+    <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$imagedir/&quot;</span>*.img; <span class="k">do</span>
+        <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$IMAGE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>ln -sf <span class="nv">$IMAGE</span> <span class="nv">$imagedir</span>/disk
+</pre></div></td></tr><tr><td class=docs>
+<p>Save the first image directory that contains a disk image link</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$IMAGE_DIR&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">IMAGE_DIR</span><span class="o">=</span><span class="nv">$imagedir</span>
+            <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="k">${</span><span class="nv">IMAGE</span><span class="p">%.img</span><span class="k">})</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="k">done</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Create array of image UUIDs...</p>
+<p>Get the image UUID</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
-<span class="nv">IMAGES</span><span class="o">=(</span><span class="nv">$IMAGES</span><span class="o">)</span>
-<span class="nv">NUM_IMAGES</span><span class="o">=</span><span class="k">${#</span><span class="nv">IMAGES</span><span class="p">[*]</span><span class="k">}</span>
-<span class="nb">echo</span> <span class="s2">&quot;Found $NUM_IMAGES images&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_IMAGES</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Found no valid images to use!&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-<span class="nv">IMAGE_UUID</span><span class="o">=</span><span class="k">${</span><span class="nv">IMAGES</span><span class="p">[0]</span><span class="k">}</span>
-<span class="nv">IMAGE_UUID_ALT</span><span class="o">=</span><span class="nv">$IMAGE_UUID</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_IMAGES</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">IMAGE_UUID_ALT</span><span class="o">=</span><span class="k">${</span><span class="nv">IMAGES</span><span class="p">[1]</span><span class="k">}</span>
+    <span class="nv">IMAGE_UUID</span><span class="o">=</span><span class="k">$(</span>nova image-list | grep <span class="s2">&quot; $IMAGE_NAME &quot;</span> | cut -d<span class="s1">&#39;|&#39;</span> -f2<span class="k">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Strip spaces off</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">IMAGE_UUID</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$IMAGE_UUID</span><span class="k">)</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create tempest.conf from tempest.conf.tpl</p>
 </td><td class=code><div class=highlight><pre>
+
 <span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$TEMPEST_CONF</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>cp <span class="nv">$TEMPEST_CONF</span>.tpl <span class="nv">$TEMPEST_CONF</span>
 <span class="k">fi</span>
 
 <span class="nv">IDENTITY_USE_SSL</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_USE_SSL</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-<span class="nv">IDENTITY_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
 <span class="nv">IDENTITY_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
-<span class="nv">IDENTITY_API_VERSION</span><span class="o">=</span><span class="s2">&quot;v2.0&quot;</span> <span class="c"># Note: need v for now...</span>
+<span class="nv">IDENTITY_API_VERSION</span><span class="o">={</span><span class="nv">$IDENTITY_API_VERSION</span>:-v2.0<span class="o">}</span> <span class="c"># Note: need v for now...</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(jaypipes): This is dumb and needs to be removed
 from the Tempest configuration file entirely...</p>
@@ -481,35 +528,32 @@ of using the same regular user account for the alternate user...</p>
 <span class="nv">ALT_TENANT_NAME</span><span class="o">=</span><span class="nv">$OS_TENANT_NAME</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>TODO(jaypipes): Support multiple images instead of plopping
+the IMAGE_UUID into both the image_ref and image_ref_alt slots</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">IMAGE_UUID_ALT</span><span class="o">=</span><span class="nv">$IMAGE_UUID</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>TODO(jaypipes): Support configurable flavor refs here...</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FLAVOR_REF</span><span class="o">=</span>1
 <span class="nv">FLAVOR_REF_ALT</span><span class="o">=</span>2
 
-<span class="nv">ADMIN_USERNAME</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_USERNAME</span><span class="k">:-</span><span class="nv">admin</span><span class="k">}</span>
-<span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
-<span class="nv">ADMIN_TENANT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_TENANT</span><span class="k">:-</span><span class="nv">admin</span><span class="k">}</span>
+<span class="nv">ADMIN_USERNAME</span><span class="o">={</span><span class="nv">$ADMIN_USERNAME</span>:-admin<span class="o">}</span>
+<span class="nv">ADMIN_PASSWORD</span><span class="o">={</span><span class="nv">$ADMIN_PASSWORD</span>:-secrete<span class="o">}</span>
+<span class="nv">ADMIN_TENANT_NAME</span><span class="o">={</span><span class="nv">$ADMIN_TENANT</span>:-admin<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Do any of the following need to be configurable?</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">COMPUTE_CATALOG_TYPE</span><span class="o">=</span>compute
 <span class="nv">COMPUTE_CREATE_IMAGE_ENABLED</span><span class="o">=</span>True
-<span class="nv">COMPUTE_RESIZE_AVAILABLE</span><span class="o">=</span>False  <span class="c"># not supported with QEMU...</span>
+<span class="nv">COMPUTE_RESIZE_AVAILABLE</span><span class="o">=</span>True
 <span class="nv">COMPUTE_LOG_LEVEL</span><span class="o">=</span>ERROR
-<span class="nv">BUILD_INTERVAL</span><span class="o">=</span>10
-<span class="nv">BUILD_TIMEOUT</span><span class="o">=</span>600
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Image test configuration options...</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">IMAGE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">IMAGE_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
-<span class="nv">IMAGE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">IMAGE_PORT</span><span class="k">:-</span><span class="nv">9292</span><span class="k">}</span>
-<span class="nv">IMAGE_API_VERSION</span><span class="o">=</span><span class="s2">&quot;1&quot;</span>
 
 sed -e <span class="s2">&quot;</span>
 <span class="s2">    s,%IDENTITY_USE_SSL%,$IDENTITY_USE_SSL,g;</span>
-<span class="s2">    s,%IDENTITY_HOST%,$IDENTITY_HOST,g;</span>
+<span class="s2">    s,%IDENTITY_HOST%,$HOST_IP,g;</span>
 <span class="s2">    s,%IDENTITY_PORT%,$IDENTITY_PORT,g;</span>
 <span class="s2">    s,%IDENTITY_API_VERSION%,$IDENTITY_API_VERSION,g;</span>
 <span class="s2">    s,%IDENTITY_PATH%,$IDENTITY_PATH,g;</span>
@@ -524,27 +568,102 @@ sed -e <span class="s2">&quot;</span>
 <span class="s2">    s,%COMPUTE_CREATE_IMAGE_ENABLED%,$COMPUTE_CREATE_IMAGE_ENABLED,g;</span>
 <span class="s2">    s,%COMPUTE_RESIZE_AVAILABLE%,$COMPUTE_RESIZE_AVAILABLE,g;</span>
 <span class="s2">    s,%COMPUTE_LOG_LEVEL%,$COMPUTE_LOG_LEVEL,g;</span>
-<span class="s2">    s,%BUILD_INTERVAL%,$BUILD_INTERVAL,g;</span>
-<span class="s2">    s,%BUILD_TIMEOUT%,$BUILD_TIMEOUT,g;</span>
 <span class="s2">    s,%IMAGE_ID%,$IMAGE_UUID,g;</span>
 <span class="s2">    s,%IMAGE_ID_ALT%,$IMAGE_UUID_ALT,g;</span>
 <span class="s2">    s,%FLAVOR_REF%,$FLAVOR_REF,g;</span>
 <span class="s2">    s,%FLAVOR_REF_ALT%,$FLAVOR_REF_ALT,g;</span>
-<span class="s2">    s,%IMAGE_HOST%,$IMAGE_HOST,g;</span>
-<span class="s2">    s,%IMAGE_PORT%,$IMAGE_PORT,g;</span>
-<span class="s2">    s,%IMAGE_API_VERSION%,$IMAGE_API_VERSION,g;</span>
 <span class="s2">    s,%ADMIN_USERNAME%,$ADMIN_USERNAME,g;</span>
 <span class="s2">    s,%ADMIN_PASSWORD%,$ADMIN_PASSWORD,g;</span>
 <span class="s2">    s,%ADMIN_TENANT_NAME%,$ADMIN_TENANT_NAME,g;</span>
 <span class="s2">&quot;</span> -i <span class="nv">$TEMPEST_CONF</span>
 
-<span class="nb">echo</span> <span class="s2">&quot;Created tempest configuration file:&quot;</span>
-cat <span class="nv">$TEMPEST_CONF</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create config.ini</p>
+</td><td class=code><div class=highlight><pre>
 
-<span class="nb">echo</span> <span class="s2">&quot;\n&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;Finished Configuring Tempest&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
+<span class="nv">CONFIG_INI_TMP</span><span class="o">=</span><span class="k">$(</span>mktemp <span class="nv">$CONFIG_INI</span>.XXXXXX<span class="k">)</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>cat &gt;<span class="nv">$CONFIG_INI_TMP</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">[environment]</span>
+<span class="s">aki_location = $TOP_DIR/files/images/aki-tty/image</span>
+<span class="s">ari_location = $TOP_DIR/files/images/ari-tty/image</span>
+<span class="s">ami_location = $TOP_DIR/files/images/ami-tty/image</span>
+<span class="s">image_ref = 3</span>
+<span class="s">image_ref_alt = 3</span>
+<span class="s">flavor_ref = 1</span>
+<span class="s">flavor_ref_alt = 2</span>
+
+<span class="s">[glance]</span>
+<span class="s">host = $GLANCE_HOST</span>
+<span class="s">apiver = v1</span>
+<span class="s">port = $GLANCE_PORT</span>
+<span class="s">image_id = 3</span>
+<span class="s">image_id_alt = 3</span>
+<span class="s">tenant_id = 1</span>
+<span class="s">EOF</span>
+<span class="k">else</span>
+<span class="k">    </span>cat &gt;<span class="nv">$CONFIG_INI_TMP</span> <span class="s">&lt;&lt;EOF</span>
+<span class="s">[environment]</span>
+<span class="s">aki_location = $IMAGE_DIR/kernel</span>
+<span class="s">ami_location = $IMAGE_DIR/disk</span>
+<span class="s">$IMAGE_RAMDISK</span>
+<span class="s">image_ref = 2</span>
+<span class="s">image_ref_alt = 2</span>
+<span class="s">flavor_ref = 1</span>
+<span class="s">flavor_ref_alt = 2</span>
+
+<span class="s">[glance]</span>
+<span class="s">host = $GLANCE_HOST</span>
+<span class="s">apiver = v1</span>
+<span class="s">port = $GLANCE_PORT</span>
+<span class="s">image_id = 2</span>
+<span class="s">image_id_alt = 2</span>
+<span class="s">tenant_id = 1</span>
+<span class="s">EOF</span>
+<span class="k">fi</span>
+
+cat &gt;&gt;<span class="nv">$CONFIG_INI_TMP</span> <span class="s">&lt;&lt;EOF</span>
+
+<span class="s">[keystone]</span>
+<span class="s">service_host = $HOST_IP</span>
+<span class="s">service_port = 5000</span>
+<span class="s">apiver = v2.0</span>
+<span class="s">user = admin</span>
+<span class="s">password = $ADMIN_PASSWORD</span>
+<span class="s">tenant_name = admin</span>
+
+<span class="s">[nova]</span>
+<span class="s">host = $HOST_IP</span>
+<span class="s">port = 8774</span>
+<span class="s">apiver = v1.1</span>
+<span class="s">project = admin</span>
+<span class="s">user = admin</span>
+<span class="s">key = $ADMIN_PASSWORD</span>
+<span class="s">ssh_timeout = 300</span>
+<span class="s">build_timeout = 300</span>
+<span class="s">flavor_ref = 1</span>
+<span class="s">flavor_ref_alt = 2</span>
+<span class="s">multi_node = no</span>
+
+<span class="s">[rabbitmq]</span>
+<span class="s">host = $RABBIT_HOST</span>
+<span class="s">user = guest</span>
+<span class="s">password = $RABBIT_PASSWORD</span>
+
+<span class="s">[swift]</span>
+<span class="s">auth_host = $HOST_IP</span>
+<span class="s">auth_port = 443</span>
+<span class="s">auth_prefix = /auth/</span>
+<span class="s">auth_ssl = yes</span>
+<span class="s">account = system</span>
+<span class="s">username = root</span>
+<span class="s">password = password</span>
+
+<span class="s">EOF</span>
+mv <span class="nv">$CONFIG_INI_TMP</span> <span class="nv">$CONFIG_INI</span>
+<span class="nv">CONFIG_INI_TMP</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+
+<span class="nb">trap</span> - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
 
 
 </pre></div></td></tr><tr><td class=docs>
