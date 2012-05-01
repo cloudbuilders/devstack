@@ -1382,17 +1382,38 @@ of having to specify the username/password each time.</p>
     sudo mysql -uroot -p<span class="nv">$MYSQL_PASSWORD</span> -h127.0.0.1 -e <span class="s2">&quot;GRANT ALL PRIVILEGES ON *.* TO &#39;$MYSQL_USER&#39;@&#39;%&#39; identified by &#39;$MYSQL_PASSWORD&#39;;&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Edit /etc/mysql/my.cnf to change ‘bind-address’ from localhost (127.0.0.1) to any (0.0.0.0) and restart the mysql service:</p>
+<p>Update <tt class="docutils literal">my.cnf</tt> for some local needs and restart the mysql service</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">MY_CNF</span><span class="o">=</span>/etc/mysql/my.cnf
+<span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/mysql/my.cnf
         <span class="nv">MYSQL</span><span class="o">=</span>mysql
     <span class="k">else</span>
-<span class="k">        </span><span class="nv">MY_CNF</span><span class="o">=</span>/etc/my.cnf
+<span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/my.cnf
         <span class="nv">MYSQL</span><span class="o">=</span>mysqld
     <span class="k">fi</span>
-<span class="k">    </span>sudo sed -i <span class="s1">&#39;s/127.0.0.1/0.0.0.0/g&#39;</span> <span class="nv">$MY_CNF</span>
-    restart_service <span class="nv">$MYSQL</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Change ‘bind-address’ from localhost (127.0.0.1) to any (0.0.0.0)</p>
+</td><td class=code><div class=highlight><pre>
+    sudo sed -i <span class="s1">&#39;/^bind-address/s/127.0.0.1/0.0.0.0/g&#39;</span> <span class="nv">$MY_CONF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set default db type to InnoDB</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>grep -q <span class="s2">&quot;default-storage-engine&quot;</span> <span class="nv">$MY_CONF</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Change it</p>
+</td><td class=code><div class=highlight><pre>
+        sudo bash -c <span class="s2">&quot;source $TOP_DIR/functions; iniset $MY_CONF mysqld default-storage-engine InnoDB&quot;</span>
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Add it</p>
+</td><td class=code><div class=highlight><pre>
+        sudo sed -i -e <span class="s2">&quot;/^\[mysqld\]/ a \</span>
+<span class="s2">default-storage-engine = InnoDB&quot;</span> <span class="nv">$MY_CONF</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>restart_service <span class="nv">$MYSQL</span>
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$SCREEN_HARDSTATUS&quot;</span> <span class="o">]</span>; <span class="k">then</span>
