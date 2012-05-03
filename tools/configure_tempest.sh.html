@@ -420,13 +420,14 @@ testing. Here we simply look for images stored in Glance
 and set the appropriate variables for use in the tempest config
 We ignore ramdisk and kernel images and set the IMAGE_UUID to
 the first image returned and set IMAGE_UUID_ALT to the second,
-if there is more than one returned...</p>
+if there is more than one returned...
+... Also ensure we only take active images, so we don't get snapshots in process</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IMAGE_LINES</span><span class="o">=</span><span class="sb">`</span>glance image-list<span class="sb">`</span>
 <span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot;$(echo -e &quot;</span><span class="se">\n\r</span><span class="s2">&quot;)&quot;</span>
 <span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 <span class="k">for </span>line in <span class="nv">$IMAGE_LINES</span>; <span class="k">do</span>
-<span class="k">    </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+<span class="k">    </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | cut -d&#39; &#39; -f2`&quot;</span>
 <span class="k">done</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create array of image UUIDs...</p>
@@ -446,11 +447,10 @@ if there is more than one returned...</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create tempest.conf from tempest.conf.tpl</p>
+<p>Create tempest.conf from tempest.conf.tpl
+copy every time, because the image UUIDS are going to change</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$TEMPEST_CONF</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>cp <span class="nv">$TEMPEST_CONF</span>.tpl <span class="nv">$TEMPEST_CONF</span>
-<span class="k">fi</span>
+cp <span class="nv">$TEMPEST_CONF</span>.tpl <span class="nv">$TEMPEST_CONF</span>
 
 <span class="nv">IDENTITY_USE_SSL</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_USE_SSL</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
 <span class="nv">IDENTITY_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
