@@ -1703,12 +1703,17 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
             <span class="c">### FIXME(dtroyer): Find RPMs for OpenVSwitch</span>
             <span class="nb">echo</span> <span class="s2">&quot;OpenVSwitch packages need to be located&quot;</span>
         <span class="k">fi</span>
+
+<span class="k">        </span><span class="nv">QUANTUM_OVS_CONF_DIR</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/plugins/openvswitch
+        <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_OVS_CONF_DIR</span>/ovs_quantum_plugin.ini
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Create database for the plugin/agent</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
 <span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS ovs_quantum;&#39;</span>
             mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS ovs_quantum CHARACTER SET utf8;&#39;</span>
+            sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum?charset=utf8/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
         <span class="k">else</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
             <span class="nb">exit </span>1
@@ -1729,19 +1734,24 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
         <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
 <span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS quantum_linux_bridge;&#39;</span>
             mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS quantum_linux_bridge;&#39;</span>
-        <span class="k">else</span>
+            <span class="k">if </span>grep -Fxq <span class="s2">&quot;user = &quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+            <span class="k">then</span>
+<span class="k">                </span>sudo sed -i -e <span class="s2">&quot;s/^connection = sqlite$/#connection = sqlite/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+                sudo sed -i -e <span class="s2">&quot;s/^#connection = mysql$/connection = mysql/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+                sudo sed -i -e <span class="s2">&quot;s/^user = .*$/user = $MYSQL_USER/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+                sudo sed -i -e <span class="s2">&quot;s/^pass = .*$/pass = $MYSQL_PASSWORD/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+                sudo sed -i -e <span class="s2">&quot;s/^host = .*$/host = $MYSQL_HOST/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+            <span class="k">else</span>
+<span class="k">                </span>sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/quantum_linux_bridge?charset=utf8/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+            <span class="k">fi</span>
+<span class="k">        else</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
             <span class="nb">exit </span>1
         <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Make sure we're using the linuxbridge plugin and set the mysql hostname, username and password in the config file</p>
+<p>Make sure we're using the linuxbridge plugin</p>
 </td><td class=code><div class=highlight><pre>
         sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.linuxbridge.LinuxBridgePlugin.LinuxBridgePlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
-        sudo sed -i -e <span class="s2">&quot;s/^connection = sqlite$/#connection = sqlite/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-        sudo sed -i -e <span class="s2">&quot;s/^#connection = mysql$/connection = mysql/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-        sudo sed -i -e <span class="s2">&quot;s/^user = .*$/user = $MYSQL_USER/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-        sudo sed -i -e <span class="s2">&quot;s/^pass = .*$/pass = $MYSQL_PASSWORD/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-        sudo sed -i -e <span class="s2">&quot;s/^host = .*$/host = $MYSQL_HOST/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$QUANTUM_CONF_DIR</span>/quantum.conf
@@ -1779,7 +1789,18 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </td><td class=code><div class=highlight><pre>
        install_package bridge-utils
        sudo sed -i -e <span class="s2">&quot;s/^physical_interface = .*$/physical_interface = $QUANTUM_LB_PRIVATE_INTERFACE/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-       screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/linuxbridge/agent/linuxbridge_quantum_agent.py $QUANTUM_LB_CONFIG_FILE -v&quot;</span>
+       <span class="k">if </span>grep -Fxq <span class="s2">&quot;user = &quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+       <span class="k">then</span>
+<span class="k">           </span>sudo sed -i -e <span class="s2">&quot;s/^connection = sqlite$/#connection = sqlite/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+           sudo sed -i -e <span class="s2">&quot;s/^#connection = mysql$/connection = mysql/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+           sudo sed -i -e <span class="s2">&quot;s/^user = .*$/user = $MYSQL_USER/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+           sudo sed -i -e <span class="s2">&quot;s/^pass = .*$/pass = $MYSQL_PASSWORD/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+           sudo sed -i -e <span class="s2">&quot;s/^host = .*$/host = $MYSQL_HOST/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+       <span class="k">else</span>
+<span class="k">           </span>sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/quantum_linux_bridge?charset=utf8/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
+       <span class="k">fi</span>
+
+<span class="k">       </span>screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/linuxbridge/agent/linuxbridge_quantum_agent.py $QUANTUM_LB_CONFIG_FILE -v&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
