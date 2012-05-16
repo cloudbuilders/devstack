@@ -341,7 +341,9 @@ service              quantum   admin        # if enabled
 service              swift     admin        # if enabled
 demo                 admin     admin
 demo                 demo      Member, anotherrole
-invisible_to_admin   demo      Member</p>
+invisible_to_admin   demo      Member
+Tempest Only:
+alt_demo             alt_demo  Member</p>
 <p>Variables set before calling this script:
 SERVICE_TOKEN - aka admin_token in keystone.conf
 SERVICE_ENDPOINT - local Keystone admin endpoint
@@ -464,6 +466,18 @@ configurable in swift-proxy.conf</p>
     keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
                            --user <span class="nv">$QUANTUM_USER</span> <span class="se">\</span>
                            --role <span class="nv">$ADMIN_ROLE</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;tempest&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Tempest has some tests that validate various authorization checks
+between two regular users in separate tenants</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">ALT_DEMO_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create --name<span class="o">=</span>alt_demo<span class="k">)</span>
+    <span class="nv">ALT_DEMO_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>alt_demo <span class="se">\</span>
+                                        --pass<span class="o">=</span><span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
+                                        --email<span class="o">=</span>alt_demo@example.com<span class="k">)</span>
+    keystone user-role-add --user <span class="nv">$ALT_DEMO_USER</span> --role <span class="nv">$MEMBER_ROLE</span> --tenant_id <span class="nv">$ALT_DEMO_TENANT</span>
 <span class="k">fi</span>
 
 
