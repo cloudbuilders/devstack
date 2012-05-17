@@ -460,6 +460,14 @@ override check and attempt installation with <tt class="docutils literal">FORCE=
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;${DISTRO}&quot;</span> <span class="o">=</span> <span class="s2">&quot;oneiric&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> is_service_enabled qpid ; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Qpid was introduced in precise</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">echo</span> <span class="s2">&quot;You must use Ubuntu Precise or newer for Qpid support.&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the paths of certain binaries</p>
 </td><td class=code><div class=highlight><pre>
@@ -819,8 +827,8 @@ host.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="mysql-rabbitmq">
-<h2>MySQL &amp; RabbitMQ</h2>
+<div class="section" id="mysql-rabbitmq-or-qpid">
+<h2>MySQL &amp; (RabbitMQ or Qpid)</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -847,8 +855,10 @@ read_password MYSQL_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
 </pre></div></td></tr><tr><td class=docs>
 <p>Rabbit connection info</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
-read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR RABBIT.&quot;</span>
+<span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
+<span class="k">    </span><span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+    read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR RABBIT.&quot;</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Glance connection info.  Note the port must be specified.</p>
@@ -1083,7 +1093,7 @@ included.  Two bits of metadata are recognized in the prerequisite files:
 - <tt class="docutils literal"># NOPRIME</tt> defers installation to be performed later in stack.sh
 - <tt class="docutils literal"># dist:DISTRO</tt> or <tt class="docutils literal">dist:DISTRO1,DISTRO2</tt> limits the selection</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 500)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 504)</p>
 Unexpected indentation.</div>
 <blockquote>
 of the package to the distros listed.  The distro names are case insensitive.</blockquote>
@@ -1315,8 +1325,8 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="rabbit">
-<h2>Rabbit</h2>
+<div class="section" id="rabbit-or-qpid">
+<h2>Rabbit or Qpid</h2>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
@@ -1338,6 +1348,13 @@ the temp file is necessary due to LP: #878600</p>
 <p>change the rabbit password since the default is &quot;guest&quot;</p>
 </td><td class=code><div class=highlight><pre>
     sudo rabbitmqctl change_password guest <span class="nv">$RABBIT_PASSWORD</span>
+<span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>install_package qpid-cpp-server
+        restart_service qpidd
+    <span class="k">else</span>
+<span class="k">        </span>install_package qpidd
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 
@@ -2453,8 +2470,12 @@ add_nova_opt <span class="s2">&quot;vncserver_proxyclient_address=$VNCSERVER_PRO
 add_nova_opt <span class="s2">&quot;api_paste_config=$NOVA_CONF_DIR/api-paste.ini&quot;</span>
 add_nova_opt <span class="s2">&quot;image_service=nova.image.glance.GlanceImageService&quot;</span>
 add_nova_opt <span class="s2">&quot;ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
-add_nova_opt <span class="s2">&quot;rabbit_host=$RABBIT_HOST&quot;</span>
-add_nova_opt <span class="s2">&quot;rabbit_password=$RABBIT_PASSWORD&quot;</span>
+<span class="k">if </span>is_service_enabled rabbit ; <span class="k">then</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;rabbit_host=$RABBIT_HOST&quot;</span>
+    add_nova_opt <span class="s2">&quot;rabbit_password=$RABBIT_PASSWORD&quot;</span>
+<span class="k">elif </span>is_service_enabled qpid ; <span class="k">then</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;rpc_backend=nova.rpc.impl_qpid&quot;</span>
+<span class="k">fi</span>
 add_nova_opt <span class="s2">&quot;glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
 add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$INSTANCES_PATH&quot;</span> <span class="o">]</span>; <span class="k">then</span>
