@@ -2110,18 +2110,24 @@ changing the permissions so we can run it as our user.</p>
     sudo chown -R <span class="nv">$USER</span>:<span class="k">${</span><span class="nv">USER_GROUP</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We then create a loopback disk and format it to XFS.
-TODO: Reset disks on new pass.</p>
+<p>We then create a loopback disk and format it to XFS.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> ! -e <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        if </span>egrep -q <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1 /proc/mounts; <span class="k">then</span>
+<span class="k">            </span>sudo umount <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
+        <span class="k">fi</span>
+<span class="k">    else</span>
 <span class="k">        </span>mkdir -p  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images
         sudo touch  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
         sudo chown <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
 
         dd <span class="k">if</span><span class="o">=</span>/dev/zero <span class="nv">of</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="se">\</span>
             <span class="nv">bs</span><span class="o">=</span>1024 <span class="nv">count</span><span class="o">=</span>0 <span class="nv">seek</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">}</span>
-        mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
     <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Make a fresh XFS filesystem</p>
+</td><td class=code><div class=highlight><pre>
+    mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
 
 </pre></div></td></tr><tr><td class=docs>
 <p>After the drive being created we mount the disk with a few mount
