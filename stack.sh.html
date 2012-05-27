@@ -1233,7 +1233,7 @@ git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLI
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    </span>git_clone <span class="nv">$QUANTUM_CLIENT_REPO</span> <span class="nv">$QUANTUM_CLIENT_DIR</span> <span class="nv">$QUANTUM_CLIENT_BRANCH</span>
 <span class="k">fi</span>
-<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>quantum</p>
 </td><td class=code><div class=highlight><pre>
@@ -1281,7 +1281,7 @@ allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils li
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$QUANTUM_CLIENT_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
-<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    </span><span class="nb">cd</span> <span class="nv">$QUANTUM_DIR</span>; sudo python setup.py develop
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled m-svc; <span class="k">then</span>
@@ -1677,116 +1677,95 @@ users).  The user system is external (keystone).</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="quantum">
-<h2>Quantum</h2>
+<div class="section" id="quantum-for-controller-or-agent-nodes">
+<h2>Quantum (for controller or agent nodes)</h2>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 770)</p>
+<p>Title underline too short.</p>
+<pre class="literal-block">
+Quantum (for controller or agent nodes)
+-------
+</pre>
+</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Put config files in /etc/quantum for everyone to find</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">QUANTUM_CONF_DIR</span><span class="o">=</span>/etc/quantum
-    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$QUANTUM_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mkdir -p <span class="nv">$QUANTUM_CONF_DIR</span>
+    <span class="k">if</span> <span class="o">[[</span> ! -d /etc/quantum <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo mkdir -p /etc/quantum
     <span class="k">fi</span>
-<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$QUANTUM_CONF_DIR</span>
+<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> /etc/quantum
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Set default values when using Linux Bridge plugin</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>set the config file</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">QUANTUM_LB_CONF_DIR</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/plugins/linuxbridge
-        mkdir -p <span class="nv">$QUANTUM_LB_CONF_DIR</span>
-        <span class="nv">QUANTUM_LB_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_LB_CONF_DIR</span>/linuxbridge_conf.ini
-</pre></div></td></tr><tr><td class=docs>
-<p>must remove this file from existing location, otherwise Quantum will prefer it</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/linuxbridge/linuxbridge_conf.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/linuxbridge/linuxbridge_conf.ini <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-        <span class="k">fi</span>
-        <span class="c">#set the default network interface</span>
-        <span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Quantum service</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
-<span class="k">    </span><span class="nv">QUANTUM_PLUGIN_INI_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/plugins.ini
-</pre></div></td></tr><tr><td class=docs>
-<p>must remove this file from existing location, otherwise Quantum will prefer it</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
-    <span class="k">fi</span>
-
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install deps
-FIXME add to files/apts/quantum, but don't install if not needed!</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">kernel_version</span><span class="o">=</span><span class="sb">`</span>cat /proc/version | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span>
-            install_package openvswitch-switch openvswitch-datapath-dkms linux-headers-<span class="nv">$kernel_version</span>
-        <span class="k">else</span>
-            <span class="c">### FIXME(dtroyer): Find RPMs for OpenVSwitch</span>
-            <span class="nb">echo</span> <span class="s2">&quot;OpenVSwitch packages need to be located&quot;</span>
-        <span class="k">fi</span>
-
-<span class="k">        </span><span class="nv">QUANTUM_OVS_CONF_DIR</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/plugins/openvswitch
-        <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_OVS_CONF_DIR</span>/ovs_quantum_plugin.ini
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create database for the plugin/agent</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
-<span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS ovs_quantum;&#39;</span>
-            mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS ovs_quantum CHARACTER SET utf8;&#39;</span>
-        <span class="k">else</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
-            <span class="nb">exit </span>1
-        <span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Make sure we're using the openvswitch plugin</p>
-</td><td class=code><div class=highlight><pre>
-        sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/openvswitch
+        <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ovs_quantum_plugin.ini
+        <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;ovs_quantum&quot;</span>
+        <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install deps
 FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </td><td class=code><div class=highlight><pre>
         install_package python-configobj
+        <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/linuxbridge
+        <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>linuxbridge_conf.ini
+        <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;quantum_linux_bridge&quot;</span>
+        <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.linuxbridge.LinuxBridgePlugin.LinuxBridgePlugin&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Unknown Quantum plugin &#39;$Q_PLUGIN&#39;.. exiting&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Create database for the plugin/agent</p>
+<p>if needed, move config file from $QUANTUM_DIR/etc/quantum to /etc/quantum</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
-<span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS quantum_linux_bridge;&#39;</span>
-            mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE IF NOT EXISTS quantum_linux_bridge;&#39;</span>
-            <span class="k">if </span>grep -Fxq <span class="s2">&quot;user = &quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-            <span class="k">then</span>
-<span class="k">                </span>sudo sed -i -e <span class="s2">&quot;s/^connection = sqlite$/#connection = sqlite/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-                sudo sed -i -e <span class="s2">&quot;s/^#connection = mysql$/connection = mysql/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-                sudo sed -i -e <span class="s2">&quot;s/^user = .*$/user = $MYSQL_USER/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-                sudo sed -i -e <span class="s2">&quot;s/^pass = .*$/pass = $MYSQL_PASSWORD/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-                sudo sed -i -e <span class="s2">&quot;s/^host = .*$/host = $MYSQL_HOST/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-            <span class="k">else</span>
-<span class="k">                </span>sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/quantum_linux_bridge?charset=utf8/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-            <span class="k">fi</span>
-<span class="k">        else</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
+    mkdir -p /<span class="nv">$Q_PLUGIN_CONF_PATH</span>
+    <span class="nv">Q_PLUGIN_CONF_FILE</span><span class="o">=</span><span class="nv">$Q_PLUGIN_CONF_PATH</span>/<span class="nv">$Q_PLUGIN_CONF_FILENAME</span>
+    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/<span class="nv">$Q_PLUGIN_CONF_FILE</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/<span class="nv">$Q_PLUGIN_CONF_FILE</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/$Q_DB_NAME?charset=utf8/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
+
+    <span class="nv">OVS_ENABLE_TUNNELING</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_ENABLE_TUNNELING</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">&amp;&amp;</span> <span class="nv">$OVS_ENABLE_TUNNELING</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">OVS_VERSION</span><span class="o">=</span><span class="sb">`</span>ovs-vsctl --version | head -n 1 | awk <span class="s1">&#39;{print $4;}&#39;</span><span class="sb">`</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="nv">$OVS_VERSION</span> <span class="se">\&lt;</span> <span class="s2">&quot;1.4&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ! is_service_enabled q-svc ; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;You are running OVS version $OVS_VERSION.&quot;</span>
+            <span class="nb">echo</span> <span class="s2">&quot;OVS 1.4+ is required for tunneling between multiple hosts.&quot;</span>
             <span class="nb">exit </span>1
         <span class="k">fi</span>
+<span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/.*enable-tunneling = .*$/enable-tunneling = $OVS_ENABLE_TUNNELING/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Make sure we're using the linuxbridge plugin</p>
+<p>Quantum service (for controller node)</p>
 </td><td class=code><div class=highlight><pre>
-        sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = quantum.plugins.linuxbridge.LinuxBridgePlugin.LinuxBridgePlugin/g&quot;</span> <span class="nv">$QUANTUM_PLUGIN_INI_FILE</span>
+<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
+<span class="k">    </span><span class="nv">Q_PLUGIN_INI_FILE</span><span class="o">=</span>/etc/quantum/plugins.ini
+    <span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
+</pre></div></td></tr><tr><td class=docs>
+<p>must remove this file from existing location, otherwise Quantum will prefer it</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="nv">$Q_PLUGIN_INI_FILE</span>
     <span class="k">fi</span>
+
 <span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$QUANTUM_CONF_DIR</span>/quantum.conf
+<span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
     <span class="k">fi</span>
-<span class="k">    </span>screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; PYTHONPATH=.:$QUANTUM_CLIENT_DIR:$PYTHONPATH python $QUANTUM_DIR/bin/quantum-server $QUANTUM_CONF_DIR/quantum.conf&quot;</span>
+
+<span class="k">    if </span>is_service_enabled mysql; <span class="k">then</span>
+<span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s2">&quot;DROP DATABASE IF EXISTS $Q_DB_NAME;&quot;</span>
+            mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s2">&quot;CREATE DATABASE IF NOT EXISTS $Q_DB_NAME CHARACTER SET utf8;&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
+            <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span>sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = $Q_PLUGIN_CLASS/g&quot;</span> <span class="nv">$Q_PLUGIN_INI_FILE</span>
+
+    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server $Q_CONF_FILE&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1795,43 +1774,43 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 <span class="k">if </span>is_service_enabled q-agt; <span class="k">then</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>Install deps
+FIXME add to files/apts/quantum, but don't install if not needed!</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">kernel_version</span><span class="o">=</span><span class="sb">`</span>cat /proc/version | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span>
+            install_package make fakeroot dkms openvswitch-switch openvswitch-datapath-dkms linux-headers-<span class="nv">$kernel_version</span>
+        <span class="k">else</span>
+            <span class="c">### FIXME(dtroyer): Find RPMs for OpenVSwitch</span>
+            <span class="nb">echo</span> <span class="s2">&quot;OpenVSwitch packages need to be located&quot;</span>
+        <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
 <p>Set up integration bridge</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
-        sudo ovs-vsctl --no-wait -- --if-exists del-br <span class="nv">$OVS_BRIDGE</span>
+        <span class="k">for </span>PORT in <span class="sb">`</span>sudo ovs-vsctl --no-wait list-ports <span class="nv">$OVS_BRIDGE</span><span class="sb">`</span>; <span class="k">do</span>
+<span class="k">            if</span> <span class="o">[[</span> <span class="s2">&quot;$PORT&quot;</span> <span class="o">=</span>~ tap* <span class="o">]]</span>; <span class="k">then </span><span class="nb">echo</span> <span class="sb">`</span>sudo ip link delete <span class="nv">$PORT</span><span class="sb">`</span> &gt; /dev/null; <span class="k">fi</span>
+<span class="k">            </span>sudo ovs-vsctl --no-wait del-port <span class="nv">$OVS_BRIDGE</span> <span class="nv">$PORT</span>
+        <span class="k">done</span>
+<span class="k">        </span>sudo ovs-vsctl --no-wait -- --if-exists del-br <span class="nv">$OVS_BRIDGE</span>
         sudo ovs-vsctl --no-wait add-br <span class="nv">$OVS_BRIDGE</span>
         sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Start up the quantum &lt;-&gt; openvswitch agent</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">QUANTUM_OVS_CONF_DIR</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/plugins/openvswitch
-        mkdir -p <span class="nv">$QUANTUM_OVS_CONF_DIR</span>
-        <span class="nv">QUANTUM_OVS_CONFIG_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_OVS_CONF_DIR</span>/ovs_quantum_plugin.ini
-        <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
-        <span class="k">fi</span>
-<span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/ovs_quantum?charset=utf8/g&quot;</span> <span class="nv">$QUANTUM_OVS_CONFIG_FILE</span>
-        screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py $QUANTUM_OVS_CONFIG_FILE -v&quot;</span>
+        sudo sed -i -e <span class="s2">&quot;s/.*local-ip = .*/local-ip = $HOST_IP/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
+        <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start up the quantum &lt;-&gt; linuxbridge agent</p>
 </td><td class=code><div class=highlight><pre>
        install_package bridge-utils
-       sudo sed -i -e <span class="s2">&quot;s/^physical_interface = .*$/physical_interface = $QUANTUM_LB_PRIVATE_INTERFACE/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-       <span class="k">if </span>grep -Fxq <span class="s2">&quot;user = &quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-       <span class="k">then</span>
-<span class="k">           </span>sudo sed -i -e <span class="s2">&quot;s/^connection = sqlite$/#connection = sqlite/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-           sudo sed -i -e <span class="s2">&quot;s/^#connection = mysql$/connection = mysql/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-           sudo sed -i -e <span class="s2">&quot;s/^user = .*$/user = $MYSQL_USER/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-           sudo sed -i -e <span class="s2">&quot;s/^pass = .*$/pass = $MYSQL_PASSWORD/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-           sudo sed -i -e <span class="s2">&quot;s/^host = .*$/host = $MYSQL_HOST/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-       <span class="k">else</span>
-<span class="k">           </span>sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/quantum_linux_bridge?charset=utf8/g&quot;</span> <span class="nv">$QUANTUM_LB_CONFIG_FILE</span>
-       <span class="k">fi</span>
-
-<span class="k">       </span>screen_it q-agt <span class="s2">&quot;sleep 4; sudo python $QUANTUM_DIR/quantum/plugins/linuxbridge/agent/linuxbridge_quantum_agent.py $QUANTUM_LB_CONFIG_FILE -v&quot;</span>
+        <span class="c">#set the default network interface</span>
+       <span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
+       sudo sed -i -e <span class="s2">&quot;s/^physical_interface = .*$/physical_interface = $QUANTUM_LB_PRIVATE_INTERFACE/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
+       <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/quantum/plugins/linuxbridge/agent/linuxbridge_quantum_agent.py
     <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Start up the quantum agent</p>
+</td><td class=code><div class=highlight><pre>
+    screen_it q-agt <span class="s2">&quot;sudo python $AGENT_BINARY /$Q_PLUGIN_CONF_FILE -v&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1997,6 +1976,23 @@ to simulate multiple systems.</p>
             yum_install libcgroup-tools
         <span class="k">fi</span>
 <span class="k">    fi</span>
+
+<span class="k">    </span><span class="nv">QEMU_CONF</span><span class="o">=</span>/etc/libvirt/qemu.conf
+    <span class="k">if </span>is_service_enabled quantum <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="nv">$Q_PLUGIN</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> ! sudo grep -q <span class="s1">&#39;^cgroup_device_acl&#39;</span> <span class="nv">$QEMU_CONF</span> ; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>add /dev/net/tun to cgroup_device_acls, needed for type=ethernet interfaces</p>
+</td><td class=code><div class=highlight><pre>
+        sudo chmod 666 <span class="nv">$QEMU_CONF</span>
+        sudo cat <span class="s">&lt;&lt;EOF &gt;&gt; /etc/libvirt/qemu.conf</span>
+<span class="s">cgroup_device_acl = [</span>
+<span class="s">    &quot;/dev/null&quot;, &quot;/dev/full&quot;, &quot;/dev/zero&quot;,</span>
+<span class="s">    &quot;/dev/random&quot;, &quot;/dev/urandom&quot;,</span>
+<span class="s">    &quot;/dev/ptmx&quot;, &quot;/dev/kvm&quot;, &quot;/dev/kqemu&quot;,</span>
+<span class="s">    &quot;/dev/rtc&quot;, &quot;/dev/hpet&quot;,&quot;/dev/net/tun&quot;,</span>
+<span class="s">]</span>
+<span class="s">EOF</span>
+        sudo chmod 644 <span class="nv">$QEMU_CONF</span>
+    <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirt-bin
@@ -2419,17 +2415,18 @@ add_nova_opt <span class="s2">&quot;s3_port=$S3_SERVICE_PORT&quot;</span>
         add_nova_opt <span class="s2">&quot;melange_host=$M_HOST&quot;</span>
         add_nova_opt <span class="s2">&quot;melange_port=$M_PORT&quot;</span>
     <span class="k">fi</span>
-<span class="k">    if </span>is_service_enabled q-svc <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>add_nova_opt <span class="s2">&quot;libvirt_vif_type=ethernet&quot;</span>
-        add_nova_opt <span class="s2">&quot;libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
-        add_nova_opt <span class="s2">&quot;linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver&quot;</span>
-        add_nova_opt <span class="s2">&quot;quantum_use_dhcp=True&quot;</span>
-    <span class="k">elif </span>is_service_enabled q-svc <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>add_nova_opt <span class="s2">&quot;libvirt_vif_type=ethernet&quot;</span>
-        add_nova_opt <span class="s2">&quot;libvirt_vif_driver=nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver&quot;</span>
-        add_nova_opt <span class="s2">&quot;linuxnet_interface_driver=nova.network.linux_net.QuantumLinuxBridgeInterfaceDriver&quot;</span>
-        add_nova_opt <span class="s2">&quot;quantum_use_dhcp=True&quot;</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
+        <span class="nv">LINUXNET_VIF_DRIVER</span><span class="o">=</span><span class="s2">&quot;nova.network.linux_net.LinuxOVSInterfaceDriver&quot;</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="s2">&quot;nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver&quot;</span>
+        <span class="nv">LINUXNET_VIF_DRIVER</span><span class="o">=</span><span class="s2">&quot;nova.network.linux_net.QuantumLinuxBridgeInterfaceDriver&quot;</span>
     <span class="k">fi</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;libvirt_vif_type=ethernet&quot;</span>
+    add_nova_opt <span class="s2">&quot;libvirt_vif_driver=$NOVA_VIF_DRIVER&quot;</span>
+    add_nova_opt <span class="s2">&quot;linuxnet_interface_driver=$LINUXNET_VIF_DRIVER&quot;</span>
+    add_nova_opt <span class="s2">&quot;quantum_use_dhcp=True&quot;</span>
 <span class="k">else</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.manager.$NET_MAN&quot;</span>
 <span class="k">fi</span>
