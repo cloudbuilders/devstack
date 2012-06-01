@@ -331,37 +331,27 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>Abort if localrc is not set</p>
+<p>This script is run by install_os_domU.sh</p>
+<p>It modifies the ubuntu image created by install_os_domU.sh
+and previously moodified by prepare_guest_template.sh</p>
+<p>This script is responsible for:
+- pushing in the DevStack code
+- creating run.sh, to run the code on boot
+It does this by mounting the disk image of the VM.</p>
+<p>The resultant image is then templated and started
+by install_os_domU.sh</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
-<span class="nb">set</span> -e
 
-<span class="nb">declare</span> -a on_exit_hooks
-
-on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="k">for </span>i in <span class="k">$(</span>seq <span class="k">$((${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span> <span class="o">-</span> <span class="m">1</span><span class="k">))</span> -1 0<span class="k">)</span>
-<span class="k">do</span>
-<span class="nb">eval</span> <span class="s2">&quot;${on_exit_hooks[$i]}&quot;</span>
-<span class="k">done</span>
-<span class="o">}</span>
-
-add_on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="nb">local </span><span class="nv">n</span><span class="o">=</span><span class="k">${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span>
-on_exit_hooks<span class="o">[</span><span class="nv">$n</span><span class="o">]=</span><span class="s2">&quot;$*&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$n</span> -eq 0 <span class="o">]]</span>
-<span class="k">then</span>
-<span class="nb">trap </span>on_exit EXIT
-<span class="k">fi</span>
-<span class="o">}</span>
-
-<span class="k">if</span> <span class="o">[</span> ! -e ../../localrc <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You must have a localrc with ALL necessary passwords defined before proceeding.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;See the xen README for required passwords.&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Exit on errors</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+</pre></div></td></tr><tr><td class=docs>
+<p>Echo commands</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This directory</p>
@@ -369,19 +359,22 @@ on_exit_hooks<span class="o">[</span><span class="nv">$n</span><span class="o">]
 <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Include onexit commands</p>
+</td><td class=code><div class=highlight><pre>
+. <span class="nv">$TOP_DIR</span>/scripts/on_exit.sh
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Source params - override xenrc params in your localrc to suite your taste</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source </span>xenrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Echo commands</p>
+<p>Parameters</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o xtrace
-
 <span class="nv">GUEST_NAME</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Directory where we stage the build</p>
+<p>Mount the VDI</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">STAGING_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nv">$TOP_DIR</span>/scripts/manage-vdi open <span class="nv">$GUEST_NAME</span> 0 1 | grep -o <span class="s2">&quot;/tmp/tmp.[[:alnum:]]*&quot;</span><span class="k">)</span>
 add_on_exit <span class="s2">&quot;$TOP_DIR/scripts/manage-vdi close $GUEST_NAME 0 1&quot;</span>
@@ -432,7 +425,7 @@ tar xf /tmp/devstack.tar -C <span class="nv">$STAGING_DIR</span>/opt/stack/devst
 cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/rc.local</span>
 <span class="s"># DIVIDER</span>
 <span class="s">/etc/init.d/networking restart</span>
-<span class="s">GUEST_PASSWORD=$GUEST_PASSWORD STAGING_DIR=/ DO_TGZ=0 bash /opt/stack/devstack/tools/xen/prepare_guest.sh &gt; /opt/stack/prepare_guest.log 2&gt;&amp;1</span>
+<span class="s">chown -R stack /opt/stack</span>
 <span class="s">su -c &quot;/opt/stack/run.sh &gt; /opt/stack/run.sh.log 2&gt;&amp;1&quot; stack</span>
 <span class="s">exit 0</span>
 <span class="s">EOF</span>
@@ -445,8 +438,12 @@ cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/rc.local</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure the hostname</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nv">HOSTS_FILE_IP</span><span class="o">=</span><span class="nv">$PUB_IP</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$MGT_IP</span> !<span class="o">=</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">HOSTS_FILE_IP</span><span class="o">=</span><span class="nv">$MGT_IP</span>
+<span class="k">fi</span>
 cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/hosts</span>
-<span class="s">$MGT_IP $GUEST_NAME</span>
+<span class="s">$HOSTS_FILE_IP $GUEST_NAME</span>
 <span class="s">127.0.0.1 localhost localhost.localdomain</span>
 <span class="s">EOF</span>
 
@@ -510,11 +507,9 @@ cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/opt/stack/run.sh</span>
 <span class="s">#!/bin/bash</span>
 <span class="s">cd /opt/stack/devstack</span>
 <span class="s">killall screen</span>
-<span class="s">UPLOAD_LEGACY_TTY=yes HOST_IP=$PUB_IP VIRT_DRIVER=xenserver FORCE=yes MULTI_HOST=$MULTI_HOST HOST_IP_IFACE=$HOST_IP_IFACE $STACKSH_PARAMS ./stack.sh</span>
+<span class="s">VIRT_DRIVER=xenserver FORCE=yes MULTI_HOST=$MULTI_HOST HOST_IP_IFACE=$HOST_IP_IFACE $STACKSH_PARAMS ./stack.sh</span>
 <span class="s">EOF</span>
 chmod 755 <span class="nv">$STAGING_DIR</span>/opt/stack/run.sh
-
-<span class="nb">echo</span> <span class="s2">&quot;Done&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>

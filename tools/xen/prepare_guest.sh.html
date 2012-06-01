@@ -331,12 +331,27 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>Configurable nuggets</p>
+<p>This script is run on an Ubuntu VM.
+This script is inserted into the VM by prepare_guest_template.sh
+and is run when that VM boots.
+It customizes a fresh Ubuntu install, so it is ready
+to run stack.sh</p>
+<p>This includes installing the XenServer tools,
+creating the user called &quot;stack&quot;,
+and shuts down the VM to signal the script has completed</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
-<span class="nb">set</span> -x
 
+<span class="nb">set</span> -x
+</pre></div></td></tr><tr><td class=docs>
+<p>Echo commands</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o xtrace
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Configurable nuggets</p>
+</td><td class=code><div class=highlight><pre>
 <span class="nv">GUEST_PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
 <span class="nv">STAGING_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">STAGING_DIR</span><span class="k">:-</span><span class="nv">stage</span><span class="k">}</span>
 <span class="nv">DO_TGZ</span><span class="o">=</span><span class="k">${</span><span class="nv">DO_TGZ</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
@@ -350,7 +365,7 @@ chroot <span class="nv">$STAGING_DIR</span> apt-get install -y curl wget ssh ope
 chroot <span class="nv">$STAGING_DIR</span> pip install xenapi
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install guest utilities</p>
+<p>Install XenServer guest utilities</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">XEGUEST</span><span class="o">=</span>xe-guest-utilities_5.6.100-651_amd64.deb
 wget http://images.ansolabs.com/xen/<span class="nv">$XEGUEST</span> -O <span class="nv">$XEGUEST</span>
@@ -424,6 +439,19 @@ setup_vimrc <span class="nv">$STAGING_DIR</span>/opt/stack/.vimrc
     rm -f stage.tgz
     tar cfz stage.tgz stage
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>remove self from local.rc
+so this script is not run again</p>
+</td><td class=code><div class=highlight><pre>
+rm -rf /etc/rc.local
+mv /etc/rc.local.preparebackup /etc/rc.local
+cp <span class="nv">$STAGING_DIR</span>/etc/rc.local <span class="nv">$STAGING_DIR</span>/etc/rc.local.backup
+
+</pre></div></td></tr><tr><td class=docs>
+<p>shutdown to notify we are done</p>
+</td><td class=code><div class=highlight><pre>
+shutdown -h now
 
 
 </pre></div></td></tr><tr><td class=docs>

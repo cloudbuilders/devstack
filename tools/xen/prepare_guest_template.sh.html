@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>xenoneirictemplate.sh</title>
+    <title>prepare_guest_template.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>xenoneirictemplate.sh</h1></th>
+        <th class=docs><h1>prepare_guest_template.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -331,70 +331,80 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>Some of these settings can be found in example preseed files
-however these need to be answered before the netinstall
-is ready to fetch the preseed file, and as such must be here
-to get a fully automated install</p>
+<p>This script is run by install_os_domU.sh</p>
+<p>Parameters:
+- $GUEST_NAME - hostname for the DomU VM</p>
+<p>It modifies the ubuntu image created by install_os_domU.sh</p>
+<p>This script is responsible for cusomtizing the fresh ubuntu
+image so on boot it runs the prepare_guest.sh script
+that modifies the VM so it is ready to run stack.sh.
+It does this by mounting the disk image of the VM.</p>
+<p>The resultant image is started by install_os_domU.sh,
+and once the VM has shutdown, build_xva.sh is run</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
-<span class="c">## makeubuntu.sh, this creates Ubuntu server 11.10 32 and 64 bit templates</span>
-<span class="c">## on Xenserver 6.0.2 Net install only</span>
-<span class="c">## Original Author: David Markey &lt;david.markey@citrix.com&gt;</span>
-<span class="c">## Author: Renuka Apte &lt;renuka.apte@citrix.com&gt;</span>
-<span class="c">## This is not an officially supported guest OS on XenServer 6.0.2</span>
 
-<span class="nv">BASE_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-<span class="nb">source</span> <span class="nv">$BASE_DIR</span>/../../../localrc
 
-<span class="nv">LENNY</span><span class="o">=</span><span class="k">$(</span>xe template-list name-label<span class="o">=</span>Debian<span class="se">\ </span>Lenny<span class="se">\ </span>5.0<span class="se">\ \(</span>32-bit<span class="se">\)</span> --minimal<span class="k">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Exit on errors</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+</pre></div></td></tr><tr><td class=docs>
+<p>Echo commands</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o xtrace
 
-<span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$LENNY</span> <span class="o">]]</span> ; <span class="k">then</span>
-<span class="nb">echo</span> <span class="s2">&quot;Cant find lenny 32bit template, is this on 6.0.2?&quot;</span>
-<span class="nb">exit </span>1
+</pre></div></td></tr><tr><td class=docs>
+<p>This directory</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Include onexit commands</p>
+</td><td class=code><div class=highlight><pre>
+. <span class="nv">$TOP_DIR</span>/scripts/on_exit.sh
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Source params - override xenrc params in your localrc to suite your taste</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source </span>xenrc
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Parameters</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">GUEST_NAME</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Mount the VDI</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">STAGING_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nv">$TOP_DIR</span>/scripts/manage-vdi open <span class="nv">$GUEST_NAME</span> 0 1 | grep -o <span class="s2">&quot;/tmp/tmp.[[:alnum:]]*&quot;</span><span class="k">)</span>
+add_on_exit <span class="s2">&quot;$TOP_DIR/scripts/manage-vdi close $GUEST_NAME 0 1&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure we have a stage</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$STAGING_DIR</span>/etc <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Stage is not properly set up!&quot;</span>
+    <span class="nb">exit </span>1
 <span class="k">fi</span>
 
-<span class="nv">distro</span><span class="o">=</span><span class="s2">&quot;Ubuntu 11.10 for DevStack&quot;</span>
-<span class="nv">arches</span><span class="o">=(</span><span class="s2">&quot;32-bit&quot;</span> <span class="s2">&quot;64-bit&quot;</span><span class="o">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Copy prepare_guest.sh to VM</p>
+</td><td class=code><div class=highlight><pre>
+mkdir -p <span class="nv">$STAGING_DIR</span>/opt/stack/
+cp <span class="nv">$TOP_DIR</span>/prepare_guest.sh <span class="nv">$STAGING_DIR</span>/opt/stack/prepare_guest.sh
 
-<span class="nv">preseedurl</span><span class="o">=</span><span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="s2">&quot;http://images.ansolabs.com/devstackubuntupreseed.cfg&quot;</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>backup rc.local</p>
+</td><td class=code><div class=highlight><pre>
+cp <span class="nv">$STAGING_DIR</span>/etc/rc.local <span class="nv">$STAGING_DIR</span>/etc/rc.local.preparebackup
 
-<span class="nv">NETINSTALL_LOCALE</span><span class="o">=</span><span class="k">${</span><span class="nv">NETINSTALL_LOCALE</span><span class="k">:-</span><span class="nv">en_US</span><span class="k">}</span>
-<span class="nv">NETINSTALL_KEYBOARD</span><span class="o">=</span><span class="k">${</span><span class="nv">NETINSTALL_KEYBOARD</span><span class="k">:-</span><span class="nv">us</span><span class="k">}</span>
-<span class="nv">NETINSTALL_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">NETINSTALL_IFACE</span><span class="k">:-</span><span class="nv">eth3</span><span class="k">}</span>
-
-<span class="k">for </span>arch in <span class="k">${</span><span class="nv">arches</span><span class="p">[@]</span><span class="k">}</span> ; <span class="k">do</span>
-<span class="nb">echo</span> <span class="s2">&quot;Attempting $distro ($arch)&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="k">$(</span>xe template-list name-label<span class="o">=</span><span class="s2">&quot;$distro ($arch)&quot;</span> <span class="nv">params</span><span class="o">=</span>uuid --minimal<span class="k">)</span> <span class="o">]]</span> ; <span class="k">then</span>
-<span class="nb">echo</span> <span class="s2">&quot;$distro ($arch)&quot;</span> already exists, Skipping
-<span class="k">else</span>
-<span class="k">if</span> <span class="o">[</span> -z <span class="nv">$NETINSTALLIP</span> <span class="o">]</span>
-<span class="k">then</span>
-<span class="nb">echo</span> <span class="s2">&quot;NETINSTALLIP not set in localrc&quot;</span>
-<span class="nb">exit </span>1
-<span class="k">fi</span>
-<span class="nv">pvargs</span><span class="o">=</span><span class="s2">&quot;-- quiet console=hvc0 partman/default_filesystem=ext3 locale=${NETINSTALL_LOCALE} console-setup/ask_detect=false keyboard-configuration/layoutcode=${NETINSTALL_KEYBOARD} netcfg/choose_interface=${NETINSTALL_IFACE} netcfg/get_hostname=os netcfg/get_domain=os auto url=${preseedurl}&quot;</span>
-        <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$NETINSTALLIP&quot;</span> !<span class="o">=</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>
-        <span class="k">then</span>
-<span class="k">            </span><span class="nv">netcfgargs</span><span class="o">=</span><span class="s2">&quot;netcfg/disable_autoconfig=true netcfg/get_nameservers=${NAMESERVERS} netcfg/get_ipaddress=${NETINSTALLIP} netcfg/get_netmask=${NETMASK} netcfg/get_gateway=${GATEWAY} netcfg/confirm_static=true&quot;</span>
-            <span class="nv">pvargs</span><span class="o">=</span><span class="s2">&quot;${pvargs} ${netcfgargs}&quot;</span>
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nv">NEWUUID</span><span class="o">=</span><span class="k">$(</span>xe vm-clone <span class="nv">uuid</span><span class="o">=</span><span class="nv">$LENNY</span> new-name-label<span class="o">=</span><span class="s2">&quot;$distro ($arch)&quot;</span><span class="k">)</span>
-        xe template-param-set <span class="nv">uuid</span><span class="o">=</span><span class="nv">$NEWUUID</span> other-config:install-methods<span class="o">=</span>http,ftp <span class="se">\</span>
-         other-config:install-repository<span class="o">=</span>http://archive.ubuntu.net/ubuntu <span class="se">\</span>
-         PV-args<span class="o">=</span><span class="s2">&quot;$pvargs&quot;</span> <span class="se">\</span>
-         other-config:debian-release<span class="o">=</span>oneiric <span class="se">\</span>
-         other-config:default_template<span class="o">=</span><span class="nb">true</span>
-
-<span class="nb">        </span><span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$arch&quot;</span> <span class="o">==</span> <span class="s2">&quot;32-bit&quot;</span> <span class="o">]]</span> ; <span class="k">then</span>
-<span class="k">            </span>xe template-param-set <span class="nv">uuid</span><span class="o">=</span><span class="nv">$NEWUUID</span> other-config:install-arch<span class="o">=</span><span class="s2">&quot;i386&quot;</span>
-        <span class="k">else</span>
-<span class="k">            </span>xe template-param-set <span class="nv">uuid</span><span class="o">=</span><span class="nv">$NEWUUID</span> other-config:install-arch<span class="o">=</span><span class="s2">&quot;amd64&quot;</span>
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Success&quot;</span>
-    <span class="k">fi</span>
-<span class="k">done</span>
-
-<span class="nb">echo</span> <span class="s2">&quot;Done&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>run prepare_guest.sh on boot</p>
+</td><td class=code><div class=highlight><pre>
+cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/rc.local</span>
+<span class="s">GUEST_PASSWORD=$GUEST_PASSWORD STAGING_DIR=/ DO_TGZ=0 bash /opt/stack/prepare_guest.sh &gt; /opt/stack/prepare_guest.log 2&gt;&amp;1</span>
+<span class="s">EOF</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
