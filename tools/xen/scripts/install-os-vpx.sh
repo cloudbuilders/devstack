@@ -19,7 +19,7 @@
 
 set -eux
 
-if [ -a /etc/xensource-inventory]
+if [ -a /etc/xensource-inventory ]
 then
     . /etc/xensource-inventory
 else
