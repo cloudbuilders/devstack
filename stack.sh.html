@@ -2218,54 +2218,104 @@ setup) we configure it with our version of rsync.</p>
 which has some default username and password if you have
 configured keystone it will checkout the directory.</p>
 </td><td class=code><div class=highlight><pre>
-   <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span><span class="s2">&quot;s3token authtoken keystone&quot;</span>
-   <span class="k">else</span>
-<span class="k">       </span><span class="nv">swift_auth_server</span><span class="o">=</span>tempauth
-   <span class="k">fi</span>
+    <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
+<span class="k">        </span><span class="nv">swift_auth_server</span><span class="o">=</span><span class="s2">&quot;s3token authtoken keystone&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">swift_auth_server</span><span class="o">=</span>tempauth
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/proxy-server.conf
+    cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/proxy-server.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
+
+    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT user
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT user <span class="k">${</span><span class="nv">USER</span><span class="k">}</span>
+
+    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT swift_dir
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT swift_dir <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>
+
+    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT workers
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT workers 1
+
+    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT log_level
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT log_level DEBUG
+
+    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT bind_port
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT bind_port <span class="k">${</span><span class="nv">SWIFT_DEFAULT_BIND_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
+
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> pipeline:main pipeline <span class="s2">&quot;catch_errors healthcheck cache ratelimit swift3 ${swift_auth_server} proxy-logging proxy-server&quot;</span>
+
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> app:proxy-server account_autocreate <span class="nb">true</span>
+
+<span class="nb">    </span>cat <span class="s">&lt;&lt;EOF&gt;&gt;${SWIFT_CONFIG_PROXY_SERVER}</span>
+
+<span class="s">[filter:keystone]</span>
+<span class="s">paste.filter_factory = keystone.middleware.swift_auth:filter_factory</span>
+<span class="s">operator_roles = Member,admin</span>
+
+<span class="s"># DIVIDER</span>
+<span class="s">[filter:s3token]</span>
+<span class="s">paste.filter_factory = keystone.middleware.s3_token:filter_factory</span>
+<span class="s">auth_port = ${KEYSTONE_AUTH_PORT}</span>
+<span class="s">auth_host = ${KEYSTONE_AUTH_HOST}</span>
+<span class="s">auth_protocol = ${KEYSTONE_AUTH_PROTOCOL}</span>
+<span class="s">auth_token = ${SERVICE_TOKEN}</span>
+<span class="s">admin_token = ${SERVICE_TOKEN}</span>
+
+<span class="s">[filter:authtoken]</span>
+<span class="s">paste.filter_factory = keystone.middleware.auth_token:filter_factory</span>
+<span class="s">auth_host = ${KEYSTONE_AUTH_HOST}</span>
+<span class="s">auth_port = ${KEYSTONE_AUTH_PORT}</span>
+<span class="s">auth_protocol = ${KEYSTONE_AUTH_PROTOCOL}</span>
+<span class="s">auth_uri = ${KEYSTONE_SERVICE_PROTOCOL}://${KEYSTONE_SERVICE_HOST}:${KEYSTONE_SERVICE_PORT}/</span>
+<span class="s">admin_tenant_name = ${SERVICE_TENANT_NAME}</span>
+<span class="s">admin_user = swift</span>
+<span class="s">admin_password = ${SERVICE_PASSWORD}</span>
+
+<span class="s">[filter:swift3]</span>
+<span class="s">use = egg:swift3#middleware</span>
+<span class="s">EOF</span>
+
+    cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/swift.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf swift-hash swift_hash_path_suffix <span class="k">${</span><span class="nv">SWIFT_HASH</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We do the install of the proxy-server and swift configuration
-replacing a few directives to match our configuration.</p>
-</td><td class=code><div class=highlight><pre>
-   sed -e <span class="s2">&quot;</span>
-<span class="s2">       s,%SWIFT_CONFIG_DIR%,${SWIFT_CONFIG_DIR},g;</span>
-<span class="s2">       s,%USER%,$USER,g;</span>
-<span class="s2">       s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
-<span class="s2">       s,%SERVICE_USERNAME%,swift,g;</span>
-<span class="s2">       s,%SERVICE_PASSWORD%,$SERVICE_PASSWORD,g;</span>
-<span class="s2">       s,%KEYSTONE_SERVICE_PROTOCOL%,$KEYSTONE_SERVICE_PROTOCOL,g;</span>
-<span class="s2">       s,%SERVICE_TOKEN%,${SERVICE_TOKEN},g;</span>
-<span class="s2">       s,%KEYSTONE_API_PORT%,${KEYSTONE_API_PORT},g;</span>
-<span class="s2">       s,%KEYSTONE_AUTH_HOST%,${KEYSTONE_AUTH_HOST},g;</span>
-<span class="s2">       s,%KEYSTONE_AUTH_PORT%,${KEYSTONE_AUTH_PORT},g;</span>
-<span class="s2">       s,%KEYSTONE_AUTH_PROTOCOL%,${KEYSTONE_AUTH_PROTOCOL},g;</span>
-<span class="s2">       s/%AUTH_SERVER%/${swift_auth_server}/g;</span>
-<span class="s2">    &quot;</span> <span class="nv">$FILES</span>/swift/proxy-server.conf | <span class="se">\</span>
-       sudo tee <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/proxy-server.conf
-
-    sed -e <span class="s2">&quot;s/%SWIFT_HASH%/$SWIFT_HASH/&quot;</span> <span class="nv">$FILES</span>/swift/swift.conf &gt; <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf
-
-</pre></div></td></tr><tr><td class=docs>
-<p>We need to generate a object/account/proxy configuration
-emulating 4 nodes on different ports we have a little function
-that help us doing that.</p>
+<p>NOTE(chmou): s3token middleware is not updated yet to use only
+username and password.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">function </span>generate_swift_configuration<span class="o">()</span> <span class="o">{</span>
         <span class="nb">local </span><span class="nv">server_type</span><span class="o">=</span><span class="nv">$1</span>
         <span class="nb">local </span><span class="nv">bind_port</span><span class="o">=</span><span class="nv">$2</span>
         <span class="nb">local </span><span class="nv">log_facility</span><span class="o">=</span><span class="nv">$3</span>
         <span class="nb">local </span>node_number
+        <span class="nb">local </span>swift_node_config
 
         <span class="k">for </span>node_number in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
 <span class="k">            </span><span class="nv">node_path</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
-            sed -e <span class="s2">&quot;</span>
-<span class="s2">                s,%SWIFT_CONFIG_DIR%,${SWIFT_CONFIG_DIR},;</span>
-<span class="s2">                s,%USER%,$USER,;</span>
-<span class="s2">                s,%NODE_PATH%,${node_path},;</span>
-<span class="s2">                s,%BIND_PORT%,${bind_port},;</span>
-<span class="s2">                s,%LOG_FACILITY%,${log_facility},</span>
-<span class="s2">            &quot;</span> <span class="nv">$FILES</span>/swift/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server.conf &gt; <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
+            <span class="nv">swift_node_config</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
+
+            cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server.conf-sample <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span>
+
+            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT user
+            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT user <span class="k">${</span><span class="nv">USER</span><span class="k">}</span>
+
+            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT bind_port
+            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT bind_port <span class="k">${</span><span class="nv">bind_port</span><span class="k">}</span>
+
+            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT swift_dir
+            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT swift_dir <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>
+
+            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT devices
+            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT devices <span class="k">${</span><span class="nv">node_path</span><span class="k">}</span>
+
+            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT log_facility
+            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT log_facility LOG_LOCAL<span class="k">${</span><span class="nv">log_facility</span><span class="k">}</span>
+
+            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT mount_check
+            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT mount_check <span class="nb">false</span>
+
+<span class="nb">            </span>iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-replicator vm_test_mode
+            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-replicator vm_test_mode yes
+
             <span class="nv">bind_port</span><span class="o">=</span><span class="k">$((</span> <span class="k">${</span><span class="nv">bind_port</span><span class="k">}</span> <span class="o">+</span> <span class="m">10</span> <span class="k">))</span>
             <span class="nv">log_facility</span><span class="o">=</span><span class="k">$((</span> <span class="k">${</span><span class="nv">log_facility</span><span class="k">}</span> <span class="o">+</span> <span class="m">1</span> <span class="k">))</span>
         <span class="k">done</span>
@@ -2274,55 +2324,56 @@ that help us doing that.</p>
     generate_swift_configuration container 6011 2
     generate_swift_configuration account 6012 2
 
+</pre></div></td></tr><tr><td class=docs>
+<p>We need to generate a object/account/proxy configuration
+emulating 4 nodes on different ports we have a little function
+that help us doing that.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">swift_log_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/logs
+    rm -rf <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
+    mkdir -p <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>/hourly
+    sudo chown -R <span class="nv">$USER</span>:adm <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
+    sed <span class="s2">&quot;s,%SWIFT_LOGDIR%,${swift_log_dir},&quot;</span> <span class="nv">$FILES</span>/swift/rsyslog.conf | sudo <span class="se">\</span>
+        tee /etc/rsyslog.d/10-swift.conf
+    restart_service rsyslog
 
 </pre></div></td></tr><tr><td class=docs>
 <p>We have some specific configuration for swift for rsyslog. See
 the file /etc/rsyslog.d/10-swift.conf for more info.</p>
 </td><td class=code><div class=highlight><pre>
-   <span class="nv">swift_log_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/logs
-   rm -rf <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
-   mkdir -p <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>/hourly
-   sudo chown -R <span class="nv">$USER</span>:adm <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
-   sed <span class="s2">&quot;s,%SWIFT_LOGDIR%,${swift_log_dir},&quot;</span> <span class="nv">$FILES</span>/swift/rsyslog.conf | sudo <span class="se">\</span>
-       tee /etc/rsyslog.d/10-swift.conf
-   restart_service rsyslog
+    <span class="nb">pushd</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span> &gt;/dev/null <span class="o">&amp;&amp;</span> <span class="o">{</span>
+
+        rm -f *.builder *.ring.gz backups/*.builder backups/*.ring.gz
+
+        <span class="nv">port_number</span><span class="o">=</span>6010
+        swift-ring-builder object.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
+        <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
+<span class="k">            </span>swift-ring-builder object.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
+            <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
+        <span class="k">done</span>
+<span class="k">        </span>swift-ring-builder object.builder rebalance
+
+        <span class="nv">port_number</span><span class="o">=</span>6011
+        swift-ring-builder container.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
+        <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
+<span class="k">            </span>swift-ring-builder container.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
+            <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
+        <span class="k">done</span>
+<span class="k">        </span>swift-ring-builder container.builder rebalance
+
+        <span class="nv">port_number</span><span class="o">=</span>6012
+        swift-ring-builder account.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
+        <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
+<span class="k">            </span>swift-ring-builder account.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
+            <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
+        <span class="k">done</span>
+<span class="k">        </span>swift-ring-builder account.builder rebalance
+
+    <span class="o">}</span> <span class="o">&amp;&amp;</span> <span class="nb">popd</span> &gt;/dev/null
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This is where we create three different rings for swift with
 different object servers binding on different ports.</p>
-</td><td class=code><div class=highlight><pre>
-   <span class="nb">pushd</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span> &gt;/dev/null <span class="o">&amp;&amp;</span> <span class="o">{</span>
-
-       rm -f *.builder *.ring.gz backups/*.builder backups/*.ring.gz
-
-       <span class="nv">port_number</span><span class="o">=</span>6010
-       swift-ring-builder object.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
-       <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">           </span>swift-ring-builder object.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
-           <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
-       <span class="k">done</span>
-<span class="k">       </span>swift-ring-builder object.builder rebalance
-
-       <span class="nv">port_number</span><span class="o">=</span>6011
-       swift-ring-builder container.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
-       <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">           </span>swift-ring-builder container.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
-           <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
-       <span class="k">done</span>
-<span class="k">       </span>swift-ring-builder container.builder rebalance
-
-       <span class="nv">port_number</span><span class="o">=</span>6012
-       swift-ring-builder account.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
-       <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">           </span>swift-ring-builder account.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
-           <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
-       <span class="k">done</span>
-<span class="k">       </span>swift-ring-builder account.builder rebalance
-
-   <span class="o">}</span> <span class="o">&amp;&amp;</span> <span class="nb">popd</span> &gt;/dev/null
-
-</pre></div></td></tr><tr><td class=docs>
-<p>We then can start rsync.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo /etc/init.d/rsync restart <span class="o">||</span> :
@@ -2331,10 +2382,7 @@ different object servers binding on different ports.</p>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>First spawn all the swift services then kill the
-proxy service so we can run it in foreground in screen.
-<tt class="docutils literal"><span class="pre">swift-init</span> ... {stop|restart}</tt> exits with '1' if no servers are running,
-ignore it just in case</p>
+<p>We then can start rsync.</p>
 </td><td class=code><div class=highlight><pre>
    swift-init all restart <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">   </span>swift-init proxy stop <span class="o">||</span> <span class="nb">true</span>
@@ -2344,13 +2392,23 @@ ignore it just in case</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>First spawn all the swift services then kill the
+proxy service so we can run it in foreground in screen.
+<tt class="docutils literal"><span class="pre">swift-init</span> ... {stop|restart}</tt> exits with '1' if no servers are running,
+ignore it just in case</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if </span>is_service_enabled n-vol; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
 <div class="section" id="volume-service">
 <h2>Volume Service</h2>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">if </span>is_service_enabled n-vol; <span class="k">then</span>
+    <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/nova-volumes-backing-file</span><span class="k">}</span>
+        <span class="nv">VOLUME_BACKING_FILE_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE_SIZE</span><span class="k">:-</span><span class="nv">2052M</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure a default volume group called 'nova-volumes' for the nova-volume
 service if it does not yet exist.  If you don't wish to use a file backed
@@ -2358,32 +2416,25 @@ volume group, create your own volume group called 'nova-volumes' before
 invoking stack.sh.</p>
 <p>By default, the backing file is 2G in size, and is stored in /opt/stack.</p>
 </td><td class=code><div class=highlight><pre>
-
-    <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/nova-volumes-backing-file</span><span class="k">}</span>
-        <span class="nv">VOLUME_BACKING_FILE_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE_SIZE</span><span class="k">:-</span><span class="nv">2052M</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Only create if the file doesn't already exists</p>
-</td><td class=code><div class=highlight><pre>
         <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
         <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
+<p>Only create if the file doesn't already exists</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>; <span class="k">fi</span>
 <span class="k">    fi</span>
 
 <span class="k">    if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Remove nova iscsi targets</p>
+<p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
 </td><td class=code><div class=highlight><pre>
         sudo tgtadm --op show --mode target | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | grep Target | cut -f3 -d <span class="s1">&#39; &#39;</span> | sudo xargs -n1 tgt-admin --delete <span class="o">||</span> <span class="nb">true</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Clean out existing volumes</p>
+<p>Remove nova iscsi targets</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">for </span>lv in <span class="sb">`</span>sudo lvs --noheadings -o lv_name <span class="nv">$VOLUME_GROUP</span><span class="sb">`</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>VOLUME_NAME_PREFIX prefixes the LVs we want</p>
+<p>Clean out existing volumes</p>
 </td><td class=code><div class=highlight><pre>
             <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$VOLUME_NAME_PREFIX}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span>sudo lvremove -f <span class="nv">$VOLUME_GROUP</span>/<span class="nv">$lv</span>
@@ -2393,14 +2444,14 @@ invoking stack.sh.</p>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>tgt in oneiric doesn't restart properly if tgtd isn't running
-do it in two steps</p>
+<p>VOLUME_NAME_PREFIX prefixes the LVs we want</p>
 </td><td class=code><div class=highlight><pre>
         sudo stop tgt <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">        </span>sudo start tgt
     <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>bypass redirection to systemctl during restart</p>
+<p>tgt in oneiric doesn't restart properly if tgtd isn't running
+do it in two steps</p>
 </td><td class=code><div class=highlight><pre>
         sudo /sbin/service --skip-redirect tgtd restart
     <span class="k">fi</span>
@@ -2412,12 +2463,12 @@ do it in two steps</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>remove legacy nova.conf</p>
+<p>bypass redirection to systemctl during restart</p>
 </td><td class=code><div class=highlight><pre>
 rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
 
 </pre></div></td></tr><tr><td class=docs>
-<p>(re)create nova.conf</p>
+<p>remove legacy nova.conf</p>
 </td><td class=code><div class=highlight><pre>
 rm -f <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span>
 add_nova_opt <span class="s2">&quot;[DEFAULT]&quot;</span>
@@ -2460,7 +2511,7 @@ add_nova_opt <span class="s2">&quot;s3_port=$S3_SERVICE_PORT&quot;</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;volume_group=$VOLUME_GROUP&quot;</span>
     add_nova_opt <span class="s2">&quot;volume_name_template=${VOLUME_NAME_PREFIX}%s&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>oneiric no longer supports ietadm</p>
+<p>(re)create nova.conf</p>
 </td><td class=code><div class=highlight><pre>
     add_nova_opt <span class="s2">&quot;iscsi_helper=tgtadm&quot;</span>
 <span class="k">fi</span>
@@ -2476,8 +2527,7 @@ add_nova_opt <span class="s2">&quot;sql_connection=$BASE_SQL_CONN/nova?charset=u
 add_nova_opt <span class="s2">&quot;libvirt_type=$LIBVIRT_TYPE&quot;</span>
 add_nova_opt <span class="s2">&quot;instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>All nova-compute workers need to know the vnc configuration options
-These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
+<p>oneiric no longer supports ietadm</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NOVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6080/vnc_auto.html&quot;</span><span class="k">}</span>
@@ -2491,8 +2541,8 @@ These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
 <span class="k">    </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
 <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Address on which instance vncservers will listen on compute hosts.
-For multi-host, this should be the management ip of the compute host.</p>
+<p>All nova-compute workers need to know the vnc configuration options
+These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
 add_nova_opt <span class="s2">&quot;vncserver_listen=$VNCSERVER_LISTEN&quot;</span>
@@ -2524,28 +2574,27 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Provide some transition from EXTRA_FLAGS to EXTRA_OPTS</p>
+<p>Address on which instance vncservers will listen on compute hosts.
+For multi-host, this should be the management ip of the compute host.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$EXTRA_OPTS&quot;</span> <span class="o">&amp;&amp;</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">EXTRA_OPTS</span><span class="o">=</span><span class="nv">$EXTRA_FLAGS</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>You can define extra nova conf flags by defining the array EXTRA_OPTS,
-For Example: EXTRA_OPTS=(foo=true bar=2)</p>
+<p>Provide some transition from EXTRA_FLAGS to EXTRA_OPTS</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">for </span>I in <span class="s2">&quot;${EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Attempt to convert flags to options</p>
+<p>You can define extra nova conf flags by defining the array EXTRA_OPTS,
+For Example: EXTRA_OPTS=(foo=true bar=2)</p>
 </td><td class=code><div class=highlight><pre>
     add_nova_opt <span class="k">${</span><span class="nv">I</span><span class="p">//--</span><span class="k">}</span>
 <span class="k">done</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="xenserver">
-<h2>XenServer</h2>
+<p>Attempt to convert flags to options</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -2558,7 +2607,9 @@ For Example: EXTRA_OPTS=(foo=true bar=2)</p>
     add_nova_opt <span class="s2">&quot;xenapi_connection_password=$XENAPI_PASSWORD&quot;</span>
     add_nova_opt <span class="s2">&quot;flat_injected=False&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Need to avoid crash due to new firewall support</p>
+</div>
+<div class="section" id="xenserver">
+<h2>XenServer</h2>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     add_nova_opt <span class="s2">&quot;firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
@@ -2570,18 +2621,18 @@ For Example: EXTRA_OPTS=(foo=true bar=2)</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Need to avoid crash due to new firewall support</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 <div class="section" id="nova-database">
 <h3>Nova Database</h3>
 </td><td class=code><div class=highlight><pre>
 
+<span class="k">if </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>All nova components talk to a central database.  We will need to do this step
 only once for an entire cluster.</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>(re)create nova database</p>
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS nova;&#39;</span>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE nova;&#39;</span>
@@ -2592,6 +2643,10 @@ only once for an entire cluster.</p>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
 <span class="k">fi</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+<p>(re)create nova database</p>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -2606,16 +2661,12 @@ only once for an entire cluster.</p>
 so send the start command by forcing text into the window.
 Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES</tt></p>
 </td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>launch the glance registry service</p>
-</td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
 <span class="k">    </span>screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>launch the glance api and wait for it to answer before continuing</p>
+<p>launch the glance registry service</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled g-api; <span class="k">then</span>
 <span class="k">    </span>screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf&quot;</span>
@@ -2628,7 +2679,7 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>(re)create keystone database</p>
+<p>launch the glance api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS keystone;&#39;</span>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE keystone CHARACTER SET utf8;&#39;</span>
@@ -2649,13 +2700,13 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <span class="k">    </span>cp -p <span class="nv">$FILES</span>/default_catalog.templates <span class="nv">$KEYSTONE_CATALOG</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Rewrite stock keystone.conf:</p>
+<p>(re)create keystone database</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_token <span class="s2">&quot;$SERVICE_TOKEN&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> sql connection <span class="s2">&quot;$BASE_SQL_CONN/keystone?charset=utf8&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> ec2 driver <span class="s2">&quot;keystone.contrib.ec2.backends.sql.Ec2&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure keystone.conf to use templates</p>
+<p>Rewrite stock keystone.conf:</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$KEYSTONE_CONF</span> catalog driver <span class="s2">&quot;keystone.catalog.backends.templated.TemplatedCatalog&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> catalog template_file <span class="s2">&quot;$KEYSTONE_CATALOG&quot;</span>
@@ -2663,12 +2714,12 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <span class="s2">        /^pipeline.*ec2_extension crud_/s|ec2_extension crud_extension|ec2_extension s3_extension crud_extension|;</span>
 <span class="s2">    &quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Append the S3 bits</p>
+<p>Configure keystone.conf to use templates</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$KEYSTONE_CONF</span> filter:s3_extension paste.filter_factory <span class="s2">&quot;keystone.contrib.s3:S3Extension.factory&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Add swift endpoints to service catalog if swift is enabled</p>
+<p>Append the S3 bits</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.publicURL = http://%SERVICE_HOST%:8080/v1/AUTH_\$(tenant_id)s&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
@@ -2678,7 +2729,7 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Add quantum endpoints to service catalog if quantum is enabled</p>
+<p>Add swift endpoints to service catalog if swift is enabled</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.publicURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
@@ -2693,7 +2744,7 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <span class="s2">    &quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Set up logging</p>
+<p>Add quantum endpoints to service catalog if quantum is enabled</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">LOGGING_ROOT</span><span class="o">=</span><span class="s2">&quot;devel&quot;</span>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -2705,12 +2756,12 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
     iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root handlers <span class="s2">&quot;devel,production&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>initialize keystone database</p>
+<p>Set up logging</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage db_sync
 
 </pre></div></td></tr><tr><td class=docs>
-<p>launch keystone and wait for it to answer before continuing</p>
+<p>initialize keystone database</p>
 </td><td class=code><div class=highlight><pre>
     screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
@@ -2720,14 +2771,14 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>keystone_data.sh creates services, admin and demo users, and roles.</p>
+<p>launch keystone and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
     <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span> <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> <span class="nv">SERVICE_PASSWORD</span><span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> <span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span> <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> <span class="nv">DEVSTACK_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span> <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> <span class="se">\</span>
         bash <span class="nv">$FILES</span>/keystone_data.sh
 
 </pre></div></td></tr><tr><td class=docs>
-<p>create an access key and secret key for nova ec2 register image</p>
+<p>keystone_data.sh creates services, admin and demo users, and roles.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled swift <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 <span class="k">        </span><span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone --os_auth_url<span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> --os_username<span class="o">=</span>nova --os_password<span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> --os_tenant_name<span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> ec2-credentials-create<span class="k">)</span>
@@ -2740,7 +2791,7 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>launch the nova-api and wait for it to answer before continuing</p>
+<p>create an access key and secret key for nova ec2 register image</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
 <span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-api&quot;</span>
@@ -2752,33 +2803,28 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
-happen after we've started the Quantum service.</p>
+<p>launch the nova-api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>create a small network</p>
+<p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
+happen after we've started the Quantum service.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span> <span class="nv">$NETWORK_CREATE_ARGS</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>create some floating ips</p>
+<p>create a small network</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>create a second pool</p>
+<p>create some floating ips</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Launching nova-compute should be as simple as running <tt class="docutils literal"><span class="pre">nova-compute</span></tt> but
-have to do a little more than that in our script.  Since we add the group
-<tt class="docutils literal">libvirtd</tt> to our user in this script, when nova-compute is run it is
-within the context of our original shell (so our groups won't be updated).
-Use 'sg' to execute nova-compute as a member of the libvirtd group.
-We don't check for is_service_enable as screen_it does it for us</p>
+<p>create a second pool</p>
 </td><td class=code><div class=highlight><pre>
 screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_DIR/bin/nova-compute&quot;</span>
 screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-cert&quot;</span>
@@ -2792,11 +2838,20 @@ screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f
 screen_it swift <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; $SWIFT_DIR/bin/swift-proxy-server ${SWIFT_CONFIG_DIR}/proxy-server.conf -v&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Starting the nova-objectstore only if swift service is not enabled.
-Swift will act as s3 objectstore.</p>
+<p>Launching nova-compute should be as simple as running <tt class="docutils literal"><span class="pre">nova-compute</span></tt> but
+have to do a little more than that in our script.  Since we add the group
+<tt class="docutils literal">libvirtd</tt> to our user in this script, when nova-compute is run it is
+within the context of our original shell (so our groups won't be updated).
+Use 'sg' to execute nova-compute as a member of the libvirtd group.
+We don't check for is_service_enable as screen_it does it for us</p>
 </td><td class=code><div class=highlight><pre>
 is_service_enabled swift <span class="o">||</span> <span class="se">\</span>
     screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-objectstore&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Starting the nova-objectstore only if swift service is not enabled.
+Swift will act as s3 objectstore.</p>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -2804,6 +2859,7 @@ is_service_enabled swift <span class="o">||</span> <span class="se">\</span>
 <h1>Install Images</h1>
 </td><td class=code><div class=highlight><pre>
 
+<span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Upload an image to glance.</p>
 <p>The default image is a small <strong>*TTY*</strong> testing image, which lets you login
@@ -2818,11 +2874,6 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 </ul>
 </blockquote>
 </td><td class=code><div class=highlight><pre>
-
-<span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Create a directory for the downloaded image tarballs.</p>
-</td><td class=code><div class=highlight><pre>
     mkdir -p <span class="nv">$FILES</span>/images
 
     <span class="nv">ADMIN_USER</span><span class="o">=</span>admin
@@ -2830,7 +2881,7 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
     <span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>curl -s -d  <span class="s2">&quot;{\&quot;auth\&quot;:{\&quot;passwordCredentials\&quot;: {\&quot;username\&quot;: \&quot;$ADMIN_USER\&quot;, \&quot;password\&quot;: \&quot;$ADMIN_PASSWORD\&quot;}, \&quot;tenantName\&quot;: \&quot;$ADMIN_TENANT\&quot;}}&quot;</span> -H <span class="s2">&quot;Content-type: application/json&quot;</span> http://<span class="nv">$HOST_IP</span>:5000/v2.0/tokens | python -c <span class="s2">&quot;import sys; import json; tok = json.loads(sys.stdin.read()); print tok[&#39;access&#39;][&#39;token&#39;][&#39;id&#39;];&quot;</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Option to upload legacy ami-tty, which works with xenserver</p>
+<p>Create a directory for the downloaded image tarballs.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}http://images.ansolabs.com/tty.tgz&quot;</span>
@@ -2838,7 +2889,7 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 
 <span class="k">    for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Downloads the image (uec ami+aki style), then extracts it.</p>
+<p>Option to upload legacy ami-tty, which works with xenserver</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">IMAGE_FNAME</span><span class="o">=</span><span class="sb">`</span>basename <span class="s2">&quot;$image_url&quot;</span><span class="sb">`</span>
         <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> <span class="o">]</span>; <span class="k">then</span>
@@ -2852,7 +2903,7 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
         <span class="k">case</span> <span class="s2">&quot;$IMAGE_FNAME&quot;</span> in
             *.tar.gz|*.tgz<span class="o">)</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Extract ami and aki files</p>
+<p>Downloads the image (uec ami+aki style), then extracts it.</p>
 </td><td class=code><div class=highlight><pre>
                 <span class="o">[</span> <span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$IMAGE_FNAME&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>
                     <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span> <span class="o">||</span>
@@ -2896,9 +2947,7 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 <span class="k">            </span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --public --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
         <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Use glance client to add the kernel the root filesystem.
-We parse the results of the first upload to get the glance ID of the
-kernel for use when uploading the root filesystem.</p>
+<p>Extract ami and aki files</p>
 </td><td class=code><div class=highlight><pre>
             <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>; <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
             <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -2914,13 +2963,15 @@ kernel for use when uploading the root filesystem.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="run-local-script">
-<h1>Run local script</h1>
+<p>Use glance client to add the kernel the root filesystem.
+We parse the results of the first upload to get the glance ID of the
+kernel for use when uploading the root filesystem.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Run <tt class="docutils literal">local.sh</tt> if it exists to perform user-managed tasks</p>
+</div>
+<div class="section" id="run-local-script">
+<h1>Run local script</h1>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -x <span class="nv">$TOP_DIR</span>/local.sh <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Running user script $TOP_DIR/local.sh&quot;</span>
@@ -2929,9 +2980,7 @@ kernel for use when uploading the root filesystem.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="fin">
-<h1>Fin</h1>
+<p>Run <tt class="docutils literal">local.sh</tt> if it exists to perform user-managed tasks</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">set</span> +o xtrace
@@ -2939,8 +2988,8 @@ kernel for use when uploading the root filesystem.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="using-the-cloud">
-<h1>Using the cloud</h1>
+<div class="section" id="fin">
+<h1>Fin</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
@@ -2948,15 +2997,17 @@ kernel for use when uploading the root filesystem.</p>
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If you installed Horizon on this server you should be able
-to access the site using your browser.</p>
+</div>
+<div class="section" id="using-the-cloud">
+<h1>Using the cloud</h1>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Horizon is now available at http://$SERVICE_HOST/&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If Keystone is present you can point <tt class="docutils literal">nova</tt> cli to this server</p>
+<p>If you installed Horizon on this server you should be able
+to access the site using your browser.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Keystone is serving at $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/&quot;</span>
@@ -2966,26 +3017,28 @@ to access the site using your browser.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Echo HOST_IP - useful for build_uec.sh, which uses dhcp to give the instance an address</p>
+<p>If Keystone is present you can point <tt class="docutils literal">nova</tt> cli to this server</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;This is your host ip: $HOST_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Warn that <tt class="docutils literal">EXTRA_FLAGS</tt> needs to be converted to <tt class="docutils literal">EXTRA_OPTS</tt></p>
+<p>Echo HOST_IP - useful for build_uec.sh, which uses dhcp to give the instance an address</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: EXTRA_FLAGS is defined and may need to be converted to EXTRA_OPTS&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Indicate how long this took to run (bash maintained variable 'SECONDS')</p>
+<p>Warn that <tt class="docutils literal">EXTRA_FLAGS</tt> needs to be converted to <tt class="docutils literal">EXTRA_OPTS</tt></p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Indicate how long this took to run (bash maintained variable 'SECONDS')</p>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
