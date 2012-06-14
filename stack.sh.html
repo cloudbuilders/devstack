@@ -420,6 +420,11 @@ repositories and branches to configure.  <tt class="docutils literal">stackrc</t
 allow you to safely override those settings without being overwritten
 when updating DevStack.</p>
 </td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$TOP_DIR</span>/stackrc <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing $TOP_DIR/stackrc - did you grab more than just stack.sh?&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
 
 </pre></div></td></tr><tr><td class=docs>
 <p>HTTP and HTTPS proxy servers are supported via the usual environment variables
@@ -429,12 +434,12 @@ or on the command line:</p>
 http_proxy=http://proxy.example.com:3128/ ./stack.sh
 </pre>
 </td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$TOP_DIR</span>/stackrc <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing $TOP_DIR/stackrc - did you grab more than just stack.sh?&quot;</span>
-    <span class="nb">exit </span>1
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$http_proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">export </span><span class="nv">http_proxy</span><span class="o">=</span><span class="nv">$http_proxy</span>
 <span class="k">fi</span>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$https_proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">export </span><span class="nv">https_proxy</span><span class="o">=</span><span class="nv">$https_proxy</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Destination path for installation <tt class="docutils literal">DEST</tt></p>
@@ -1171,18 +1176,6 @@ glance client is</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>pip install the dependencies of the package before we do the setup.py
-develop, so that pip and not distutils process the dependency chain</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>setup_develop<span class="o">()</span> <span class="o">{</span>
-    python setup.py egg_info
-    <span class="nv">raw_links</span><span class="o">=</span><span class="sb">`</span>cat *.egg-info/dependency_links.txt | awk <span class="s1">&#39;{print &quot;-f &quot; $1}&#39;</span><span class="sb">`</span>
-    <span class="nv">depend_links</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$raw_links</span> | xargs<span class="sb">`</span>
-    sudo pip install -r *-info/requires.txt <span class="nv">$depend_links</span>
-    sudo python setup.py develop
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>install package requirements</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1281,41 +1274,39 @@ git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLI
 <p>setup our checkouts so they are installed into python path
 allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils literal">import glance.client</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">cd</span> <span class="nv">$KEYSTONECLIENT_DIR</span>; setup_develop
-<span class="nb">cd</span> <span class="nv">$NOVACLIENT_DIR</span>; setup_develop
-<span class="nb">cd</span> <span class="nv">$OPENSTACKCLIENT_DIR</span>; setup_develop
+setup_develop <span class="nv">$KEYSTONECLIENT_DIR</span>
+setup_develop <span class="nv">$NOVACLIENT_DIR</span>
+setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
 <span class="k">if </span>is_service_enabled key g-api n-api swift; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$KEYSTONE_DIR</span>; setup_develop
+<span class="k">    </span>setup_develop <span class="nv">$KEYSTONE_DIR</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$SWIFT_DIR</span>; setup_develop
-    <span class="nb">cd</span> <span class="nv">$SWIFTCLIENT_DIR</span>; setup_develop
-    <span class="nb">cd</span> <span class="nv">$SWIFT3_DIR</span>; setup_develop
+<span class="k">    </span>setup_develop <span class="nv">$SWIFT_DIR</span>
+    setup_develop <span class="nv">$SWIFTCLIENT_DIR</span>
+    setup_develop <span class="nv">$SWIFT3_DIR</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled g-api n-api; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$GLANCE_DIR</span>; setup_develop
+<span class="k">    </span>setup_develop <span class="nv">$GLANCE_DIR</span>
 <span class="k">fi</span>
-<span class="nb">cd</span> <span class="nv">$NOVA_DIR</span>; setup_develop
+setup_develop <span class="nv">$NOVA_DIR</span>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>; setup_develop
+<span class="k">    </span>setup_develop <span class="nv">$HORIZON_DIR</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$QUANTUM_CLIENT_DIR</span>; setup_develop
-<span class="k">fi</span>
-<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$QUANTUM_DIR</span>; setup_develop
+<span class="k">    </span>setup_develop <span class="nv">$QUANTUM_CLIENT_DIR</span>
+    setup_develop <span class="nv">$QUANTUM_DIR</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled m-svc; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$MELANGE_DIR</span>; setup_develop
+<span class="k">    </span>setup_develop <span class="nv">$MELANGE_DIR</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled melange; <span class="k">then</span>
-<span class="k">    </span><span class="nb">cd</span> <span class="nv">$MELANGECLIENT_DIR</span>; setup_develop
+<span class="k">    </span>setup_develop <span class="nv">$MELANGECLIENT_DIR</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Do this _after_ glance is installed to override the old binary</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">cd</span> <span class="nv">$GLANCECLIENT_DIR</span>; setup_develop
+setup_develop <span class="nv">$GLANCECLIENT_DIR</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1702,7 +1693,7 @@ users).  The user system is external (keystone).</p>
 <div class="section" id="quantum-for-controller-or-agent-nodes">
 <h2>Quantum (for controller or agent nodes)</h2>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 791)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 786)</p>
 <p>Title underline too short.</p>
 <pre class="literal-block">
 Quantum (for controller or agent nodes)
@@ -2897,7 +2888,7 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 
     <span class="nv">ADMIN_USER</span><span class="o">=</span>admin
     <span class="nv">ADMIN_TENANT</span><span class="o">=</span>admin
-    <span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>curl -s -d  <span class="s2">&quot;{\&quot;auth\&quot;:{\&quot;passwordCredentials\&quot;: {\&quot;username\&quot;: \&quot;$ADMIN_USER\&quot;, \&quot;password\&quot;: \&quot;$ADMIN_PASSWORD\&quot;}, \&quot;tenantName\&quot;: \&quot;$ADMIN_TENANT\&quot;}}&quot;</span> -H <span class="s2">&quot;Content-type: application/json&quot;</span> http://<span class="nv">$HOST_IP</span>:5000/v2.0/tokens | python -c <span class="s2">&quot;import sys; import json; tok = json.loads(sys.stdin.read()); print tok[&#39;access&#39;][&#39;token&#39;][&#39;id&#39;];&quot;</span><span class="sb">`</span>
+    <span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone --os_tenant_name <span class="nv">$ADMIN_TENANT</span> --os_username <span class="nv">$ADMIN_USER</span> --os_password <span class="nv">$ADMIN_PASSWORD</span> --os_auth_url http://<span class="nv">$HOST_IP</span>:5000/v2.0 token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a directory for the downloaded image tarballs.</p>
@@ -2911,7 +2902,7 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 <p>Option to upload legacy ami-tty, which works with xenserver</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">IMAGE_FNAME</span><span class="o">=</span><span class="sb">`</span>basename <span class="s2">&quot;$image_url&quot;</span><span class="sb">`</span>
-        <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> <span class="o">]</span>; <span class="k">then</span>
+        <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $FILES/$IMAGE_FNAME)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>wget -c <span class="nv">$image_url</span> -O <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span>
         <span class="k">fi</span>
 
