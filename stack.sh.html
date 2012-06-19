@@ -1870,10 +1870,30 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 cp -p <span class="nv">$NOVA_DIR</span>/etc/nova/policy.json <span class="nv">$NOVA_CONF_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>If Nova ships the new rootwrap.d config files, deploy them
+(owned by root) and add a parameter to $NOVA_ROOTWRAP</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ROOTWRAP_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Wipe any existing rootwrap.d files first</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo rm -rf <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
+    <span class="k">fi</span>
+<span class="k">    </span>sudo mkdir -m 755 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
+    sudo cp <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.d/* <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
+    sudo chown -R root:root <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
+    sudo chmod 644 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d/*
+    <span class="nv">NOVA_ROOTWRAP</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP $NOVA_CONF_DIR/rootwrap.d&quot;</span>
+    <span class="nv">ROOTWRAP_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP *&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Set up the rootwrap sudoers</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-<span class="nb">echo</span> <span class="s2">&quot;$USER ALL=(root) NOPASSWD: $NOVA_ROOTWRAP&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+<span class="nb">echo</span> <span class="s2">&quot;$USER ALL=(root) NOPASSWD: $ROOTWRAP_SUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
 chmod 0440 <span class="nv">$TEMPFILE</span>
 sudo chown root:root <span class="nv">$TEMPFILE</span>
 sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
