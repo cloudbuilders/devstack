@@ -1759,17 +1759,25 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 <p>Quantum service (for controller node)</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
-<span class="k">    </span><span class="nv">Q_PLUGIN_INI_FILE</span><span class="o">=</span>/etc/quantum/plugins.ini
-    <span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
 </pre></div></td></tr><tr><td class=docs>
 <p>must remove this file from existing location, otherwise Quantum will prefer it</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="nv">$Q_PLUGIN_INI_FILE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Support prior to common config</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">Q_PLUGIN_INI_FILE</span><span class="o">=</span>/etc/quantum/plugins.ini
+        sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="nv">$Q_PLUGIN_INI_FILE</span>
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
+    <span class="nv">Q_API_PASTE_FILE</span><span class="o">=</span>/etc/quantum/api-paste.ini
+
+    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
     <span class="k">fi</span>
 
-<span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
+<span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="nv">$Q_API_PASTE_FILE</span>
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled mysql; <span class="k">then</span>
@@ -1779,9 +1787,18 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
             <span class="nb">exit </span>1
     <span class="k">fi</span>
-<span class="k">    </span>sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = $Q_PLUGIN_CLASS/g&quot;</span> <span class="nv">$Q_PLUGIN_INI_FILE</span>
 
-    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server $Q_CONF_FILE&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Update either configuration file with plugin or old plugin file
+file checked below exists only in common config version</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/quantum/tests/etc/quantum.conf.test <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/^core_plugin =.*$/core_plugin = $Q_PLUGIN_CLASS/g&quot;</span> <span class="nv">$Q_CONF_FILE</span>
+    <span class="k">else</span>
+<span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = $Q_PLUGIN_CLASS/g&quot;</span> <span class="nv">$Q_PLUGIN_INI_FILE</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
