@@ -483,6 +483,15 @@ override check and attempt installation with <tt class="docutils literal">FORCE=
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p><tt class="docutils literal">stack.sh</tt> keeps function libraries here
+Make sure <tt class="docutils literal">$TOP_DIR/lib</tt> directory is present</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$TOP_DIR</span>/lib <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing devstack/lib - did you grab more than just stack.sh?&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>stack.sh keeps the list of <tt class="docutils literal">apt</tt> and <tt class="docutils literal">pip</tt> dependencies in external
 files, along with config templates and other useful files.  You can find these
 in the <tt class="docutils literal">files</tt> directory (next to this script).  We will reference this
@@ -501,6 +510,14 @@ directory using the <tt class="docutils literal">FILES</tt> variable in this scr
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are already running a stack.sh session.&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;To rejoin this session type &#39;screen -x stack&#39;.&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;To destroy this session, kill the running screen.&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure we only have one volume service enabled.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled cinder <span class="o">&amp;&amp;</span> is_service_enabled n-vol; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: n-vol and cinder must not be enabled at the same time&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
@@ -592,6 +609,25 @@ prerequisites and initialize <tt class="docutils literal">$DEST</tt>.</p>
 <span class="nv">OFFLINE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$OFFLINE</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Destination path for service data</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
+sudo mkdir -p <span class="nv">$DATA_DIR</span>
+sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$DATA_DIR</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="projects">
+<h2>Projects</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Get project function libraries</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
+
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Set the destination directories for openstack projects</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
@@ -640,7 +676,7 @@ prerequisites and initialize <tt class="docutils literal">$DEST</tt>.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the lvm volume group to use/create for iscsi volumes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">VOLUME_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">:-</span><span class="nv">nova</span><span class="p">-volumes</span><span class="k">}</span>
+<span class="nv">VOLUME_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">:-</span><span class="nv">stack</span><span class="p">-volumes</span><span class="k">}</span>
 <span class="nv">VOLUME_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">:-</span><span class="nv">volume</span><span class="p">-</span><span class="k">}</span>
 <span class="nv">INSTANCE_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTANCE_NAME_PREFIX</span><span class="k">:-</span><span class="nv">instance</span><span class="p">-</span><span class="k">}</span>
 
@@ -744,6 +780,7 @@ the required password.  Prompt user for a password and write to localrc.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="nova-network-configuration">
 <h2>Nova Network Configuration</h2>
 </td><td class=code><div class=highlight><pre>
@@ -1096,7 +1133,7 @@ included.  Two bits of metadata are recognized in the prerequisite files:
 - <tt class="docutils literal"># NOPRIME</tt> defers installation to be performed later in stack.sh
 - <tt class="docutils literal"># dist:DISTRO</tt> or <tt class="docutils literal">dist:DISTRO1,DISTRO2</tt> limits the selection</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 504)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 526)</p>
 Unexpected indentation.</div>
 <blockquote>
 of the package to the distros listed.  The distro names are case insensitive.</blockquote>
@@ -1128,6 +1165,10 @@ glance client is</p>
             <span class="k">fi</span>
 <span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ glance <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} glance&quot;</span>
+            <span class="k">fi</span>
+<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> c-* <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ cinder <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} cinder&quot;</span>
             <span class="k">fi</span>
 <span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> n-* <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ nova <span class="o">]]</span>; <span class="k">then</span>
@@ -1258,9 +1299,11 @@ git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLI
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$MELANGE_REPO</span> <span class="nv">$MELANGE_DIR</span> <span class="nv">$MELANGE_BRANCH</span>
 <span class="k">fi</span>
-
 <span class="k">if </span>is_service_enabled melange; <span class="k">then</span>
 <span class="k">    </span>git_clone <span class="nv">$MELANGECLIENT_REPO</span> <span class="nv">$MELANGECLIENT_DIR</span> <span class="nv">$MELANGECLIENT_BRANCH</span>
+<span class="k">fi</span>
+<span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
+<span class="k">    </span>install_cinder
 <span class="k">fi</span>
 
 
@@ -1301,6 +1344,9 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled melange; <span class="k">then</span>
 <span class="k">    </span>setup_develop <span class="nv">$MELANGECLIENT_DIR</span>
+<span class="k">fi</span>
+<span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
+<span class="k">    </span>configure_cinder
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1696,7 +1742,7 @@ users).  The user system is external (keystone).</p>
 <div class="section" id="quantum-for-controller-or-agent-nodes">
 <h2>Quantum (for controller or agent nodes)</h2>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 786)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 808)</p>
 <p>Title underline too short.</p>
 <pre class="literal-block">
 Quantum (for controller or agent nodes)
@@ -2434,7 +2480,9 @@ proxy service so we can run it in foreground in screen.
 ignore it just in case</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">if </span>is_service_enabled n-vol; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
+<span class="k">    </span>init_cinder
+<span class="k">elif </span>is_service_enabled n-vol; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
@@ -2443,14 +2491,14 @@ ignore it just in case</p>
 </td><td class=code><div class=highlight><pre>
 
     <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/nova-volumes-backing-file</span><span class="k">}</span>
+<span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
         <span class="nv">VOLUME_BACKING_FILE_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE_SIZE</span><span class="k">:-</span><span class="nv">2052M</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure a default volume group called 'nova-volumes' for the nova-volume
+<p>Configure a default volume group called '<cite>stack-volumes</cite>' for the volume
 service if it does not yet exist.  If you don't wish to use a file backed
-volume group, create your own volume group called 'nova-volumes' before
-invoking stack.sh.</p>
-<p>By default, the backing file is 2G in size, and is stored in /opt/stack.</p>
+volume group, create your own volume group called <tt class="docutils literal"><span class="pre">stack-volumes</span></tt> before
+invoking <tt class="docutils literal">stack.sh</tt>.</p>
+<p>By default, the backing file is 2G in size, and is stored in <tt class="docutils literal">/opt/stack/data</tt>.</p>
 </td><td class=code><div class=highlight><pre>
         <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
         <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
@@ -2623,9 +2671,15 @@ For multi-host, this should be the management ip of the compute host.</p>
     add_nova_opt <span class="s2">&quot;logging_context_format_string=%(asctime)s %(levelname)s %(name)s [%(request_id)s %(user_name)s %(project_name)s] %(instance)s%(message)s&quot;</span>
 <span class="k">fi</span>
 
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Show user_name and project_name instead of user_id and project_id</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;volume_api_class=nova.volume.cinder.API&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>If cinder is enabled, use the cinder volume driver</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$EXTRA_OPTS&quot;</span> <span class="o">&amp;&amp;</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">EXTRA_OPTS</span><span class="o">=</span><span class="nv">$EXTRA_FLAGS</span>
@@ -2844,7 +2898,8 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <p>create an access key and secret key for nova ec2 register image</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
-<span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-api&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;enabled_apis=$NOVA_ENABLED_APIS&quot;</span>
+    screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-api&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for nova-api to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://127.0.0.1:8774; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;nova-api did not start&quot;</span>
@@ -2884,6 +2939,9 @@ screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nov
 screen_it n-novnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-novncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF --web .&quot;</span>
 screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
 screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-consoleauth&quot;</span>
+<span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
+<span class="k">    </span>start_cinder
+<span class="k">fi</span>
 screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
 screen_it swift <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; $SWIFT_DIR/bin/swift-proxy-server ${SWIFT_CONFIG_DIR}/proxy-server.conf -v&quot;</span>
 
