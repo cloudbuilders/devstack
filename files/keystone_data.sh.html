@@ -349,10 +349,18 @@ alt_demo             alt_demo  Member</p>
 SERVICE_TOKEN - aka admin_token in keystone.conf
 SERVICE_ENDPOINT - local Keystone admin endpoint
 SERVICE_TENANT_NAME - name of tenant containing service accounts
+SERVICE_HOST - host used for endpoint creation
 ENABLED_SERVICES - stack.sh's list of services to start
-DEVSTACK_DIR - Top-level DevStack directory</p>
+DEVSTACK_DIR - Top-level DevStack directory
+KEYSTONE_CATALOG_BACKEND - used to determine service catalog creation</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="defaults">
+<h1>Defaults</h1>
+</td><td class=code><div class=highlight><pre>
 
 <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
 <span class="nv">SERVICE_PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_PASSWORD</span><span class="k">:-</span><span class="nv">$ADMIN_PASSWORD</span><span class="k">}</span>
@@ -361,12 +369,16 @@ DEVSTACK_DIR - Top-level DevStack directory</p>
 <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TENANT_NAME</span><span class="k">:-</span><span class="nv">service</span><span class="k">}</span>
 
 <span class="k">function </span>get_id <span class="o">()</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="sb">`</span><span class="nv">$@</span> | awk <span class="s1">&#39;/ id / { print $4 }&#39;</span><span class="sb">`</span>
+    <span class="nb">echo</span> <span class="sb">`</span><span class="s2">&quot;$@&quot;</span> | awk <span class="s1">&#39;/ id / { print $4 }&#39;</span><span class="sb">`</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Tenants</p>
+</div>
+<div class="section" id="tenants">
+<h1>Tenants</h1>
 </td><td class=code><div class=highlight><pre>
+
 <span class="nv">ADMIN_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create --name<span class="o">=</span>admin<span class="k">)</span>
 <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create --name<span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span><span class="k">)</span>
 <span class="nv">DEMO_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create --name<span class="o">=</span>demo<span class="k">)</span>
@@ -374,8 +386,11 @@ DEVSTACK_DIR - Top-level DevStack directory</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Users</p>
+</div>
+<div class="section" id="users">
+<h1>Users</h1>
 </td><td class=code><div class=highlight><pre>
+
 <span class="nv">ADMIN_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>admin <span class="se">\</span>
                                          --pass<span class="o">=</span><span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
                                          --email<span class="o">=</span>admin@example.com<span class="k">)</span>
@@ -385,8 +400,11 @@ DEVSTACK_DIR - Top-level DevStack directory</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Roles</p>
+</div>
+<div class="section" id="roles">
+<h1>Roles</h1>
 </td><td class=code><div class=highlight><pre>
+
 <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>admin<span class="k">)</span>
 <span class="nv">KEYSTONEADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>KeystoneAdmin<span class="k">)</span>
 <span class="nv">KEYSTONESERVICE_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>KeystoneServiceAdmin<span class="k">)</span>
@@ -420,32 +438,52 @@ keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <s
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure service users/roles</p>
+</div>
+<div class="section" id="services">
+<h1>Services</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">NOVA_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>nova <span class="se">\</span>
-                                        --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-                                        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                                        --email<span class="o">=</span>nova@example.com<span class="k">)</span>
-keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                       --user_id <span class="nv">$NOVA_USER</span> <span class="se">\</span>
-                       --role_id <span class="nv">$ADMIN_ROLE</span>
 
-<span class="nv">GLANCE_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>glance <span class="se">\</span>
-                                          --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-                                          --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                                          --email<span class="o">=</span>glance@example.com<span class="k">)</span>
-keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                       --user_id <span class="nv">$GLANCE_USER</span> <span class="se">\</span>
-                       --role_id <span class="nv">$ADMIN_ROLE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Keystone</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">	</span><span class="nv">KEYSTONE_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
+		--name<span class="o">=</span>keystone <span class="se">\</span>
+		--type<span class="o">=</span>identity <span class="se">\</span>
+		--description<span class="o">=</span><span class="s2">&quot;Keystone Identity Service&quot;</span><span class="k">)</span>
+	keystone endpoint-create <span class="se">\</span>
+	    --region RegionOne <span class="se">\</span>
+		--service_id <span class="nv">$KEYSTONE_SERVICE</span> <span class="se">\</span>
+		--publicurl <span class="s2">&quot;http://$SERVICE_HOST:\$(public_port)s/v2.0&quot;</span> <span class="se">\</span>
+		--adminurl <span class="s2">&quot;http://$SERVICE_HOST:\$(admin_port)s/v2.0&quot;</span> <span class="se">\</span>
+		--internalurl <span class="s2">&quot;http://$SERVICE_HOST:\$(admin_port)s/v2.0&quot;</span>
+<span class="k">fi</span>
 
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>swift <span class="se">\</span>
-                                             --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-                                             --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                                             --email<span class="o">=</span>swift@example.com<span class="k">)</span>
-    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                           --user_id <span class="nv">$SWIFT_USER</span> <span class="se">\</span>
-                           --role_id <span class="nv">$ADMIN_ROLE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Nova</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-cpu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">NOVA_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create <span class="se">\</span>
+        --name<span class="o">=</span>nova <span class="se">\</span>
+        --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --email<span class="o">=</span>nova@example.com<span class="k">)</span>
+    keystone user-role-add <span class="se">\</span>
+        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --user_id <span class="nv">$NOVA_USER</span> <span class="se">\</span>
+        --role_id <span class="nv">$ADMIN_ROLE</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">NOVA_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
+            --name<span class="o">=</span>nova <span class="se">\</span>
+            --type<span class="o">=</span>compute <span class="se">\</span>
+            --description<span class="o">=</span><span class="s2">&quot;Nova Compute Service&quot;</span><span class="k">)</span>
+        keystone endpoint-create <span class="se">\</span>
+            --region RegionOne <span class="se">\</span>
+            --service_id <span class="nv">$NOVA_SERVICE</span> <span class="se">\</span>
+            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:\$(compute_port)s/v1.1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:\$(compute_port)s/v1.1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:\$(compute_port)s/v1.1/\$(tenant_id)s&quot;</span>
+    <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova needs ResellerAdmin role to download images when accessing
 swift through the s3 api. The admin role in swift allows a user
@@ -454,19 +492,142 @@ for a user to act as any tenant. The name of this role is also
 configurable in swift-proxy.conf</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">RESELLER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>ResellerAdmin<span class="k">)</span>
-    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                           --user_id <span class="nv">$NOVA_USER</span> <span class="se">\</span>
-                           --role_id <span class="nv">$RESELLER_ROLE</span>
+    keystone user-role-add <span class="se">\</span>
+        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --user_id <span class="nv">$NOVA_USER</span> <span class="se">\</span>
+        --role_id <span class="nv">$RESELLER_ROLE</span>
 <span class="k">fi</span>
 
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;quantum&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">QUANTUM_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>quantum <span class="se">\</span>
-                                               --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-                                               --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                                               --email<span class="o">=</span>quantum@example.com<span class="k">)</span>
-    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                           --user_id <span class="nv">$QUANTUM_USER</span> <span class="se">\</span>
-                           --role_id <span class="nv">$ADMIN_ROLE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Volume</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-vol&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">VOLUME_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
+            --name<span class="o">=</span>volume <span class="se">\</span>
+            --type<span class="o">=</span>volume <span class="se">\</span>
+            --description<span class="o">=</span><span class="s2">&quot;Volume Service&quot;</span><span class="k">)</span>
+        keystone endpoint-create <span class="se">\</span>
+            --region RegionOne <span class="se">\</span>
+            --service_id <span class="nv">$VOLUME_SERVICE</span> <span class="se">\</span>
+            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8776/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8776/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8776/v1/\$(tenant_id)s&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Glance</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;g-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">GLANCE_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create <span class="se">\</span>
+        --name<span class="o">=</span>glance <span class="se">\</span>
+        --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --email<span class="o">=</span>glance@example.com<span class="k">)</span>
+    keystone user-role-add <span class="se">\</span>
+        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --user_id <span class="nv">$GLANCE_USER</span> <span class="se">\</span>
+        --role_id <span class="nv">$ADMIN_ROLE</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">GLANCE_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
+            --name<span class="o">=</span>glance <span class="se">\</span>
+            --type<span class="o">=</span>image <span class="se">\</span>
+            --description<span class="o">=</span><span class="s2">&quot;Glance Image Service&quot;</span><span class="k">)</span>
+        keystone endpoint-create <span class="se">\</span>
+            --region RegionOne <span class="se">\</span>
+            --service_id <span class="nv">$GLANCE_SERVICE</span> <span class="se">\</span>
+            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:9292/v1&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:9292/v1&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:9292/v1&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Swift</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create <span class="se">\</span>
+        --name<span class="o">=</span>swift <span class="se">\</span>
+        --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --email<span class="o">=</span>swift@example.com<span class="k">)</span>
+    keystone user-role-add <span class="se">\</span>
+        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --user_id <span class="nv">$SWIFT_USER</span> <span class="se">\</span>
+        --role_id <span class="nv">$ADMIN_ROLE</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">SWIFT_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
+            --name<span class="o">=</span>swift <span class="se">\</span>
+            --type<span class="o">=</span><span class="s2">&quot;object-store&quot;</span> <span class="se">\</span>
+            --description<span class="o">=</span><span class="s2">&quot;Swift Service&quot;</span><span class="k">)</span>
+        keystone endpoint-create <span class="se">\</span>
+            --region RegionOne <span class="se">\</span>
+            --service_id <span class="nv">$SWIFT_SERVICE</span> <span class="se">\</span>
+            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8080/v1&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">QUANTUM_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create <span class="se">\</span>
+        --name<span class="o">=</span>quantum <span class="se">\</span>
+        --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --email<span class="o">=</span>quantum@example.com<span class="k">)</span>
+    keystone user-role-add <span class="se">\</span>
+        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --user_id <span class="nv">$QUANTUM_USER</span> <span class="se">\</span>
+        --role_id <span class="nv">$ADMIN_ROLE</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">QUANTUM_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
+            --name<span class="o">=</span>quantum <span class="se">\</span>
+            --type<span class="o">=</span>network <span class="se">\</span>
+            --description<span class="o">=</span><span class="s2">&quot;Quantum Service&quot;</span><span class="k">)</span>
+        keystone endpoint-create <span class="se">\</span>
+            --region RegionOne <span class="se">\</span>
+            --service_id <span class="nv">$QUANTUM_SERVICE</span> <span class="se">\</span>
+            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>EC2</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">EC2_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
+            --name<span class="o">=</span>ec2 <span class="se">\</span>
+            --type<span class="o">=</span>ec2 <span class="se">\</span>
+            --description<span class="o">=</span><span class="s2">&quot;EC2 Compatibility Layer&quot;</span><span class="k">)</span>
+        keystone endpoint-create <span class="se">\</span>
+            --region RegionOne <span class="se">\</span>
+            --service_id <span class="nv">$EC2_SERVICE</span> <span class="se">\</span>
+            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Admin&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>S3</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-obj&quot;</span> <span class="o">||</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">S3_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
+            --name<span class="o">=</span>s3 <span class="se">\</span>
+            --type<span class="o">=</span>s3 <span class="se">\</span>
+            --description<span class="o">=</span><span class="s2">&quot;S3&quot;</span><span class="k">)</span>
+        keystone endpoint-create <span class="se">\</span>
+            --region RegionOne <span class="se">\</span>
+            --service_id <span class="nv">$S3_SERVICE</span> <span class="se">\</span>
+            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:$S3_SERVICE_PORT&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:$S3_SERVICE_PORT&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:$S3_SERVICE_PORT&quot;</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;tempest&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -474,11 +635,16 @@ configurable in swift-proxy.conf</p>
 <p>Tempest has some tests that validate various authorization checks
 between two regular users in separate tenants</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ALT_DEMO_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create --name<span class="o">=</span>alt_demo<span class="k">)</span>
-    <span class="nv">ALT_DEMO_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>alt_demo <span class="se">\</span>
-                                        --pass<span class="o">=</span><span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
-                                        --email<span class="o">=</span>alt_demo@example.com<span class="k">)</span>
-    keystone user-role-add --user <span class="nv">$ALT_DEMO_USER</span> --role <span class="nv">$MEMBER_ROLE</span> --tenant_id <span class="nv">$ALT_DEMO_TENANT</span>
+    <span class="nv">ALT_DEMO_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create <span class="se">\</span>
+        --name<span class="o">=</span>alt_demo<span class="k">)</span>
+    <span class="nv">ALT_DEMO_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create <span class="se">\</span>
+        --name<span class="o">=</span>alt_demo <span class="se">\</span>
+        --pass<span class="o">=</span><span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
+        --email<span class="o">=</span>alt_demo@example.com<span class="k">)</span>
+    keystone user-role-add <span class="se">\</span>
+        --tenant_id <span class="nv">$ALT_DEMO_TENANT</span> <span class="se">\</span>
+        --user_id <span class="nv">$ALT_DEMO_USER</span> <span class="se">\</span>
+        --role_id <span class="nv">$MEMBER_ROLE</span>
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;cinder&quot;</span> <span class="o">]]</span>; <span class="k">then</span>

@@ -2805,7 +2805,7 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 
     <span class="nv">KEYSTONE_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/keystone</span><span class="k">}</span>
     <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_CONF_DIR</span>/keystone.conf
-    <span class="nv">KEYSTONE_CATALOG</span><span class="o">=</span><span class="nv">$KEYSTONE_CONF_DIR</span>/default_catalog.templates
+    <span class="nv">KEYSTONE_CATALOG_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_CATALOG_BACKEND</span><span class="k">:-</span><span class="nv">template</span><span class="k">}</span>
 
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$KEYSTONE_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$KEYSTONE_CONF_DIR</span>
@@ -2816,7 +2816,6 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <span class="k">        </span>cp -p <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf.sample <span class="nv">$KEYSTONE_CONF</span>
         cp -p <span class="nv">$KEYSTONE_DIR</span>/etc/policy.json <span class="nv">$KEYSTONE_CONF_DIR</span>
     <span class="k">fi</span>
-<span class="k">    </span>cp -p <span class="nv">$FILES</span>/default_catalog.templates <span class="nv">$KEYSTONE_CATALOG</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create keystone database</p>
@@ -2824,46 +2823,57 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
     iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_token <span class="s2">&quot;$SERVICE_TOKEN&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> sql connection <span class="s2">&quot;$BASE_SQL_CONN/keystone?charset=utf8&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> ec2 driver <span class="s2">&quot;keystone.contrib.ec2.backends.sql.Ec2&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Rewrite stock keystone.conf:</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$KEYSTONE_CONF</span> catalog driver <span class="s2">&quot;keystone.catalog.backends.templated.TemplatedCatalog&quot;</span>
-    iniset <span class="nv">$KEYSTONE_CONF</span> catalog template_file <span class="s2">&quot;$KEYSTONE_CATALOG&quot;</span>
     sed -e <span class="s2">&quot;</span>
 <span class="s2">        /^pipeline.*ec2_extension crud_/s|ec2_extension crud_extension|ec2_extension s3_extension crud_extension|;</span>
 <span class="s2">    &quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure keystone.conf to use templates</p>
+<p>Rewrite stock keystone.conf:</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$KEYSTONE_CONF</span> filter:s3_extension paste.filter_factory <span class="s2">&quot;keystone.contrib.s3:S3Extension.factory&quot;</span>
 
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;sql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Append the S3 bits</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.publicURL = http://%SERVICE_HOST%:8080/v1/AUTH_\$(tenant_id)s&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-        <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.adminURL = http://%SERVICE_HOST%:8080/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-        <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.internalURL = http://%SERVICE_HOST%:8080/v1/AUTH_\$(tenant_id)s&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-        <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.name = Swift Service&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-    <span class="k">fi</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> catalog driver keystone.catalog.backends.sql.Catalog
+        inicomment <span class="nv">$KEYSTONE_CONF</span> catalog template_file
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">KEYSTONE_CATALOG</span><span class="o">=</span><span class="nv">$KEYSTONE_CONF_DIR</span>/default_catalog.templates
+        cp -p <span class="nv">$FILES</span>/default_catalog.templates <span class="nv">$KEYSTONE_CATALOG</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure keystone.conf to use sql</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.publicURL = http://%SERVICE_HOST%:8080/v1/AUTH_\$(tenant_id)s&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.adminURL = http://%SERVICE_HOST%:8080/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.internalURL = http://%SERVICE_HOST%:8080/v1/AUTH_\$(tenant_id)s&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.name = Swift Service&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+        <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Add swift endpoints to service catalog if swift is enabled</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.publicURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-        <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.adminURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-        <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.internalURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-        <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.name = Quantum Service&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-    <span class="k">fi</span>
+        <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.publicURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.adminURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.internalURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.name = Quantum Service&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+        <span class="k">fi</span>
 
-<span class="k">    </span>sudo sed -e <span class="s2">&quot;</span>
-<span class="s2">        s,%SERVICE_HOST%,$SERVICE_HOST,g;</span>
-<span class="s2">        s,%S3_SERVICE_PORT%,$S3_SERVICE_PORT,g;</span>
-<span class="s2">    &quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
+<span class="k">        </span>sudo sed -e <span class="s2">&quot;</span>
+<span class="s2">            s,%SERVICE_HOST%,$SERVICE_HOST,g;</span>
+<span class="s2">            s,%S3_SERVICE_PORT%,$S3_SERVICE_PORT,g;</span>
+<span class="s2">        &quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Add quantum endpoints to service catalog if quantum is enabled</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$KEYSTONE_CONF</span> catalog driver <span class="s2">&quot;keystone.catalog.backends.templated.TemplatedCatalog&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> catalog template_file <span class="s2">&quot;$KEYSTONE_CATALOG&quot;</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure keystone.conf to use templates</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">LOGGING_ROOT</span><span class="o">=</span><span class="s2">&quot;devel&quot;</span>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -2880,11 +2890,11 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
     <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage db_sync
 
 </pre></div></td></tr><tr><td class=docs>
-<p>initialize keystone database</p>
+<p>Set up the keystone database</p>
 </td><td class=code><div class=highlight><pre>
     screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -O- $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/ 2&gt;&amp;1 | grep -q &#39;200 OK&#39;; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while http_proxy= wget -O- $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/ 2&gt;&amp;1 | grep -q &#39;refused&#39;; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
@@ -2893,14 +2903,20 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <p>launch keystone and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
-    <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span> <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> <span class="nv">SERVICE_PASSWORD</span><span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> <span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span> <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> <span class="nv">DEVSTACK_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span> <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> <span class="se">\</span>
+
+    <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span> <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> <span class="nv">SERVICE_PASSWORD</span><span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> <span class="se">\</span>
+    <span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span> <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> <span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="nv">$SERVICE_HOST</span> <span class="se">\</span>
+    <span class="nv">S3_SERVICE_PORT</span><span class="o">=</span><span class="nv">$S3_SERVICE_PORT</span> <span class="nv">KEYSTONE_CATALOG_BACKEND</span><span class="o">=</span><span class="nv">$KEYSTONE_CATALOG_BACKEND</span> <span class="se">\</span>
+    <span class="nv">DEVSTACK_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span> <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> <span class="se">\</span>
         bash <span class="nv">$FILES</span>/keystone_data.sh
 
 </pre></div></td></tr><tr><td class=docs>
 <p>keystone_data.sh creates services, admin and demo users, and roles.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled swift <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
-<span class="k">        </span><span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone --os_auth_url<span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> --os_username<span class="o">=</span>nova --os_password<span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> --os_tenant_name<span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> ec2-credentials-create<span class="k">)</span>
+<span class="k">        </span><span class="nv">NOVA_USER_ID</span><span class="o">=</span><span class="k">$(</span>keystone user-list | grep <span class="s1">&#39; nova &#39;</span> | get_field 1<span class="k">)</span>
+        <span class="nv">NOVA_TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; $SERVICE_TENANT_NAME &quot;</span> | get_field 1<span class="k">)</span>
+        <span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone ec2-credentials-create --user <span class="nv">$NOVA_USER_ID</span> --tenant_id <span class="nv">$NOVA_TENANT_ID</span><span class="k">)</span>
         <span class="nv">ACCESS_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ access / { print $4 }&#39;</span><span class="k">)</span>
         <span class="nv">SECRET_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ secret / { print $4 }&#39;</span><span class="k">)</span>
         add_nova_opt <span class="s2">&quot;s3_access_key=$ACCESS_KEY&quot;</span>
