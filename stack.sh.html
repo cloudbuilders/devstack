@@ -1805,7 +1805,7 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
             <span class="nb">echo</span> <span class="s2">&quot;OVS 1.4+ is required for tunneling between multiple hosts.&quot;</span>
             <span class="nb">exit </span>1
         <span class="k">fi</span>
-<span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/.*enable-tunneling = .*$/enable-tunneling = $OVS_ENABLE_TUNNELING/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
+<span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/.*enable_tunneling = .*$/enable_tunneling = $OVS_ENABLE_TUNNELING/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -1813,18 +1813,9 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 <p>Quantum service (for controller node)</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>must remove this file from existing location, otherwise Quantum will prefer it</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Support prior to common config</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">Q_PLUGIN_INI_FILE</span><span class="o">=</span>/etc/quantum/plugins.ini
-        sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/plugins.ini <span class="nv">$Q_PLUGIN_INI_FILE</span>
-    <span class="k">fi</span>
 <span class="k">    </span><span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
     <span class="nv">Q_API_PASTE_FILE</span><span class="o">=</span>/etc/quantum/api-paste.ini
+    <span class="nv">Q_POLICY_FILE</span><span class="o">=</span>/etc/quantum/policy.json
 
     <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
@@ -1832,6 +1823,10 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 
 <span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="nv">$Q_API_PASTE_FILE</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="nv">$Q_POLICY_FILE</span>
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled mysql; <span class="k">then</span>
@@ -1843,16 +1838,10 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Update either configuration file with plugin or old plugin file
-file checked below exists only in common config version</p>
+<p>Update either configuration file with plugin</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/quantum/tests/etc/quantum.conf.test <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/^core_plugin =.*$/core_plugin = $Q_PLUGIN_CLASS/g&quot;</span> <span class="nv">$Q_CONF_FILE</span>
-    <span class="k">else</span>
-<span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/^provider =.*$/provider = $Q_PLUGIN_CLASS/g&quot;</span> <span class="nv">$Q_PLUGIN_INI_FILE</span>
-    <span class="k">fi</span>
-
-<span class="k">    </span>screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE&quot;</span>
+    sudo sed -i -e <span class="s2">&quot;s/^core_plugin =.*$/core_plugin = $Q_PLUGIN_CLASS/g&quot;</span> <span class="nv">$Q_CONF_FILE</span>
+    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1882,7 +1871,7 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 <span class="k">        </span>sudo ovs-vsctl --no-wait -- --if-exists del-br <span class="nv">$OVS_BRIDGE</span>
         sudo ovs-vsctl --no-wait add-br <span class="nv">$OVS_BRIDGE</span>
         sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
-        sudo sed -i -e <span class="s2">&quot;s/.*local-ip = .*/local-ip = $HOST_IP/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
+        sudo sed -i -e <span class="s2">&quot;s/.*local_ip = .*/local_ip = $HOST_IP/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
         <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
