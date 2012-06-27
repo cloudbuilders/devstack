@@ -18,7 +18,7 @@
       body { padding-top: 60px; }
       dd { padding: 10px; }
     </style>
-    
+
     <!-- Le javascripts -->
     <script src="../assets/js/jquery-1.7.1.min.js" type="text/javascript" charset="utf-8"></script>
     <script src="../assets/js/bootstrap.js" type="text/javascript" charset="utf-8"></script>
@@ -86,7 +86,10 @@ HOST_IP=w.x.y.z</pre>
             Old log files are cleaned automatically if <code>LOGDAYS</code> is
             set to the number of days of old log files to keep.  <code>LOGDAYS</code>
             defaults to 7.
-            <pre>LOGDAYS=1</pre></dd>
+            <pre>LOGDAYS=1</pre>
+            The Nova logs will be colorized by default (if <code>SYSLOG</code> is not
+            set below); this can be turned off by setting <code>LOG_COLOR</code> false.
+            <pre>LOG_COLOR=False</pre></dd>
 
           <dt>Screen logging</dt>
           <dd>DevStack runs the OpenStack services under <code>screen</code> which
@@ -123,19 +126,41 @@ SYSLOG_PORT=516</pre></dd>
 
           <dt>Swift</dt>
           <dd>Swift is now used as the back-end for the S3-like object store.  If Nova's
-            objectstore (n-obj in ENABLED_SERVICES) is enabled, it will NOT run if
-            Swift is enabled.  Setting
-            the hash value is required and you will be prompted for it if Swift is
+            objectstore (n-obj in <code>ENABLED_SERVICES</code>) is enabled, it will NOT run if
+            Swift is enabled.  Enable Swift by adding it to <code>ENABLED_SERVICES</code>:
+            <pre>ENABLED_SERVICES+=,swift</pre>
+            Setting Swift's hash value is required and you will be prompted for it if Swift is
             enabled so just set it to something already:
             <pre>SWIFT_HASH=66a3d6b56c1f479c8b4e70ab5c2000f5</pre>
             For development purposes the default of 3 replicas is usually not required.
             Set this to 1 to save some resources:
             <pre>SWIFT_REPLICAS=1</pre>
-            The data for Swift is stored in the source tree by default 
+            The data for Swift is stored in the source tree by default
             (<code>$DEST/swift/data</code>) and can be moved by setting
             <code>SWIFT_DATA_DIR</code>.  The directory will be created if
             it does not exist.
             <pre>SWIFT_DATA_DIR=$DEST/data</pre></dd>
+
+          <dt>SQL Service Catalog</dt>
+          <dd>By default DevStack uses Keystone's <code>template</code> service catalog
+            backend.  This backend does not support the <code>service-*</code> and
+            <code>endpoint-*</code> commands of the <code>keystone</code> CLI.  To
+            do so requires the <code>sql</code> backend be enabled:
+            <pre>KEYSTONE_CATALOG_BACKEND=sql</pre>
+            DevStack's default configuration in <code>sql</code> mode is set in
+            <code>files/keystone_data.sh</code></dd>
+
+          <dt>Cinder</dt>
+          <dd>Cinder is the replacement for Nova's volume service.  DevStack will
+            continue to use Nova Volume as the default until some time after
+            Nova changes its default to Cinder.  To enable Cinder replace <code>n-vol</code>
+            in <code>ENABLED_SERVICES</code> with the Cinder services:
+            <pre>ENABLED_SERVICES+=,-n-vol,c-api,c-sch,c-vol</pre>
+            The volume group used to hold the volumes is set by <code>VOLUME_GROUP</code> and
+            the logical volume name prefix is set with <code>VOLUME_NAME_PREFIX</code>.
+            The default values are shown below.
+            <pre>VOLUME_GROUP="stack-volumes"
+VOLUME_NAME_PREFIX="volume-"</pre></dd>
 
           <dt>Multi-host DevStack</dt>
           <dd>Running DevStack with multiple hosts requires a custom <code>localrc</code>
