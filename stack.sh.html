@@ -2925,10 +2925,18 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 </pre></div></td></tr><tr><td class=docs>
 <p>keystone_data.sh creates services, admin and demo users, and roles.</p>
 </td><td class=code><div class=highlight><pre>
+    <span class="nb">export </span><span class="nv">OS_AUTH_URL</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span>
+    <span class="nb">export </span><span class="nv">OS_TENANT_NAME</span><span class="o">=</span>admin
+    <span class="nb">export </span><span class="nv">OS_USERNAME</span><span class="o">=</span>admin
+    <span class="nb">export </span><span class="nv">OS_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up auth creds now that keystone is bootstrapped</p>
+</td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled swift <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 <span class="k">        </span><span class="nv">NOVA_USER_ID</span><span class="o">=</span><span class="k">$(</span>keystone user-list | grep <span class="s1">&#39; nova &#39;</span> | get_field 1<span class="k">)</span>
         <span class="nv">NOVA_TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; $SERVICE_TENANT_NAME &quot;</span> | get_field 1<span class="k">)</span>
-        <span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone ec2-credentials-create --user <span class="nv">$NOVA_USER_ID</span> --tenant_id <span class="nv">$NOVA_TENANT_ID</span><span class="k">)</span>
+        <span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone ec2-credentials-create --user_id <span class="nv">$NOVA_USER_ID</span> --tenant_id <span class="nv">$NOVA_TENANT_ID</span><span class="k">)</span>
         <span class="nv">ACCESS_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ access / { print $4 }&#39;</span><span class="k">)</span>
         <span class="nv">SECRET_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ secret / { print $4 }&#39;</span><span class="k">)</span>
         add_nova_opt <span class="s2">&quot;s3_access_key=$ACCESS_KEY&quot;</span>
@@ -3027,9 +3035,7 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 </td><td class=code><div class=highlight><pre>
     mkdir -p <span class="nv">$FILES</span>/images
 
-    <span class="nv">ADMIN_USER</span><span class="o">=</span>admin
-    <span class="nv">ADMIN_TENANT</span><span class="o">=</span>admin
-    <span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone --os_tenant_name <span class="nv">$ADMIN_TENANT</span> --os_username <span class="nv">$ADMIN_USER</span> --os_password <span class="nv">$ADMIN_PASSWORD</span> --os_auth_url http://<span class="nv">$HOST_IP</span>:5000/v2.0 token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone  token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a directory for the downloaded image tarballs.</p>
