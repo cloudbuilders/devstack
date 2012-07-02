@@ -1144,98 +1144,6 @@ an error.  It is also useful for following along as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>get_packages() collects a list of package names of any type from the
-prerequisite files in <tt class="docutils literal"><span class="pre">files/{apts|pips}</span></tt>.  The list is intended
-to be passed to a package installer such as apt or pip.</p>
-<p>Only packages required for the services in ENABLED_SERVICES will be
-included.  Two bits of metadata are recognized in the prerequisite files:
-- <tt class="docutils literal"># NOPRIME</tt> defers installation to be performed later in stack.sh
-- <tt class="docutils literal"># dist:DISTRO</tt> or <tt class="docutils literal">dist:DISTRO1,DISTRO2</tt> limits the selection</p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 539)</p>
-Unexpected indentation.</div>
-<blockquote>
-of the package to the distros listed.  The distro names are case insensitive.</blockquote>
-<p>get_packages dir</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>get_packages<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">package_dir</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span>file_to_parse
-    <span class="nb">local </span>service
-
-    <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$package_dir&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;No package directory supplied&quot;</span>
-        <span class="k">return </span>1
-    <span class="k">fi</span>
-<span class="k">    for </span>service in general <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Allow individual services to specify dependencies</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">package_dir</span><span class="k">}</span>/<span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} $service&quot;</span>
-        <span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>NOTE(sdague) n-api needs glance for now because that's where
-glance client is</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> n-api <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ nova <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} nova&quot;</span>
-            <span class="k">fi</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ glance <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} glance&quot;</span>
-            <span class="k">fi</span>
-<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> c-* <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ cinder <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} cinder&quot;</span>
-            <span class="k">fi</span>
-<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> n-* <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ nova <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} nova&quot;</span>
-            <span class="k">fi</span>
-<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> g-* <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ glance <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} glance&quot;</span>
-            <span class="k">fi</span>
-<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> key* <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ keystone <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} keystone&quot;</span>
-            <span class="k">fi</span>
-<span class="k">        fi</span>
-<span class="k">    done</span>
-
-<span class="k">    for </span>file in <span class="k">${</span><span class="nv">file_to_parse</span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">        </span><span class="nb">local </span><span class="nv">fname</span><span class="o">=</span><span class="k">${</span><span class="nv">package_dir</span><span class="k">}</span>/<span class="k">${</span><span class="nv">file</span><span class="k">}</span>
-        <span class="nb">local </span>OIFS line package distros distro
-        <span class="o">[[</span> -e <span class="nv">$fname</span> <span class="o">]]</span> <span class="o">||</span> <span class="k">continue</span>
-
-<span class="k">        </span><span class="nv">OIFS</span><span class="o">=</span><span class="nv">$IFS</span>
-        <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\n&#39;</span>
-        <span class="k">for </span>line in <span class="k">$(</span>&lt;<span class="k">${</span><span class="nv">fname</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">            if</span> <span class="o">[[</span> <span class="nv">$line</span> <span class="o">=</span>~ <span class="s2">&quot;NOPRIME&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                continue</span>
-<span class="k">            fi</span>
-
-<span class="k">            if</span> <span class="o">[[</span> <span class="nv">$line</span> <span class="o">=</span>~ <span class="o">(</span>.*<span class="o">)</span><span class="c">#.*dist:([^ ]*) ]]; then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>We are using BASH regexp matching feature.</p>
-</td><td class=code><div class=highlight><pre>
-                <span class="nv">package</span><span class="o">=</span><span class="k">${</span><span class="nv">BASH_REMATCH</span><span class="p">[1]</span><span class="k">}</span>
-                <span class="nv">distros</span><span class="o">=</span><span class="k">${</span><span class="nv">BASH_REMATCH</span><span class="p">[2]</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>In bash ${VAR,,} will lowecase VAR</p>
-</td><td class=code><div class=highlight><pre>
-                <span class="o">[[</span> <span class="k">${</span><span class="nv">distros</span><span class="p">,,</span><span class="k">}</span> <span class="o">=</span>~ <span class="k">${</span><span class="nv">DISTRO</span><span class="p">,,</span><span class="k">}</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="nv">$package</span>
-                <span class="k">continue</span>
-<span class="k">            fi</span>
-
-<span class="k">            </span><span class="nb">echo</span> <span class="k">${</span><span class="nv">line</span><span class="p">%#*</span><span class="k">}</span>
-        <span class="k">done</span>
-<span class="k">        </span><span class="nv">IFS</span><span class="o">=</span><span class="nv">$OIFS</span>
-    <span class="k">done</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>install package requirements</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1762,7 +1670,7 @@ users).  The user system is external (keystone).</p>
 <div class="section" id="quantum-for-controller-or-agent-nodes">
 <h2>Quantum (for controller or agent nodes)</h2>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 821)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 790)</p>
 <p>Title underline too short.</p>
 <pre class="literal-block">
 Quantum (for controller or agent nodes)
