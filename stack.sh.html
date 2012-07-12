@@ -983,10 +983,12 @@ only some quick testing.</p>
 
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>If we are using swift, we can default the s3 port to swift instead
+<p>If we are using swift3, we can default the s3 port to swift instead
 of nova-objectstore</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">S3_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">S3_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
+    <span class="k">if </span>is_service_enabled swift3;then
+        <span class="nv">S3_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">S3_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
+    <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>We only ask for Swift Hash if we have enabled swift service.
 SWIFT_HASH is a random unique string for a swift cluster that
@@ -1192,10 +1194,12 @@ git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLI
 <p>storage service client and and Library</p>
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$SWIFTCLIENT_REPO</span> <span class="nv">$SWIFTCLIENT_DIR</span> <span class="nv">$SWIFTCLIENT_BRANCH</span>
+    <span class="k">if </span>is_service_enabled swift3; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>swift3 middleware to provide S3 emulation to Swift</p>
 </td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$SWIFT3_REPO</span> <span class="nv">$SWIFT3_DIR</span> <span class="nv">$SWIFT3_BRANCH</span>
+        git_clone <span class="nv">$SWIFT3_REPO</span> <span class="nv">$SWIFT3_DIR</span> <span class="nv">$SWIFT3_BRANCH</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled g-api n-api; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -2233,13 +2237,17 @@ setup) we configure it with our version of rsync.</p>
 <span class="k">        </span>sudo sed -i <span class="s1">&#39;/disable *= *yes/ { s/yes/no/ }&#39;</span> /etc/xinetd.d/rsync
     <span class="k">fi</span>
 
+<span class="k">    if </span>is_service_enabled swift3;then
+        <span class="nv">swift_auth_server</span><span class="o">=</span><span class="s2">&quot;s3token &quot;</span>
+    <span class="k">fi</span>
+        
 </pre></div></td></tr><tr><td class=docs>
 <p>By default Swift will be installed with the tempauth middleware
 which has some default username and password if you have
 configured keystone it will checkout the directory.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">        </span><span class="nv">swift_auth_server</span><span class="o">=</span><span class="s2">&quot;s3token authtoken keystone&quot;</span>
+<span class="k">        </span>swift_auth_server+<span class="o">=</span><span class="s2">&quot;authtoken keystone&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nv">swift_auth_server</span><span class="o">=</span>tempauth
     <span class="k">fi</span>
@@ -2262,7 +2270,12 @@ configured keystone it will checkout the directory.</p>
     iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT bind_port
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT bind_port <span class="k">${</span><span class="nv">SWIFT_DEFAULT_BIND_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
 
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> pipeline:main pipeline <span class="s2">&quot;catch_errors healthcheck cache ratelimit swift3 ${swift_auth_server} proxy-logging proxy-server&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Only enable Swift3 if we have it enabled in ENABLED_SERVICES</p>
+</td><td class=code><div class=highlight><pre>
+    is_service_enabled swift3 <span class="o">&amp;&amp;</span> <span class="nv">swift3</span><span class="o">=</span>swift3 <span class="o">||</span> <span class="nv">swift3</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> pipeline:main pipeline <span class="s2">&quot;catch_errors healthcheck cache ratelimit ${swift3} ${swift_auth_server} proxy-logging proxy-server&quot;</span>
 
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> app:proxy-server account_autocreate <span class="nb">true</span>
 
@@ -2271,15 +2284,6 @@ configured keystone it will checkout the directory.</p>
 <span class="s">[filter:keystone]</span>
 <span class="s">paste.filter_factory = keystone.middleware.swift_auth:filter_factory</span>
 <span class="s">operator_roles = Member,admin</span>
-
-<span class="s"># DIVIDER</span>
-<span class="s">[filter:s3token]</span>
-<span class="s">paste.filter_factory = keystone.middleware.s3_token:filter_factory</span>
-<span class="s">auth_port = ${KEYSTONE_AUTH_PORT}</span>
-<span class="s">auth_host = ${KEYSTONE_AUTH_HOST}</span>
-<span class="s">auth_protocol = ${KEYSTONE_AUTH_PROTOCOL}</span>
-<span class="s">auth_token = ${SERVICE_TOKEN}</span>
-<span class="s">admin_token = ${SERVICE_TOKEN}</span>
 
 <span class="s">[filter:authtoken]</span>
 <span class="s">paste.filter_factory = keystone.middleware.auth_token:filter_factory</span>
@@ -2290,12 +2294,24 @@ configured keystone it will checkout the directory.</p>
 <span class="s">admin_tenant_name = ${SERVICE_TENANT_NAME}</span>
 <span class="s">admin_user = swift</span>
 <span class="s">admin_password = ${SERVICE_PASSWORD}</span>
+<span class="s">EOF</span>
+    <span class="k">if </span>is_service_enabled swift3;then
+        cat <span class="s">&lt;&lt;EOF&gt;&gt;${SWIFT_CONFIG_PROXY_SERVER}</span>
+<span class="s"># DIVIDER</span>
+<span class="s">[filter:s3token]</span>
+<span class="s">paste.filter_factory = keystone.middleware.s3_token:filter_factory</span>
+<span class="s">auth_port = ${KEYSTONE_AUTH_PORT}</span>
+<span class="s">auth_host = ${KEYSTONE_AUTH_HOST}</span>
+<span class="s">auth_protocol = ${KEYSTONE_AUTH_PROTOCOL}</span>
+<span class="s">auth_token = ${SERVICE_TOKEN}</span>
+<span class="s">admin_token = ${SERVICE_TOKEN}</span>
 
 <span class="s">[filter:swift3]</span>
 <span class="s">use = egg:swift3#swift3</span>
 <span class="s">EOF</span>
+    <span class="k">fi</span>
 
-    cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/swift.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf
+<span class="k">    </span>cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/swift.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf swift-hash swift_hash_path_suffix <span class="k">${</span><span class="nv">SWIFT_HASH</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2844,7 +2860,7 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up auth creds now that keystone is bootstrapped</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled swift <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
+    <span class="k">if </span>is_service_enabled swift3 <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 <span class="k">        </span><span class="nv">NOVA_USER_ID</span><span class="o">=</span><span class="k">$(</span>keystone user-list | grep <span class="s1">&#39; nova &#39;</span> | get_field 1<span class="k">)</span>
         <span class="nv">NOVA_TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; $SERVICE_TENANT_NAME &quot;</span> | get_field 1<span class="k">)</span>
         <span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone ec2-credentials-create --user_id <span class="nv">$NOVA_USER_ID</span> --tenant_id <span class="nv">$NOVA_TENANT_ID</span><span class="k">)</span>
@@ -2915,12 +2931,12 @@ within the context of our original shell (so our groups won't be updated).
 Use 'sg' to execute nova-compute as a member of the libvirtd group.
 We don't check for is_service_enable as screen_it does it for us</p>
 </td><td class=code><div class=highlight><pre>
-is_service_enabled swift <span class="o">||</span> <span class="se">\</span>
+is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
     screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-objectstore&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Starting the nova-objectstore only if swift service is not enabled.
+<p>Starting the nova-objectstore only if swift3 service is not enabled.
 Swift will act as s3 objectstore.</p>
 </td><td class=code><div class=highlight><pre>
 
