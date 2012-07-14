@@ -492,13 +492,111 @@ inicomment test.ini aaa handlers
 
 rm test.ini
 
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Test option not exist</p>
 </td><td class=code><div class=highlight><pre>
 
+<span class="nb">echo</span> <span class="s2">&quot;Testing enable_service()&quot;</span>
+
+<span class="k">function </span>test_enable_service<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">start</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+    <span class="nb">local </span><span class="nv">add</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
+    <span class="nb">local </span><span class="nv">finish</span><span class="o">=</span><span class="s2">&quot;$3&quot;</span>
+
+    <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="s2">&quot;$start&quot;</span>
+    enable_service <span class="nv">$add</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span> <span class="s2">&quot;$finish&quot;</span> <span class="o">]</span>
+    <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;OK: $start + $add -&gt; $ENABLED_SERVICES&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;changing $start to $finish with $add failed: $ENABLED_SERVICES&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+test_enable_service <span class="s1">&#39;&#39;</span> a <span class="s1">&#39;a&#39;</span>
+test_enable_service <span class="s1">&#39;a&#39;</span> b <span class="s1">&#39;a,b&#39;</span>
+test_enable_service <span class="s1">&#39;a,b&#39;</span> c <span class="s1">&#39;a,b,c&#39;</span>
+test_enable_service <span class="s1">&#39;a,b&#39;</span> c <span class="s1">&#39;a,b,c&#39;</span>
+test_enable_service <span class="s1">&#39;a,b,&#39;</span> c <span class="s1">&#39;a,b,c&#39;</span>
+test_enable_service <span class="s1">&#39;a,b&#39;</span> c,d <span class="s1">&#39;a,b,c,d&#39;</span>
+test_enable_service <span class="s1">&#39;a,b&#39;</span> <span class="s2">&quot;c d&quot;</span> <span class="s1">&#39;a,b,c,d&#39;</span>
+test_enable_service <span class="s1">&#39;a,b,c&#39;</span> c <span class="s1">&#39;a,b,c&#39;</span>
+
+test_enable_service <span class="s1">&#39;a,b,-c&#39;</span> c <span class="s1">&#39;a,b&#39;</span>
+test_enable_service <span class="s1">&#39;a,b,c&#39;</span> -c <span class="s1">&#39;a,b&#39;</span>
+
+<span class="k">function </span>test_disable_service<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">start</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+    <span class="nb">local </span><span class="nv">del</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
+    <span class="nb">local </span><span class="nv">finish</span><span class="o">=</span><span class="s2">&quot;$3&quot;</span>
+
+    <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="s2">&quot;$start&quot;</span>
+    disable_service <span class="s2">&quot;$del&quot;</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span> <span class="s2">&quot;$finish&quot;</span> <span class="o">]</span>
+    <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;OK: $start - $del -&gt; $ENABLED_SERVICES&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;changing $start to $finish with $del failed: $ENABLED_SERVICES&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="nb">echo</span> <span class="s2">&quot;Testing disable_service()&quot;</span>
+test_disable_service <span class="s1">&#39;a,b,c&#39;</span> a <span class="s1">&#39;b,c&#39;</span>
+test_disable_service <span class="s1">&#39;a,b,c&#39;</span> b <span class="s1">&#39;a,c&#39;</span>
+test_disable_service <span class="s1">&#39;a,b,c&#39;</span> c <span class="s1">&#39;a,b&#39;</span>
+
+test_disable_service <span class="s1">&#39;a,b,c&#39;</span> a <span class="s1">&#39;b,c&#39;</span>
+test_disable_service <span class="s1">&#39;b,c&#39;</span> b <span class="s1">&#39;c&#39;</span>
+test_disable_service <span class="s1">&#39;c&#39;</span> c <span class="s1">&#39;&#39;</span>
+test_disable_service <span class="s1">&#39;&#39;</span> d <span class="s1">&#39;&#39;</span>
+
+test_disable_service <span class="s1">&#39;a,b,c,&#39;</span> c <span class="s1">&#39;a,b&#39;</span>
+test_disable_service <span class="s1">&#39;a,b&#39;</span> c <span class="s1">&#39;a,b&#39;</span>
+
+
+<span class="nb">echo</span> <span class="s2">&quot;Testing disable_all_services()&quot;</span>
+<span class="nv">ENABLED_SERVICES</span><span class="o">=</span>a,b,c
+disable_all_services
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">]]</span>
+<span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;disabling all services FAILED: $ENABLED_SERVICES&quot;</span>
+<span class="k">fi</span>
+
+<span class="nb">echo</span> <span class="s2">&quot;Testing disable_negated_services()&quot;</span>
+
+
+<span class="k">function </span>test_disable_negated_services<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">start</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+    <span class="nb">local </span><span class="nv">finish</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
+
+    <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="s2">&quot;$start&quot;</span>
+    disable_negated_services
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span> <span class="s2">&quot;$finish&quot;</span> <span class="o">]</span>
+    <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;OK: $start + $add -&gt; $ENABLED_SERVICES&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;changing $start to $finish failed: $ENABLED_SERVICES&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+test_disable_negated_services <span class="s1">&#39;-a&#39;</span> <span class="s1">&#39;&#39;</span>
+test_disable_negated_services <span class="s1">&#39;-a,a&#39;</span> <span class="s1">&#39;&#39;</span>
+test_disable_negated_services <span class="s1">&#39;-a,-a&#39;</span> <span class="s1">&#39;&#39;</span>
+test_disable_negated_services <span class="s1">&#39;a,-a&#39;</span> <span class="s1">&#39;&#39;</span>
+test_disable_negated_services <span class="s1">&#39;b,a,-a&#39;</span> <span class="s1">&#39;b&#39;</span>
+test_disable_negated_services <span class="s1">&#39;a,b,-a&#39;</span> <span class="s1">&#39;b&#39;</span>
+test_disable_negated_services <span class="s1">&#39;a,-a,b&#39;</span> <span class="s1">&#39;b&#39;</span>
+
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Test comments</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Enabling/disabling services</p>
 </pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </div>
