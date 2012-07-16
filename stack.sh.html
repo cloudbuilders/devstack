@@ -678,6 +678,19 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 <p>Default Quantum Host</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Which Quantum API nova should use</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">NOVA_USE_QUANTUM_API</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_USE_QUANTUM_API</span><span class="k">:-</span><span class="nv">v1</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Default admin username</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_ADMIN_USERNAME</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ADMIN_USERNAME</span><span class="k">:-</span><span class="nv">quantum</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Default auth strategy</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_AUTH_STRATEGY</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_AUTH_STRATEGY</span><span class="k">:-</span><span class="nv">keystone</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Default Melange Port</p>
@@ -826,6 +839,7 @@ we should make sure we use the same variable names as the option names.</p>
 <span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
 <span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">FIXED_NETWORK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_NETWORK_SIZE</span><span class="k">:-</span><span class="nv">256</span><span class="k">}</span>
+<span class="nv">NETWORK_GATEWAY</span><span class="o">=</span><span class="k">${</span><span class="nv">NETWORK_GATEWAY</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.1</span><span class="k">}</span>
 <span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.224/28</span><span class="k">}</span>
 <span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">FlatDHCPManager</span><span class="k">}</span>
 <span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
@@ -1689,8 +1703,12 @@ users).  The user system is external (keystone).</p>
 <span class="k">        </span><span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/openvswitch
         <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ovs_quantum_plugin.ini
         <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;ovs_quantum&quot;</span>
-        <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin&quot;</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v1&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPlugin&quot;</span>
+        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPluginV2&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install deps
 FIXME add to files/apts/quantum, but don't install if not needed!</p>
@@ -1699,8 +1717,12 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
         <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/linuxbridge
         <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>linuxbridge_conf.ini
         <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;quantum_linux_bridge&quot;</span>
-        <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.linuxbridge.LinuxBridgePlugin.LinuxBridgePlugin&quot;</span>
-    <span class="k">else</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v1&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.linuxbridge.LinuxBridgePlugin.LinuxBridgePlugin&quot;</span>
+        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.linuxbridge.lb_quantum_plugin.LinuxBridgePluginV2&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Unknown Quantum plugin &#39;$Q_PLUGIN&#39;.. exiting&quot;</span>
         <span class="nb">exit </span>1
     <span class="k">fi</span>
@@ -1725,6 +1747,12 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
         <span class="k">fi</span>
 <span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/.*enable_tunneling = .*$/enable_tunneling = $OVS_ENABLE_TUNNELING/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
     <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v1&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> AGENT target_v2_api False
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> AGENT target_v2_api True
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1736,15 +1764,15 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
     <span class="nv">Q_POLICY_FILE</span><span class="o">=</span>/etc/quantum/policy.json
 
     <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
+<span class="k">      </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="nv">$Q_API_PASTE_FILE</span>
+<span class="k">      </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="nv">$Q_API_PASTE_FILE</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>sudo mv <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="nv">$Q_POLICY_FILE</span>
+<span class="k">      </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="nv">$Q_POLICY_FILE</span>
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled mysql; <span class="k">then</span>
@@ -1790,7 +1818,7 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
         sudo ovs-vsctl --no-wait add-br <span class="nv">$OVS_BRIDGE</span>
         sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
         sudo sed -i -e <span class="s2">&quot;s/.*local_ip = .*/local_ip = $HOST_IP/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
-        <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py
+        <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start up the quantum &lt;-&gt; linuxbridge agent</p>
@@ -1799,7 +1827,7 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
         <span class="c">#set the default network interface</span>
        <span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
        sudo sed -i -e <span class="s2">&quot;s/^physical_interface = .*$/physical_interface = $QUANTUM_LB_PRIVATE_INTERFACE/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
-       <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="nv">$QUANTUM_DIR</span>/quantum/plugins/linuxbridge/agent/linuxbridge_quantum_agent.py
+       <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/linuxbridge/agent/linuxbridge_quantum_agent.py&quot;</span>
     <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start up the quantum agent</p>
@@ -2514,15 +2542,27 @@ add_nova_opt <span class="s2">&quot;fixed_range=$FIXED_RANGE&quot;</span>
 add_nova_opt <span class="s2">&quot;s3_host=$SERVICE_HOST&quot;</span>
 add_nova_opt <span class="s2">&quot;s3_port=$S3_SERVICE_PORT&quot;</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.quantum.manager.QuantumManager&quot;</span>
-    add_nova_opt <span class="s2">&quot;quantum_connection_host=$Q_HOST&quot;</span>
-    add_nova_opt <span class="s2">&quot;quantum_connection_port=$Q_PORT&quot;</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v1&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.quantum.manager.QuantumManager&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_connection_host=$Q_HOST&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_connection_port=$Q_PORT&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_use_dhcp=True&quot;</span>
 
-    <span class="k">if </span>is_service_enabled melange; <span class="k">then</span>
-<span class="k">        </span>add_nova_opt <span class="s2">&quot;quantum_ipam_lib=nova.network.quantum.melange_ipam_lib&quot;</span>
-        add_nova_opt <span class="s2">&quot;use_melange_mac_generation=True&quot;</span>
-        add_nova_opt <span class="s2">&quot;melange_host=$M_HOST&quot;</span>
-        add_nova_opt <span class="s2">&quot;melange_port=$M_PORT&quot;</span>
+        <span class="k">if </span>is_service_enabled melange; <span class="k">then</span>
+<span class="k">            </span>add_nova_opt <span class="s2">&quot;quantum_ipam_lib=nova.network.quantum.melange_ipam_lib&quot;</span>
+            add_nova_opt <span class="s2">&quot;use_melange_mac_generation=True&quot;</span>
+            add_nova_opt <span class="s2">&quot;melange_host=$M_HOST&quot;</span>
+            add_nova_opt <span class="s2">&quot;melange_port=$M_PORT&quot;</span>
+        <span class="k">fi</span>
+
+<span class="k">    elif</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>add_nova_opt <span class="s2">&quot;network_api_class=nova.network.quantumv2.api.API&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_admin_username=$Q_ADMIN_USERNAME&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_admin_password=$SERVICE_PASSWORD&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_admin_auth_url=$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_auth_strategy=$Q_AUTH_STRATEGY&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_admin_tenant_name=$SERVICE_TENANT_NAME&quot;</span>
+        add_nova_opt <span class="s2">&quot;quantum_url=http://$Q_HOST:$Q_PORT&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -2535,7 +2575,6 @@ add_nova_opt <span class="s2">&quot;s3_port=$S3_SERVICE_PORT&quot;</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;libvirt_vif_type=ethernet&quot;</span>
     add_nova_opt <span class="s2">&quot;libvirt_vif_driver=$NOVA_VIF_DRIVER&quot;</span>
     add_nova_opt <span class="s2">&quot;linuxnet_interface_driver=$LINUXNET_VIF_DRIVER&quot;</span>
-    add_nova_opt <span class="s2">&quot;quantum_use_dhcp=True&quot;</span>
 <span class="k">else</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.manager.$NET_MAN&quot;</span>
 <span class="k">fi</span>
@@ -2788,9 +2827,9 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <p>Add swift endpoints to service catalog if swift is enabled</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.publicURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.adminURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.internalURL = http://%SERVICE_HOST%:9696/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.publicURL = http://%SERVICE_HOST%:$Q_PORT/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.adminURL = http://%SERVICE_HOST%:$Q_PORT/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.internalURL = http://%SERVICE_HOST%:$Q_PORT/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
             <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.name = Quantum Service&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
         <span class="k">fi</span>
 
@@ -2888,25 +2927,39 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <p>Launch the nova-api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v1&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
 happen after we've started the Quantum service.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span> <span class="nv">$NETWORK_CREATE_ARGS</span>
+        <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span> <span class="nv">$NETWORK_CREATE_ARGS</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a small network</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+        <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create some floating ips</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
-<span class="k">fi</span>
+        <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; demo &quot;</span> | get_field 1<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a second pool</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --os_token <span class="nv">$Q_ADMIN_USERNAME</span> --os_url http://<span class="nv">$Q_HOST</span>:<span class="nv">$Q_PORT</span> --tenant_id <span class="nv">$TENANT_ID</span> net1 | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create a small network</p>
+</td><td class=code><div class=highlight><pre>
+        quantum subnet-create --os_token <span class="nv">$Q_ADMIN_USERNAME</span> --os_url http://<span class="nv">$Q_HOST</span>:<span class="nv">$Q_PORT</span> --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway  <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create a subnet</p>
 </td><td class=code><div class=highlight><pre>
 screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_DIR/bin/nova-compute&quot;</span>
 screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-cert&quot;</span>
