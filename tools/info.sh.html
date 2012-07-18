@@ -370,6 +370,11 @@ pkg|&lt;package&gt;|&lt;version&gt;</blockquote>
 <span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Import common functions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Source params</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
@@ -381,7 +386,27 @@ pkg|&lt;package&gt;|&lt;version&gt;</blockquote>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
+<div class="section" id="os">
+<h1>OS</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Determine what OS we're using</p>
+</td><td class=code><div class=highlight><pre>
+GetDistro
+
+<span class="nb">echo</span> <span class="s2">&quot;os|distro=$DISTRO&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;os|vendor=$os_VENDOR&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;os|release=$os_RELEASE&quot;</span>
+<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$os_UPDATE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;os|version=$os_UPDATE&quot;</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="repos">
 <h1>Repos</h1>
 </td><td class=code><div class=highlight><pre>
@@ -409,54 +434,6 @@ pkg|&lt;package&gt;|&lt;version&gt;</blockquote>
     <span class="k">fi</span>
 <span class="k">done</span>
 
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="os">
-<h1>OS</h1>
-</td><td class=code><div class=highlight><pre>
-
-GetOSInfo<span class="o">()</span> <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Figure out which vedor we are</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> -r /etc/lsb-release <span class="o">]</span>; <span class="k">then</span>
-        . /etc/lsb-release
-        <span class="nv">VENDORNAME</span><span class="o">=</span><span class="nv">$DISTRIB_ID</span>
-        <span class="nv">RELEASE</span><span class="o">=</span><span class="nv">$DISTRIB_RELEASE</span>
-    <span class="k">else</span>
-<span class="k">        for </span>r in RedHat CentOS Fedora; <span class="k">do</span>
-<span class="k">            </span><span class="nv">VENDORPKG</span><span class="o">=</span><span class="s2">&quot;`echo $r | tr [:upper:] [:lower:]`-release&quot;</span>
-            <span class="nv">VENDORNAME</span><span class="o">=</span><span class="nv">$r</span>
-            <span class="nv">RELEASE</span><span class="o">=</span><span class="sb">`</span>rpm -q --queryformat <span class="s1">&#39;%{VERSION}&#39;</span> <span class="nv">$VENDORPKG</span><span class="sb">`</span>
-            <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="o">=</span> 0 <span class="o">]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nb">break</span>
-<span class="nb">            </span><span class="k">fi</span>
-<span class="k">            </span><span class="nv">VENDORNAME</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="k">done</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Get update level</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;`grep Update /etc/redhat-release`&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Get update</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="nv">UPDATE</span><span class="o">=</span><span class="sb">`</span>cat /etc/redhat-release | sed s/.*Update<span class="se">\ </span>// | sed s/<span class="se">\)</span><span class="nv">$/</span>/<span class="sb">`</span>
-        <span class="k">else</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Assume update 0</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="nv">UPDATE</span><span class="o">=</span>0
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;os|vendor=$VENDORNAME&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;os|release=$RELEASE&quot;</span>
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$UPDATE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;os|version=$UPDATE&quot;</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-GetOSInfo
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -469,70 +446,23 @@ GetOSInfo
 <li>We are going to check packages only for the services needed.</li>
 <li>We are parsing the packages files and detecting metadatas.</li>
 </ul>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 62)</p>
-Bullet list ends without a blank line; unexpected unindent.</div>
-<blockquote>
-<ul class="simple">
-<li>If we have the meta-keyword dist:DISTRO or
-dist:DISTRO1,DISTRO2 it will be installed only for those
-distros (case insensitive).</li>
-</ul>
-</blockquote>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>get_packages<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;general&quot;</span>
-    <span class="nb">local </span>service
 
-    <span class="k">for </span>service in <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Allow individual services to specify dependencies</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$FILES</span>/apts/<span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} $service&quot;</span>
-        <span class="k">fi</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> n-* <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ nova <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} nova&quot;</span>
-            <span class="k">fi</span>
-<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> g-* <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ glance <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} glance&quot;</span>
-            <span class="k">fi</span>
-<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> key* <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ keystone <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} keystone&quot;</span>
-            <span class="k">fi</span>
-<span class="k">        fi</span>
-<span class="k">    done</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">PKG_DIR</span><span class="o">=</span><span class="nv">$FILES</span>/apts
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">PKG_DIR</span><span class="o">=</span><span class="nv">$FILES</span>/rpms
+<span class="k">fi</span>
 
-<span class="k">    for </span>file in <span class="k">${</span><span class="nv">file_to_parse</span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">        </span><span class="nb">local </span><span class="nv">fname</span><span class="o">=</span><span class="k">${</span><span class="nv">FILES</span><span class="k">}</span>/apts/<span class="k">${</span><span class="nv">file</span><span class="k">}</span>
-        <span class="nb">local </span>OIFS line package distros distro
-        <span class="o">[[</span> -e <span class="nv">$fname</span> <span class="o">]]</span> <span class="o">||</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">&quot;missing: $fname&quot;</span>; <span class="nb">exit </span>1; <span class="o">}</span>
-
-        <span class="nv">OIFS</span><span class="o">=</span><span class="nv">$IFS</span>
-        <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\n&#39;</span>
-        <span class="k">for </span>line in <span class="k">$(</span>&lt;<span class="k">${</span><span class="nv">fname</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">            if</span> <span class="o">[[</span> <span class="nv">$line</span> <span class="o">=</span>~ <span class="o">(</span>.*<span class="o">)</span><span class="c">#.*dist:([^ ]*) ]]; then # We are using BASH regexp matching feature.</span>
-                        <span class="nv">package</span><span class="o">=</span><span class="k">${</span><span class="nv">BASH_REMATCH</span><span class="p">[1]</span><span class="k">}</span>
-                        <span class="nv">distros</span><span class="o">=</span><span class="k">${</span><span class="nv">BASH_REMATCH</span><span class="p">[2]</span><span class="k">}</span>
-                        <span class="k">for </span>distro in <span class="k">${</span><span class="nv">distros</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>  <span class="c">#In bash ${VAR,,} will lowecase VAR</span>
-                            <span class="o">[[</span> <span class="k">${</span><span class="nv">distro</span><span class="p">,,</span><span class="k">}</span> <span class="o">==</span> <span class="k">${</span><span class="nv">DISTRO</span><span class="p">,,</span><span class="k">}</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="nv">$package</span>
-                        <span class="k">done</span>
-<span class="k">                        continue</span>
-<span class="k">            fi</span>
-
-<span class="k">            </span><span class="nb">echo</span> <span class="k">${</span><span class="nv">line</span><span class="p">%#*</span><span class="k">}</span>
-        <span class="k">done</span>
-<span class="k">        </span><span class="nv">IFS</span><span class="o">=</span><span class="nv">$OIFS</span>
-    <span class="k">done</span>
-<span class="o">}</span>
-
-<span class="k">for </span>p in <span class="k">$(</span>get_packages<span class="k">)</span>; <span class="k">do</span>
-<span class="k">    </span><span class="nv">ver</span><span class="o">=</span><span class="k">$(</span>dpkg -s <span class="nv">$p</span> 2&gt;/dev/null | grep <span class="s1">&#39;^Version: &#39;</span> | cut -d<span class="s1">&#39; &#39;</span> -f2<span class="k">)</span>
-    <span class="nb">echo</span> <span class="s2">&quot;pkg|${p}|${ver}&quot;</span>
+<span class="k">for </span>p in <span class="k">$(</span>get_packages <span class="nv">$PKG_DIR</span><span class="k">)</span>; <span class="k">do</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">ver</span><span class="o">=</span><span class="k">$(</span>dpkg -s <span class="nv">$p</span> 2&gt;/dev/null | grep <span class="s1">&#39;^Version: &#39;</span> | cut -d<span class="s1">&#39; &#39;</span> -f2<span class="k">)</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">ver</span><span class="o">=</span><span class="k">$(</span>rpm -q --queryformat <span class="s2">&quot;%{VERSION}-%{RELEASE}\n&quot;</span> <span class="nv">$p</span><span class="k">)</span>
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;pkg|${p}|${ver}&quot;</span>
 <span class="k">done</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -540,29 +470,23 @@ distros (case insensitive).</li>
 <h1>Pips</h1>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">function </span>get_pips<span class="o">()</span> <span class="o">{</span>
-    cat <span class="nv">$FILES</span>/pips/* | uniq
-<span class="o">}</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">CMD_PIP</span><span class="o">=</span>/usr/bin/pip
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">CMD_PIP</span><span class="o">=</span>/usr/bin/pip-python
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Pip tells us what is currently installed</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FREEZE_FILE</span><span class="o">=</span><span class="k">$(</span>mktemp --tmpdir freeze.XXXXXX<span class="k">)</span>
-pip freeze &gt;<span class="nv">$FREEZE_FILE</span> 2&gt;/dev/null
+<span class="nv">$CMD_PIP</span> freeze &gt;<span class="nv">$FREEZE_FILE</span> 2&gt;/dev/null
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Loop through our requirements and look for matches</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">for </span>p in <span class="k">$(</span>get_pips<span class="k">)</span>; <span class="k">do</span>
-    <span class="o">[[</span> <span class="s2">&quot;$p&quot;</span> <span class="o">=</span> <span class="s2">&quot;-e&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">continue</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$p&quot;</span> <span class="o">=</span>~ <span class="se">\+</span>?<span class="o">([</span>^#<span class="o">]</span>*<span class="o">)</span><span class="c">#? ]]; then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Get the URL from a remote reference</p>
-</td><td class=code><div class=highlight><pre>
-         <span class="nv">p</span><span class="o">=</span><span class="k">${</span><span class="nv">BASH_REMATCH</span><span class="p">[1]</span><span class="k">}</span>
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nv">line</span><span class="o">=</span><span class="s2">&quot;`grep -i $p $FREEZE_FILE`&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$line&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">while </span><span class="nb">read </span>line; <span class="k">do</span>
+<span class="k">    if</span> <span class="o">[[</span> -n <span class="s2">&quot;$line&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$line&quot;</span> <span class="o">=</span>~ <span class="se">\+</span><span class="o">(</span>.*<span class="o">)</span>@<span class="o">(</span>.*<span class="o">)</span><span class="c">#egg=(.*) ]]; then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Handle URLs</p>
@@ -590,9 +514,10 @@ pip freeze &gt;<span class="nv">$FREEZE_FILE</span> 2&gt;/dev/null
         <span class="c">#echo &quot;unknown: $p&quot;</span>
         <span class="k">continue</span>
 <span class="k">    fi</span>
-<span class="k">done</span>
+<span class="k">done</span> &lt;<span class="nv">$FREEZE_FILE</span>
 
 rm <span class="nv">$FREEZE_FILE</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -608,7 +533,7 @@ rm <span class="nv">$FREEZE_FILE</span>
 <span class="s1">        /PASSWORD/d;</span>
 <span class="s1">        /^#/d;</span>
 <span class="s1">        s/^/localrc\|/;</span>
-<span class="s1">    &#39;</span> <span class="nv">$TOP_DIR</span>/localrc | sort
+<span class="s1">    &#39;</span> <span class="nv">$TOP_DIR</span>/localrc
 <span class="k">fi</span>
 
 
