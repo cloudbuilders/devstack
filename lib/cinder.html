@@ -403,6 +403,54 @@ runs that a clean run would need to clean up</p>
 
     cp -p <span class="nv">$CINDER_DIR</span>/etc/cinder/policy.json <span class="nv">$CINDER_CONF_DIR</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Set the paths of certain binaries</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">CINDER_ROOTWRAP</span><span class="o">=</span>/usr/local/bin/cinder-rootwrap
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">CINDER_ROOTWRAP</span><span class="o">=</span>/usr/bin/cinder-rootwrap
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>If Cinder ships the new rootwrap filters files, deploy them
+(owned by root) and add a parameter to $CINDER_ROOTWRAP</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">ROOTWRAP_CINDER_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$CINDER_ROOTWRAP&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$CINDER_DIR</span>/etc/cinder/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Wipe any existing rootwrap.d files first</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>sudo rm -rf <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
+        <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Deploy filters to /etc/cinder/rootwrap.d</p>
+</td><td class=code><div class=highlight><pre>
+        sudo mkdir -m 755 <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
+        sudo cp <span class="nv">$CINDER_DIR</span>/etc/cinder/rootwrap.d/*.filters <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
+        sudo chown -R root:root <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
+        sudo chmod 644 <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d/*
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up rootwrap.conf, pointing to /etc/cinder/rootwrap.d</p>
+</td><td class=code><div class=highlight><pre>
+        sudo cp <span class="nv">$CINDER_DIR</span>/etc/cinder/rootwrap.conf <span class="nv">$CINDER_CONF_DIR</span>/
+        sudo sed -e <span class="s2">&quot;s:^filters_path=.*$:filters_path=$CINDER_CONF_DIR/rootwrap.d:&quot;</span> -i <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf
+        sudo chown root:root <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf
+        sudo chmod 0644 <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf
+</pre></div></td></tr><tr><td class=docs>
+<p>Specify rootwrap.conf as first parameter to cinder-rootwrap</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">CINDER_ROOTWRAP</span><span class="o">=</span><span class="s2">&quot;$CINDER_ROOTWRAP $CINDER_CONF_DIR/rootwrap.conf&quot;</span>
+        <span class="nv">ROOTWRAP_CINDER_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$CINDER_ROOTWRAP *&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$USER ALL=(root) NOPASSWD: $ROOTWRAP_CINDER_SUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+    chmod 0440 <span class="nv">$TEMPFILE</span>
+    sudo chown root:root <span class="nv">$TEMPFILE</span>
+    sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/cinder-rootwrap
+
     <span class="nv">CINDER_API_PASTE_INI</span><span class="o">=</span><span class="nv">$CINDER_CONF_DIR</span>/api-paste.ini
     cp <span class="nv">$CINDER_DIR</span>/etc/cinder/api-paste.ini <span class="nv">$CINDER_API_PASTE_INI</span>
     iniset <span class="nv">$CINDER_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
@@ -422,6 +470,8 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT api_paste_config <span class="nv">$CINDER_API_PASTE_INI</span>
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT root_helper <span class="s2">&quot;sudo ${CINDER_ROOTWRAP}&quot;</span>
+
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
