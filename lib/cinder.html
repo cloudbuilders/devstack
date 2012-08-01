@@ -518,7 +518,9 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
             <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>; <span class="k">fi</span>
 <span class="k">        fi</span>
 
-<span class="k">        if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
+<span class="k">        </span>mkdir -p <span class="nv">$CINDER_DIR</span>/volumes
+
+        <span class="k">if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
 <span class="k">            if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>RPM doesn't start the service</p>
@@ -559,6 +561,9 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 <span class="k">function </span>start_cinder<span class="o">()</span> <span class="o">{</span>
     <span class="k">if </span>is_service_enabled c-vol; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            if</span> <span class="o">[[</span> ! -f /etc/tgt/conf.d/cinder.conf <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">               </span><span class="nb">echo</span> <span class="s2">&quot;include $CINDER_DIR/volumes/*&quot;</span> | sudo tee /etc/tgt/conf.d/cinder.conf
+            <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>tgt in oneiric doesn't restart properly if tgtd isn't running
 do it in two steps</p>

@@ -2519,6 +2519,11 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>RPM doesn't start the service</p>
 </td><td class=code><div class=highlight><pre>
+        mkdir -p <span class="nv">$NOVA_DIR</span>/volumes
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setup tgtd configuration files</p>
+</td><td class=code><div class=highlight><pre>
         sudo tgtadm --op show --mode target | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | grep Target | cut -f3 -d <span class="s1">&#39; &#39;</span> | sudo xargs -n1 tgt-admin --delete <span class="o">||</span> <span class="nb">true</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Remove nova iscsi targets</p>
@@ -2534,8 +2539,16 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 <span class="k">    fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>VOLUME_NAME_PREFIX prefixes the LVs we want</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> ! -f /etc/tgt/conf.d/nova.conf <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">           </span><span class="nb">echo</span> <span class="s2">&quot;include $NOVA_DIR/volumes/*&quot;</span> | sudo tee /etc/tgt/conf.d/nova.conf
+        <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setup the tgt configuration file</p>
 </td><td class=code><div class=highlight><pre>
         sudo stop tgt <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">        </span>sudo start tgt
