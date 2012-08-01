@@ -1745,19 +1745,11 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
     <span class="nv">Q_API_PASTE_FILE</span><span class="o">=</span>/etc/quantum/api-paste.ini
     <span class="nv">Q_POLICY_FILE</span><span class="o">=</span>/etc/quantum/policy.json
 
-    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
-    <span class="k">fi</span>
+    cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
+    cp <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="nv">$Q_API_PASTE_FILE</span>
+    cp <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="nv">$Q_POLICY_FILE</span>
 
-<span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="nv">$Q_API_PASTE_FILE</span>
-    <span class="k">fi</span>
-
-<span class="k">    if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="nv">$Q_POLICY_FILE</span>
-    <span class="k">fi</span>
-
-<span class="k">    if </span>is_service_enabled mysql; <span class="k">then</span>
+    <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
 <span class="k">            </span>mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s2">&quot;DROP DATABASE IF EXISTS $Q_DB_NAME;&quot;</span>
             mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s2">&quot;CREATE DATABASE IF NOT EXISTS $Q_DB_NAME CHARACTER SET utf8;&quot;</span>
         <span class="k">else</span>
@@ -1768,7 +1760,16 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Update either configuration file with plugin</p>
 </td><td class=code><div class=highlight><pre>
-    sudo sed -i -e <span class="s2">&quot;s/^core_plugin =.*$/core_plugin = $Q_PLUGIN_CLASS/g&quot;</span> <span class="nv">$Q_CONF_FILE</span>
+    iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT core_plugin <span class="nv">$Q_PLUGIN_CLASS</span>
+
+    iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT auth_strategy <span class="nv">$Q_AUTH_STRATEGY</span>
+    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_SERVICE_HOST</span>
+    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>
+    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_user <span class="nv">$Q_ADMIN_USERNAME</span>
+    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+
     screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
 <span class="k">fi</span>
 
@@ -2981,17 +2982,15 @@ happen after we've started the Quantum service.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a second pool</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --os_token <span class="nv">$Q_ADMIN_USERNAME</span> --os_url http://<span class="nv">$Q_HOST</span>:<span class="nv">$Q_PORT</span> --tenant_id <span class="nv">$TENANT_ID</span> net1 | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create a small network</p>
-</td><td class=code><div class=highlight><pre>
-        quantum subnet-create --os_token <span class="nv">$Q_ADMIN_USERNAME</span> --os_url http://<span class="nv">$Q_HOST</span>:<span class="nv">$Q_PORT</span> --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway  <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span>
+        <span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --tenant_id <span class="nv">$TENANT_ID</span> net1 | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create a subnet</p>
+<p>Create a small network
+Since quantum command is executed in admin context at this point,
+--tenant_id needs to be specified.</p>
 </td><td class=code><div class=highlight><pre>
 screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_DIR/bin/nova-compute&quot;</span>
 screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-cert&quot;</span>
