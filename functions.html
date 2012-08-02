@@ -888,12 +888,19 @@ pip_install package [package ...]</p>
 <span class="k">    if</span> <span class="o">[[</span> -z <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>GetOSVersion
     <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">CMD_PIP</span><span class="o">=</span>/usr/bin/pip
+<span class="k">    if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">        </span><span class="nb">source</span> <span class="nv">$DEST</span>/.venv/bin/activate
+        <span class="nv">CMD_PIP</span><span class="o">=</span><span class="nv">$DEST</span>/.venv/bin/pip
+        <span class="nv">SUDO_PIP</span><span class="o">=</span><span class="s2">&quot;env&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span><span class="nv">CMD_PIP</span><span class="o">=</span>/usr/bin/pip-python
-    <span class="k">fi</span>
-<span class="k">    </span>sudo <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span><span class="k">${</span><span class="nv">PIP_DOWNLOAD_CACHE</span><span class="k">:-</span><span class="p">/var/cache/pip</span><span class="k">}</span> <span class="se">\</span>
+<span class="k">        </span><span class="nv">SUDO_PIP</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">CMD_PIP</span><span class="o">=</span>/usr/bin/pip
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">CMD_PIP</span><span class="o">=</span>/usr/bin/pip-python
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+    <span class="nv">$SUDO_PIP</span> <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span><span class="k">${</span><span class="nv">PIP_DOWNLOAD_CACHE</span><span class="k">:-</span><span class="p">/var/cache/pip</span><span class="k">}</span> <span class="se">\</span>
         <span class="nv">HTTP_PROXY</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="se">\</span>
         <span class="nv">HTTPS_PROXY</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
         <span class="nv">$CMD_PIP</span> install --use-mirrors <span class="nv">$@</span>
@@ -922,12 +929,17 @@ develop, so that pip and not distutils process the dependency chain
 setup_develop directory</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>setup_develop<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">        </span><span class="nv">SUDO_CMD</span><span class="o">=</span><span class="s2">&quot;env&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">SUDO_CMD</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
+    <span class="k">fi</span>
     <span class="o">(</span><span class="nb">cd</span> <span class="nv">$1</span>; <span class="se">\</span>
         python setup.py egg_info; <span class="se">\</span>
         <span class="nv">raw_links</span><span class="o">=</span><span class="k">$(</span>awk <span class="s1">&#39;/^.+/ {print &quot;-f &quot; $1}&#39;</span> *.egg-info/dependency_links.txt<span class="k">)</span>; <span class="se">\</span>
         <span class="nv">depend_links</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$raw_links</span> | xargs<span class="k">)</span>; <span class="se">\</span>
         pip_install -r *-info/requires.txt <span class="nv">$depend_links</span>; <span class="se">\</span>
-        sudo <span class="se">\</span>
+        <span class="nv">$SUDO_CMD</span> <span class="se">\</span>
             <span class="nv">HTTP_PROXY</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="se">\</span>
             <span class="nv">HTTPS_PROXY</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
             python setup.py develop <span class="se">\</span>
