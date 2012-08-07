@@ -423,8 +423,9 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <p>Glance should already contain images to be used in tempest
 testing. Here we simply look for images stored in Glance
 and set the appropriate variables for use in the tempest config
-We ignore ramdisk and kernel images and set the IMAGE_UUID to
-the first image returned and set IMAGE_UUID_ALT to the second,
+We ignore ramdisk and kernel images, look for the default image
+DEFAULT_IMAGE_NAME. If not found, we set the IMAGE_UUID to the
+first image returned and set IMAGE_UUID_ALT to the second,
 if there is more than one returned...
 ... Also ensure we only take active images, so we don't get snapshots in process</p>
 </td><td class=code><div class=highlight><pre>
@@ -432,7 +433,11 @@ if there is more than one returned...
 <span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot;$(echo -e &quot;</span><span class="se">\n\r</span><span class="s2">&quot;)&quot;</span>
 <span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 <span class="k">for </span>line in <span class="nv">$IMAGE_LINES</span>; <span class="k">do</span>
-<span class="k">    </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | cut -d&#39; &#39; -f2`&quot;</span>
+<span class="k">    if</span> <span class="o">[</span> -z <span class="nv">$DEFAULT_IMAGE_NAME</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | cut -d&#39; &#39; -f2`&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | grep &quot;</span><span class="nv">$DEFAULT_IMAGE_NAME</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+    <span class="k">fi</span>
 <span class="k">done</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create array of image UUIDs...</p>
@@ -495,10 +500,32 @@ and tenant are set up...</p>
 <span class="nv">ALT_PASSWORD</span><span class="o">=</span><span class="nv">$OS_PASSWORD</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>TODO(jaypipes): Support configurable flavor refs here...</p>
+<p>Check Nova for existing flavors and, if set, look for the
+DEFAULT_INSTANCE_TYPE and use that. Otherwise, just use the first flavor.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FLAVOR_REF</span><span class="o">=</span>1
-<span class="nv">FLAVOR_REF_ALT</span><span class="o">=</span>2
+<span class="nv">FLAVOR_LINES</span><span class="o">=</span><span class="sb">`</span>nova flavor-list<span class="sb">`</span>
+<span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot;$(echo -e &quot;</span><span class="se">\n\r</span><span class="s2">&quot;)&quot;</span>
+<span class="nv">FLAVORS</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="k">for </span>line in <span class="nv">$FLAVOR_LINES</span>; <span class="k">do</span>
+<span class="k">    if</span> <span class="o">[</span> -z <span class="nv">$DEFAULT_INSTANCE_TYPE</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">FLAVORS</span><span class="o">=</span><span class="s2">&quot;$FLAVORS `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">FLAVORS</span><span class="o">=</span><span class="s2">&quot;$FLAVORS `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep &quot;</span><span class="nv">$DEFAULT_INSTANCE_TYPE</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+    <span class="k">fi</span>
+<span class="k">done</span>
+<span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
+<span class="nv">FLAVORS</span><span class="o">=(</span><span class="nv">$FLAVORS</span><span class="o">)</span>
+<span class="nv">NUM_FLAVORS</span><span class="o">=</span><span class="k">${#</span><span class="nv">FLAVORS</span><span class="p">[*]</span><span class="k">}</span>
+<span class="nb">echo</span> <span class="s2">&quot;Found $NUM_FLAVORS flavors&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_FLAVORS</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Found no valid flavors to use!&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+<span class="nv">FLAVOR_REF</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAVORS</span><span class="p">[0]</span><span class="k">}</span>
+<span class="nv">FLAVOR_REF_ALT</span><span class="o">=</span><span class="nv">$FLAVOR_REF</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_FLAVORS</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">FLAVOR_REF_ALT</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAVORS</span><span class="p">[1]</span><span class="k">}</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Do any of the following need to be configurable?</p>
@@ -512,7 +539,10 @@ and tenant are set up...</p>
 <span class="nv">BUILD_INTERVAL</span><span class="o">=</span>3
 <span class="nv">BUILD_TIMEOUT</span><span class="o">=</span>400
 <span class="nv">RUN_SSH</span><span class="o">=</span>True
-<span class="nv">SSH_USER</span><span class="o">=</span><span class="nv">$OS_USERNAME</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Check for DEFAULT_INSTANCE_USER and try to connect with that account</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SSH_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">$OS_USERNAME</span><span class="k">}</span>
 <span class="nv">NETWORK_FOR_SSH</span><span class="o">=</span>private
 <span class="nv">IP_VERSION_FOR_SSH</span><span class="o">=</span>4
 <span class="nv">SSH_TIMEOUT</span><span class="o">=</span>4

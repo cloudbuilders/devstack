@@ -245,10 +245,6 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 <span class="nv">INSTANCE_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTANCE_NAME_PREFIX</span><span class="k">:-</span><span class="nv">instance</span><span class="p">-</span><span class="k">}</span>
 
 </td><td class=code><div class=highlight><pre>
-<span class="nv">VIRT_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">VIRT_DRIVER</span><span class="k">:-</span><span class="nv">libvirt</span><span class="k">}</span>
-<span class="nv">LIBVIRT_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_TYPE</span><span class="k">:-</span><span class="nv">kvm</span><span class="k">}</span>
-
-</td><td class=code><div class=highlight><pre>
 <span class="nv">SCHEDULER</span><span class="o">=</span><span class="k">${</span><span class="nv">SCHEDULER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.scheduler.filter_scheduler.FilterScheduler</span><span class="k">}</span>
 
 <span class="nv">HOST_IP_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST_IP_IFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
@@ -1778,6 +1774,11 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     add_nova_opt <span class="s2">&quot;firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
+<span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;openvz&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+</td><td class=code><div class=highlight><pre>
+    add_nova_opt <span class="s2">&quot;connection_type=openvz&quot;</span>
+    <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
+    add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
 <span class="k">else</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;compute_driver=libvirt.LibvirtDriver&quot;</span>
     <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
@@ -2004,6 +2005,14 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
         <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $FILES/$IMAGE_FNAME)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>wget -c <span class="nv">$image_url</span> -O <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span>
         <span class="k">fi</span>
+
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;openvz&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
+            <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span>
+            glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --public --container-format ami --disk-format ami &lt; <span class="s2">&quot;$IMAGE&quot;</span>
+            <span class="k">continue</span>
+<span class="k">        fi</span>
 
 <span class="k">        </span><span class="nv">KERNEL</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
         <span class="nv">RAMDISK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
