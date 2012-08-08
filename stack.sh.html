@@ -1023,15 +1023,15 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$NOVA_USE_QUANTUM_API&quot;</span> <span class="o">=</span> <span class="s2">&quot;v2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> AGENT target_v2_api True
     <span class="k">fi</span>
+<span class="k">    </span><span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
+    cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
 <span class="k">fi</span>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
-<span class="k">    </span><span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
-    <span class="nv">Q_API_PASTE_FILE</span><span class="o">=</span>/etc/quantum/api-paste.ini
+<span class="k">    </span><span class="nv">Q_API_PASTE_FILE</span><span class="o">=</span>/etc/quantum/api-paste.ini
     <span class="nv">Q_POLICY_FILE</span><span class="o">=</span>/etc/quantum/policy.json
 
-    cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
     cp <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="nv">$Q_API_PASTE_FILE</span>
     cp <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="nv">$Q_POLICY_FILE</span>
 
@@ -1053,8 +1053,6 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_user <span class="nv">$Q_ADMIN_USERNAME</span>
     iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-
-    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
 <span class="k">fi</span>
 
 </td><td class=code><div class=highlight><pre>
@@ -1077,8 +1075,6 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
        sudo sed -i -e <span class="s2">&quot;s/^physical_interface = .*$/physical_interface = $QUANTUM_LB_PRIVATE_INTERFACE/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
        <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/linuxbridge/agent/linuxbridge_quantum_agent.py&quot;</span>
     <span class="k">fi</span>
-</td><td class=code><div class=highlight><pre>
-    screen_it q-agt <span class="s2">&quot;sudo python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
 <span class="k">fi</span>
 
 </td><td class=code><div class=highlight><pre>
@@ -1087,9 +1083,7 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
 
     <span class="nv">Q_DHCP_CONF_FILE</span><span class="o">=</span>/etc/quantum/dhcp_agent.ini
 
-    <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$QUANTUM_DIR</span>/etc/dhcp_agent.ini <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>sudo cp <span class="nv">$QUANTUM_DIR</span>/etc/dhcp_agent.ini <span class="nv">$Q_DHCP_CONF_FILE</span>
-    <span class="k">fi</span>
+    cp <span class="nv">$QUANTUM_DIR</span>/etc/dhcp_agent.ini <span class="nv">$Q_DHCP_CONF_FILE</span>
 
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT verbose True
@@ -1108,9 +1102,27 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
     <span class="k">fi</span>
-</td><td class=code><div class=highlight><pre>
-    screen_it q-dhcp <span class="s2">&quot;sudo python $AGENT_DHCP_BINARY --config-file=$Q_DHCP_CONF_FILE&quot;</span>
 <span class="k">fi</span>
+
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+<span class="k">    </span>iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT control_exchange quantum
+    <span class="k">if </span>is_service_enabled qpid ; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT rpc_backend quantum.openstack.common.rpc.impl_qpid
+    <span class="k">elif</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
+        iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</td><td class=code><div class=highlight><pre>
+screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
+
+</td><td class=code><div class=highlight><pre>
+screen_it q-agt <span class="s2">&quot;sudo python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
+
+</td><td class=code><div class=highlight><pre>
+screen_it q-dhcp <span class="s2">&quot;sudo python $AGENT_DHCP_BINARY --config-file=$Q_DHCP_CONF_FILE&quot;</span>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled m-svc; <span class="k">then</span>
