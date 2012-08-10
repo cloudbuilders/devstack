@@ -52,6 +52,9 @@ GetDistro
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$https_proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">export </span><span class="nv">https_proxy</span><span class="o">=</span><span class="nv">$https_proxy</span>
 <span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$no_proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">export </span><span class="nv">no_proxy</span><span class="o">=</span><span class="nv">$no_proxy</span>
+<span class="k">fi</span>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
@@ -236,13 +239,26 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SCHEDULER</span><span class="o">=</span><span class="k">${</span><span class="nv">SCHEDULER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.scheduler.filter_scheduler.FilterScheduler</span><span class="k">}</span>
 
-<span class="nv">HOST_IP_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST_IP_IFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
+<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.224/28</span><span class="k">}</span>
+
+</td><td class=code><div class=highlight><pre>
+<span class="nv">HOST_IP_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST_IP_IFACE</span><span class="k">:-$(</span>ip route | sed -n <span class="s1">&#39;/^default/{ s/.*dev \(\w\+\)\s\+.*/\1/; p; }&#39;</span><span class="k">)}</span>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$HOST_IP&quot;</span> -o <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="sb">`</span><span class="nv">LC_ALL</span><span class="o">=</span>C ip -f inet addr show <span class="k">${</span><span class="nv">HOST_IP_IFACE</span><span class="k">}</span> | awk <span class="s1">&#39;/inet/ {split($2,parts,&quot;/&quot;);  print parts[1]}&#39;</span> | head -n1<span class="sb">`</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">HOST_IPS</span><span class="o">=</span><span class="sb">`</span><span class="nv">LC_ALL</span><span class="o">=</span>C ip -f inet addr show <span class="k">${</span><span class="nv">HOST_IP_IFACE</span><span class="k">}</span> | awk <span class="s1">&#39;/inet/ {split($2,parts,&quot;/&quot;);  print parts[1]}&#39;</span><span class="sb">`</span>
+    <span class="k">for </span>IP in <span class="nv">$HOST_IPS</span>; <span class="k">do</span>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> ! <span class="o">(</span>address_in_net <span class="nv">$IP</span> <span class="nv">$FIXED_RANGE</span> <span class="o">||</span> address_in_net <span class="nv">$IP</span> <span class="nv">$FLOATING_RANGE</span><span class="o">)</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="nv">$IP</span>
+            <span class="nb">break</span>;
+        <span class="k">fi</span>
+<span class="k">    done</span>
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Could not determine host ip address.&quot;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;Either localrc specified dhcp on ${HOST_IP_IFACE} or defaulted to eth0&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;Either localrc specified dhcp on ${HOST_IP_IFACE} or defaulted&quot;</span>
         <span class="nb">exit </span>1
     <span class="k">fi</span>
 <span class="k">fi</span>
@@ -318,11 +334,8 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 <span class="k">fi</span>
 
 <span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">$PUBLIC_INTERFACE_DEFAULT</span><span class="k">}</span>
-<span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">br100</span><span class="k">}</span>
-<span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">FIXED_NETWORK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_NETWORK_SIZE</span><span class="k">:-</span><span class="nv">256</span><span class="k">}</span>
 <span class="nv">NETWORK_GATEWAY</span><span class="o">=</span><span class="k">${</span><span class="nv">NETWORK_GATEWAY</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.1</span><span class="k">}</span>
-<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.224/28</span><span class="k">}</span>
 <span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">FlatDHCPManager</span><span class="k">}</span>
 <span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">$FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="k">}</span>
