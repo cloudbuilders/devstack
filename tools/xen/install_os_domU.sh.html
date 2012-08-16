@@ -539,7 +539,7 @@ create_vlan <span class="nv">$MGT_DEV</span> <span class="nv">$MGT_VLAN</span> <
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up ip forwarding, but skip on xcp-xapi</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> -a /etc/sysconfig/network<span class="o">]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[</span> -a /etc/sysconfig/network <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    if</span> ! grep -q <span class="s2">&quot;FORWARD_IPV4=YES&quot;</span> /etc/sysconfig/network; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>FIXME: This doesn't work on reboot!</p>
@@ -600,7 +600,7 @@ and/or create VM from template</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">GUEST_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_NAME</span><span class="k">:-</span><span class="s2">&quot;DevStackOSDomU&quot;</span><span class="k">}</span>
-<span class="nv">TNAME</span><span class="o">=</span><span class="s2">&quot;devstack_template_folsom_11.10&quot;</span>
+<span class="nv">TNAME</span><span class="o">=</span><span class="s2">&quot;devstack_template&quot;</span>
 <span class="nv">SNAME_PREPARED</span><span class="o">=</span><span class="s2">&quot;template_prepared&quot;</span>
 <span class="nv">SNAME_FIRST_BOOT</span><span class="o">=</span><span class="s2">&quot;before_first_boot&quot;</span>
 
@@ -625,23 +625,6 @@ and/or create VM from template</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>try to find ubuntu template</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">ubuntu_template_name</span><span class="o">=</span><span class="s2">&quot;Ubuntu 11.10 for DevStack (64-bit)&quot;</span>
-    <span class="nv">ubuntu_template</span><span class="o">=</span><span class="k">$(</span>xe_min template-list name-label<span class="o">=</span><span class="s2">&quot;$ubuntu_template_name&quot;</span><span class="k">)</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>remove template, if we are in CLEAN_TEMPLATE mode</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$ubuntu_template&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="nv">$CLEAN_TEMPLATES</span>; <span class="k">then</span>
-<span class="k">            </span>xe template-param-clear param-name<span class="o">=</span>other-config <span class="nv">uuid</span><span class="o">=</span><span class="nv">$ubuntu_template</span>
-            xe template-uninstall template-uuid<span class="o">=</span><span class="nv">$ubuntu_template</span> <span class="nv">force</span><span class="o">=</span><span class="nb">true</span>
-<span class="nb">            </span><span class="nv">ubuntu_template</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>always update the preseed file, incase we have a newer one</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">PRESEED_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">PRESEED_URL</span><span class="k">:-</span><span class="s2">&quot;&quot;</span><span class="k">}</span>
@@ -660,15 +643,16 @@ and/or create VM from template</p>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
-<span class="k">    if</span> <span class="o">[</span> -z <span class="s2">&quot;$ubuntu_template&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-        <span class="nv">$TOP_DIR</span>/scripts/xenoneirictemplate.sh <span class="nv">$PRESEED_URL</span>
-    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Update the template</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$TOP_DIR</span>/scripts/install_ubuntu_template.sh <span class="nv">$PRESEED_URL</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create a new VM with the given template
 creating the correct VIFs and metadata</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$TOP_DIR</span>/scripts/install-os-vpx.sh -t <span class="s2">&quot;$ubuntu_template_name&quot;</span> -v <span class="nv">$VM_BR</span> -m <span class="nv">$MGT_BR</span> -p <span class="nv">$PUB_BR</span> -l <span class="nv">$GUEST_NAME</span> -r <span class="nv">$OSDOMU_MEM_MB</span> -k <span class="s2">&quot;flat_network_bridge=${VM_BR}&quot;</span>
+    <span class="nv">$TOP_DIR</span>/scripts/install-os-vpx.sh -t <span class="s2">&quot;$UBUNTU_INST_TEMPLATE_NAME&quot;</span> -v <span class="nv">$VM_BR</span> -m <span class="nv">$MGT_BR</span> -p <span class="nv">$PUB_BR</span> -l <span class="nv">$GUEST_NAME</span> -r <span class="nv">$OSDOMU_MEM_MB</span> -k <span class="s2">&quot;flat_network_bridge=${VM_BR}&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>wait for install to finish</p>

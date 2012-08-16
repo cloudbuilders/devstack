@@ -388,26 +388,15 @@ add_on_exit <span class="s2">&quot;$TOP_DIR/scripts/manage-vdi close $GUEST_NAME
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Directory where our conf files are stored</p>
+<p>Configure dns (use same dns as dom0)
+but only when not precise</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FILES_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
-<span class="nv">TEMPLATES_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/templates
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Directory for supporting script files</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SCRIPT_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/scripts
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Version of ubuntu with which we are working</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">UBUNTU_VERSION</span><span class="o">=</span><span class="sb">`</span>cat <span class="nv">$STAGING_DIR</span>/etc/lsb-release | grep <span class="s2">&quot;DISTRIB_CODENAME=&quot;</span> | sed <span class="s2">&quot;s/DISTRIB_CODENAME=//&quot;</span><span class="sb">`</span>
-<span class="nv">KERNEL_VERSION</span><span class="o">=</span><span class="sb">`</span>ls <span class="nv">$STAGING_DIR</span>/boot/vmlinuz* | head -1 | sed <span class="s2">&quot;s/.*vmlinuz-//&quot;</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure dns (use same dns as dom0)</p>
-</td><td class=code><div class=highlight><pre>
-cp /etc/resolv.conf <span class="nv">$STAGING_DIR</span>/etc/resolv.conf
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$UBUNTU_INST_RELEASE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;precise&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>cp /etc/resolv.conf <span class="nv">$STAGING_DIR</span>/etc/resolv.conf
+<span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$MGT_IP&quot;</span> !<span class="o">=</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$PUB_IP&quot;</span> !<span class="o">=</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Configuration without DHCP not supported on Precise&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Copy over devstack</p>
@@ -451,6 +440,7 @@ cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/hosts</span>
 <p>Hostname must resolve for rabbit</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">INTERFACES</span><span class="o">=</span><span class="nv">$STAGING_DIR</span>/etc/network/interfaces
+<span class="nv">TEMPLATES_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/templates
 cp <span class="nv">$TEMPLATES_DIR</span>/interfaces.in  <span class="nv">$INTERFACES</span>
 <span class="k">if</span> <span class="o">[</span> <span class="nv">$VM_IP</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;eth1 on dhcp&#39;</span>
