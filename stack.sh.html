@@ -1364,7 +1364,7 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">        </span>swift_auth_server+<span class="o">=</span><span class="s2">&quot;authtoken keystone&quot;</span>
+<span class="k">        </span>swift_auth_server+<span class="o">=</span><span class="s2">&quot;authtoken keystoneauth&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nv">swift_auth_server</span><span class="o">=</span>tempauth
     <span class="k">fi</span>
@@ -1394,23 +1394,20 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> app:proxy-server account_autocreate <span class="nb">true</span>
 
-<span class="nb">    </span>cat <span class="s">&lt;&lt;EOF&gt;&gt;${SWIFT_CONFIG_PROXY_SERVER}</span>
+</td><td class=code><div class=highlight><pre>
+    sed -i <span class="s1">&#39;/^# \[filter:authtoken\]/,/^# \[filter:keystoneauth\]$/ s/^#[ \t]*//&#39;</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken admin_user swift
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
 
-<span class="s">[filter:keystone]</span>
-<span class="s">paste.filter_factory = keystone.middleware.swift_auth:filter_factory</span>
-<span class="s">operator_roles = Member,admin</span>
+    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:keystoneauth use
+    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:keystoneauth operator_roles
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:keystoneauth operator_roles <span class="s2">&quot;Member, admin&quot;</span>
 
-<span class="s">[filter:authtoken]</span>
-<span class="s">paste.filter_factory = keystone.middleware.auth_token:filter_factory</span>
-<span class="s">auth_host = ${KEYSTONE_AUTH_HOST}</span>
-<span class="s">auth_port = ${KEYSTONE_AUTH_PORT}</span>
-<span class="s">auth_protocol = ${KEYSTONE_AUTH_PROTOCOL}</span>
-<span class="s">auth_uri = ${KEYSTONE_SERVICE_PROTOCOL}://${KEYSTONE_SERVICE_HOST}:${KEYSTONE_SERVICE_PORT}/</span>
-<span class="s">admin_tenant_name = ${SERVICE_TENANT_NAME}</span>
-<span class="s">admin_user = swift</span>
-<span class="s">admin_password = ${SERVICE_PASSWORD}</span>
-<span class="s">delay_auth_decision = 1</span>
-<span class="s">EOF</span>
     <span class="k">if </span>is_service_enabled swift3;then
         cat <span class="s">&lt;&lt;EOF&gt;&gt;${SWIFT_CONFIG_PROXY_SERVER}</span>
 <span class="s"># DIVIDER</span>
