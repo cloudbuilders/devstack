@@ -603,6 +603,38 @@ Fedora release 16 (Verne)</p>
 <span class="k">    </span><span class="nb">export </span>os_VENDOR os_RELEASE os_UPDATE os_PACKAGE os_CODENAME
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>git update using reference as a branch.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>git_update_branch<span class="o">()</span> <span class="o">{</span>
+
+    <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$1</span>
+
+    git checkout -f origin/<span class="nv">$GIT_BRANCH</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>a local branch might not exist</p>
+</td><td class=code><div class=highlight><pre>
+    git branch -D <span class="nv">$GIT_BRANCH</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>git checkout -b <span class="nv">$GIT_BRANCH</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>git update using reference as a tag. Be careful editing source at that repo
+as working copy will be in a detached mode</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>git_update_tag<span class="o">()</span> <span class="o">{</span>
+
+    <span class="nv">GIT_TAG</span><span class="o">=</span><span class="nv">$1</span>
+
+    git tag -d <span class="nv">$GIT_TAG</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>fetching given tag only</p>
+</td><td class=code><div class=highlight><pre>
+    git fetch origin tag <span class="nv">$GIT_TAG</span>
+    git checkout -f <span class="nv">$GIT_TAG</span>
+<span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Translate the OS version values into common nomenclature
@@ -644,9 +676,9 @@ git_clone remote dest-dir branch</p>
 
 <span class="k">    </span><span class="nv">GIT_REMOTE</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nv">GIT_DEST</span><span class="o">=</span><span class="nv">$2</span>
-    <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nv">GIT_REF</span><span class="o">=</span><span class="nv">$3</span>
 
-    <span class="k">if </span><span class="nb">echo</span> <span class="nv">$GIT_BRANCH</span> | egrep -q <span class="s2">&quot;^refs&quot;</span>; <span class="k">then</span>
+    <span class="k">if </span><span class="nb">echo</span> <span class="nv">$GIT_REF</span> | egrep -q <span class="s2">&quot;^refs&quot;</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>If our branch name is a gerrit style refs/changes/...</p>
 </td><td class=code><div class=highlight><pre>
@@ -655,7 +687,7 @@ git_clone remote dest-dir branch</p>
             git clone <span class="nv">$GIT_REMOTE</span> <span class="nv">$GIT_DEST</span>
         <span class="k">fi</span>
 <span class="k">        </span><span class="nb">cd</span> <span class="nv">$GIT_DEST</span>
-        git fetch <span class="nv">$GIT_REMOTE</span> <span class="nv">$GIT_BRANCH</span> <span class="o">&amp;&amp;</span> git checkout FETCH_HEAD
+        git fetch <span class="nv">$GIT_REMOTE</span> <span class="nv">$GIT_REF</span> <span class="o">&amp;&amp;</span> git checkout FETCH_HEAD
     <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>do a full clone only if the directory doesn't exist</p>
@@ -667,7 +699,7 @@ git_clone remote dest-dir branch</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>This checkout syntax works for both branches and tags</p>
 </td><td class=code><div class=highlight><pre>
-            git checkout <span class="nv">$GIT_BRANCH</span>
+            git checkout <span class="nv">$GIT_REF</span>
         <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$RECLONE&quot;</span> <span class="o">==</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>if it does exist then simulate what clone does if asked to RECLONE</p>
@@ -684,13 +716,20 @@ git_clone remote dest-dir branch</p>
 thinks the pyc files are correct using them)</p>
 </td><td class=code><div class=highlight><pre>
             find <span class="nv">$GIT_DEST</span> -name <span class="s1">&#39;*.pyc&#39;</span> -delete
-            git checkout -f origin/<span class="nv">$GIT_BRANCH</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>a local branch might not exist</p>
+<p>handle GIT_REF accordingly to type (tag, branch)</p>
 </td><td class=code><div class=highlight><pre>
-            git branch -D <span class="nv">$GIT_BRANCH</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">            </span>git checkout -b <span class="nv">$GIT_BRANCH</span>
-        <span class="k">fi</span>
+            <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;`git show-ref refs/tags/$GIT_REF`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>git_update_tag <span class="nv">$GIT_REF</span>
+            <span class="k">elif</span> <span class="o">[[</span> -n <span class="s2">&quot;`git show-ref refs/heads/$GIT_REF`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>git_update_branch <span class="nv">$GIT_REF</span>
+            <span class="k">else</span>
+<span class="k">                </span><span class="nb">echo</span> <span class="nv">$GIT_REF</span> is neither branch nor tag
+                <span class="nb">exit </span>1
+            <span class="k">fi</span>
+
+<span class="k">        fi</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
 
