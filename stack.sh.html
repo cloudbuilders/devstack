@@ -202,6 +202,7 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
@@ -662,6 +663,9 @@ git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLI
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>install_cinder
+<span class="k">fi</span>
+<span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
+<span class="k">    </span>install_ceilometer
 <span class="k">fi</span>
 
 </td><td class=code><div class=highlight><pre>
@@ -1919,6 +1923,10 @@ screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-cons
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>start_cinder
 <span class="k">fi</span>
+<span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
+<span class="k">    </span>configure_ceilometer
+    start_ceilometer
+<span class="k">fi</span>
 screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
 screen_it swift <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; $SWIFT_DIR/bin/swift-proxy-server ${SWIFT_CONFIG_DIR}/proxy-server.conf -v&quot;</span>
 
@@ -1961,6 +1969,8 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
         <span class="nv">RAMDISK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
         <span class="nv">DISK_FORMAT</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
         <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="nv">UNPACK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        
         <span class="k">case</span> <span class="s2">&quot;$IMAGE_FNAME&quot;</span> in
             *.tar.gz|*.tgz<span class="o">)</span>
 </td><td class=code><div class=highlight><pre>
@@ -1992,6 +2002,7 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
                 <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img.gz&quot;</span><span class="k">)</span>
                 <span class="nv">DISK_FORMAT</span><span class="o">=</span>raw
                 <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
+                <span class="nv">UNPACK</span><span class="o">=</span>zcat
                 ;;
             *.qcow2<span class="o">)</span>
                 <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
@@ -2003,8 +2014,12 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
         <span class="k">esac</span>
 
 <span class="k">        if</span> <span class="o">[</span> <span class="s2">&quot;$CONTAINER_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;bare&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
-        <span class="k">else</span>
+<span class="k">            if</span> <span class="o">[</span> <span class="s2">&quot;$UNPACK&quot;</span> <span class="o">=</span> <span class="s2">&quot;zcat&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                </span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt;  &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
+            <span class="k">else</span>
+<span class="k">                </span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; <span class="k">${</span><span class="nv">IMAGE</span><span class="k">}</span>
+            <span class="k">fi</span>
+<span class="k">        else</span>
 </td><td class=code><div class=highlight><pre>
             <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>; <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
             <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
