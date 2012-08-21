@@ -1947,10 +1947,7 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-</td><td class=code><div class=highlight><pre>
-    mkdir -p <span class="nv">$FILES</span>/images
-
-    <span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone  token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+<span class="k">    </span><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone  token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1958,86 +1955,8 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
     <span class="k">fi</span>
 
 <span class="k">    for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">IMAGE_FNAME</span><span class="o">=</span><span class="sb">`</span>basename <span class="s2">&quot;$image_url&quot;</span><span class="sb">`</span>
-        <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $FILES/$IMAGE_FNAME)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>wget -c <span class="nv">$image_url</span> -O <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span>
-        <span class="k">fi</span>
-
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;openvz&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
-            <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span>
-            glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --public --container-format ami --disk-format ami &lt; <span class="s2">&quot;$IMAGE&quot;</span>
-            <span class="k">continue</span>
-<span class="k">        fi</span>
-
-<span class="k">        </span><span class="nv">KERNEL</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="nv">RAMDISK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="nv">DISK_FORMAT</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="nv">UNPACK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        
-        <span class="k">case</span> <span class="s2">&quot;$IMAGE_FNAME&quot;</span> in
-            *.tar.gz|*.tgz<span class="o">)</span>
-</td><td class=code><div class=highlight><pre>
-                <span class="o">[</span> <span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$IMAGE_FNAME&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>
-                    <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span> <span class="o">||</span>
-                    <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.tgz}&quot;</span>
-                <span class="nv">xdir</span><span class="o">=</span><span class="s2">&quot;$FILES/images/$IMAGE_NAME&quot;</span>
-                rm -Rf <span class="s2">&quot;$xdir&quot;</span>;
-                mkdir <span class="s2">&quot;$xdir&quot;</span>
-                tar -zxf <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> -C <span class="s2">&quot;$xdir&quot;</span>
-                <span class="nv">KERNEL</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-vmlinuz* <span class="s2">&quot;$xdir/&quot;</span>aki-*/image; <span class="k">do</span>
-                         <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
-                <span class="nv">RAMDISK</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-initrd* <span class="s2">&quot;$xdir/&quot;</span>ari-*/image; <span class="k">do</span>
-                         <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
-                <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*.img <span class="s2">&quot;$xdir/&quot;</span>ami-*/image; <span class="k">do</span>
-                         <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
-                <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                    </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
-                <span class="k">fi</span>
-                ;;
-            *.img<span class="o">)</span>
-                <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/$IMAGE_FNAME&quot;</span>;
-                <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
-                <span class="nv">DISK_FORMAT</span><span class="o">=</span>raw
-                <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
-                ;;
-            *.img.gz<span class="o">)</span>
-                <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
-                <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img.gz&quot;</span><span class="k">)</span>
-                <span class="nv">DISK_FORMAT</span><span class="o">=</span>raw
-                <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
-                <span class="nv">UNPACK</span><span class="o">=</span>zcat
-                ;;
-            *.qcow2<span class="o">)</span>
-                <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
-                <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.qcow2&quot;</span><span class="k">)</span>
-                <span class="nv">DISK_FORMAT</span><span class="o">=</span>qcow2
-                <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
-                ;;
-            *<span class="o">)</span> <span class="nb">echo</span> <span class="s2">&quot;Do not know what to do with $IMAGE_FNAME&quot;</span>; <span class="nb">false</span>;;
-        <span class="k">esac</span>
-
-<span class="k">        if</span> <span class="o">[</span> <span class="s2">&quot;$CONTAINER_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;bare&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[</span> <span class="s2">&quot;$UNPACK&quot;</span> <span class="o">=</span> <span class="s2">&quot;zcat&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">                </span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt;  &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
-            <span class="k">else</span>
-<span class="k">                </span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; <span class="k">${</span><span class="nv">IMAGE</span><span class="k">}</span>
-            <span class="k">fi</span>
-<span class="k">        else</span>
-</td><td class=code><div class=highlight><pre>
-            <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>; <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
-            <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> --is-public<span class="o">=</span>True --container-format aki --disk-format aki &lt; <span class="s2">&quot;$KERNEL&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-            <span class="k">fi</span>
-<span class="k">            if</span> <span class="o">[</span> -n <span class="s2">&quot;$RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> --is-public<span class="o">=</span>True --container-format ari --disk-format ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-            <span class="k">fi</span>
-<span class="k">            </span>glance --os-auth-token <span class="nv">$TOKEN</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> --is-public<span class="o">=</span>True --container-format ami --disk-format ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+--property kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+--property ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
-        <span class="k">fi</span>
-<span class="k">    done</span>
+<span class="k">        </span>upload_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
+    <span class="k">done</span>
 <span class="k">fi</span>
 
 
