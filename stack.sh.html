@@ -1581,6 +1581,13 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> -d <span class="nv">$NOVA_DIR</span>/bin <span class="o">]</span> ; <span class="k">then</span>
+<span class="k">    </span><span class="nv">NOVA_BIN_DIR</span><span class="o">=</span><span class="nv">$NOVA_DIR</span>/bin
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">NOVA_BIN_DIR</span><span class="o">=</span>/usr/local/bin
+<span class="k">fi</span>
+
 <span class="nv">NOVA_CONF</span><span class="o">=</span>nova.conf
 <span class="k">function </span>add_nova_opt <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span>
@@ -1746,7 +1753,7 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE nova CHARACTER SET latin1;&#39;</span>
 
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage db sync
+    <span class="nv">$NOVA_BIN_DIR</span>/nova-manage db sync
 <span class="k">fi</span>
 
 
@@ -1885,7 +1892,7 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;enabled_apis=$NOVA_ENABLED_APIS&quot;</span>
-    screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-api&quot;</span>
+    screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for nova-api to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://127.0.0.1:8774; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;nova-api did not start&quot;</span>
@@ -1902,21 +1909,21 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
     quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span>
 <span class="k">elif </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span> <span class="nv">$NETWORK_CREATE_ARGS</span>
+    <span class="nv">$NOVA_BIN_DIR</span>/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span> <span class="nv">$NETWORK_CREATE_ARGS</span>
 
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
+    <span class="nv">$NOVA_BIN_DIR</span>/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_DIR</span>/bin/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
+    <span class="nv">$NOVA_BIN_DIR</span>/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
 <span class="k">fi</span>
 
 </td><td class=code><div class=highlight><pre>
-screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_DIR/bin/nova-compute&quot;</span>
-screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-cert&quot;</span>
-screen_it n-vol <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-volume&quot;</span>
-screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-network&quot;</span>
-screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-scheduler&quot;</span>
+screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_BIN_DIR/nova-compute&quot;</span>
+screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cert&quot;</span>
+screen_it n-vol <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-volume&quot;</span>
+screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-network&quot;</span>
+screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-scheduler&quot;</span>
 screen_it n-novnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-novncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF --web .&quot;</span>
 screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
 screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-consoleauth&quot;</span>
@@ -1932,7 +1939,7 @@ screen_it swift <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; $SWIFT_DIR/bin/s
 
 </td><td class=code><div class=highlight><pre>
 is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
-    screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-objectstore&quot;</span>
+    screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-objectstore&quot;</span>
 
 
 </td><td class=code><div class=highlight><pre>
