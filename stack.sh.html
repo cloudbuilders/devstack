@@ -16,27 +16,94 @@
       </tr>
     </thead>
     <tbody>
-        <tr><td class='docs'></td><td class=code><div class=highlight><pre>
+        <tr><td class='docs'><p><code>stack.sh</code> is an opinionated OpenStack developer installation.  It
+installs and configures various combinations of <strong>Glance</strong>, <strong>Horizon</strong>,
+<strong>Keystone</strong>, <strong>Nova</strong>, <strong>Quantum</strong> and <strong>Swift</strong></p>
+
+</td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
 
-</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>This script allows you to specify configuration options of what git
+repositories to use, enabled services, network configuration and various
+passwords.  If you are crafty you can run the script on multiple nodes using
+shared settings for common resources (mysql, rabbitmq) and build a multi-node
+developer install.</p>
 
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>To keep this script simple we assume you are running on an <strong>Ubuntu 11.10
+Oneiric</strong> or <strong>Ubuntu 12.04 Precise</strong> machine.  It should work in a VM or
+physical server.  Additionally we put the list of <code>apt</code> and <code>pip</code>
+dependencies and other configuration files in this repo.  So start by
+grabbing this script and the dependencies.</p>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Learn more and get the most recent version at http://devstack.org</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Keep track of the devstack directory</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Import common functions</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Determine what system we are running on.  This provides <code>os_VENDOR</code>,
+<code>os_RELEASE</code>, <code>os_UPDATE</code>, <code>os_PACKAGE</code>, <code>os_CODENAME</code>
+and <code>DISTRO</code></p>
 
 </td><td class=code><div class=highlight><pre>
 GetDistro
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>Settings</h1>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p><code>stack.sh</code> is customizable through setting environment variables.  If you
+want to override a setting you can set and export it::</p>
+
+<pre><code>export MYSQL_PASSWORD=anothersecret
+./stack.sh
+</code></pre>
+
+<p>You can also pass options on a single line <code>MYSQL_PASSWORD=simple ./stack.sh</code></p>
+
+<p>Additionally, you can put any local variables into a <code>localrc</code> file::</p>
+
+<pre><code>MYSQL_PASSWORD=anothersecret
+MYSQL_USER=hellaroot
+</code></pre>
+
+<p>We try to have sensible defaults, so you should be able to run <code>./stack.sh</code>
+in most cases.</p>
+
+<p>DevStack distributes <code>stackrc</code> which contains locations for the OpenStack
+repositories and branches to configure.  <code>stackrc</code> sources <code>localrc</code> to
+allow you to safely override those settings without being overwritten
+when updating DevStack.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$TOP_DIR</span>/stackrc <span class="o">]]</span>; <span class="k">then</span>
@@ -44,6 +111,17 @@ GetDistro
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>HTTP and HTTPS proxy servers are supported via the usual environment variables
+<code>http_proxy</code> and <code>https_proxy</code>.  Additionally if you would like to access
+to specific server directly and not through the proxy server, you can use
+<code>no_proxy</code> environment variable.  They can be set in <code>localrc</code> if necessary
+or on the command line::</p>
+
+<pre><code>http_proxy=http://proxy.example.com:3128/ no_proxy=repo.example.net ./stack.sh
+</code></pre>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$http_proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -56,14 +134,33 @@ GetDistro
 <span class="k">    </span><span class="nb">export </span><span class="nv">no_proxy</span><span class="o">=</span><span class="nv">$no_proxy</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Destination path for installation <code>DEST</code></p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>Sanity Check</h1>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Remove services which were negated in ENABLED<em>SERVICES
+using the "-" prefix (e.g., "-n-vol") instead of
+calling disable</em>service().</p>
 
 </td><td class=code><div class=highlight><pre>
 disable_negated_services
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Warn users who aren't on an explicitly supported distro, but allow them to
+override check and attempt installation with <code>FORCE=yes ./stack</code></p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>oneiric|precise|quantal|f16|f17<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -75,10 +172,18 @@ disable_negated_services
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;${DISTRO}&quot;</span> <span class="o">=</span> <span class="s2">&quot;oneiric&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> is_service_enabled qpid ; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Qpid was introduced in precise</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nb">echo</span> <span class="s2">&quot;You must use Ubuntu Precise or newer for Qpid support.&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set the paths of certain binaries</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -87,11 +192,23 @@ disable_negated_services
 <span class="k">    </span><span class="nv">NOVA_ROOTWRAP</span><span class="o">=</span>/usr/bin/nova-rootwrap
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p><code>stack.sh</code> keeps function libraries here
+Make sure <code>$TOP_DIR/lib</code> directory is present</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$TOP_DIR</span>/lib <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing devstack/lib - did you grab more than just stack.sh?&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>stack.sh keeps the list of <code>apt</code> and <code>pip</code> dependencies in external
+files, along with config templates and other useful files.  You can find these
+in the <code>files</code> directory (next to this script).  We will reference this
+directory using the <code>FILES</code> variable in this script.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
@@ -99,6 +216,10 @@ disable_negated_services
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: missing devstack/files - did you grab more than just stack.sh?&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Check to see if we are already running DevStack</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span><span class="nb">type</span> -p screen &gt;/dev/null <span class="o">&amp;&amp;</span> screen -ls | egrep -q <span class="s2">&quot;[0-9].stack&quot;</span>; <span class="k">then</span>
@@ -108,11 +229,22 @@ disable_negated_services
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Make sure we only have one volume service enabled.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled cinder <span class="o">&amp;&amp;</span> is_service_enabled n-vol; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: n-vol and cinder must not be enabled at the same time&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>OpenStack is designed to be run as a regular user (Horizon will fail to run
+as root, since apache refused to startup serve content from root user).  If
+<code>stack.sh</code> is run as <strong>root</strong>, it automatically creates a <strong>stack</strong> user with
+sudo privileges and runs as that user.</p>
 
 </td><td class=code><div class=highlight><pre>
 
@@ -121,6 +253,11 @@ disable_negated_services
     <span class="nb">echo</span> <span class="s2">&quot;You are running this script as root.&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;In $ROOTSLEEP seconds, we will create a user &#39;stack&#39; and run as that user&quot;</span>
     sleep <span class="nv">$ROOTSLEEP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>since this script runs as a normal user, we need to give that user
+ability to run sudo</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -138,6 +275,10 @@ disable_negated_services
     <span class="k">fi</span>
 
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Giving stack user passwordless sudo priviledges&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>some uec images sudoers does not have a '#includedir'. add one.</p>
+
 </td><td class=code><div class=highlight><pre>
     grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
         <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> &gt;&gt; /etc/sudoers
@@ -155,6 +296,10 @@ disable_negated_services
     <span class="k">fi</span>
 <span class="k">    </span><span class="nb">exit </span>1
 <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We're not root, make sure sudo is available</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">CHECK_SUDO_CMD</span><span class="o">=</span><span class="s2">&quot;dpkg -l sudo&quot;</span>
@@ -163,22 +308,43 @@ disable_negated_services
     <span class="k">fi</span>
     <span class="nv">$CHECK_SUDO_CMD</span> <span class="o">||</span> die <span class="s2">&quot;Sudo is required.  Re-run stack.sh as root ONE TIME ONLY to set up sudo.&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>UEC images /etc/sudoers does not have a '#includedir'. add one.</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
         <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> | sudo tee -a /etc/sudoers
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up devstack sudoers</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
     <span class="nb">echo</span> <span class="s2">&quot;`whoami` ALL=(root) NOPASSWD:ALL&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Some binaries might be under /sbin or /usr/sbin, so make sure sudo will
+see them by forcing PATH</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nb">echo</span> <span class="s2">&quot;Defaults:`whoami` secure_path=/sbin:/usr/sbin:/usr/bin:/bin:/usr/local/sbin:/usr/local/bin&quot;</span> &gt;&gt; <span class="nv">$TEMPFILE</span>
     chmod 0440 <span class="nv">$TEMPFILE</span>
     sudo chown root:root <span class="nv">$TEMPFILE</span>
     sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/50_stack_sh
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Remove old file</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo rm -f /etc/sudoers.d/stack_sh_nova
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create the destination directory and ensure it is writable by the user</p>
 
 </td><td class=code><div class=highlight><pre>
 sudo mkdir -p <span class="nv">$DEST</span>
@@ -186,11 +352,27 @@ sudo mkdir -p <span class="nv">$DEST</span>
 <span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$DEST</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set True to configure <code>stack.sh</code> to run cleanly without Internet access.
+<code>stack.sh</code> must have been previously run with Internet access to install
+prerequisites and initialize <code>$DEST</code>.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">OFFLINE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$OFFLINE</span><span class="sb">`</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set True to configure <code>stack.sh</code> to exit with an error code if it is asked
+to clone any git repositories.  If devstack is used in a testing environment,
+this may be used to ensure that the correct code is being tested.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">ERROR_ON_CLONE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$ERROR_ON_CLONE</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Destination path for service data</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
@@ -198,12 +380,23 @@ sudo mkdir -p <span class="nv">$DATA_DIR</span>
 sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$DATA_DIR</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Projects</h2>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Get project function libraries</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set the destination directories for openstack projects</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
@@ -221,38 +414,92 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 <span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
 <span class="nv">QUANTUM_CLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-quantumclient
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Default Quantum Plugin</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_PLUGIN</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_PLUGIN</span><span class="k">:-</span><span class="nv">openvswitch</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Default Quantum Port</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_PORT</span><span class="k">:-</span><span class="nv">9696</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Default Quantum Host</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Which Quantum API nova should use
+Default admin username</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_ADMIN_USERNAME</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ADMIN_USERNAME</span><span class="k">:-</span><span class="nv">quantum</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Default auth strategy</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_AUTH_STRATEGY</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_AUTH_STRATEGY</span><span class="k">:-</span><span class="nv">keystone</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Use namespace or not</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_USE_NAMESPACE</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_USE_NAMESPACE</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Name of the lvm volume group to use/create for iscsi volumes</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VOLUME_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">:-</span><span class="nv">stack</span><span class="p">-volumes</span><span class="k">}</span>
 <span class="nv">VOLUME_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">:-</span><span class="nv">volume</span><span class="p">-</span><span class="k">}</span>
 <span class="nv">INSTANCE_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTANCE_NAME_PREFIX</span><span class="k">:-</span><span class="nv">instance</span><span class="p">-</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Nova supports pluggable schedulers.  <code>FilterScheduler</code> should work in most
+cases.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SCHEDULER</span><span class="o">=</span><span class="k">${</span><span class="nv">SCHEDULER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.scheduler.filter_scheduler.FilterScheduler</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set fixed and floating range here so we can make sure not to use addresses
+from either range when attempting to guess the ip to use for the host</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.224/28</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Find the interface used for the default route</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">HOST_IP_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST_IP_IFACE</span><span class="k">:-$(</span>ip route | sed -n <span class="s1">&#39;/^default/{ s/.*dev \(\w\+\)\s\+.*/\1/; p; }&#39;</span><span class="k">)}</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Search for an IP unless an explicit is set by <code>HOST_IP</code> environment variable</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$HOST_IP&quot;</span> -o <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
     <span class="nv">HOST_IPS</span><span class="o">=</span><span class="sb">`</span><span class="nv">LC_ALL</span><span class="o">=</span>C ip -f inet addr show <span class="k">${</span><span class="nv">HOST_IP_IFACE</span><span class="k">}</span> | awk <span class="s1">&#39;/inet/ {split($2,parts,&quot;/&quot;);  print parts[1]}&#39;</span><span class="sb">`</span>
     <span class="k">for </span>IP in <span class="nv">$HOST_IPS</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Attempt to filter out ip addresses that are part of the fixed and
+floating range. Note that this method only works if the 'netaddr'
+python library is installed. If it is not installed, an error
+will be printed and the first ip from the interface will be used.</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> ! <span class="o">(</span>address_in_net <span class="nv">$IP</span> <span class="nv">$FIXED_RANGE</span> <span class="o">||</span> address_in_net <span class="nv">$IP</span> <span class="nv">$FLOATING_RANGE</span><span class="o">)</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">HOST_IP</span><span class="o">=</span><span class="nv">$IP</span>
@@ -266,19 +513,39 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Allow the use of an alternate hostname (such as localhost/127.0.0.1) for service endpoints.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure services to use syslog instead of writing to individual log files</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SYSLOG</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$SYSLOG</span><span class="sb">`</span>
 <span class="nv">SYSLOG_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSLOG_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
 <span class="nv">SYSLOG_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSLOG_PORT</span><span class="k">:-</span><span class="nv">516</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Use color for logging output</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">LOG_COLOR</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$LOG_COLOR</span><span class="sb">`</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Service startup timeout</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SERVICE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TIMEOUT</span><span class="k">:-</span><span class="nv">60</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Generic helper to configure passwords</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>read_password <span class="o">{</span>
@@ -288,12 +555,25 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 
     <span class="nv">localrc</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/localrc
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If the password is not defined yet, proceed to prompt user for a password.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[</span> ! <span class="nv">$pw</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If there is no localrc file, create one</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$localrc</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">            </span>touch <span class="nv">$localrc</span>
         <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Presumably if we got this far it can only be that our localrc is missing
+the required password.  Prompt user for a password and write to localrc.</p>
 
 </td><td class=code><div class=highlight><pre>
         <span class="nb">echo</span> <span class="s1">&#39;&#39;</span>
@@ -321,12 +601,25 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 <span class="o">}</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Nova Network Configuration</h2>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>FIXME: more documentation about why these are important options.  Also
+we should make sure we use the same variable names as the option names.</p>
 
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">PUBLIC_INTERFACE_DEFAULT</span><span class="o">=</span>eth3
+</pre></div></td></tr><tr><td class=docs>
+
+<p>allow build_domU.sh to specify the flat network bridge via kernel args</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span><span class="k">$(</span>grep -o <span class="s1">&#39;flat_network_bridge=[[:alnum:]]*&#39;</span> /proc/cmdline | cut -d<span class="o">=</span> -f 2 | sort -u<span class="k">)</span>
     <span class="nv">GUEST_INTERFACE_DEFAULT</span><span class="o">=</span>eth1
@@ -344,31 +637,98 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 <span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">$FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="k">}</span>
 <span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Test floating pool and range are used for testing.  They are defined
+here until the admin APIs can replace nova-manage</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TEST_FLOATING_POOL</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_POOL</span><span class="k">:-</span><span class="nv">test</span><span class="k">}</span>
 <span class="nv">TEST_FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.253.0/29</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p><strong>MULTI_HOST</strong> is a mode where each compute node runs its own network node.  This
+allows network operations and routing for a VM to occur on the server that is
+running the VM - removing a SPOF and bandwidth bottleneck.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">MULTI_HOST</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$MULTI_HOST</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If you are using FlatDHCP on multiple hosts, set the <code>FLAT_INTERFACE</code>
+variable but make sure that the interface doesn't already have an
+ip or you risk breaking things.</p>
+
+<p><strong>DHCP Warning</strong>:  If your flat interface device uses DHCP, there will be a
+hiccup while the network is moved from the flat interface to the flat network
+bridge.  This will happen when you launch your first instance.  Upon launch
+you will lose all connectivity to the node, and the vm launch will probably
+fail.</p>
+
+<p>If you are running on a single node and don't need to access the VMs from
+devices other than that node, you can set the flat interface to the same
+value as <code>FLAT_NETWORK_BRIDGE</code>.  This will stop the network hiccup from
+occurring.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
 
 <span class="c">## FIXME(ja): should/can we check that FLAT_INTERFACE is sane?</span>
 
-</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Using Quantum networking:</p>
+
+<p>Make sure that quantum is enabled in ENABLED<em>SERVICES.  If it is the network
+manager will be set to the QuantumManager.  If you want to run Quantum on
+this host, make sure that q-svc is also in ENABLED</em>SERVICES.</p>
+
+<p>If you're planning to use the Quantum openvswitch plugin, set Q<em>PLUGIN to
+"openvswitch" and make sure the q-agt service is enabled in
+ENABLED</em>SERVICES.</p>
+
+<p>With Quantum networking the NET_MAN variable is ignored.</p>
 
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>MySQL &amp; (RabbitMQ or Qpid)</h2>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We configure Nova, Horizon, Glance and Keystone to use MySQL as their
+database server.  While they share a single server, each has their own
+database and tables.</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>By default this script will install and configure MySQL.  If you want to
+use an existing server, you can pass in the user/password/host parameters.
+You will need to send the same <code>MYSQL_PASSWORD</code> to every host if you are doing
+a multi-node DevStack installation.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">MYSQL_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
 <span class="nv">MYSQL_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_USER</span><span class="k">:-</span><span class="nv">root</span><span class="k">}</span>
 read_password MYSQL_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR MYSQL.&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>NOTE: Don't specify /db in this string so we can use it for multiple services</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">BASE_SQL_CONN</span><span class="o">=</span><span class="k">${</span><span class="nv">BASE_SQL_CONN</span><span class="k">:-</span><span class="nv">mysql</span><span class="p">://</span><span class="nv">$MYSQL_USER</span><span class="p">:</span><span class="nv">$MYSQL_PASSWORD</span><span class="p">@</span><span class="nv">$MYSQL_HOST</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Rabbit connection info</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
@@ -376,53 +736,141 @@ read_password MYSQL_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
     read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR RABBIT.&quot;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Glance connection info.  Note the port must be specified.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
 
 
-</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Swift</h2>
 
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>TODO: add logging to different location.</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>By default the location of swift drives and objects is located inside
+the swift source directory. SWIFT<em>DATA</em>DIR variable allow you to redefine
+this.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SWIFT_DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data/swift</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We are going to have the configuration files inside the source
+directory, change SWIFT<em>CONFIG</em>DIR if you want to adjust that.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SWIFT_CONFIG_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">:-</span><span class="p">/etc/swift</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>DevStack will create a loop-back disk formatted as XFS to store the
+swift data. By default the disk size is 1 gigabyte. The variable
+SWIFT<em>LOOPBACK</em>DISK_SIZE specified in bytes allow you to change
+that.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">1000000</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The ring uses a configurable number of bits from a path’s MD5 hash as
+a partition index that designates a device. The number of bits kept
+from the hash is known as the partition power, and 2 to the partition
+power indicates the partition count. Partitioning the full MD5 hash
+ring allows other parts of the cluster to work in batches of items at
+once which ends up either more efficient or at least less complex than
+working with each item separately or the entire cluster all at once.
+By default we define 9 for the partition count (which mean 512).</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">:-</span><span class="nv">9</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>This variable allows you to configure how many replicas you want to be
+configured for your Swift cluster.  By default the three replicas would need a
+bit of IO and Memory on a VM you may want to lower that to 1 if you want to do
+only some quick testing.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SWIFT_REPLICAS</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">:-</span><span class="nv">3</span><span class="k">}</span>
 
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If we are using swift3, we can default the s3 port to swift instead
+of nova-objectstore</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled swift3;then
         <span class="nv">S3_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">S3_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
     <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We only ask for Swift Hash if we have enabled swift service.
+SWIFT_HASH is a random unique string for a swift cluster that
+can never change.</p>
+
 </td><td class=code><div class=highlight><pre>
     read_password SWIFT_HASH <span class="s2">&quot;ENTER A RANDOM SWIFT HASH.&quot;</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set default port for nova-objectstore</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">S3_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">S3_SERVICE_PORT</span><span class="k">:-</span><span class="nv">3333</span><span class="k">}</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Keystone</h2>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Service Token - Openstack components need to have an admin token
+to validate user tokens.</p>
 
 </td><td class=code><div class=highlight><pre>
 read_password SERVICE_TOKEN <span class="s2">&quot;ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN TOKEN.&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Services authenticate to Identity with servicename/SERVICE_PASSWORD</p>
+
 </td><td class=code><div class=highlight><pre>
 read_password SERVICE_PASSWORD <span class="s2">&quot;ENTER A SERVICE_PASSWORD TO USE FOR THE SERVICE AUTHENTICATION.&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Horizon currently truncates usernames and passwords at 20 characters</p>
+
 </td><td class=code><div class=highlight><pre>
 read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS).&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set the tenant for service accounts in Keystone</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TENANT_NAME</span><span class="k">:-</span><span class="nv">service</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set Keystone interface configuration</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">KEYSTONE_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_API_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
@@ -434,14 +882,34 @@ read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
 <span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">http</span><span class="k">}</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Horizon</h2>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Allow overriding the default Apache user and group, default both to
+current user.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">APACHE_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_USER</span><span class="k">:-</span><span class="nv">$USER</span><span class="k">}</span>
 <span class="nv">APACHE_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_GROUP</span><span class="k">:-</span><span class="nv">$APACHE_USER</span><span class="k">}</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Log files</h2>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up logging for stack.sh
+Set LOGFILE to turn on logging
+We append '.xxxxxxxx' to the given name to maintain history
+where xxxxxxxx is a representation of the date the file was created</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">||</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -451,6 +919,12 @@ read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>First clean up old log files.  Use the user-specified LOGFILE
+as the template to search for, appending '.*' to match the date
+we added on earlier runs.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">LOGDIR</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
     <span class="nv">LOGNAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
@@ -458,24 +932,54 @@ read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
     find <span class="nv">$LOGDIR</span> -maxdepth 1 -name <span class="nv">$LOGNAME</span>.<span class="se">\*</span> -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
 
     <span class="nv">LOGFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Redirect stdout/stderr to tee to write the log file</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
     <span class="nb">echo</span> <span class="s2">&quot;stack.sh log $LOGFILE&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Specified logfile name always links to the most recent log</p>
+
 </td><td class=code><div class=highlight><pre>
     ln -sf <span class="nv">$LOGFILE</span> <span class="nv">$LOGDIR</span>/<span class="nv">$LOGNAME</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up logging of screen windows
+Set SCREEN<em>LOGDIR to turn on logging of screen windows to the
+directory specified in SCREEN</em>LOGDIR, we will log to the the file
+screen-$SERVICE<em>NAME-$TIMESTAMP.log in that dir and have a link
+screen-$SERVICE</em>NAME.log to the latest log file.
+Logs are kept for as long specified in LOGDAYS.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We make sure the directory is created.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> -d <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We cleanup the old logs</p>
+
 </td><td class=code><div class=highlight><pre>
         find <span class="nv">$SCREEN_LOGDIR</span> -maxdepth 1 -name screen-<span class="se">\*</span>.log -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
     <span class="k">else</span>
 <span class="k">        </span>mkdir -p <span class="nv">$SCREEN_LOGDIR</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>So that errors don't compound we exit on any errors so you see only the
+first error that occurred.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nb">trap </span>failed ERR
@@ -486,13 +990,30 @@ failed<span class="o">()</span> <span class="o">{</span>
     <span class="nb">exit</span> <span class="nv">$r</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Print the commands being run so that we can see the command that triggers
+an error.  It is also useful for following along as the install occurs.</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o xtrace
 
 
-</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>Install Packages</h1>
 
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Openstack uses a fair number of other projects.</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install package requirements</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -507,6 +1028,11 @@ failed<span class="o">()</span> <span class="o">{</span>
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install rabbitmq-server
+the temp file is necessary due to LP: #878600</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">tfile</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
     install_package rabbitmq-server &gt; <span class="s2">&quot;$tfile&quot;</span> 2&gt;&amp;1
@@ -523,6 +1049,11 @@ failed<span class="o">()</span> <span class="o">{</span>
 <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Seed configuration with mysql password so that apt-get install doesn't
+prompt us for a password upon install.</p>
+
 </td><td class=code><div class=highlight><pre>
         cat <span class="s">&lt;&lt;MYSQL_PRESEED | sudo debconf-set-selections</span>
 <span class="s">mysql-server-5.1 mysql-server/root_password password $MYSQL_PASSWORD</span>
@@ -530,6 +1061,12 @@ failed<span class="o">()</span> <span class="o">{</span>
 <span class="s">mysql-server-5.1 mysql-server/start_on_boot boolean true</span>
 <span class="s">MYSQL_PRESEED</span>
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>while <code>.my.cnf</code> is not needed for openstack to function, it is useful
+as it allows you to access the mysql databases via <code>mysql nova</code> instead
+of having to specify the username/password each time.</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$HOME</span>/.my.cnf <span class="o">]]</span>; <span class="k">then</span>
@@ -541,12 +1078,21 @@ failed<span class="o">()</span> <span class="o">{</span>
 <span class="s">EOF</span>
         chmod 0600 <span class="nv">$HOME</span>/.my.cnf
     <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install mysql-server</p>
+
 </td><td class=code><div class=highlight><pre>
     install_package mysql-server
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install deps
+FIXME add to files/apts/quantum, but don't install if not needed!</p>
+
 </td><td class=code><div class=highlight><pre>
         install_package python-configobj
     <span class="k">fi</span>
@@ -554,6 +1100,10 @@ failed<span class="o">()</span> <span class="o">{</span>
 
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install apache2, which is NOPRIME'd</p>
+
 </td><td class=code><div class=highlight><pre>
         install_package apache2 libapache2-mod-wsgi
     <span class="k">else</span>
@@ -564,6 +1114,11 @@ failed<span class="o">()</span> <span class="o">{</span>
 
 <span class="k">if </span>is_service_enabled q-agt; <span class="k">then</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install deps
+FIXME add to files/apts/quantum, but don't install if not needed!</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">kernel_version</span><span class="o">=</span><span class="sb">`</span>cat /proc/version | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span>
@@ -579,6 +1134,11 @@ failed<span class="o">()</span> <span class="o">{</span>
 
 <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Virtualization Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">LIBVIRT_PKG_NAME</span><span class="o">=</span>libvirt-bin
@@ -586,6 +1146,12 @@ failed<span class="o">()</span> <span class="o">{</span>
 <span class="k">        </span><span class="nv">LIBVIRT_PKG_NAME</span><span class="o">=</span>libvirt
     <span class="k">fi</span>
 <span class="k">    </span>install_package <span class="nv">$LIBVIRT_PKG_NAME</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install and configure <strong>LXC</strong> if specified.  LXC is another approach to
+splitting a system into many smaller parts.  LXC uses cgroups and chroot
+to simulate multiple systems.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -601,11 +1167,19 @@ failed<span class="o">()</span> <span class="o">{</span>
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install memcached for swift.</p>
+
 </td><td class=code><div class=highlight><pre>
     install_package memcached
 <span class="k">fi</span>
 
 <span class="nv">TRACK_DEPENDS</span><span class="o">=</span><span class="k">${</span><span class="nv">TRACK_DEPENDS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install python packages into a virtualenv so that we can track them</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span> ; <span class="k">then</span>
@@ -617,11 +1191,23 @@ failed<span class="o">()</span> <span class="o">{</span>
     <span class="nv">$DEST</span>/.venv/bin/pip freeze &gt; <span class="nv">$DEST</span>/requires-pre-pip
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install python requirements</p>
+
 </td><td class=code><div class=highlight><pre>
 pip_install <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/pips | sort -u<span class="k">)</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Check out OpenStack sources</p>
+
 </td><td class=code><div class=highlight><pre>
 git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_DIR</span> <span class="nv">$NOVA_BRANCH</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Check out the client libs that are used most</p>
 
 </td><td class=code><div class=highlight><pre>
 git_clone <span class="nv">$KEYSTONECLIENT_REPO</span> <span class="nv">$KEYSTONECLIENT_DIR</span> <span class="nv">$KEYSTONECLIENT_BRANCH</span>
@@ -629,30 +1215,62 @@ git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_
 git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENSTACKCLIENT_DIR</span> <span class="nv">$OPENSTACKCLIENT_BRANCH</span>
 git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLIENT_DIR</span> <span class="nv">$GLANCECLIENT_BRANCH</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>glance, swift middleware and nova api needs keystone middleware</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key g-api n-api swift; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>unified auth system (manages accounts/tokens)</p>
+
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$KEYSTONE_REPO</span> <span class="nv">$KEYSTONE_DIR</span> <span class="nv">$KEYSTONE_BRANCH</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>storage service</p>
+
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$SWIFT_REPO</span> <span class="nv">$SWIFT_DIR</span> <span class="nv">$SWIFT_BRANCH</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>storage service client and and Library</p>
+
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$SWIFTCLIENT_REPO</span> <span class="nv">$SWIFTCLIENT_DIR</span> <span class="nv">$SWIFTCLIENT_BRANCH</span>
     <span class="k">if </span>is_service_enabled swift3; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>swift3 middleware to provide S3 emulation to Swift</p>
+
 </td><td class=code><div class=highlight><pre>
         git_clone <span class="nv">$SWIFT3_REPO</span> <span class="nv">$SWIFT3_DIR</span> <span class="nv">$SWIFT3_BRANCH</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled g-api n-api; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>image catalog service</p>
+
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$GLANCE_REPO</span> <span class="nv">$GLANCE_DIR</span> <span class="nv">$GLANCE_BRANCH</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled n-novnc; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>a websockets/html5 or flash powered VNC console for vm instances</p>
+
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$NOVNC_REPO</span> <span class="nv">$NOVNC_DIR</span> <span class="nv">$NOVNC_BRANCH</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>django powered web control panel for openstack</p>
+
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$HORIZON_REPO</span> <span class="nv">$HORIZON_DIR</span> <span class="nv">$HORIZON_BRANCH</span> <span class="nv">$HORIZON_TAG</span>
 <span class="k">fi</span>
@@ -660,11 +1278,12 @@ git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLI
 <span class="k">    </span>git_clone <span class="nv">$QUANTUM_CLIENT_REPO</span> <span class="nv">$QUANTUM_CLIENT_DIR</span> <span class="nv">$QUANTUM_CLIENT_BRANCH</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>quantum</p>
+
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$QUANTUM_REPO</span> <span class="nv">$QUANTUM_DIR</span> <span class="nv">$QUANTUM_BRANCH</span>
-<span class="k">fi</span>
-<span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
-<span class="k">    </span>install_heat
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>install_cinder
@@ -673,7 +1292,16 @@ git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLI
 <span class="k">    </span>install_ceilometer
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>Initialization</h1>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up our checkouts so they are installed into python path
+allowing <code>import nova</code> or <code>import glance.client</code></p>
 
 </td><td class=code><div class=highlight><pre>
 setup_develop <span class="nv">$KEYSTONECLIENT_DIR</span>
@@ -693,6 +1321,10 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
 <span class="k">    </span>setup_develop <span class="nv">$GLANCE_DIR</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Do this <em>after</em> glance is installed to override the old binary</p>
+
 </td><td class=code><div class=highlight><pre>
 setup_develop <span class="nv">$GLANCECLIENT_DIR</span>
 
@@ -703,9 +1335,6 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    </span>setup_develop <span class="nv">$QUANTUM_CLIENT_DIR</span>
     setup_develop <span class="nv">$QUANTUM_DIR</span>
-<span class="k">fi</span>
-<span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
-<span class="k">    </span>configure_heat
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>configure_cinder
@@ -720,10 +1349,18 @@ setup_develop <span class="nv">$NOVA_DIR</span>
     <span class="nb">exit </span>0
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Syslog</h2>
+
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$SYSLOG</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$SYSLOG_HOST&quot;</span> <span class="o">=</span> <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure the master host to receive</p>
+
 </td><td class=code><div class=highlight><pre>
         cat <span class="s">&lt;&lt;EOF &gt;/tmp/90-stack-m.conf</span>
 <span class="s">\$ModLoad imrelp</span>
@@ -731,6 +1368,10 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 <span class="s">EOF</span>
         sudo mv /tmp/90-stack-m.conf /etc/rsyslog.d
     <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set rsyslog to send to remote host</p>
+
 </td><td class=code><div class=highlight><pre>
         cat <span class="s">&lt;&lt;EOF &gt;/tmp/90-stack-s.conf</span>
 <span class="s">*.*		:omrelp:$SYSLOG_HOST:$SYSLOG_PORT</span>
@@ -741,20 +1382,40 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 <span class="k">fi</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Rabbit or Qpid</h2>
+
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Start rabbitmq-server</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>RPM doesn't start the service</p>
+
 </td><td class=code><div class=highlight><pre>
         restart_service rabbitmq-server
     <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>change the rabbit password since the default is "guest"</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo rabbitmqctl change_password guest <span class="nv">$RABBIT_PASSWORD</span>
 <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
 <span class="k">    </span>restart_service qpidd
 <span class="k">fi</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Mysql</h2>
 
 </td><td class=code><div class=highlight><pre>
 
@@ -763,13 +1424,29 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 
     <span class="c">#start mysql-server</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>RPM doesn't start the service</p>
+
 </td><td class=code><div class=highlight><pre>
         start_service mysqld
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set the root password - only works the first time</p>
+
 </td><td class=code><div class=highlight><pre>
         sudo mysqladmin -u root password <span class="nv">$MYSQL_PASSWORD</span> <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">    </span><span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Update the DB to give user ‘$MYSQL_USER’@’%’ full control of the all databases:</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo mysql -uroot -p<span class="nv">$MYSQL_PASSWORD</span> -h127.0.0.1 -e <span class="s2">&quot;GRANT ALL PRIVILEGES ON *.* TO &#39;$MYSQL_USER&#39;@&#39;%&#39; identified by &#39;$MYSQL_PASSWORD&#39;;&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Update <code>my.cnf</code> for some local needs and restart the mysql service</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -780,14 +1457,30 @@ setup_develop <span class="nv">$NOVA_DIR</span>
         <span class="nv">MYSQL</span><span class="o">=</span>mysqld
     <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Change ‘bind-address’ from localhost (127.0.0.1) to any (0.0.0.0)</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo sed -i <span class="s1">&#39;/^bind-address/s/127.0.0.1/0.0.0.0/g&#39;</span> <span class="nv">$MY_CONF</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set default db type to InnoDB</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>sudo grep -q <span class="s2">&quot;default-storage-engine&quot;</span> <span class="nv">$MY_CONF</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Change it</p>
+
 </td><td class=code><div class=highlight><pre>
         sudo bash -c <span class="s2">&quot;source $TOP_DIR/functions; iniset $MY_CONF mysqld default-storage-engine InnoDB&quot;</span>
     <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Add it</p>
+
 </td><td class=code><div class=highlight><pre>
         sudo sed -i -e <span class="s2">&quot;/^\[mysqld\]/ a \</span>
 <span class="s2">default-storage-engine = InnoDB&quot;</span> <span class="nv">$MY_CONF</span>
@@ -800,16 +1493,32 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 <span class="k">    </span><span class="nv">SCREEN_HARDSTATUS</span><span class="o">=</span><span class="s1">&#39;%{= .} %-Lw%{= .}%&gt; %n%f %t*%{= .}%+Lw%&lt; %-=%{g}(%{d}%H/%l%{g})&#39;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Our screenrc file builder</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>screen_rc <span class="o">{</span>
     <span class="nv">SCREENRC</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/stack-screenrc
     <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$SCREENRC</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Name the screen session</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="nb">echo</span> <span class="s2">&quot;sessionname stack&quot;</span> &gt; <span class="nv">$SCREENRC</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set a reasonable statusbar</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="nb">echo</span> <span class="s2">&quot;hardstatus alwayslastline &#39;$SCREEN_HARDSTATUS&#39;&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
         <span class="nb">echo</span> <span class="s2">&quot;screen -t stack bash&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
     <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If this service doesn't already exist in the screenrc file</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> ! grep <span class="nv">$1</span> <span class="nv">$SCREENRC</span> 2&gt;&amp;1 &gt; /dev/null; <span class="k">then</span>
 <span class="k">        </span><span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
@@ -818,14 +1527,28 @@ setup_develop <span class="nv">$NOVA_DIR</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Our screen helper to launch a service in a hidden named screen</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>screen_it <span class="o">{</span>
     <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
     <span class="k">if </span>is_service_enabled <span class="nv">$1</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Append the service to the screen rc file</p>
+
 </td><td class=code><div class=highlight><pre>
         screen_rc <span class="s2">&quot;$1&quot;</span> <span class="s2">&quot;$2&quot;</span>
 
         screen -S stack -X screen -t <span class="nv">$1</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>sleep to allow bash to be ready to be send the command - we are
+creating a new window in screen and then sends characters, so if
+bash isn't running by the time we send the command, nothing happens</p>
+
 </td><td class=code><div class=highlight><pre>
         sleep 1.5
 
@@ -838,30 +1561,63 @@ setup_develop <span class="nv">$NOVA_DIR</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create a new named screen to run processes in</p>
+
 </td><td class=code><div class=highlight><pre>
 screen -d -m -S stack -t stack -s /bin/bash
 sleep 1
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set a reasonable statusbar</p>
+
 </td><td class=code><div class=highlight><pre>
 screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARDSTATUS&quot;</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Horizon</h2>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up the django horizon application to serve via apache/wsgi</p>
 
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Remove stale session database.</p>
+
 </td><td class=code><div class=highlight><pre>
     rm -f <span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/dashboard_openstack.sqlite3
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p><code>local_settings.py</code> is used to override horizon default settings.</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/local_settings.py
     cp <span class="nv">$FILES</span>/horizon_settings.py <span class="nv">$local_settings</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Initialize the horizon database (it stores sessions and notices shown to
+users).  The user system is external (keystone).</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>
     python manage.py syncdb --noinput
     <span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create an empty directory that apache uses as docroot</p>
 
 </td><td class=code><div class=highlight><pre>
     sudo mkdir -p <span class="nv">$HORIZON_DIR</span>/.blackhole
@@ -869,12 +1625,24 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
         <span class="nv">APACHE_CONF</span><span class="o">=</span>sites-available/horizon
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Clean up the old config name</p>
+
 </td><td class=code><div class=highlight><pre>
         sudo rm -f /etc/apache2/sites-enabled/000-default
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Be a good citizen and use the distro tools here</p>
+
 </td><td class=code><div class=highlight><pre>
         sudo touch /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF</span>
         sudo a2ensite horizon
     <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install httpd, which is NOPRIME'd</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="nv">APACHE_NAME</span><span class="o">=</span>httpd
         <span class="nv">APACHE_CONF</span><span class="o">=</span>conf.d/horizon.conf
@@ -892,6 +1660,10 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
 <span class="k">fi</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Glance</h2>
+
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
@@ -901,15 +1673,31 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     <span class="k">fi</span>
 <span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$GLANCE_CONF_DIR</span>
     <span class="nv">GLANCE_IMAGE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance/images
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Delete existing images</p>
+
 </td><td class=code><div class=highlight><pre>
     rm -rf <span class="nv">$GLANCE_IMAGE_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Use local glance directories</p>
 
 </td><td class=code><div class=highlight><pre>
     mkdir -p <span class="nv">$GLANCE_IMAGE_DIR</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>(re)create glance database</p>
+
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS glance;&#39;</span>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE glance CHARACTER SET utf8;&#39;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Copy over our glance configurations and update them</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nv">GLANCE_REGISTRY_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry.conf
@@ -939,6 +1727,10 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
     iniset <span class="nv">$GLANCE_API_CONF</span> paste_deploy flavor keystone
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Store the images in swift if enabled.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT default_store swift
@@ -966,9 +1758,17 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
 <span class="k">fi</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Quantum</h2>
+
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Put config files in /etc/quantum for everyone to find</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> ! -d /etc/quantum <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p /etc/quantum
@@ -989,6 +1789,10 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Unknown Quantum plugin &#39;$Q_PLUGIN&#39;.. exiting&quot;</span>
         <span class="nb">exit </span>1
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If needed, move config file from $QUANTUM_DIR/etc/quantum to /etc/quantum</p>
 
 </td><td class=code><div class=highlight><pre>
     mkdir -p /<span class="nv">$Q_PLUGIN_CONF_PATH</span>
@@ -1012,6 +1816,10 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Quantum service (for controller node)</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
 <span class="k">    </span><span class="nv">Q_API_PASTE_FILE</span><span class="o">=</span>/etc/quantum/api-paste.ini
@@ -1028,6 +1836,10 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
             <span class="nb">exit </span>1
     <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Update either configuration file with plugin</p>
+
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT core_plugin <span class="nv">$Q_PLUGIN_CLASS</span>
 
@@ -1040,9 +1852,17 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Quantum agent (for compute nodes)</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled q-agt; <span class="k">then</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up integration bridge</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
         <span class="k">for </span>PORT in <span class="sb">`</span>sudo ovs-vsctl --no-wait list-ports <span class="nv">$OVS_BRIDGE</span><span class="sb">`</span>; <span class="k">do</span>
@@ -1055,12 +1875,21 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
         sudo sed -i -e <span class="s2">&quot;s/.*local_ip = .*/local_ip = $HOST_IP/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
         <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Start up the quantum &lt;-> linuxbridge agent
+set the default network interface</p>
+
 </td><td class=code><div class=highlight><pre>
        <span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> LINUX_BRIDGE physical_interface_mappings default:<span class="nv">$QUANTUM_LB_PRIVATE_INTERFACE</span>
        <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/linuxbridge/agent/linuxbridge_quantum_agent.py&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Quantum DHCP</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled q-dhcp; <span class="k">then</span>
@@ -1070,11 +1899,23 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
 
     cp <span class="nv">$QUANTUM_DIR</span>/etc/dhcp_agent.ini <span class="nv">$Q_DHCP_CONF_FILE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set verbose</p>
+
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT verbose True
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set debug</p>
+
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT debug True
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Update database</p>
 
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT db_connection <span class="s2">&quot;mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/$Q_DB_NAME?charset=utf8&quot;</span>
@@ -1090,6 +1931,10 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Quantum RPC support - must be updated prior to starting any of the services</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    </span>iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT control_exchange quantum
@@ -1101,16 +1946,36 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Start the Quantum services</p>
+
 </td><td class=code><div class=highlight><pre>
 screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Start up the quantum agent</p>
 
 </td><td class=code><div class=highlight><pre>
 screen_it q-agt <span class="s2">&quot;sudo python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Start up the quantum agent</p>
+
 </td><td class=code><div class=highlight><pre>
 screen_it q-dhcp <span class="s2">&quot;sudo python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Nova</h2>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Put config files in /etc/nova for everyone to find</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_CONF_DIR</span><span class="o">=</span>/etc/nova
@@ -1121,27 +1986,52 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 
 cp -p <span class="nv">$NOVA_DIR</span>/etc/nova/policy.json <span class="nv">$NOVA_CONF_DIR</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If Nova ships the new rootwrap filters files, deploy them
+(owned by root) and add a parameter to $NOVA_ROOTWRAP</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">ROOTWRAP_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP&quot;</span>
 <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Wipe any existing rootwrap.d files first</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo rm -rf <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
     <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Deploy filters to /etc/nova/rootwrap.d</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo mkdir -m 755 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
     sudo cp <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.d/*.filters <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
     sudo chown -R root:root <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
     sudo chmod 644 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d/*
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up rootwrap.conf, pointing to /etc/nova/rootwrap.d</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo cp <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.conf <span class="nv">$NOVA_CONF_DIR</span>/
     sudo sed -e <span class="s2">&quot;s:^filters_path=.*$:filters_path=$NOVA_CONF_DIR/rootwrap.d:&quot;</span> -i <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.conf
     sudo chown root:root <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.conf
     sudo chmod 0644 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.conf
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Specify rootwrap.conf as first parameter to nova-rootwrap</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">NOVA_ROOTWRAP</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP $NOVA_CONF_DIR/rootwrap.conf&quot;</span>
     <span class="nv">ROOTWRAP_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP *&quot;</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up the rootwrap sudoers for nova</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
@@ -1151,16 +2041,40 @@ sudo chown root:root <span class="nv">$TEMPFILE</span>
 sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 
 <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Use the sample http middleware configuration supplied in the
+Nova sources.  This paste config adds the configuration required
+for Nova to validate Keystone tokens.</p>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Allow rate limiting to be turned off for testing, like for Tempest
+NOTE: Set API<em>RATE</em>LIMIT="False" to turn OFF rate limiting</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nv">API_RATE_LIMIT</span><span class="o">=</span><span class="k">${</span><span class="nv">API_RATE_LIMIT</span><span class="k">:-</span><span class="s2">&quot;True&quot;</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Remove legacy paste config if present</p>
+
 </td><td class=code><div class=highlight><pre>
     rm -f <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Get the sample configuration file in place</p>
+
 </td><td class=code><div class=highlight><pre>
     cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_CONF_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Rewrite the authtoken configration for our Keystone service.
+This is a bit defensive to allow the sample file some varaince.</p>
 
 </td><td class=code><div class=highlight><pre>
     sed -e <span class="s2">&quot;</span>
@@ -1173,25 +2087,59 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 <span class="s2">    &quot;</span> -i <span class="nv">$NOVA_CONF_DIR</span>/api-paste.ini
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Helper to clean iptables rules</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>clean_iptables<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Delete rules</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo iptables -S -v | sed <span class="s2">&quot;s/-c [0-9]* [0-9]* //g&quot;</span> | grep <span class="s2">&quot;nova&quot;</span> | grep <span class="s2">&quot;\-A&quot;</span> |  sed <span class="s2">&quot;s/-A/-D/g&quot;</span> | awk <span class="s1">&#39;{print &quot;sudo iptables&quot;,$0}&#39;</span> | bash
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Delete nat rules</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo iptables -S -v -t nat | sed <span class="s2">&quot;s/-c [0-9]* [0-9]* //g&quot;</span> | grep <span class="s2">&quot;nova&quot;</span> |  grep <span class="s2">&quot;\-A&quot;</span> | sed <span class="s2">&quot;s/-A/-D/g&quot;</span> | awk <span class="s1">&#39;{print &quot;sudo iptables -t nat&quot;,$0}&#39;</span> | bash
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Delete chains</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo iptables -S -v | sed <span class="s2">&quot;s/-c [0-9]* [0-9]* //g&quot;</span> | grep <span class="s2">&quot;nova&quot;</span> | grep <span class="s2">&quot;\-N&quot;</span> |  sed <span class="s2">&quot;s/-N/-X/g&quot;</span> | awk <span class="s1">&#39;{print &quot;sudo iptables&quot;,$0}&#39;</span> | bash
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Delete nat chains</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo iptables -S -v -t nat | sed <span class="s2">&quot;s/-c [0-9]* [0-9]* //g&quot;</span> | grep <span class="s2">&quot;nova&quot;</span> |  grep <span class="s2">&quot;\-N&quot;</span> | sed <span class="s2">&quot;s/-N/-X/g&quot;</span> | awk <span class="s1">&#39;{print &quot;sudo iptables -t nat&quot;,$0}&#39;</span> | bash
 <span class="o">}</span>
 
 <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Force IP forwarding on, just on case</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo sysctl -w net.ipv4.ip_forward<span class="o">=</span>1
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>attempt to load modules: network block device - used to manage qcow images</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo modprobe nbd <span class="o">||</span> <span class="nb">true</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Check for kvm (hardware based virtualization).  If unable to initialize
+kvm, we drop back to the slower emulation mode (qemu).  Note: many systems
+come with hardware virtualization disabled in BIOS.</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;kvm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1201,6 +2149,12 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
             <span class="nv">LIBVIRT_TYPE</span><span class="o">=</span>qemu
         <span class="k">fi</span>
 <span class="k">    fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Install and configure <strong>LXC</strong> if specified.  LXC is another approach to
+splitting a system into many smaller parts.  LXC uses cgroups and chroot
+to simulate multiple systems.</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1220,6 +2174,10 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 
 <span class="k">    </span><span class="nv">QEMU_CONF</span><span class="o">=</span>/etc/libvirt/qemu.conf
     <span class="k">if </span>is_service_enabled quantum <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="nv">$Q_PLUGIN</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> ! sudo grep -q <span class="s1">&#39;^cgroup_device_acl&#39;</span> <span class="nv">$QEMU_CONF</span> ; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Add /dev/net/tun to cgroup<em>device</em>acls, needed for type=ethernet interfaces</p>
+
 </td><td class=code><div class=highlight><pre>
         sudo chmod 666 <span class="nv">$QEMU_CONF</span>
         sudo cat <span class="s">&lt;&lt;EOF &gt;&gt; /etc/libvirt/qemu.conf</span>
@@ -1236,6 +2194,10 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirt-bin
     <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>http://wiki.libvirt.org/page/SSHPolicyKitSetup</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> ! grep ^libvirtd: /etc/group &gt;/dev/null; <span class="k">then</span>
 <span class="k">            </span>sudo groupadd libvirtd
@@ -1250,16 +2212,42 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 <span class="s1">EOF&#39;</span>
         <span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirtd
     <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>The user that nova runs as needs to be member of libvirtd group otherwise
+nova-compute will be unable to use libvirt.</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo usermod -a -G libvirtd <span class="sb">`</span>whoami<span class="sb">`</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>libvirt detects various settings on startup, as we potentially changed
+the system configuration (modules, filesystems), we need to restart
+libvirt to detect those changes.</p>
+
 </td><td class=code><div class=highlight><pre>
     restart_service <span class="nv">$LIBVIRT_DAEMON</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Instance Storage
+~~~~~~~~~~~~~~~~</p>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Nova stores each instance in its own directory.</p>
 
 </td><td class=code><div class=highlight><pre>
     mkdir -p <span class="nv">$NOVA_DIR</span>/instances
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>You can specify a different disk to be mounted and used for backing the
+virtual machines.  If there is a partition labeled nova-instances we
+mount it (ext filesystems can be labeled via e2label).</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[</span> -L /dev/disk/by-label/nova-instances <span class="o">]</span>; <span class="k">then</span>
@@ -1269,8 +2257,16 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Clean iptables from previous runs</p>
+
 </td><td class=code><div class=highlight><pre>
     clean_iptables
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Destroy old instances</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nv">instances</span><span class="o">=</span><span class="sb">`</span>sudo virsh list --all | grep <span class="nv">$INSTANCE_NAME_PREFIX</span> | sed <span class="s2">&quot;s/.*\($INSTANCE_NAME_PREFIX[0-9a-fA-F]*\).*/\1/g&quot;</span><span class="sb">`</span>
@@ -1279,38 +2275,71 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 <span class="nb">        echo</span> <span class="nv">$instances</span> | xargs -n1 sudo virsh undefine <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">    </span><span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Logout and delete iscsi sessions</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo iscsiadm --mode node | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | cut -d <span class="s2">&quot; &quot;</span> -f2 | xargs sudo iscsiadm --mode node --logout <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">    </span>sudo iscsiadm --mode node | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | cut -d <span class="s2">&quot; &quot;</span> -f2 | sudo iscsiadm --mode node --op delete <span class="o">||</span> <span class="nb">true</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Clean out the instances directory.</p>
 
 </td><td class=code><div class=highlight><pre>
     sudo rm -rf <span class="nv">$NOVA_DIR</span>/instances/*
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled n-net q-dhcp; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Delete traces of nova networks from prior runs</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">    </span>clean_iptables
     rm -rf <span class="nv">$NOVA_DIR</span>/networks
     mkdir -p <span class="nv">$NOVA_DIR</span>/networks
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Force IP forwarding on, just on case</p>
+
 </td><td class=code><div class=highlight><pre>
     sudo sysctl -w net.ipv4.ip_forward<span class="o">=</span>1
 <span class="k">fi</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Storage Service</h2>
+
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We make sure to kill all swift processes first</p>
+
 </td><td class=code><div class=highlight><pre>
     swift-init all stop <span class="o">||</span> <span class="nb">true</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We first do a bit of setup by creating the directories and
+changing the permissions so we can run it as our user.</p>
 
 </td><td class=code><div class=highlight><pre>
 
     <span class="nv">USER_GROUP</span><span class="o">=</span><span class="k">$(</span>id -g<span class="k">)</span>
     sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives
     sudo chown -R <span class="nv">$USER</span>:<span class="k">${</span><span class="nv">USER_GROUP</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We then create a loopback disk and format it to XFS.</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="o">]]</span>; <span class="k">then</span>
@@ -1325,8 +2354,17 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
         dd <span class="k">if</span><span class="o">=</span>/dev/zero <span class="nv">of</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="se">\</span>
             <span class="nv">bs</span><span class="o">=</span>1024 <span class="nv">count</span><span class="o">=</span>0 <span class="nv">seek</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">}</span>
     <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Make a fresh XFS filesystem</p>
+
 </td><td class=code><div class=highlight><pre>
     mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>After the drive being created we mount the disk with a few mount
+options to make it most efficient as possible for swift.</p>
 
 </td><td class=code><div class=highlight><pre>
     mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
@@ -1335,9 +2373,19 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
             <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
     <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We then create link to that mounted location so swift would know
+where to go.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
 <span class="k">        </span>sudo ln -sf <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1/<span class="nv">$x</span> <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/<span class="nv">$x</span>; <span class="k">done</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We now have to emulate a few different servers into one we
+create all the directories needed for swift</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
@@ -1355,9 +2403,20 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
    sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span> /var/run/swift
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SWIFT_CONFIG_DIR&quot;</span> !<span class="o">=</span> <span class="s2">&quot;/etc/swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Some swift tools are hard-coded to use /etc/swift and are apparenty not going to be fixed.
+Create a symlink if the config dir is moved</p>
+
 </td><td class=code><div class=highlight><pre>
         sudo ln -sf <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span> /etc/swift
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Swift use rsync to syncronize between all the different
+partitions (which make more sense when you have a multi-node
+setup) we configure it with our version of rsync.</p>
 
 </td><td class=code><div class=highlight><pre>
     sed -e <span class="s2">&quot;</span>
@@ -1374,6 +2433,12 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 <span class="k">    if </span>is_service_enabled swift3;then
         <span class="nv">swift_auth_server</span><span class="o">=</span><span class="s2">&quot;s3token &quot;</span>
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>By default Swift will be installed with the tempauth middleware
+which has some default username and password if you have
+configured keystone it will checkout the directory.</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
@@ -1400,12 +2465,20 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
     iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT bind_port
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT bind_port <span class="k">${</span><span class="nv">SWIFT_DEFAULT_BIND_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Only enable Swift3 if we have it enabled in ENABLED_SERVICES</p>
+
 </td><td class=code><div class=highlight><pre>
     is_service_enabled swift3 <span class="o">&amp;&amp;</span> <span class="nv">swift3</span><span class="o">=</span>swift3 <span class="o">||</span> <span class="nv">swift3</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> pipeline:main pipeline <span class="s2">&quot;catch_errors healthcheck cache ratelimit ${swift3} ${swift_auth_server} proxy-logging proxy-server&quot;</span>
 
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> app:proxy-server account_autocreate <span class="nb">true</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure Keystone</p>
 
 </td><td class=code><div class=highlight><pre>
     sed -i <span class="s1">&#39;/^# \[filter:authtoken\]/,/^# \[filter:keystoneauth\]$/ s/^#[ \t]*//&#39;</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
@@ -1439,6 +2512,11 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 
 <span class="k">    </span>cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/swift.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf swift-hash swift_hash_path_suffix <span class="k">${</span><span class="nv">SWIFT_HASH</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>NOTE(chmou): s3token middleware is not updated yet to use only
+username and password.</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">function </span>generate_swift_configuration<span class="o">()</span> <span class="o">{</span>
@@ -1483,6 +2561,12 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
     generate_swift_configuration container 6011 2
     generate_swift_configuration account 6012 2
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We need to generate a object/account/proxy configuration
+emulating 4 nodes on different ports we have a little function
+that help us doing that.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">swift_log_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/logs
     rm -rf <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
@@ -1491,6 +2575,11 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
     sed <span class="s2">&quot;s,%SWIFT_LOGDIR%,${swift_log_dir},&quot;</span> <span class="nv">$FILES</span>/swift/rsyslog.conf | sudo <span class="se">\</span>
         tee /etc/rsyslog.d/10-swift.conf
     restart_service rsyslog
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We have some specific configuration for swift for rsyslog. See
+the file /etc/rsyslog.d/10-swift.conf for more info.</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nb">pushd</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span> &gt;/dev/null <span class="o">&amp;&amp;</span> <span class="o">{</span>
@@ -1523,12 +2612,21 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 
     <span class="o">}</span> <span class="o">&amp;&amp;</span> <span class="nb">popd</span> &gt;/dev/null
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>This is where we create three different rings for swift with
+different object servers binding on different ports.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo /etc/init.d/rsync restart <span class="o">||</span> :
     <span class="k">else</span>
 <span class="k">        </span>sudo systemctl start xinetd.service
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>We then can start rsync.</p>
 
 </td><td class=code><div class=highlight><pre>
    swift-init all restart <span class="o">||</span> <span class="nb">true</span>
@@ -1538,35 +2636,79 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 <span class="k">fi</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>First spawn all the swift services then kill the
+proxy service so we can run it in foreground in screen.
+<code>swift-init ... {stop|restart}</code> exits with '1' if no servers are running,
+ignore it just in case</p>
+
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>init_cinder
 <span class="k">elif </span>is_service_enabled n-vol; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>Volume Service</h2>
+
 </td><td class=code><div class=highlight><pre>
 
     <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure a default volume group called '<code>stack-volumes</code>' for the volume
+service if it does not yet exist.  If you don't wish to use a file backed
+volume group, create your own volume group called <code>stack-volumes</code> before
+invoking <code>stack.sh</code>.</p>
+
+<p>By default, the backing file is 5G in size, and is stored in <code>/opt/stack/data</code>.</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
         <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Only create if the file doesn't already exists</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>; <span class="k">fi</span>
 <span class="k">    fi</span>
 
 <span class="k">    if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
+
 </td><td class=code><div class=highlight><pre>
             start_service tgtd
         <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>RPM doesn't start the service</p>
+
 </td><td class=code><div class=highlight><pre>
         mkdir -p <span class="nv">$NOVA_DIR</span>/volumes
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Setup tgtd configuration files</p>
+
 </td><td class=code><div class=highlight><pre>
         sudo tgtadm --op show --mode target | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | grep Target | cut -f3 -d <span class="s1">&#39; &#39;</span> | sudo xargs -n1 tgt-admin --delete <span class="o">||</span> <span class="nb">true</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Remove nova iscsi targets</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="k">for </span>lv in <span class="sb">`</span>sudo lvs --noheadings -o lv_name <span class="nv">$VOLUME_GROUP</span><span class="sb">`</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Clean out existing volumes</p>
+
 </td><td class=code><div class=highlight><pre>
             <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$VOLUME_NAME_PREFIX}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span>sudo lvremove -f <span class="nv">$VOLUME_GROUP</span>/<span class="nv">$lv</span>
@@ -1576,11 +2718,19 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>VOLUME<em>NAME</em>PREFIX prefixes the LVs we want</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> <span class="o">[[</span> ! -f /etc/tgt/conf.d/nova.conf <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">           </span>sudo mkdir -p /etc/tgt/conf.d
            <span class="nb">echo</span> <span class="s2">&quot;include $NOVA_DIR/volumes/*&quot;</span> | sudo tee /etc/tgt/conf.d/nova.conf
         <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Setup the tgt configuration file</p>
 
 </td><td class=code><div class=highlight><pre>
         sudo stop tgt <span class="o">||</span> <span class="nb">true</span>
@@ -1589,6 +2739,11 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
 <span class="k">        </span>restart_service tgtd
     <span class="k">fi</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>tgt in oneiric doesn't restart properly if tgtd isn't running
+do it in two steps</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> -d <span class="nv">$NOVA_DIR</span>/bin <span class="o">]</span> ; <span class="k">then</span>
@@ -1602,8 +2757,16 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
     <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt; <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Support entry points installation of console scripts</p>
+
 </td><td class=code><div class=highlight><pre>
 rm -f <span class="nv">$NOVA_DIR</span>/bin/nova.conf
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Remove legacy nova.conf</p>
 
 </td><td class=code><div class=highlight><pre>
 rm -f <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span>
@@ -1642,6 +2805,10 @@ add_nova_opt <span class="s2">&quot;s3_port=$S3_SERVICE_PORT&quot;</span>
 <span class="k">if </span>is_service_enabled n-vol; <span class="k">then</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;volume_group=$VOLUME_GROUP&quot;</span>
     add_nova_opt <span class="s2">&quot;volume_name_template=${VOLUME_NAME_PREFIX}%s&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>(re)create nova.conf</p>
+
 </td><td class=code><div class=highlight><pre>
     add_nova_opt <span class="s2">&quot;iscsi_helper=tgtadm&quot;</span>
 <span class="k">fi</span>
@@ -1657,6 +2824,10 @@ add_nova_opt <span class="s2">&quot;sql_connection=$BASE_SQL_CONN/nova?charset=u
 add_nova_opt <span class="s2">&quot;libvirt_type=$LIBVIRT_TYPE&quot;</span>
 add_nova_opt <span class="s2">&quot;libvirt_cpu_mode=none&quot;</span>
 add_nova_opt <span class="s2">&quot;instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>oneiric no longer supports ietadm</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NOVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6080/vnc_auto.html&quot;</span><span class="k">}</span>
@@ -1669,6 +2840,11 @@ add_nova_opt <span class="s2">&quot;instance_name_template=${INSTANCE_NAME_PREFI
 <span class="k">else</span>
 <span class="k">    </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
 <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>All nova-compute workers need to know the vnc configuration options
+These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
 add_nova_opt <span class="s2">&quot;vncserver_listen=$VNCSERVER_LISTEN&quot;</span>
@@ -1698,32 +2874,62 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;api_rate_limit=False&quot;</span>
 <span class="k">fi</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Address on which instance vncservers will listen on compute hosts.
+For multi-host, this should be the management ip of the compute host.</p>
+
 </td><td class=code><div class=highlight><pre>
     add_nova_opt <span class="s2">&quot;logging_context_format_string=%(asctime)s %(color)s%(levelname)s %(name)s [[01;36m%(request_id)s [00;36m%(user_name)s %(project_name)s%(color)s] [01;35m%(instance)s%(color)s%(message)s[00m&quot;</span>
     add_nova_opt <span class="s2">&quot;logging_default_format_string=%(asctime)s %(color)s%(levelname)s %(name)s [[00;36m-%(color)s] [01;35m%(instance)s%(color)s%(message)s[00m&quot;</span>
     add_nova_opt <span class="s2">&quot;logging_debug_format_suffix=[00;33mfrom (pid=%(process)d) %(funcName)s %(pathname)s:%(lineno)d[00m&quot;</span>
     add_nova_opt <span class="s2">&quot;logging_exception_prefix=%(color)s%(asctime)s TRACE %(name)s [01;35m%(instance)s[00m&quot;</span>
 <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Add color to logging output</p>
+
 </td><td class=code><div class=highlight><pre>
     add_nova_opt <span class="s2">&quot;logging_context_format_string=%(asctime)s %(levelname)s %(name)s [%(request_id)s %(user_name)s %(project_name)s] %(instance)s%(message)s&quot;</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Show user<em>name and project</em>name instead of user<em>id and project</em>id</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;volume_api_class=nova.volume.cinder.API&quot;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If cinder is enabled, use the cinder volume driver</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$EXTRA_OPTS&quot;</span> <span class="o">&amp;&amp;</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">EXTRA_OPTS</span><span class="o">=</span><span class="nv">$EXTRA_FLAGS</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Provide some transition from EXTRA<em>FLAGS to EXTRA</em>OPTS</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">for </span>I in <span class="s2">&quot;${EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>You can define extra nova conf flags by defining the array EXTRA<em>OPTS,
+For Example: EXTRA</em>OPTS=(foo=true bar=2)</p>
+
 </td><td class=code><div class=highlight><pre>
     add_nova_opt <span class="k">${</span><span class="nv">I</span><span class="p">//--</span><span class="k">}</span>
 <span class="k">done</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Attempt to convert flags to options</p>
 
 </td><td class=code><div class=highlight><pre>
 
@@ -1736,10 +2942,18 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
     add_nova_opt <span class="s2">&quot;xenapi_connection_username=$XENAPI_USER&quot;</span>
     add_nova_opt <span class="s2">&quot;xenapi_connection_password=$XENAPI_PASSWORD&quot;</span>
     add_nova_opt <span class="s2">&quot;flat_injected=False&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<h2>XenServer</h2>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     add_nova_opt <span class="s2">&quot;firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
 <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;openvz&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Need to avoid crash due to new firewall support</p>
+
 </td><td class=code><div class=highlight><pre>
     add_nova_opt <span class="s2">&quot;connection_type=openvz&quot;</span>
     <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
@@ -1751,33 +2965,73 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 <span class="k">fi</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>TODO(deva): OpenVZ driver does not yet work if compute<em>driver is set here.
+            Replace connection</em>type when this is fixed.
+            add<em>nova</em>opt "compute_driver=openvz.connection.OpenVzConnection"</p>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Nova Database
+~~~~~~~~~~~~~</p>
 
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>All nova components talk to a central database.  We will need to do this step
+only once for an entire cluster.</p>
+
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS nova;&#39;</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>(re)create nova database</p>
+
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE nova CHARACTER SET latin1;&#39;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Explicitly use latin1: to avoid lp#829209, nova expects the database to
+use latin1 by default, and then upgrades the database to utf8 (see the
+082_essex.py in nova)</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_BIN_DIR</span>/nova-manage db sync
 <span class="k">fi</span>
 
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
-<span class="k">    </span>init_heat
-<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>(re)create nova database</p>
 
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>Launch Services</h1>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>nova api crashes if we start it with a regular screen command,
+so send the start command by forcing text into the window.
+Only run the services specified in <code>ENABLED_SERVICES</code></p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
 <span class="k">    </span>screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; bin/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf&quot;</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>launch the glance registry service</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled g-api; <span class="k">then</span>
@@ -1790,6 +3044,10 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>launch the glance api and wait for it to answer before continuing</p>
+
 </td><td class=code><div class=highlight><pre>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS keystone;&#39;</span>
     mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE keystone CHARACTER SET utf8;&#39;</span>
@@ -1808,6 +3066,10 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
         cp -p <span class="nv">$KEYSTONE_DIR</span>/etc/policy.json <span class="nv">$KEYSTONE_CONF_DIR</span>
     <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>(re)create keystone database</p>
+
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_token <span class="s2">&quot;$SERVICE_TOKEN&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> sql connection <span class="s2">&quot;$BASE_SQL_CONN/keystone?charset=utf8&quot;</span>
@@ -1815,16 +3077,28 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
     sed -e <span class="s2">&quot;</span>
 <span class="s2">        /^pipeline.*ec2_extension crud_/s|ec2_extension crud_extension|ec2_extension s3_extension crud_extension|;</span>
 <span class="s2">    &quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Rewrite stock keystone.conf:</p>
+
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$KEYSTONE_CONF</span> filter:s3_extension paste.filter_factory <span class="s2">&quot;keystone.contrib.s3:S3Extension.factory&quot;</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;sql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Append the S3 bits</p>
+
 </td><td class=code><div class=highlight><pre>
         iniset <span class="nv">$KEYSTONE_CONF</span> catalog driver keystone.catalog.backends.sql.Catalog
         inicomment <span class="nv">$KEYSTONE_CONF</span> catalog template_file
     <span class="k">else</span>
 <span class="k">        </span><span class="nv">KEYSTONE_CATALOG</span><span class="o">=</span><span class="nv">$KEYSTONE_CONF_DIR</span>/default_catalog.templates
         cp -p <span class="nv">$FILES</span>/default_catalog.templates <span class="nv">$KEYSTONE_CATALOG</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure keystone.conf to use sql</p>
+
 </td><td class=code><div class=highlight><pre>
         <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.publicURL = http://%SERVICE_HOST%:8080/v1/AUTH_\$(tenant_id)s&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
@@ -1832,6 +3106,10 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
             <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.internalURL = http://%SERVICE_HOST%:8080/v1/AUTH_\$(tenant_id)s&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
             <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.name = Swift Service&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
         <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Add swift endpoints to service catalog if swift is enabled</p>
 
 </td><td class=code><div class=highlight><pre>
         <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
@@ -1846,10 +3124,18 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 <span class="s2">            s,%S3_SERVICE_PORT%,$S3_SERVICE_PORT,g;</span>
 <span class="s2">        &quot;</span> -i <span class="nv">$KEYSTONE_CATALOG</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Add quantum endpoints to service catalog if quantum is enabled</p>
+
 </td><td class=code><div class=highlight><pre>
         iniset <span class="nv">$KEYSTONE_CONF</span> catalog driver <span class="s2">&quot;keystone.catalog.backends.templated.TemplatedCatalog&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> catalog template_file <span class="s2">&quot;$KEYSTONE_CATALOG&quot;</span>
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Configure keystone.conf to use templates</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nv">LOGGING_ROOT</span><span class="o">=</span><span class="s2">&quot;devel&quot;</span>
@@ -1861,10 +3147,22 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root level <span class="s2">&quot;DEBUG&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root handlers <span class="s2">&quot;devel,production&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up logging</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage db_sync
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Initialize keystone database</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage pki_setup
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>set up certificates</p>
 
 </td><td class=code><div class=highlight><pre>
     screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
@@ -1873,6 +3171,10 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>launch keystone and wait for it to answer before continuing</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
@@ -1883,11 +3185,19 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
     <span class="nv">DEVSTACK_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span> <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> <span class="se">\</span>
         bash -x <span class="nv">$FILES</span>/keystone_data.sh
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>keystone_data.sh creates services, admin and demo users, and roles.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nb">export </span><span class="nv">OS_AUTH_URL</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span>
     <span class="nb">export </span><span class="nv">OS_TENANT_NAME</span><span class="o">=</span>admin
     <span class="nb">export </span><span class="nv">OS_USERNAME</span><span class="o">=</span>admin
     <span class="nb">export </span><span class="nv">OS_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Set up auth creds now that keystone is bootstrapped</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled swift3 <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
@@ -1902,6 +3212,10 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create an access key and secret key for nova ec2 register image</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;enabled_apis=$NOVA_ENABLED_APIS&quot;</span>
@@ -1913,23 +3227,50 @@ add_nova_opt <span class="s2">&quot;force_dhcp_release=True&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Launch the nova-api and wait for it to answer before continuing</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
 <span class="k">    </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; demo &quot;</span> | get_field 1<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
+happen after we've started the Quantum service.</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --tenant_id <span class="nv">$TENANT_ID</span> net1 | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
     quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span>
 <span class="k">elif </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create a small network
+Since quantum command is executed in admin context at this point,
+--tenant_id needs to be specified.</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_BIN_DIR</span>/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span> <span class="nv">$NETWORK_CREATE_ARGS</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create a small network</p>
 
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_BIN_DIR</span>/nova-manage floating create <span class="nv">$FLOATING_RANGE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create some floating ips</p>
+
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_BIN_DIR</span>/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Create a second pool</p>
 
 </td><td class=code><div class=highlight><pre>
 screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_BIN_DIR/nova-compute&quot;</span>
@@ -1950,22 +3291,50 @@ screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-cons
 screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
 screen_it swift <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; $SWIFT_DIR/bin/swift-proxy-server ${SWIFT_CONFIG_DIR}/proxy-server.conf -v&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Launching nova-compute should be as simple as running <code>nova-compute</code> but
+have to do a little more than that in our script.  Since we add the group
+<code>libvirtd</code> to our user in this script, when nova-compute is run it is
+within the context of our original shell (so our groups won't be updated).
+Use 'sg' to execute nova-compute as a member of the libvirtd group.
+We don't check for is<em>service</em>enable as screen_it does it for us</p>
+
 </td><td class=code><div class=highlight><pre>
 is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
     screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-objectstore&quot;</span>
 
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
-<span class="k">    </span>start_heat
-<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Starting the nova-objectstore only if swift3 service is not enabled.
+Swift will act as s3 objectstore.</p>
 
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>Install Images</h1>
 
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
 <span class="k">    </span><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone  token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Upload an image to glance.</p>
+
+<p>The default image is cirros, a small testing image, which lets you login as root</p>
+
+<p>cirros also uses <code>cloud-init</code>, supporting login via keypair and sending scripts as
+userdata.  See https://help.ubuntu.com/community/CloudInit for more on cloud-init</p>
+
+<p>Override <code>IMAGE_URLS</code> with a comma-separated list of uec images.</p>
+
+<ul>
+<li><strong>oneiric</strong>: http://uec-images.ubuntu.com/oneiric/current/oneiric-server-cloudimg-amd64.tar.gz</li>
+<li><strong>precise</strong>: http://uec-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64.tar.gz
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}http://images.ansolabs.com/tty.tgz&quot;</span>
@@ -1977,7 +3346,16 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
 <span class="k">fi</span>
 
 
+</pre></div></td></tr><tr><td class=docs></li>
+</ul>
+
+<p>Option to upload legacy ami-tty, which works with xenserver</p>
+
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>Run local script</h1>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -x <span class="nv">$TOP_DIR</span>/local.sh <span class="o">]]</span>; <span class="k">then</span>
@@ -1986,21 +3364,38 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
 <span class="k">fi</span>
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Run <code>local.sh</code> if it exists to perform user-managed tasks</p>
+
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">set</span> +o xtrace
 
 
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>Fin</h1>
+
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<h1>Using the cloud</h1>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Horizon is now available at http://$SERVICE_HOST/&quot;</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If you installed Horizon on this server you should be able
+to access the site using your browser.</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
@@ -2010,19 +3405,41 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
     <span class="nb">echo</span> <span class="s2">&quot;The password: $ADMIN_PASSWORD&quot;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>If Keystone is present you can point <code>nova</code> cli to this server</p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;This is your host ip: $HOST_IP&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Echo HOST<em>IP - useful for build</em>uec.sh, which uses dhcp to give the instance an address</p>
 
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: EXTRA_FLAGS is defined and may need to be converted to EXTRA_OPTS&quot;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Warn that <code>EXTRA_FLAGS</code> needs to be converted to <code>EXTRA_OPTS</code></p>
+
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot;</span>
 
 
-</td><td class=code><div class=highlight><pre></td><td class='code'></td></tr>
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+
+<p>Indicate how long this took to run (bash maintained variable 'SECONDS')</p>
+
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+
+</pre></div></td></tr><tr><td class=docs>
+</pre></div></td></tr><tr><td class=docs></td><td class='code'></td></tr>
     </tbody>
     </table>
 </div>
