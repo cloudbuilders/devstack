@@ -998,14 +998,19 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
     sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/$Q_DB_NAME?charset=utf8/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
 
     <span class="nv">OVS_ENABLE_TUNNELING</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_ENABLE_TUNNELING</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">&amp;&amp;</span> <span class="nv">$OVS_ENABLE_TUNNELING</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$OVS_ENABLE_TUNNELING&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">OVS_VERSION</span><span class="o">=</span><span class="sb">`</span>ovs-vsctl --version | head -n 1 | awk <span class="s1">&#39;{print $4;}&#39;</span><span class="sb">`</span>
         <span class="k">if</span> <span class="o">[</span> <span class="nv">$OVS_VERSION</span> <span class="se">\&lt;</span> <span class="s2">&quot;1.4&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ! is_service_enabled q-svc ; <span class="k">then</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;You are running OVS version $OVS_VERSION.&quot;</span>
             <span class="nb">echo</span> <span class="s2">&quot;OVS 1.4+ is required for tunneling between multiple hosts.&quot;</span>
             <span class="nb">exit </span>1
         <span class="k">fi</span>
-<span class="k">        </span>sudo sed -i -e <span class="s2">&quot;s/.*enable_tunneling = .*$/enable_tunneling = $OVS_ENABLE_TUNNELING/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_DEFAULT_BRIDGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS network_vlan_ranges <span class="s2">&quot;&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS network_vlan_ranges default
+        <span class="k">fi</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS tunnel_id_ranges 1:1000
     <span class="k">fi</span>
 
 <span class="k">    </span><span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
@@ -1052,8 +1057,20 @@ screen -r stack -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARD
 <span class="k">        </span>sudo ovs-vsctl --no-wait -- --if-exists del-br <span class="nv">$OVS_BRIDGE</span>
         sudo ovs-vsctl --no-wait add-br <span class="nv">$OVS_BRIDGE</span>
         sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
-        sudo sed -i -e <span class="s2">&quot;s/.*local_ip = .*/local_ip = $HOST_IP/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
-        <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py&quot;</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_ENABLE_TUNNELING&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS local_ip <span class="nv">$HOST_IP</span>
+        <span class="k">else</span>
+</td><td class=code><div class=highlight><pre>
+            <span class="nv">OVS_DEFAULT_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_DEFAULT_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
+        <span class="k">fi</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_DEFAULT_BRIDGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS bridge_mappings <span class="s2">&quot;&quot;</span>
+        <span class="k">else</span>
+</td><td class=code><div class=highlight><pre>
+            sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$OVS_DEFAULT_BRIDGE</span>
+            iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS bridge_mappings default:<span class="nv">$OVS_DEFAULT_BRIDGE</span>
+        <span class="k">fi</span>
+<span class="k">        </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </td><td class=code><div class=highlight><pre>
        <span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">QUANTUM_LB_PRIVATE_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
