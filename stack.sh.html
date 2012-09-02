@@ -518,6 +518,25 @@ templates and other useful files in the <tt class="docutils literal">files</tt> 
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Make sure we only have one rpc backend enabled.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">rpc_backend_cnt</span><span class="o">=</span>0
+<span class="k">for </span>svc in qpid zeromq rabbit; <span class="k">do</span>
+<span class="k">    </span>is_service_enabled <span class="nv">$svc</span> <span class="o">&amp;&amp;</span>
+        <span class="o">((</span>rpc_backend_cnt++<span class="o">))</span>
+<span class="k">done</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$rpc_backend_cnt&quot;</span> -gt 1 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: only one rpc backend may be enabled,&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;       set only one of &#39;rabbit&#39;, &#39;qpid&#39;, &#39;zeromq&#39;&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;       via ENABLED_SERVICES.&quot;</span>
+<span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$rpc_backend_cnt&quot;</span> <span class="o">==</span> 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: at least one rpc backend must be enabled,&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;       set one of &#39;rabbit&#39;, &#39;qpid&#39;, &#39;zeromq&#39;&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;       via ENABLED_SERVICES.&quot;</span>
+<span class="k">fi</span>
+<span class="nb">unset </span>rpc_backend_cnt
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Make sure we only have one volume service enabled.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled cinder <span class="o">&amp;&amp;</span> is_service_enabled n-vol; <span class="k">then</span>
@@ -1204,6 +1223,12 @@ the temp file is necessary due to LP: #878600</p>
     <span class="k">else</span>
 <span class="k">        </span>install_package qpidd
     <span class="k">fi</span>
+<span class="k">elif </span>is_service_enabled zeromq; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>install_package zeromq python-zmq
+    <span class="k">else</span>
+<span class="k">        </span>install_package libzmq1 python-zmq
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
@@ -1500,8 +1525,8 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="rabbit-or-qpid">
-<h2>Rabbit or Qpid</h2>
+<div class="section" id="finalize-queue-instllation">
+<h2>Finalize queue instllation</h2>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
@@ -1992,6 +2017,8 @@ set the default network interface</p>
 <span class="k">    </span>iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT control_exchange quantum
     <span class="k">if </span>is_service_enabled qpid ; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT rpc_backend quantum.openstack.common.rpc.impl_qpid
+    <span class="k">elif </span>is_service_enabled zeromq; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT rpc_backend quantum.openstack.common.rpc.impl_zmq
     <span class="k">elif</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
         iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
@@ -2764,7 +2791,9 @@ add_nova_opt <span class="s2">&quot;vncserver_proxyclient_address=$VNCSERVER_PRO
 add_nova_opt <span class="s2">&quot;api_paste_config=$NOVA_CONF_DIR/api-paste.ini&quot;</span>
 add_nova_opt <span class="s2">&quot;image_service=nova.image.glance.GlanceImageService&quot;</span>
 add_nova_opt <span class="s2">&quot;ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
-<span class="k">if </span>is_service_enabled qpid ; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled zeromq; <span class="k">then</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;rpc_backend=nova.openstack.common.rpc.impl_zmq&quot;</span>
+<span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;rpc_backend=nova.rpc.impl_qpid&quot;</span>
 <span class="k">elif</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;rabbit_host=$RABBIT_HOST&quot;</span>
@@ -3081,6 +3110,8 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
         add_nova_opt <span class="s2">&quot;s3_affix_tenant=True&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
+
+screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-rpc-zmq-receiver&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create an access key and secret key for nova ec2 register image</p>
