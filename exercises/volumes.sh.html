@@ -399,6 +399,11 @@ is_service_enabled cinder n-vol <span class="o">||</span> <span class="nb">exit 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEFAULT_IMAGE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_IMAGE_NAME</span><span class="k">:-</span><span class="nv">ami</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Security group name</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SECGROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">SECGROUP</span><span class="k">:-</span><span class="nv">vol_secgroup</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -430,6 +435,34 @@ glance image-list
 <p>Grab the id of the image to launch</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span>glance image-list | egrep <span class="s2">&quot; $DEFAULT_IMAGE_NAME &quot;</span> | get_field 1<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="security-groups">
+<h2>Security Groups</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>List of secgroups:</p>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-list
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create a secgroup</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! nova secgroup-list | grep -q <span class="nv">$SECGROUP</span>; <span class="k">then</span>
+<span class="k">    </span>nova secgroup-create <span class="nv">$SECGROUP</span> <span class="s2">&quot;$SECGROUP description&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova secgroup-list | grep -q $SECGROUP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Security group not created&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure Security Group Rules</p>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-add-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
+nova secgroup-add-rule <span class="nv">$SECGROUP</span> tcp 22 22 0.0.0.0/0
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -581,9 +614,22 @@ nova volume-delete <span class="nv">$VOL_ID</span> <span class="o">||</span> die
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>shutdown the server</p>
+<p>Shutdown the server</p>
 </td><td class=code><div class=highlight><pre>
-nova delete <span class="nv">$NAME</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting instance $NAME&quot;</span>
+nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting instance $NAME&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Wait for termination</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova list | grep -q $VM_UUID; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Server $NAME not deleted&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete a secgroup</p>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>

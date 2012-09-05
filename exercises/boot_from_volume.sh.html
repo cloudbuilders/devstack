@@ -413,6 +413,12 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nv">DEFAULT_INSTANCE_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Security group name</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SECGROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">SECGROUP</span><span class="k">:-</span><span class="nv">boot_secgroup</span><span class="k">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="launching-servers">
 <h1>Launching servers</h1>
@@ -448,7 +454,6 @@ nova delete <span class="nv">$INSTANCE_NAME</span> <span class="o">||</span> <sp
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure Security Groups</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SECGROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">SECGROUP</span><span class="k">:-</span><span class="nv">test_secgroup</span><span class="k">}</span>
 nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="nb">true</span>
 nova secgroup-create <span class="nv">$SECGROUP</span> <span class="s2">&quot;$SECGROUP description&quot;</span>
 nova secgroup-add-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
@@ -686,8 +691,8 @@ nova delete <span class="nv">$INSTANCE_NAME</span> <span class="o">||</span> <sp
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait till our volume is no longer in-use</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova show $INSTANCE_NAME; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t terminate!&quot;</span>
+<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova list | grep -q $VM_UUID; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Server $NAME not deleted&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
@@ -700,8 +705,7 @@ nova floating-ip-delete <span class="nv">$FLOATING_IP</span> <span class="o">||<
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete instance</p>
 </td><td class=code><div class=highlight><pre>
-nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>

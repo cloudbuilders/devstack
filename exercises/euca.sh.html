@@ -397,6 +397,11 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEFAULT_IMAGE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_IMAGE_NAME</span><span class="k">:-</span><span class="nv">ami</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Security group name</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SECGROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">SECGROUP</span><span class="k">:-</span><span class="nv">euca_secgroup</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -408,11 +413,6 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <p>Find a machine image to boot</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>euca-describe-images | grep machine | grep <span class="k">${</span><span class="nv">DEFAULT_IMAGE_NAME</span><span class="k">}</span> | cut -f2 | head -n1<span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Define secgroup</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SECGROUP</span><span class="o">=</span>euca_secgroup
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Add a secgroup</p>
@@ -508,7 +508,7 @@ euca-terminate-instances <span class="nv">$INSTANCE</span> <span class="o">||</s
 </pre></div></td></tr><tr><td class=docs>
 <p>Assure it has terminated within a reasonable time</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-instances $INSTANCE | grep -q running; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-instances $INSTANCE | grep -q $INSTANCE; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t terminate within $TERMINATE_TIMEOUT seconds&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
@@ -516,8 +516,7 @@ euca-terminate-instances <span class="nv">$INSTANCE</span> <span class="o">||</s
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete group</p>
 </td><td class=code><div class=highlight><pre>
-euca-delete-group <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+euca-delete-group <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
