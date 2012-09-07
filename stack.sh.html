@@ -678,6 +678,7 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 <p>Get project function libraries</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/n-vol
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
 
@@ -2565,82 +2566,13 @@ ignore it just in case</p>
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>init_cinder
 <span class="k">elif </span>is_service_enabled n-vol; <span class="k">then</span>
+<span class="k">    </span>init_nvol
+<span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="volume-service">
 <h2>Volume Service</h2>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure a default volume group called '<cite>stack-volumes</cite>' for the volume
-service if it does not yet exist.  If you don't wish to use a file backed
-volume group, create your own volume group called <tt class="docutils literal"><span class="pre">stack-volumes</span></tt> before
-invoking <tt class="docutils literal">stack.sh</tt>.</p>
-<p>By default, the backing file is 5G in size, and is stored in <tt class="docutils literal">/opt/stack/data</tt>.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
-        <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Only create if the file doesn't already exists</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>; <span class="k">fi</span>
-<span class="k">    fi</span>
-
-<span class="k">    if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
-</td><td class=code><div class=highlight><pre>
-            start_service tgtd
-        <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>RPM doesn't start the service</p>
-</td><td class=code><div class=highlight><pre>
-        mkdir -p <span class="nv">$NOVA_DIR</span>/volumes
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup tgtd configuration files</p>
-</td><td class=code><div class=highlight><pre>
-        sudo tgtadm --op show --mode target | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | grep Target | cut -f3 -d <span class="s1">&#39; &#39;</span> | sudo xargs -n1 tgt-admin --delete <span class="o">||</span> <span class="nb">true</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Remove nova iscsi targets</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">for </span>lv in <span class="sb">`</span>sudo lvs --noheadings -o lv_name <span class="nv">$VOLUME_GROUP</span><span class="sb">`</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean out existing volumes</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$VOLUME_NAME_PREFIX}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span>sudo lvremove -f <span class="nv">$VOLUME_GROUP</span>/<span class="nv">$lv</span>
-            <span class="k">fi</span>
-<span class="k">        done</span>
-<span class="k">    fi</span>
-
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">VOLUME_NAME_PREFIX</tt> prefixes the LVs we want</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> ! -f /etc/tgt/conf.d/nova.conf <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">           </span>sudo mkdir -p /etc/tgt/conf.d
-           <span class="nb">echo</span> <span class="s2">&quot;include $NOVA_DIR/volumes/*&quot;</span> | sudo tee /etc/tgt/conf.d/nova.conf
-        <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup the tgt configuration file</p>
-</td><td class=code><div class=highlight><pre>
-        sudo stop tgt <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">        </span>sudo start tgt
-    <span class="k">else</span>
-<span class="k">        </span>restart_service tgtd
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>tgt in oneiric doesn't restart properly if tgtd isn't running
-do it in two steps</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> -d <span class="nv">$NOVA_DIR</span>/bin <span class="o">]</span> ; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NOVA_BIN_DIR</span><span class="o">=</span><span class="nv">$NOVA_DIR</span>/bin
@@ -3109,12 +3041,14 @@ Since quantum command is executed in admin context at this point,
 </td><td class=code><div class=highlight><pre>
 screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_BIN_DIR/nova-compute&quot;</span>
 screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cert&quot;</span>
-screen_it n-vol <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-volume&quot;</span>
 screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-network&quot;</span>
 screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-scheduler&quot;</span>
 screen_it n-novnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-novncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF --web .&quot;</span>
 screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
 screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-consoleauth&quot;</span>
+<span class="k">if </span>is_service_enabled n-vol; <span class="k">then</span>
+<span class="k">    </span>start_nvol
+<span class="k">fi</span>
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>start_cinder
 <span class="k">fi</span>
