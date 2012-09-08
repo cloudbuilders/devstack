@@ -1710,16 +1710,20 @@ users).  The user system is external (keystone).</p>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$GLANCE_CONF_DIR</span>
     <span class="k">fi</span>
 <span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$GLANCE_CONF_DIR</span>
+
     <span class="nv">GLANCE_IMAGE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance/images
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete existing images</p>
 </td><td class=code><div class=highlight><pre>
     rm -rf <span class="nv">$GLANCE_IMAGE_DIR</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Use local glance directories</p>
-</td><td class=code><div class=highlight><pre>
     mkdir -p <span class="nv">$GLANCE_IMAGE_DIR</span>
+
+    <span class="nv">GLANCE_CACHE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance/cache
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete existing images</p>
+</td><td class=code><div class=highlight><pre>
+    rm -rf <span class="nv">$GLANCE_CACHE_DIR</span>
+    mkdir -p <span class="nv">$GLANCE_CACHE_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create glance database</p>
@@ -1752,7 +1756,8 @@ users).  The user system is external (keystone).</p>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/glance?charset<span class="o">=</span>utf8
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
-    iniset <span class="nv">$GLANCE_API_CONF</span> paste_deploy flavor keystone
+    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT image_cache_dir <span class="nv">$GLANCE_CACHE_DIR</span>/
+    iniset <span class="nv">$GLANCE_API_CONF</span> paste_deploy flavor keystone+cachemanagement
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
@@ -1777,6 +1782,23 @@ users).  The user system is external (keystone).</p>
 
     <span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api-paste.ini
     cp <span class="nv">$GLANCE_DIR</span>/etc/glance-api-paste.ini <span class="nv">$GLANCE_API_PASTE_INI</span>
+
+    <span class="nv">GLANCE_CACHE_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-cache.conf
+    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-cache.conf <span class="nv">$GLANCE_CACHE_CONF</span>
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT debug True
+    inicomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT log_file
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT image_cache_dir <span class="nv">$GLANCE_CACHE_DIR</span>/
+    iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_url
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_url <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
+    iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_tenant_name
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_user
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT admin_user glance
+    iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_password
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT admin_password <span class="nv">$SERVICE_PASSWORD</span>
+
 
     <span class="nv">GLANCE_POLICY_JSON</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/policy.json
     cp <span class="nv">$GLANCE_DIR</span>/etc/policy.json <span class="nv">$GLANCE_POLICY_JSON</span>
