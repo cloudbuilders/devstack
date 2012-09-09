@@ -681,6 +681,7 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/n-vol
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the destination directories for OpenStack projects</p>
@@ -725,6 +726,10 @@ Default admin username</p>
 <p>Use namespace or not</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_USE_NAMESPACE</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_USE_NAMESPACE</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Meta data IP</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_META_DATA_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_META_DATA_IP</span><span class="k">:-}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the LVM volume group to use/create for iscsi volumes</p>
@@ -1845,7 +1850,7 @@ users).  The user system is external (keystone).</p>
     <span class="nv">Q_PLUGIN_CONF_FILE</span><span class="o">=</span><span class="nv">$Q_PLUGIN_CONF_PATH</span>/<span class="nv">$Q_PLUGIN_CONF_FILENAME</span>
     cp <span class="nv">$QUANTUM_DIR</span>/<span class="nv">$Q_PLUGIN_CONF_FILE</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
 
-    sudo sed -i -e <span class="s2">&quot;s/^sql_connection =.*$/sql_connection = mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/$Q_DB_NAME?charset=utf8/g&quot;</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
+    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> DATABASE sql_connection mysql:<span class="se">\/\/</span><span class="nv">$MYSQL_USER</span>:<span class="nv">$MYSQL_PASSWORD</span>@<span class="nv">$MYSQL_HOST</span><span class="se">\/</span><span class="nv">$Q_DB_NAME</span>?charset<span class="o">=</span>utf8
 
     <span class="nv">OVS_ENABLE_TUNNELING</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_ENABLE_TUNNELING</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$OVS_ENABLE_TUNNELING&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1891,12 +1896,7 @@ users).  The user system is external (keystone).</p>
     iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT core_plugin <span class="nv">$Q_PLUGIN_CLASS</span>
 
     iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT auth_strategy <span class="nv">$Q_AUTH_STRATEGY</span>
-    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_SERVICE_HOST</span>
-    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>
-    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_user <span class="nv">$Q_ADMIN_USERNAME</span>
-    iniset <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    quantum_setup_keystone <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1908,13 +1908,7 @@ users).  The user system is external (keystone).</p>
 <p>Set up integration bridge</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
-        <span class="k">for </span>PORT in <span class="sb">`</span>sudo ovs-vsctl --no-wait list-ports <span class="nv">$OVS_BRIDGE</span><span class="sb">`</span>; <span class="k">do</span>
-<span class="k">            if</span> <span class="o">[[</span> <span class="s2">&quot;$PORT&quot;</span> <span class="o">=</span>~ tap* <span class="o">]]</span>; <span class="k">then </span><span class="nb">echo</span> <span class="sb">`</span>sudo ip link delete <span class="nv">$PORT</span><span class="sb">`</span> &gt; /dev/null; <span class="k">fi</span>
-<span class="k">            </span>sudo ovs-vsctl --no-wait del-port <span class="nv">$OVS_BRIDGE</span> <span class="nv">$PORT</span>
-        <span class="k">done</span>
-<span class="k">        </span>sudo ovs-vsctl --no-wait -- --if-exists del-br <span class="nv">$OVS_BRIDGE</span>
-        sudo ovs-vsctl --no-wait add-br <span class="nv">$OVS_BRIDGE</span>
-        sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$OVS_BRIDGE</span> bridge-id br-int
+        quantum_setup_ovs_bridge <span class="nv">$OVS_BRIDGE</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_ENABLE_TUNNELING&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS local_ip <span class="nv">$HOST_IP</span>
         <span class="k">else</span>
@@ -1968,15 +1962,63 @@ set the default network interface</p>
 <p>Update database</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT db_connection <span class="s2">&quot;mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/$Q_DB_NAME?charset=utf8&quot;</span>
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT auth_url <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT admin_user <span class="nv">$Q_ADMIN_USERNAME</span>
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    quantum_setup_keystone <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT set_auth_url
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Quantum L3</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled q-l3; <span class="k">then</span>
+<span class="k">    </span><span class="nv">AGENT_L3_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-l3-agent&quot;</span>
+    <span class="nv">PUBLIC_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-ex</span><span class="k">}</span>
+    <span class="nv">Q_L3_CONF_FILE</span><span class="o">=</span>/etc/quantum/l3_agent.ini
+
+    cp <span class="nv">$QUANTUM_DIR</span>/etc/l3_agent.ini <span class="nv">$Q_L3_CONF_FILE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set verbose</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT verbose True
+</pre></div></td></tr><tr><td class=docs>
+<p>Set debug</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT debug True
+
+    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT metadata_ip <span class="nv">$Q_META_DATA_IP</span>
+    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
+    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
+
+    quantum_setup_keystone <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT set_auth_url
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">==</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up external bridge
+Create it if it does not exist</p>
+</td><td class=code><div class=highlight><pre>
+        sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$PUBLIC_BRIDGE</span>
+        sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$PUBLIC_BRIDGE</span> bridge-id <span class="nv">$PUBLIC_BRIDGE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>remove internal ports</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">for </span>PORT in <span class="sb">`</span>sudo ovs-vsctl --no-wait list-ports <span class="nv">$PUBLIC_BRIDGE</span><span class="sb">`</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">TYPE</span><span class="o">=</span><span class="k">$(</span>sudo ovs-vsctl get interface <span class="nv">$PORT</span> <span class="nb">type</span><span class="k">)</span>
+            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;internal&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nb">echo</span> <span class="sb">`</span>sudo ip link delete <span class="nv">$PORT</span><span class="sb">`</span> &gt; /dev/null
+                sudo ovs-vsctl --no-wait del-port <span class="nv">$bridge</span> <span class="nv">$PORT</span>
+            <span class="k">fi</span>
+<span class="k">        done</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>ensure no IP is configured on the public bridge</p>
+</td><td class=code><div class=highlight><pre>
+        sudo ip addr flush dev <span class="nv">$PUBLIC_BRIDGE</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -1994,22 +2036,6 @@ set the default network interface</p>
         iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Start the Quantum services</p>
-</td><td class=code><div class=highlight><pre>
-screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Start up the quantum agent</p>
-</td><td class=code><div class=highlight><pre>
-screen_it q-agt <span class="s2">&quot;sudo python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Start up the quantum agent</p>
-</td><td class=code><div class=highlight><pre>
-screen_it q-dhcp <span class="s2">&quot;sudo python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE&quot;</span>
-
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -2983,7 +3009,6 @@ Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
       <span class="nb">exit </span>1
     <span class="k">fi</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Launch keystone and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
@@ -3033,23 +3058,72 @@ screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/no
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Launch the nova-api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
-<span class="k">    </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; demo &quot;</span> | get_field 1<span class="k">)</span>
+    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Waiting for Quantum to start...&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://127.0.0.1:9696; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;Quantum did not start&quot;</span>
+      <span class="nb">exit </span>1
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If we're using Quantum (i.e. q-svc is enabled), network creation has to
-happen after we've started the Quantum service.</p>
+<p>Start the Quantum service</p>
+</td><td class=code><div class=highlight><pre>
+
+    <span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; demo &quot;</span> | get_field 1<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure Quantum elements
+Configure internal network &amp; subnet</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --tenant_id <span class="nv">$TENANT_ID</span> net1 | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-    quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span>
-<span class="k">elif </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
+    <span class="nv">SUBNET_ID</span><span class="o">=</span><span class="k">$(</span>quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+    <span class="k">if </span>is_service_enabled q-l3; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a small network
 Since quantum command is executed in admin context at this point,
 <tt class="docutils literal"><span class="pre">--tenant_id</span></tt> needs to be specified.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">ROUTER_ID</span><span class="o">=</span><span class="k">$(</span>quantum router-create --tenant_id <span class="nv">$TENANT_ID</span> router1 | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        quantum router-interface-add <span class="nv">$ROUTER_ID</span> <span class="nv">$SUBNET_ID</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create a router, and add the private subnet as one of its interfaces</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">EXT_NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create ext_net -- --router:external<span class="o">=</span>True | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        <span class="nv">EXT_GW_IP</span><span class="o">=</span><span class="k">$(</span>quantum subnet-create --ip_version 4 <span class="nv">$EXT_NET_ID</span> <span class="nv">$FLOATING_RANGE</span> -- --enable_dhcp<span class="o">=</span>False | grep <span class="s1">&#39;gateway_ip&#39;</span> | get_field 2<span class="k">)</span>
+        quantum router-gateway-set <span class="nv">$ROUTER_ID</span> <span class="nv">$EXT_NET_ID</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">CIDR_LEN</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="p">#*/</span><span class="k">}</span>
+            sudo ip addr add <span class="nv">$EXT_GW_IP</span>/<span class="nv">$CIDR_LEN</span> dev <span class="nv">$PUBLIC_BRIDGE</span>
+            sudo ip link <span class="nb">set</span> <span class="nv">$PUBLIC_BRIDGE</span> up
+        <span class="k">fi</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_NAMESPACE&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create an external network, and a subnet. Configure the external network as router gw</p>
+</td><td class=code><div class=highlight><pre>
+            iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT router_id <span class="nv">$ROUTER_ID</span>
+        <span class="k">fi</span>
+<span class="k">   fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Explicitly set router id in l3 agent configuration</p>
+</td><td class=code><div class=highlight><pre>
+   screen_it q-agt <span class="s2">&quot;sudo python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Start up the quantum agent</p>
+</td><td class=code><div class=highlight><pre>
+   screen_it q-dhcp <span class="s2">&quot;sudo python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Start up the quantum dhcp agent</p>
+</td><td class=code><div class=highlight><pre>
+   screen_it q-l3 <span class="s2">&quot;sudo python $AGENT_L3_BINARY --config-file $Q_CONF_FILE --config-file=$Q_L3_CONF_FILE&quot;</span>
+
+<span class="k">elif </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Start up the quantum l3 agent</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_BIN_DIR</span>/nova-manage network create private <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span> <span class="nv">$NETWORK_CREATE_ARGS</span>
 
