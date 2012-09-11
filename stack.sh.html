@@ -1918,6 +1918,13 @@ network.</p>
     <span class="nv">LB_PHYSICAL_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">LB_PHYSICAL_INTERFACE</span><span class="k">:-}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>With the openvswitch plugin, set to True in localrc to enable
+provider GRE tunnels when ENABLE_TENANT_TUNNELS is False.</p>
+<p>Example: OVS_ENABLE_TUNNELING=True</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">OVS_ENABLE_TUNNELING</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_ENABLE_TUNNELING</span><span class="k">:-</span><span class="nv">$ENABLE_TENANT_TUNNELS</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Put config files in <tt class="docutils literal">/etc/quantum</tt> for everyone to find</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> ! -d /etc/quantum <span class="o">]]</span>; <span class="k">then</span>
@@ -2005,6 +2012,13 @@ for more complex physical network configurations.</p>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_VLAN_RANGES&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS network_vlan_ranges <span class="nv">$OVS_VLAN_RANGES</span>
         <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Enable tunnel networks if selected</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$OVS_ENABLE_TUNNELING</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS enable_tunneling True
+        <span class="k">fi</span>
 <span class="k">    elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> VLANS tenant_network_type vlan
@@ -2045,7 +2059,7 @@ for more complex physical network configurations.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Setup agent for tunneling</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_ENABLE_TUNNELING&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Verify tunnels are supported
 REVISIT - also check kernel module support for GRE and patch ports</p>
@@ -2056,7 +2070,8 @@ REVISIT - also check kernel module support for GRE and patch ports</p>
                 <span class="nb">echo</span> <span class="s2">&quot;OVS 1.4+ is required for tunneling between multiple hosts.&quot;</span>
                 <span class="nb">exit </span>1
             <span class="k">fi</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS local_ip <span class="nv">$HOST_IP</span>
+<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS enable_tunneling True
+            iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS local_ip <span class="nv">$HOST_IP</span>
         <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
