@@ -2217,37 +2217,30 @@ sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class=
 cp -p <span class="nv">$NOVA_DIR</span>/etc/nova/policy.json <span class="nv">$NOVA_CONF_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If Nova ships the new rootwrap filters files, deploy them
-(owned by root) and add a parameter to <tt class="docutils literal">$NOVA_ROOTWRAP</tt></p>
+<p>Deploy new rootwrap filters files (owned by root).
+Wipe any existing rootwrap.d files first</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">ROOTWRAP_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Wipe any existing rootwrap.d files first</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo rm -rf <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
-    <span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>sudo rm -rf <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
+<span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Deploy filters to /etc/nova/rootwrap.d</p>
 </td><td class=code><div class=highlight><pre>
-    sudo mkdir -m 755 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
-    sudo cp <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.d/*.filters <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
-    sudo chown -R root:root <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
-    sudo chmod 644 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d/*
+sudo mkdir -m 755 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
+sudo cp <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.d/*.filters <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
+sudo chown -R root:root <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
+sudo chmod 644 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d/*
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up rootwrap.conf, pointing to /etc/nova/rootwrap.d</p>
 </td><td class=code><div class=highlight><pre>
-    sudo cp <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.conf <span class="nv">$NOVA_CONF_DIR</span>/
-    sudo sed -e <span class="s2">&quot;s:^filters_path=.*$:filters_path=$NOVA_CONF_DIR/rootwrap.d:&quot;</span> -i <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.conf
-    sudo chown root:root <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.conf
-    sudo chmod 0644 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.conf
+sudo cp <span class="nv">$NOVA_DIR</span>/etc/nova/rootwrap.conf <span class="nv">$NOVA_CONF_DIR</span>/
+sudo sed -e <span class="s2">&quot;s:^filters_path=.*$:filters_path=$NOVA_CONF_DIR/rootwrap.d:&quot;</span> -i <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.conf
+sudo chown root:root <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.conf
+sudo chmod 0644 <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.conf
 </pre></div></td></tr><tr><td class=docs>
 <p>Specify rootwrap.conf as first parameter to nova-rootwrap</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">NOVA_ROOTWRAP</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP $NOVA_CONF_DIR/rootwrap.conf&quot;</span>
-    <span class="nv">ROOTWRAP_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP *&quot;</span>
-<span class="k">fi</span>
+<span class="nv">ROOTWRAP_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP $NOVA_CONF_DIR/rootwrap.conf *&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up the rootwrap sudoers for nova</p>
@@ -2814,7 +2807,7 @@ add_nova_opt <span class="s2">&quot;[DEFAULT]&quot;</span>
 add_nova_opt <span class="s2">&quot;verbose=True&quot;</span>
 add_nova_opt <span class="s2">&quot;auth_strategy=keystone&quot;</span>
 add_nova_opt <span class="s2">&quot;allow_resize_to_same_host=True&quot;</span>
-add_nova_opt <span class="s2">&quot;root_helper=sudo $NOVA_ROOTWRAP&quot;</span>
+add_nova_opt <span class="s2">&quot;rootwrap_config=$NOVA_CONF_DIR/rootwrap.conf&quot;</span>
 add_nova_opt <span class="s2">&quot;compute_scheduler_driver=$SCHEDULER&quot;</span>
 add_nova_opt <span class="s2">&quot;dhcpbridge_flagfile=$NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
 add_nova_opt <span class="s2">&quot;fixed_range=$FIXED_RANGE&quot;</span>
