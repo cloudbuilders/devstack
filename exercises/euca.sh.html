@@ -440,6 +440,60 @@ die_if_not_set INSTANCE <span class="s2">&quot;Failure launching instance&quot;<
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<div class="section" id="volumes">
+<h2>Volumes</h2>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-vol&quot;</span> <span class="o">||</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;c-vol&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">   </span><span class="nv">VOLUME</span><span class="o">=</span><span class="sb">`</span>euca-create-volume -s 1 -z <span class="nv">$VOLUME_ZONE</span> | cut -f2<span class="sb">`</span>
+   die_if_not_set VOLUME <span class="s2">&quot;Failure to create volume&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test that volume has been created</p>
+</td><td class=code><div class=highlight><pre>
+   <span class="nv">VOLUME</span><span class="o">=</span><span class="sb">`</span>euca-describe-volumes | cut -f2<span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test volume has become available</p>
+</td><td class=code><div class=highlight><pre>
+   <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-volumes $VOLUME | grep -q available; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">       </span><span class="nb">echo</span> <span class="s2">&quot;volume didnt become available within $RUNNING_TIMEOUT seconds&quot;</span>
+       <span class="nb">exit </span>1
+   <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Attach volume to an instance</p>
+</td><td class=code><div class=highlight><pre>
+   euca-attach-volume -i <span class="nv">$INSTANCE</span> -d <span class="nv">$ATTACH_DEVICE</span> <span class="nv">$VOLUME</span> <span class="o">||</span> <span class="se">\</span>
+       die <span class="s2">&quot;Failure attaching volume $VOLUME to $INSTANCE&quot;</span>
+   <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-volumes $VOLUME | grep -q in-use; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">       </span><span class="nb">echo</span> <span class="s2">&quot;Could not attach $VOLUME to $INSTANCE&quot;</span>
+       <span class="nb">exit </span>1
+   <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Detach volume from an instance</p>
+</td><td class=code><div class=highlight><pre>
+   euca-detach-volume <span class="nv">$VOLUME</span> <span class="o">||</span> <span class="se">\</span>
+       die <span class="s2">&quot;Failure detaching volume $VOLUME to $INSTANCE&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-volumes $VOLUME | grep -q available; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Could not detach $VOLUME to $INSTANCE&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove volume</p>
+</td><td class=code><div class=highlight><pre>
+    euca-delete-volume <span class="nv">$VOLUME</span> <span class="o">||</span> <span class="se">\</span>
+        die <span class="s2">&quot;Failure to delete volume&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-volumes | grep $VOLUME; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">       </span><span class="nb">echo</span> <span class="s2">&quot;Could not delete $VOLUME&quot;</span>
+       <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume Tests Skipped&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Allocate floating address</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>euca-allocate-address | cut -f2<span class="sb">`</span>
@@ -528,6 +582,7 @@ euca-delete-group <span class="nv">$SECGROUP</span> <span class="o">||</span> di
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 </div>
 </body>
