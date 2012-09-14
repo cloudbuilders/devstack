@@ -2112,8 +2112,7 @@ complex physical network configurations.</p>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_BRIDGE_MAPPINGS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS bridge_mappings <span class="nv">$OVS_BRIDGE_MAPPINGS</span>
         <span class="k">fi</span>
-
-<span class="k">        </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/openvswitch/agent/ovs_quantum_agent.py&quot;</span>
+<span class="k">        </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-openvswitch-agent&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Setup physical network interface mappings.  Override
@@ -2126,8 +2125,7 @@ complex physical network configurations.</p>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$LB_INTERFACE_MAPPINGS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> LINUX_BRIDGE physical_interface_mappings <span class="nv">$LB_INTERFACE_MAPPINGS</span>
         <span class="k">fi</span>
-
-<span class="k">       </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/linuxbridge/agent/linuxbridge_quantum_agent.py&quot;</span>
+<span class="k">        </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-linuxbridge-agent&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -2151,10 +2149,6 @@ complex physical network configurations.</p>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT debug True
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Update database</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT db_connection <span class="s2">&quot;mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/$Q_DB_NAME?charset=utf8&quot;</span>
     quantum_setup_keystone <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT set_auth_url
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -2185,17 +2179,16 @@ complex physical network configurations.</p>
 
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT metadata_ip <span class="nv">$Q_META_DATA_IP</span>
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
 
     quantum_setup_keystone <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT set_auth_url
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">==</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
+        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up external bridge
 Create it if it does not exist</p>
 </td><td class=code><div class=highlight><pre>
         sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$PUBLIC_BRIDGE</span>
-        sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$PUBLIC_BRIDGE</span> bridge-id <span class="nv">$PUBLIC_BRIDGE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>remove internal ports</p>
 </td><td class=code><div class=highlight><pre>
@@ -2212,6 +2205,7 @@ Create it if it does not exist</p>
         sudo ip addr flush dev <span class="nv">$PUBLIC_BRIDGE</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
+        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="s1">&#39;&#39;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -2845,17 +2839,20 @@ add_nova_opt <span class="s2">&quot;s3_port=$S3_SERVICE_PORT&quot;</span>
     add_nova_opt <span class="s2">&quot;quantum_url=http://$Q_HOST:$Q_PORT&quot;</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtOpenVswitchDriver&quot;</span>
-        <span class="nv">LINUXNET_VIF_DRIVER</span><span class="o">=</span><span class="s2">&quot;nova.network.linux_net.LinuxOVSInterfaceDriver&quot;</span>
+<span class="k">        </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="s2">&quot;nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver&quot;</span>
-        <span class="nv">LINUXNET_VIF_DRIVER</span><span class="o">=</span><span class="s2">&quot;nova.network.linux_net.QuantumLinuxBridgeInterfaceDriver&quot;</span>
     <span class="k">fi</span>
-<span class="k">    </span>add_nova_opt <span class="s2">&quot;libvirt_vif_type=ethernet&quot;</span>
-    add_nova_opt <span class="s2">&quot;libvirt_vif_driver=$NOVA_VIF_DRIVER&quot;</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;libvirt_vif_driver=$NOVA_VIF_DRIVER&quot;</span>
     add_nova_opt <span class="s2">&quot;linuxnet_interface_driver=$LINUXNET_VIF_DRIVER&quot;</span>
 <span class="k">else</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.manager.$NET_MAN&quot;</span>
+    add_nova_opt <span class="s2">&quot;public_interface=$PUBLIC_INTERFACE&quot;</span>
+    add_nova_opt <span class="s2">&quot;vlan_interface=$VLAN_INTERFACE&quot;</span>
+    add_nova_opt <span class="s2">&quot;flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>add_nova_opt <span class="s2">&quot;flat_interface=$FLAT_INTERFACE&quot;</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled n-vol; <span class="k">then</span>
 <span class="k">    </span>add_nova_opt <span class="s2">&quot;volume_group=$VOLUME_GROUP&quot;</span>
@@ -2867,12 +2864,6 @@ add_nova_opt <span class="s2">&quot;s3_port=$S3_SERVICE_PORT&quot;</span>
 <span class="k">fi</span>
 add_nova_opt <span class="s2">&quot;osapi_compute_extension=nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
 add_nova_opt <span class="s2">&quot;my_ip=$HOST_IP&quot;</span>
-add_nova_opt <span class="s2">&quot;public_interface=$PUBLIC_INTERFACE&quot;</span>
-add_nova_opt <span class="s2">&quot;vlan_interface=$VLAN_INTERFACE&quot;</span>
-add_nova_opt <span class="s2">&quot;flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
-<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>add_nova_opt <span class="s2">&quot;flat_interface=$FLAT_INTERFACE&quot;</span>
-<span class="k">fi</span>
 add_nova_opt <span class="s2">&quot;sql_connection=$BASE_SQL_CONN/nova?charset=utf8&quot;</span>
 add_nova_opt <span class="s2">&quot;libvirt_type=$LIBVIRT_TYPE&quot;</span>
 add_nova_opt <span class="s2">&quot;libvirt_cpu_mode=none&quot;</span>
