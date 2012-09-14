@@ -335,6 +335,7 @@ ul.auto-toc {
 Install and start Cinder volume service
 Dependencies:
 - functions
+- DEST, DATA_DIR must be defined
 - KEYSTONE_AUTH_* must be defined
 SERVICE_{TENANT_NAME|PASSWORD} must be defined</p>
 </td><td class=code><div class=highlight><pre>
@@ -368,14 +369,19 @@ an error.  It is also useful for following along as the install occurs.</p>
 <p>set up default directories</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">CINDER_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/cinder
-<span class="k">if</span> <span class="o">[</span> -d <span class="nv">$CINDER_DIR</span>/bin <span class="o">]</span> ; <span class="k">then</span>
+<span class="nv">CINDERCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-cinderclient
+<span class="nv">CINDER_STATE_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_STATE_PATH</span><span class="p">:=</span><span class="nv">$DATA_DIR</span><span class="p">/cinder</span><span class="k">}</span>
+<span class="nv">CINDER_CONF_DIR</span><span class="o">=</span>/etc/cinder
+<span class="nv">CINDER_CONF</span><span class="o">=</span><span class="nv">$CINDER_CONF_DIR</span>/cinder.conf
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Support entry points installation of console scripts</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$CINDER_DIR</span>/bin <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">CINDER_BIN_DIR</span><span class="o">=</span><span class="nv">$CINDER_DIR</span>/bin
 <span class="k">else</span>
 <span class="k">    </span><span class="nv">CINDER_BIN_DIR</span><span class="o">=</span>/usr/local/bin
 <span class="k">fi</span>
-<span class="nv">CINDERCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-cinderclient
-<span class="nv">CINDER_CONF_DIR</span><span class="o">=</span>/etc/cinder
-<span class="nv">CINDER_CONF</span><span class="o">=</span><span class="nv">$CINDER_CONF_DIR</span>/cinder.conf
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the lvm volume group to use/create for iscsi volumes</p>
@@ -475,6 +481,7 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT api_paste_config <span class="nv">$CINDER_API_PASTE_INI</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT root_helper <span class="s2">&quot;sudo ${CINDER_ROOTWRAP}&quot;</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT osapi_volume_extension cinder.api.openstack.volume.contrib.standard_extensions
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT state_path <span class="nv">$CINDER_STATE_PATH</span>
 
     <span class="k">if </span>is_service_enabled qpid ; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT rpc_backend cinder.openstack.common.rpc.impl_qpid
@@ -540,7 +547,7 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
             <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>; <span class="k">fi</span>
 <span class="k">        fi</span>
 
-<span class="k">        </span>mkdir -p <span class="nv">$CINDER_DIR</span>/volumes
+<span class="k">        </span>mkdir -p <span class="nv">$CINDER_STATE_PATH</span>/volumes
 
         <span class="k">if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
 <span class="k">            if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
