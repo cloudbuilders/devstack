@@ -333,10 +333,15 @@ ul.auto-toc {
 
 <p>lib/ceilometer
 Install and start Ceilometer service
-Dependencies:
-- functions</p>
+To enable, add the following to localrc
+ENABLED_SERVICES+=ceilometer-acompute,ceilometer-acentral,ceilometer-collector,ceilometer-api</p>
 </td><td class=code><div class=highlight><pre>
 
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Dependencies:
+- functions</p>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="stack-sh">
@@ -377,6 +382,7 @@ an error.  It is also useful for following along as the install occurs.</p>
 <span class="nv">CEILOMETER_CONF_DIR</span><span class="o">=</span>/etc/ceilometer
 <span class="nv">CEILOMETER_AGENT_CONF</span><span class="o">=</span><span class="nv">$CEILOMETER_CONF_DIR</span>/ceilometer-agent.conf
 <span class="nv">CEILOMETER_COLLECTOR_CONF</span><span class="o">=</span><span class="nv">$CEILOMETER_CONF_DIR</span>/ceilometer-collector.conf
+<span class="nv">CEILOMETER_API_LOG_DIR</span><span class="o">=</span>/var/log/ceilometer-api
 
 </pre></div></td></tr><tr><td class=docs>
 <p>cleanup_ceilometer() - Remove residual data files, anything left over from previous
@@ -394,10 +400,12 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_ceilometer<span class="o">()</span> <span class="o">{</span>
     setup_develop <span class="nv">$CEILOMETER_DIR</span>
-    <span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$CEILOMETER_CONF_DIR</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mkdir -m 755 -p <span class="nv">$CEILOMETER_CONF_DIR</span>
-    <span class="k">fi</span>
-<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$CEILOMETER_CONF_DIR</span>
+
+    <span class="o">[</span> -d <span class="nv">$CEILOMETER_CONF_DIR</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> sudo mkdir -m 755 -p <span class="nv">$CEILOMETER_CONF_DIR</span>
+    sudo chown <span class="nv">$USER</span> <span class="nv">$CEILOMETER_CONF_DIR</span>
+
+    <span class="o">[</span> ! -d <span class="nv">$CEILOMETER_API_LOG_DIR</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  sudo mkdir -m 755 -p <span class="nv">$CEILOMETER_API_LOG_DIR</span> 
+    sudo chown <span class="nv">$USER</span> <span class="nv">$CEILOMETER_API_LOG_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>ceilometer confs are copy of /etc/nova/nova.conf which must exist first</p>
@@ -420,6 +428,7 @@ runs that a clean run would need to clean up</p>
     screen_it ceilometer-acompute <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-agent-compute --config-file $CEILOMETER_AGENT_CONF&quot;</span>
     screen_it ceilometer-acentral <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-agent-central --config-file $CEILOMETER_AGENT_CONF&quot;</span>
     screen_it ceilometer-collector <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-collector --config-file $CEILOMETER_COLLECTOR_CONF&quot;</span>
+    screen_it ceilometer-api <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR&quot;</span>
 <span class="o">}</span>
 
 
