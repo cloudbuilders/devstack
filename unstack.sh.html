@@ -360,6 +360,17 @@ on the command line</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Destination path for service data</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Get project function libraries</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/n-vol
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
 <tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt></p>
 </td><td class=code><div class=highlight><pre>
@@ -394,20 +405,45 @@ GetOSVersion
 <span class="k">    </span>stop_service apache2
 <span class="k">fi</span>
 
+<span class="nv">SCSI_PERSIST_DIR</span><span class="o">=</span><span class="nv">$CINDER_STATE_PATH</span>/volumes/*
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Get the iSCSI volumes</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled cinder n-vol; <span class="k">then</span>
+<span class="k">    if </span>is_service_enabled n-vol; <span class="k">then</span>
+<span class="k">        </span><span class="nv">SCSI_PERSIST_DIR</span><span class="o">=</span><span class="nv">$NOVA_STATE_PATH</span>/volumes/*
+    <span class="k">fi</span>
+
 <span class="k">    </span><span class="nv">TARGETS</span><span class="o">=</span><span class="k">$(</span>sudo tgtadm --op show --mode target<span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$TARGETS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>FIXME(dtroyer): this could very well require more here to</dt>
-<dd>clean up left-over volumes</dd>
-</dl>
+<p>If tgt driver isn't running this won't work obviously
+So check the response and restart if need be</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="s2">&quot;iSCSI target cleanup needed:&quot;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;$TARGETS&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;tgtd seems to be in a bad state, restarting...&quot;</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>restart_service tgt
+        <span class="k">else</span>
+<span class="k">            </span>restart_service tgtd
+        <span class="k">fi</span>
+<span class="k">        </span><span class="nv">TARGETS</span><span class="o">=</span><span class="k">$(</span>sudo tgtadm --op show --mode target<span class="k">)</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> -n <span class="s2">&quot;$TARGETS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">iqn_list</span><span class="o">=(</span> <span class="k">$(</span>grep --no-filename -r iqn <span class="nv">$SCSI_PERSIST_DIR</span> | sed <span class="s1">&#39;s/&lt;target //&#39;</span> | sed <span class="s1">&#39;s/&gt;//&#39;</span><span class="k">)</span> <span class="o">)</span>
+        <span class="k">for </span>i in <span class="s2">&quot;${iqn_list[@]}&quot;</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nb">echo </span>removing iSCSI target: <span class="nv">$i</span>
+            sudo tgt-admin --delete <span class="nv">$i</span>
+        <span class="k">done</span>
+<span class="k">    fi</span>
+
+<span class="k">    if </span>is_service_enabled cinder; <span class="k">then</span>
+<span class="k">        </span>sudo rm -rf <span class="nv">$CINDER_STATE_PATH</span>/volumes/*
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled n-vol; <span class="k">then</span>
+<span class="k">        </span>sudo rm -rf <span class="nv">$NOVA_STATE_PATH</span>/volumes/*
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
