@@ -545,6 +545,11 @@ templates and other useful files in the <tt class="docutils literal">files</tt> 
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up logging level</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">VERBOSE</span><span class="o">=</span><span class="k">$(</span>trueorfalse True <span class="nv">$VERBOSE</span><span class="k">)</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="root-access">
@@ -842,6 +847,7 @@ should work in most cases.</p>
 <p>Generic helper to configure passwords</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>read_password <span class="o">{</span>
+    <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
     <span class="nb">set</span> +o xtrace
     <span class="nv">var</span><span class="o">=</span><span class="nv">$1</span>; <span class="nv">msg</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nv">pw</span><span class="o">=</span><span class="k">${</span><span class="p">!var</span><span class="k">}</span>
@@ -884,7 +890,7 @@ the required password.  Prompt user for a password and write to localrc.</p>
 <span class="k">        </span><span class="nb">eval</span> <span class="s2">&quot;$var=$pw&quot;</span>
         <span class="nb">echo</span> <span class="s2">&quot;$var=$pw&quot;</span> &gt;&gt; <span class="nv">$localrc</span>
     <span class="k">fi</span>
-<span class="k">    </span><span class="nb">set</span> -o xtrace
+    <span class="nv">$XTRACE</span>
 <span class="o">}</span>
 
 
@@ -1132,6 +1138,22 @@ current user.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Echo text to the log file, summary log file and stdout
+echo_summary &quot;something to say&quot;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>echo_summary<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="nv">$@</span> &gt;&amp;6
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Echo text only to stdout, no log files
+echo_nolog &quot;something not for the logs&quot;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>echo_nolog<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="nv">$@</span> &gt;&amp;3
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Set up logging for <tt class="docutils literal">stack.sh</tt>
 Set <tt class="docutils literal">LOGFILE</tt> to turn on logging
 Append '.xxxxxxxx' to the given name to maintain history
@@ -1153,17 +1175,56 @@ we added on earlier runs.</p>
     <span class="nv">LOGNAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
     mkdir -p <span class="nv">$LOGDIR</span>
     find <span class="nv">$LOGDIR</span> -maxdepth 1 -name <span class="nv">$LOGNAME</span>.<span class="se">\*</span> -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
-
     <span class="nv">LOGFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>
+    <span class="nv">SUMFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.summary
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Redirect output according to config
+Copy stdout to fd 3</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>3&gt;&amp;1
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Redirect stdout/stderr to tee to write the log file</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
-    <span class="nb">echo</span> <span class="s2">&quot;stack.sh log $LOGFILE&quot;</span>
+        <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up a second fd for output</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${SUMFILE}&quot;</span> <span class="o">)</span>
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fd 1 and 2 to primary logfile</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>1&gt; <span class="s2">&quot;${LOGFILE}&quot;</span> 2&gt;&amp;1
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fd 6 to summary logfile and stdout</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${SUMFILE}&quot;</span> /dev/fd/3 <span class="o">)</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>echo_summary <span class="s2">&quot;stack.sh log $LOGFILE&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Specified logfile name always links to the most recent log</p>
 </td><td class=code><div class=highlight><pre>
     ln -sf <span class="nv">$LOGFILE</span> <span class="nv">$LOGDIR</span>/<span class="nv">$LOGNAME</span>
+    ln -sf <span class="nv">$SUMFILE</span> <span class="nv">$LOGDIR</span>/<span class="nv">$LOGNAME</span>.summary
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up output redirection without log files
+Copy stdout to fd 3</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>3&gt;&amp;1
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Throw away stdout and stderr</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>1&gt;/dev/null 2&gt;&amp;1
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Always send summary fd to original stdout</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>6&gt;&amp;3
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1228,6 +1289,7 @@ an error.  It is also useful for following along as the install occurs.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install package requirements</p>
 </td><td class=code><div class=highlight><pre>
+echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/apts<span class="k">)</span>
 <span class="k">else</span>
@@ -1364,7 +1426,8 @@ to simulate multiple systems.</p>
 <p>Install python packages into a virtualenv so that we can track them</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span> ; <span class="k">then</span>
-<span class="k">    </span>install_package python-virtualenv
+<span class="k">    </span>echo_summary <span class="s2">&quot;Installing Python packages into a virtualenv $DEST/.venv&quot;</span>
+    install_package python-virtualenv
 
     rm -rf <span class="nv">$DEST</span>/.venv
     virtualenv --system-site-packages <span class="nv">$DEST</span>/.venv
@@ -1375,6 +1438,7 @@ to simulate multiple systems.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install python requirements</p>
 </td><td class=code><div class=highlight><pre>
+echo_summary <span class="s2">&quot;Installing Python prerequisites&quot;</span>
 pip_install <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/pips | sort -u<span class="k">)</span>
 
 
@@ -1382,6 +1446,8 @@ pip_install <span class="k">$(</span>get_packages <span class="nv">$FILES</span>
 <div class="section" id="check-out-source">
 <h2>Check Out Source</h2>
 </td><td class=code><div class=highlight><pre>
+
+echo_summary <span class="s2">&quot;Installing OpenStack project source&quot;</span>
 
 install_keystoneclient
 
@@ -1464,6 +1530,8 @@ git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLI
 <h1>Initialization</h1>
 </td><td class=code><div class=highlight><pre>
 
+echo_summary <span class="s2">&quot;Configuring OpenStack projects&quot;</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up our checkouts so they are installed into python path
 allowing <tt class="docutils literal">import nova</tt> or <tt class="docutils literal">import glance.client</tt></p>
@@ -1540,7 +1608,8 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 <span class="s">EOF</span>
         sudo mv /tmp/90-stack-s.conf /etc/rsyslog.d
     <span class="k">fi</span>
-<span class="k">    </span>restart_service rsyslog
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting rsyslog&quot;</span>
+    restart_service rsyslog
 <span class="k">fi</span>
 
 
@@ -1554,6 +1623,7 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start rabbitmq-server</p>
 </td><td class=code><div class=highlight><pre>
+    echo_summary <span class="s2">&quot;Starting RabbitMQ&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>RPM doesn't start the service</p>
@@ -1565,7 +1635,8 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 </td><td class=code><div class=highlight><pre>
     sudo rabbitmqctl change_password guest <span class="nv">$RABBIT_PASSWORD</span>
 <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
-<span class="k">    </span>restart_service qpidd
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting qpid&quot;</span>
+    restart_service qpidd
 <span class="k">fi</span>
 
 
@@ -1576,6 +1647,7 @@ setup_develop <span class="nv">$NOVA_DIR</span>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring and starting MySQL&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Start mysql-server</p>
@@ -1652,7 +1724,8 @@ screen -r <span class="nv">$SCREEN_NAME</span> -X hardstatus alwayslastline <spa
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">    </span>configure_keystone
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Keystone&quot;</span>
+    configure_keystone
     init_keystone
     start_keystone
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
@@ -1693,6 +1766,7 @@ screen -r <span class="nv">$SCREEN_NAME</span> -X hardstatus alwayslastline <spa
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring and starting Horizon&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Remove stale session database.</p>
@@ -1761,7 +1835,9 @@ users).  The user system is external (keystone).</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-<span class="k">    </span><span class="nv">GLANCE_CONF_DIR</span><span class="o">=</span>/etc/glance
+<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Glance&quot;</span>
+
+    <span class="nv">GLANCE_CONF_DIR</span><span class="o">=</span>/etc/glance
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$GLANCE_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$GLANCE_CONF_DIR</span>
     <span class="k">fi</span>
@@ -1869,6 +1945,7 @@ users).  The user system is external (keystone).</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Quantum&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Quantum Network Configuration</p>
 <p>The following variables control the Quantum openvswitch and
@@ -2230,6 +2307,8 @@ Create it if it does not exist</p>
 <h2>Nova</h2>
 </td><td class=code><div class=highlight><pre>
 
+echo_summary <span class="s2">&quot;Configuring Nova&quot;</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Put config files in <tt class="docutils literal">/etc/nova</tt> for everyone to find</p>
 </td><td class=code><div class=highlight><pre>
@@ -2509,6 +2588,7 @@ mount it (ext filesystems can be labeled via e2label).</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Swift&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure to kill all swift processes first</p>
@@ -2798,9 +2878,11 @@ ignore it just in case</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
-<span class="k">    </span>init_cinder
+<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Cinder&quot;</span>
+    init_cinder
 <span class="k">elif </span>is_service_enabled n-vol; <span class="k">then</span>
-<span class="k">    </span>init_nvol
+<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Nova volumes&quot;</span>
+    init_nvol
 <span class="k">fi</span>
 
 <span class="nv">NOVA_CONF</span><span class="o">=</span>nova.conf
@@ -2965,7 +3047,8 @@ For Example: <tt class="docutils literal"><span class="pre">EXTRA_OPTS=(foo=true
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>read_password XENAPI_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR XEN.&quot;</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Using XenServer virtualization driver&quot;</span>
+    read_password XENAPI_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR XEN.&quot;</span>
     add_nova_opt <span class="s2">&quot;compute_driver=xenapi.XenAPIDriver&quot;</span>
     <span class="nv">XENAPI_CONNECTION_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">XENAPI_CONNECTION_URL</span><span class="k">:-</span><span class="s2">&quot;http://169.254.0.1&quot;</span><span class="k">}</span>
     <span class="nv">XENAPI_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">XENAPI_USER</span><span class="k">:-</span><span class="s2">&quot;root&quot;</span><span class="k">}</span>
@@ -2981,6 +3064,7 @@ For Example: <tt class="docutils literal"><span class="pre">EXTRA_OPTS=(foo=true
     <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     add_nova_opt <span class="s2">&quot;firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
 <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;openvz&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Using OpenVZ virtualization driver&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Need to avoid crash due to new firewall support</p>
 </td><td class=code><div class=highlight><pre>
@@ -2988,7 +3072,8 @@ For Example: <tt class="docutils literal"><span class="pre">EXTRA_OPTS=(foo=true
     <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
 <span class="k">else</span>
-<span class="k">    </span>add_nova_opt <span class="s2">&quot;compute_driver=libvirt.LibvirtDriver&quot;</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Using libvirt virtualization driver&quot;</span>
+    add_nova_opt <span class="s2">&quot;compute_driver=libvirt.LibvirtDriver&quot;</span>
     <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
 <span class="k">fi</span>
@@ -3034,7 +3119,8 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
-<span class="k">    </span>init_heat
+<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Heat&quot;</span>
+    init_heat
 <span class="k">fi</span>
 
 
@@ -3057,7 +3143,8 @@ so send the start command by forcing text into the window.
 Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES</tt></p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-<span class="k">    </span>screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf&quot;</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Glance&quot;</span>
+    screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -3092,7 +3179,8 @@ screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/no
 <p>Create an access key and secret key for nova ec2 register image</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
-<span class="k">    </span>add_nova_opt <span class="s2">&quot;enabled_apis=$NOVA_ENABLED_APIS&quot;</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Nova API&quot;</span>
+    add_nova_opt <span class="s2">&quot;enabled_apis=$NOVA_ENABLED_APIS&quot;</span>
     screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for nova-api to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://127.0.0.1:8774; do sleep 1; done&quot;</span>; <span class="k">then</span>
@@ -3102,6 +3190,7 @@ screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/no
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Quantum&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Launch the nova-api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
@@ -3175,6 +3264,7 @@ screen_it q-agt <span class="s2">&quot;sudo python $AGENT_BINARY --config-file $
 screen_it q-dhcp <span class="s2">&quot;sudo python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE&quot;</span>
 screen_it q-l3 <span class="s2">&quot;sudo python $AGENT_L3_BINARY --config-file $Q_CONF_FILE --config-file=$Q_L3_CONF_FILE&quot;</span>
 
+echo_summary <span class="s2">&quot;Starting Nova&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start up the quantum agents if enabled</p>
 </td><td class=code><div class=highlight><pre>
@@ -3186,13 +3276,16 @@ screen_it n-novnc <span class="s2">&quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-n
 screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
 screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-consoleauth&quot;</span>
 <span class="k">if </span>is_service_enabled n-vol; <span class="k">then</span>
-<span class="k">    </span>start_nvol
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Nova volumes&quot;</span>
+    start_nvol
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
-<span class="k">    </span>start_cinder
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Cinder&quot;</span>
+    start_cinder
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
-<span class="k">    </span>configure_ceilometer
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Ceilometer&quot;</span>
+    configure_ceilometer
     start_ceilometer
 <span class="k">fi</span>
 screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
@@ -3211,7 +3304,8 @@ is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
 Swift will act as s3 objectstore.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
-<span class="k">    </span>start_heat
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Heat&quot;</span>
+    start_heat
 <span class="k">fi</span>
 
 
@@ -3226,7 +3320,8 @@ Swift will act as s3 objectstore.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-<span class="k">    </span><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone  token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Uploading images&quot;</span>
+    <span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone  token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Upload an image to glance.</p>
@@ -3273,11 +3368,24 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 
 <span class="nb">set</span> +o xtrace
 
-
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">exec </span>1&gt;&amp;3
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="fin">
 <h1>Fin</h1>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Force all output to stdout and logs now</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>1&gt;&amp;3
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Force all output to stdout now</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
@@ -3312,13 +3420,13 @@ to access the site using your browser.</p>
 <p>Echo <tt class="docutils literal">HOST_IP</tt> - useful for <tt class="docutils literal">build_uec.sh</tt>, which uses dhcp to give the instance an address</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: EXTRA_FLAGS is defined and may need to be converted to EXTRA_OPTS&quot;</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;WARNING: EXTRA_FLAGS is defined and may need to be converted to EXTRA_OPTS&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Warn that <tt class="docutils literal">EXTRA_FLAGS</tt> needs to be converted to <tt class="docutils literal">EXTRA_OPTS</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">echo</span> <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot;</span>
+echo_summary <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
