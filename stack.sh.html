@@ -745,6 +745,7 @@ address.</p>
 <p>Get project function libraries</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/n-vol
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
@@ -781,23 +782,6 @@ address.</p>
 <span class="k">    </span><span class="nv">NOVA_BIN_DIR</span><span class="o">=</span><span class="nv">$NOVA_DIR</span>/bin
 <span class="k">else</span>
 <span class="k">    </span><span class="nv">NOVA_BIN_DIR</span><span class="o">=</span>/usr/local/bin
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Glance defaults</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">GLANCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance
-<span class="nv">GLANCECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-glanceclient
-<span class="nv">GLANCE_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_CACHE_DIR</span><span class="p">:=</span><span class="nv">$DATA_DIR</span><span class="p">/glance/cache</span><span class="k">}</span>
-<span class="nv">GLANCE_IMAGE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_IMAGE_DIR</span><span class="p">:=</span><span class="nv">$DATA_DIR</span><span class="p">/glance/images</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Support entry points installation of console scripts</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$GLANCE_DIR</span>/bin <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">GLANCE_BIN_DIR</span><span class="o">=</span><span class="nv">$GLANCE_DIR</span>/bin
-<span class="k">else</span>
-<span class="k">    </span><span class="nv">GLANCE_BIN_DIR</span><span class="o">=</span>/usr/local/bin
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1005,18 +989,6 @@ read_password MYSQL_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
 <span class="k">    </span><span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
     read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR RABBIT.&quot;</span>
 <span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="glance">
-<h2>Glance</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Glance connection info.  Note the port must be specified.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1450,6 +1422,7 @@ pip_install <span class="k">$(</span>get_packages <span class="nv">$FILES</span>
 echo_summary <span class="s2">&quot;Installing OpenStack project source&quot;</span>
 
 install_keystoneclient
+install_glanceclient
 
 git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_DIR</span> <span class="nv">$NOVA_BRANCH</span>
 
@@ -1458,7 +1431,6 @@ git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_DIR</span> <
 </td><td class=code><div class=highlight><pre>
 git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_DIR</span> <span class="nv">$NOVACLIENT_BRANCH</span>
 git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENSTACKCLIENT_DIR</span> <span class="nv">$OPENSTACKCLIENT_BRANCH</span>
-git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLIENT_DIR</span> <span class="nv">$GLANCECLIENT_BRANCH</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>glance, swift middleware and nova api needs keystone middleware</p>
@@ -1489,7 +1461,7 @@ git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLI
 </pre></div></td></tr><tr><td class=docs>
 <p>image catalog service</p>
 </td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$GLANCE_REPO</span> <span class="nv">$GLANCE_DIR</span> <span class="nv">$GLANCE_BRANCH</span>
+    install_glance
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled n-novnc; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1550,14 +1522,14 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
 <span class="k">    </span>setup_develop <span class="nv">$SWIFT3_DIR</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled g-api n-api; <span class="k">then</span>
-<span class="k">    </span>setup_develop <span class="nv">$GLANCE_DIR</span>
+<span class="k">    </span>configure_glance
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Do this _after_ glance is installed to override the old binary
 TODO(dtroyer): figure out when this is no longer necessary</p>
 </td><td class=code><div class=highlight><pre>
-setup_develop <span class="nv">$GLANCECLIENT_DIR</span>
+configure_glanceclient
 
 setup_develop <span class="nv">$NOVA_DIR</span>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
@@ -1830,71 +1802,14 @@ users).  The user system is external (keystone).</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="id3">
+<div class="section" id="glance">
 <h2>Glance</h2>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Glance&quot;</span>
 
-    <span class="nv">GLANCE_CONF_DIR</span><span class="o">=</span>/etc/glance
-    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$GLANCE_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mkdir -p <span class="nv">$GLANCE_CONF_DIR</span>
-    <span class="k">fi</span>
-<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$GLANCE_CONF_DIR</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Delete existing images</p>
-</td><td class=code><div class=highlight><pre>
-    rm -rf <span class="nv">$GLANCE_IMAGE_DIR</span>
-    mkdir -p <span class="nv">$GLANCE_IMAGE_DIR</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Delete existing cache</p>
-</td><td class=code><div class=highlight><pre>
-    rm -rf <span class="nv">$GLANCE_CACHE_DIR</span>
-    mkdir -p <span class="nv">$GLANCE_CACHE_DIR</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>(re)create glance database</p>
-</td><td class=code><div class=highlight><pre>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS glance;&#39;</span>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE glance CHARACTER SET utf8;&#39;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Copy over our glance configurations and update them</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">GLANCE_REGISTRY_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry.conf
-    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-registry.conf <span class="nv">$GLANCE_REGISTRY_CONF</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT debug True
-    inicomment <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT log_file
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/glance?charset<span class="o">=</span>utf8
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> paste_deploy flavor keystone
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_user glance
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-
-    <span class="nv">GLANCE_API_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api.conf
-    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-api.conf <span class="nv">$GLANCE_API_CONF</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT debug True
-    inicomment <span class="nv">$GLANCE_API_CONF</span> DEFAULT log_file
-    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/glance?charset<span class="o">=</span>utf8
-    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
-    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT image_cache_dir <span class="nv">$GLANCE_CACHE_DIR</span>/
-    iniset <span class="nv">$GLANCE_API_CONF</span> paste_deploy flavor keystone+cachemanagement
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_user glance
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    init_glance
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Store the images in swift if enabled.</p>
@@ -1906,35 +1821,6 @@ users).  The user system is external (keystone).</p>
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_key <span class="nv">$SERVICE_PASSWORD</span>
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_create_container_on_put True
     <span class="k">fi</span>
-
-<span class="k">    </span><span class="nv">GLANCE_REGISTRY_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry-paste.ini
-    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-registry-paste.ini <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
-
-    <span class="nv">GLANCE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api-paste.ini
-    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-api-paste.ini <span class="nv">$GLANCE_API_PASTE_INI</span>
-
-    <span class="nv">GLANCE_CACHE_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-cache.conf
-    cp <span class="nv">$GLANCE_DIR</span>/etc/glance-cache.conf <span class="nv">$GLANCE_CACHE_CONF</span>
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT debug True
-    inicomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT log_file
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT image_cache_dir <span class="nv">$GLANCE_CACHE_DIR</span>/
-    iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_url
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_url <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
-    iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_tenant_name
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_user
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT admin_user glance
-    iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_password
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT admin_password <span class="nv">$SERVICE_PASSWORD</span>
-
-
-    <span class="nv">GLANCE_POLICY_JSON</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/policy.json
-    cp <span class="nv">$GLANCE_DIR</span>/etc/policy.json <span class="nv">$GLANCE_POLICY_JSON</span>
-
-    <span class="nv">$GLANCE_BIN_DIR</span>/glance-manage db_sync
-
 <span class="k">fi</span>
 
 
@@ -3142,25 +3028,13 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 so send the start command by forcing text into the window.
 Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled g-api g-reg; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Glance&quot;</span>
-    screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf&quot;</span>
+    start_glance
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Launch the glance registry service</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled g-api; <span class="k">then</span>
-<span class="k">    </span>screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Waiting for g-api ($GLANCE_HOSTPORT) to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://$GLANCE_HOSTPORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;g-api did not start&quot;</span>
-      <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Launch the glance api and wait for it to answer before continuing</p>
+<p>Launch the Glance services</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key <span class="o">&amp;&amp;</span> is_service_enabled swift3 <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NOVA_USER_ID</span><span class="o">=</span><span class="k">$(</span>keystone user-list | grep <span class="s1">&#39; nova &#39;</span> | get_field 1<span class="k">)</span>
