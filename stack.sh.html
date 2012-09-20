@@ -1353,6 +1353,10 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
         <span class="k">else</span>
             <span class="c">### FIXME(dtroyer): Find RPMs for OpenVSwitch</span>
             <span class="nb">echo</span> <span class="s2">&quot;OpenVSwitch packages need to be located&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Fedora does not started OVS by default</p>
+</td><td class=code><div class=highlight><pre>
+            restart_service openvswitch
         <span class="k">fi</span>
 <span class="k">    elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">       </span>install_package bridge-utils
@@ -1943,6 +1947,15 @@ provider GRE tunnels when ENABLE_TENANT_TUNNELS is False.</p>
 
     <span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
     cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
+    <span class="nv">Q_RR_CONF_FILE</span><span class="o">=</span>/etc/quantum/rootwrap.conf
+    cp -p <span class="nv">$QUANTUM_DIR</span>/etc/rootwrap.conf <span class="nv">$Q_RR_CONF_FILE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Copy over the config and filter bits</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">Q_CONF_ROOTWRAP_D</span><span class="o">=</span>/etc/quantum/rootwrap.d
+    mkdir -p <span class="nv">$Q_CONF_ROOTWRAP_D</span>
+    cp -pr <span class="nv">$QUANTUM_DIR</span>/etc/quantum/rootwrap.d/* <span class="nv">$Q_CONF_ROOTWRAP_D</span>/
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2075,7 +2088,11 @@ complex physical network configurations.</p>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_BRIDGE_MAPPINGS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS bridge_mappings <span class="nv">$OVS_BRIDGE_MAPPINGS</span>
         <span class="k">fi</span>
-<span class="k">        </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-openvswitch-agent&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Update config w/rootwrap</p>
+</td><td class=code><div class=highlight><pre>
+        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS root_helper <span class="c">#Q_RR_CONF_FILE</span>
+        <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-openvswitch-agent&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Setup physical network interface mappings.  Override
@@ -2088,7 +2105,11 @@ complex physical network configurations.</p>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$LB_INTERFACE_MAPPINGS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> LINUX_BRIDGE physical_interface_mappings <span class="nv">$LB_INTERFACE_MAPPINGS</span>
         <span class="k">fi</span>
-<span class="k">        </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-linuxbridge-agent&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Update config w/rootwrap</p>
+</td><td class=code><div class=highlight><pre>
+        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> LINUX_BRIDGE root_helper <span class="c">#Q_RR_CONF_FILE</span>
+        <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-linuxbridge-agent&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -2113,6 +2134,11 @@ complex physical network configurations.</p>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
 
     quantum_setup_keystone <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT set_auth_url
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Update config w/rootwrap</p>
+</td><td class=code><div class=highlight><pre>
+    iniset /<span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT root_helper <span class="c">#Q_RR_CONF_FILE</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
@@ -2356,8 +2382,7 @@ to simulate multiple systems.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Add /dev/net/tun to cgroup_device_acls, needed for type=ethernet interfaces</p>
 </td><td class=code><div class=highlight><pre>
-        sudo chmod 666 <span class="nv">$QEMU_CONF</span>
-        sudo cat <span class="s">&lt;&lt;EOF &gt;&gt; /etc/libvirt/qemu.conf</span>
+        cat <span class="s">&lt;&lt;EOF | sudo tee -a $QEMU_CONF</span>
 <span class="s">cgroup_device_acl = [</span>
 <span class="s">    &quot;/dev/null&quot;, &quot;/dev/full&quot;, &quot;/dev/zero&quot;,</span>
 <span class="s">    &quot;/dev/random&quot;, &quot;/dev/urandom&quot;,</span>
@@ -2365,7 +2390,6 @@ to simulate multiple systems.</p>
 <span class="s">    &quot;/dev/rtc&quot;, &quot;/dev/hpet&quot;,&quot;/dev/net/tun&quot;,</span>
 <span class="s">]</span>
 <span class="s">EOF</span>
-        sudo chmod 644 <span class="nv">$QEMU_CONF</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -3134,9 +3158,9 @@ Since quantum command is executed in admin context at this point,
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a second pool</p>
 </td><td class=code><div class=highlight><pre>
-screen_it q-agt <span class="s2">&quot;sudo python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
-screen_it q-dhcp <span class="s2">&quot;sudo python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE&quot;</span>
-screen_it q-l3 <span class="s2">&quot;sudo python $AGENT_L3_BINARY --config-file $Q_CONF_FILE --config-file=$Q_L3_CONF_FILE&quot;</span>
+screen_it q-agt <span class="s2">&quot;python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
+screen_it q-dhcp <span class="s2">&quot;python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE&quot;</span>
+screen_it q-l3 <span class="s2">&quot;python $AGENT_L3_BINARY --config-file $Q_CONF_FILE --config-file=$Q_L3_CONF_FILE&quot;</span>
 
 echo_summary <span class="s2">&quot;Starting Nova&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
