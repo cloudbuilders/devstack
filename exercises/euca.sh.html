@@ -368,7 +368,6 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">EXERCISE_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$EXERCISE_DIR</span>/..; <span class="nb">pwd</span><span class="k">)</span>
-<span class="nv">VOLUME_ZONE</span><span class="o">=</span>nova
 <span class="nv">VOLUME_SIZE</span><span class="o">=</span>1
 <span class="nv">ATTACH_DEVICE</span><span class="o">=</span>/dev/vdc
 
@@ -444,13 +443,17 @@ die_if_not_set INSTANCE <span class="s2">&quot;Failure launching instance&quot;<
 <h2>Volumes</h2>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-vol&quot;</span> <span class="o">||</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;c-vol&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">   </span><span class="nv">VOLUME</span><span class="o">=</span><span class="sb">`</span>euca-create-volume -s 1 -z <span class="nv">$VOLUME_ZONE</span> | cut -f2<span class="sb">`</span>
+<span class="k">   </span><span class="nv">VOLUME_ZONE</span><span class="o">=</span><span class="sb">`</span>euca-describe-availability-zones | head -n1 | cut -f2<span class="sb">`</span>
+   die_if_not_set VOLUME_ZONE <span class="s2">&quot;Failure to find zone for volume&quot;</span>
+
+   <span class="nv">VOLUME</span><span class="o">=</span><span class="sb">`</span>euca-create-volume -s 1 -z <span class="nv">$VOLUME_ZONE</span> | cut -f2<span class="sb">`</span>
    die_if_not_set VOLUME <span class="s2">&quot;Failure to create volume&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Test that volume has been created</p>
 </td><td class=code><div class=highlight><pre>
    <span class="nv">VOLUME</span><span class="o">=</span><span class="sb">`</span>euca-describe-volumes | cut -f2<span class="sb">`</span>
+   die_if_not_set VOLUME <span class="s2">&quot;Failure to get volume&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Test volume has become available</p>
