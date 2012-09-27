@@ -566,10 +566,16 @@ nova volume-create --display_name <span class="nv">$VOL_NAME</span> --display_de
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Failure creating volume $VOL_NAME&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
+
+<span class="nv">start_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
 <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova volume-list | grep $VOL_NAME | grep available; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume $VOL_NAME not created&quot;</span>
+    <span class="nv">end_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Failed volume-create after $((end_time - start_time)) seconds&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
+<span class="nv">end_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
+<span class="nb">echo</span> <span class="s2">&quot;Completed volume-create in $((end_time - start_time)) seconds&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Get volume ID</p>
@@ -581,12 +587,17 @@ die_if_not_set VOL_ID <span class="s2">&quot;Failure retrieving volume ID for $V
 <p>Attach to server</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEVICE</span><span class="o">=</span>/dev/vdb
+<span class="nv">start_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
 nova volume-attach <span class="nv">$VM_UUID</span> <span class="nv">$VOL_ID</span> <span class="nv">$DEVICE</span> <span class="o">||</span> <span class="se">\</span>
     die <span class="s2">&quot;Failure attaching volume $VOL_NAME to $NAME&quot;</span>
 <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova volume-list | grep $VOL_NAME | grep in-use; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume $VOL_NAME not attached to $NAME&quot;</span>
+    <span class="nv">end_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Failed volume-attach after $((end_time - start_time)) seconds&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
+<span class="nv">end_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
+<span class="nb">echo</span> <span class="s2">&quot;Completed volume-attach in $((end_time - start_time)) seconds&quot;</span>
 
 <span class="nv">VOL_ATTACH</span><span class="o">=</span><span class="sb">`</span>nova volume-list | grep <span class="nv">$VOL_NAME</span> | head -1 | get_field -1<span class="sb">`</span>
 die_if_not_set VOL_ATTACH <span class="s2">&quot;Failure retrieving $VOL_NAME status&quot;</span>
@@ -598,20 +609,30 @@ die_if_not_set VOL_ATTACH <span class="s2">&quot;Failure retrieving $VOL_NAME st
 </pre></div></td></tr><tr><td class=docs>
 <p>Detach volume</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nv">start_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
 nova volume-detach <span class="nv">$VM_UUID</span> <span class="nv">$VOL_ID</span> <span class="o">||</span> die <span class="s2">&quot;Failure detaching volume $VOL_NAME from $NAME&quot;</span>
 <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova volume-list | grep $VOL_NAME | grep available; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume $VOL_NAME not detached from $NAME&quot;</span>
+    <span class="nv">end_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Failed volume-detach after $((end_time - start_time)) seconds&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
+<span class="nv">end_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
+<span class="nb">echo</span> <span class="s2">&quot;Completed volume-detach in $((end_time - start_time)) seconds&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete volume</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nv">start_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
 nova volume-delete <span class="nv">$VOL_ID</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting volume $VOL_NAME&quot;</span>
 <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova volume-list | grep $VOL_NAME; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume $VOL_NAME not deleted&quot;</span>
+    <span class="nv">end_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Failed volume-delete after $((end_time - start_time)) seconds&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
+<span class="nv">end_time</span><span class="o">=</span><span class="sb">`</span>date +%s<span class="sb">`</span>
+<span class="nb">echo</span> <span class="s2">&quot;Completed volume-delete in $((end_time - start_time)) seconds&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Shutdown the server</p>
