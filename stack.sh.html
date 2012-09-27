@@ -813,7 +813,7 @@ Default admin username</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Meta data IP</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">Q_META_DATA_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_META_DATA_IP</span><span class="k">:-}</span>
+<span class="nv">Q_META_DATA_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_META_DATA_IP</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the LVM volume group to use/create for iscsi volumes</p>
@@ -2611,180 +2611,182 @@ current user.</p>
 <span class="s1">        EXT_NET_ID=$(quantum net-create ext_net -- --router:external=True | grep &#39;</span> id <span class="s1">&#39; | get_field 2)</span>
 <span class="s1">        EXT_GW_IP=$(quantum subnet-create --ip_version 4 $EXT_NET_ID $FLOATING_RANGE -- --enable_dhcp=False | grep &#39;</span>gateway_ip<span class="s1">&#39; | get_field 2)</span>
 <span class="s1">        quantum router-gateway-set $ROUTER_ID $EXT_NET_ID</span>
-<span class="s1">        if [[ &quot;$Q_PLUGIN&quot; = &quot;openvswitch&quot; ]]; then</span>
+<span class="s1">        if [[ &quot;$Q_PLUGIN&quot; = &quot;openvswitch&quot; ]] &amp;&amp; [[ &quot;$Q_USE_NAMESPACE&quot; = &quot;True&quot; ]]; then</span>
 <span class="s1">            CIDR_LEN=${FLOATING_RANGE#*/}</span>
 <span class="s1">            sudo ip addr add $EXT_GW_IP/$CIDR_LEN dev $PUBLIC_BRIDGE</span>
 <span class="s1">            sudo ip link set $PUBLIC_BRIDGE up</span>
-<span class="s1">        fi</span>
-<span class="s1">        if [[ &quot;$Q_USE_NAMESPACE&quot; == &quot;False&quot; ]]; then</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">            iniset $Q_L3_CONF_FILE DEFAULT router_id $ROUTER_ID</span>
-<span class="s1">        fi</span>
-<span class="s1">   fi</span>
+<span class="s1">            ROUTER_GW_IP=`quantum port-list -c fixed_ips -c device_owner | grep router_gateway | awk -F &#39;</span><span class="s2">&quot;&#39; &#39;{ print $8; }&#39;`</span>
+<span class="s2">            sudo route add -net $FIXED_RANGE gw $ROUTER_GW_IP</span>
+<span class="s2">        fi</span>
+<span class="s2">        if [[ &quot;</span><span class="nv">$Q_USE_NAMESPACE</span><span class="s2">&quot; == &quot;</span>False<span class="s2">&quot; ]]; then</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">            iniset $Q_L3_CONF_FILE DEFAULT router_id $ROUTER_ID</span>
+<span class="s2">        fi</span>
+<span class="s2">   fi</span>
 
-<span class="s1">elif is_service_enabled mysql &amp;&amp; is_service_enabled nova; then</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    $NOVA_BIN_DIR/nova-manage network create private $FIXED_RANGE 1 $FIXED_NETWORK_SIZE $NETWORK_CREATE_ARGS</span>
+<span class="s2">elif is_service_enabled mysql &amp;&amp; is_service_enabled nova; then</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">    $NOVA_BIN_DIR/nova-manage network create private $FIXED_RANGE 1 $FIXED_NETWORK_SIZE $NETWORK_CREATE_ARGS</span>
 
-<span class="s1"># DIVIDER</span>
-<span class="s1">    $NOVA_BIN_DIR/nova-manage floating create $FLOATING_RANGE</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">    $NOVA_BIN_DIR/nova-manage floating create $FLOATING_RANGE</span>
 
-<span class="s1"># DIVIDER</span>
-<span class="s1">    $NOVA_BIN_DIR/nova-manage floating create --ip_range=$TEST_FLOATING_RANGE --pool=$TEST_FLOATING_POOL</span>
-<span class="s1">fi</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">    $NOVA_BIN_DIR/nova-manage floating create --ip_range=$TEST_FLOATING_RANGE --pool=$TEST_FLOATING_POOL</span>
+<span class="s2">fi</span>
 
-<span class="s1"># DIVIDER</span>
-<span class="s1">screen_it q-agt &quot;python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
-<span class="s1">screen_it q-dhcp &quot;python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE&quot;</span>
-<span class="s1">screen_it q-l3 &quot;python $AGENT_L3_BINARY --config-file $Q_CONF_FILE --config-file=$Q_L3_CONF_FILE&quot;</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">screen_it q-agt &quot;</span>python <span class="nv">$AGENT_BINARY</span> --config-file <span class="nv">$Q_CONF_FILE</span> --config-file /<span class="nv">$Q_PLUGIN_CONF_FILE</span><span class="s2">&quot;</span>
+<span class="s2">screen_it q-dhcp &quot;</span>python <span class="nv">$AGENT_DHCP_BINARY</span> --config-file <span class="nv">$Q_CONF_FILE</span> --config-file<span class="o">=</span><span class="nv">$Q_DHCP_CONF_FILE</span><span class="s2">&quot;</span>
+<span class="s2">screen_it q-l3 &quot;</span>python <span class="nv">$AGENT_L3_BINARY</span> --config-file <span class="nv">$Q_CONF_FILE</span> --config-file<span class="o">=</span><span class="nv">$Q_L3_CONF_FILE</span><span class="s2">&quot;</span>
 
-<span class="s1">echo_summary &quot;Starting Nova&quot;</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">screen_it n-cpu &quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_BIN_DIR/nova-compute&quot;</span>
-<span class="s1">screen_it n-crt &quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cert&quot;</span>
-<span class="s1">screen_it n-net &quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-network&quot;</span>
-<span class="s1">screen_it n-sch &quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-scheduler&quot;</span>
-<span class="s1">screen_it n-novnc &quot;cd $NOVNC_DIR &amp;&amp; ./utils/nova-novncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF --web .&quot;</span>
-<span class="s1">screen_it n-xvnc &quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-xvpvncproxy --config-file $NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
-<span class="s1">screen_it n-cauth &quot;cd $NOVA_DIR &amp;&amp; ./bin/nova-consoleauth&quot;</span>
-<span class="s1">if is_service_enabled n-vol; then</span>
-<span class="s1">    echo_summary &quot;Starting Nova volumes&quot;</span>
-<span class="s1">    start_nvol</span>
-<span class="s1">fi</span>
-<span class="s1">if is_service_enabled cinder; then</span>
-<span class="s1">    echo_summary &quot;Starting Cinder&quot;</span>
-<span class="s1">    start_cinder</span>
-<span class="s1">fi</span>
-<span class="s1">if is_service_enabled ceilometer; then</span>
-<span class="s1">    echo_summary &quot;Configuring Ceilometer&quot;</span>
-<span class="s1">    configure_ceilometer</span>
-<span class="s1">    echo_summary &quot;Starting Ceilometer&quot;</span>
-<span class="s1">    start_ceilometer</span>
-<span class="s1">fi</span>
-<span class="s1">screen_it horizon &quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
-<span class="s1">screen_it swift &quot;cd $SWIFT_DIR &amp;&amp; $SWIFT_DIR/bin/swift-proxy-server ${SWIFT_CONFIG_DIR}/proxy-server.conf -v&quot;</span>
+<span class="s2">echo_summary &quot;</span>Starting Nova<span class="s2">&quot;</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">screen_it n-cpu &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> sg libvirtd <span class="nv">$NOVA_BIN_DIR</span>/nova-compute<span class="s2">&quot;</span>
+<span class="s2">screen_it n-crt &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">$NOVA_BIN_DIR</span>/nova-cert<span class="s2">&quot;</span>
+<span class="s2">screen_it n-net &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">$NOVA_BIN_DIR</span>/nova-network<span class="s2">&quot;</span>
+<span class="s2">screen_it n-sch &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">$NOVA_BIN_DIR</span>/nova-scheduler<span class="s2">&quot;</span>
+<span class="s2">screen_it n-novnc &quot;</span><span class="nb">cd</span> <span class="nv">$NOVNC_DIR</span> <span class="o">&amp;&amp;</span> ./utils/nova-novncproxy --config-file <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span> --web .<span class="s2">&quot;</span>
+<span class="s2">screen_it n-xvnc &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> ./bin/nova-xvpvncproxy --config-file <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span><span class="s2">&quot;</span>
+<span class="s2">screen_it n-cauth &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> ./bin/nova-consoleauth<span class="s2">&quot;</span>
+<span class="s2">if is_service_enabled n-vol; then</span>
+<span class="s2">    echo_summary &quot;</span>Starting Nova volumes<span class="s2">&quot;</span>
+<span class="s2">    start_nvol</span>
+<span class="s2">fi</span>
+<span class="s2">if is_service_enabled cinder; then</span>
+<span class="s2">    echo_summary &quot;</span>Starting Cinder<span class="s2">&quot;</span>
+<span class="s2">    start_cinder</span>
+<span class="s2">fi</span>
+<span class="s2">if is_service_enabled ceilometer; then</span>
+<span class="s2">    echo_summary &quot;</span>Configuring Ceilometer<span class="s2">&quot;</span>
+<span class="s2">    configure_ceilometer</span>
+<span class="s2">    echo_summary &quot;</span>Starting Ceilometer<span class="s2">&quot;</span>
+<span class="s2">    start_ceilometer</span>
+<span class="s2">fi</span>
+<span class="s2">screen_it horizon &quot;</span><span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span> <span class="o">&amp;&amp;</span> sudo tail -f /var/log/<span class="nv">$APACHE_NAME</span>/horizon_error.log<span class="s2">&quot;</span>
+<span class="s2">screen_it swift &quot;</span><span class="nb">cd</span> <span class="nv">$SWIFT_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">$SWIFT_DIR</span>/bin/swift-proxy-server <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/proxy-server.conf -v<span class="s2">&quot;</span>
 
-<span class="s1"># DIVIDER</span>
-<span class="s1">is_service_enabled swift3 || \</span>
-<span class="s1">    screen_it n-obj &quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-objectstore&quot;</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">is_service_enabled swift3 || \</span>
+<span class="s2">    screen_it n-obj &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">$NOVA_BIN_DIR</span>/nova-objectstore<span class="s2">&quot;</span>
 
-<span class="s1"># DIVIDER</span>
-<span class="s1">if is_service_enabled heat; then</span>
-<span class="s1">    echo_summary &quot;Starting Heat&quot;</span>
-<span class="s1">    start_heat</span>
-<span class="s1">fi</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">if is_service_enabled heat; then</span>
+<span class="s2">    echo_summary &quot;</span>Starting Heat<span class="s2">&quot;</span>
+<span class="s2">    start_heat</span>
+<span class="s2">fi</span>
 
 
-<span class="s1"># DIVIDER</span>
+<span class="s2"># DIVIDER</span>
 
-<span class="s1"># DIVIDER</span>
+<span class="s2"># DIVIDER</span>
 
-<span class="s1">if is_service_enabled g-reg; then</span>
-<span class="s1">    echo_summary &quot;Uploading images&quot;</span>
-<span class="s1">    TOKEN=$(keystone  token-get | grep &#39;</span> id <span class="err">&#39;</span> | get_field 2<span class="o">)</span>
+<span class="s2">if is_service_enabled g-reg; then</span>
+<span class="s2">    echo_summary &quot;</span>Uploading images<span class="s2">&quot;</span>
+<span class="s2">    TOKEN=$(keystone  token-get | grep &#39; id &#39; | get_field 2)</span>
+
+<span class="s2"># DIVIDER</span>
+<span class="s2">    if [[ -n &quot;</span><span class="nv">$UPLOAD_LEGACY_TTY</span><span class="s2">&quot; ]]; then</span>
+<span class="s2">        IMAGE_URLS=&quot;</span><span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">:+</span><span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="k">}</span><span class="p">,</span><span class="k">}</span>http://images.ansolabs.com/tty.tgz<span class="s2">&quot;</span>
+<span class="s2">    fi</span>
+
+<span class="s2">    for image_url in ${IMAGE_URLS//,/ }; do</span>
+<span class="s2">        upload_image $image_url $TOKEN</span>
+<span class="s2">    done</span>
+<span class="s2">fi</span>
+
+
+<span class="s2"># DIVIDER</span>
+
+<span class="s2"># DIVIDER</span>
+<span class="s2">if [[ -x $TOP_DIR/local.sh ]]; then</span>
+<span class="s2">    echo &quot;</span>Running user script <span class="nv">$TOP_DIR</span>/local.sh<span class="s2">&quot;</span>
+<span class="s2">    $TOP_DIR/local.sh</span>
+<span class="s2">fi</span>
+
+
+<span class="s2"># DIVIDER</span>
+
+<span class="s2">set +o xtrace</span>
+
+<span class="s2">if [[ -n &quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot; ]]; then</span>
+<span class="s2">    exec 1&gt;&amp;3</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">    exec 1&gt; &gt;( tee -a &quot;</span><span class="k">${</span><span class="nv">LOGFILE</span><span class="k">}</span><span class="s2">&quot; ) 2&gt;&amp;1</span>
+<span class="s2">else</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">    exec 1&gt;&amp;3</span>
+<span class="s2">fi</span>
+
+
+<span class="s2"># DIVIDER</span>
+
+<span class="s2">echo &quot;&quot;</span>
+<span class="s2">echo &quot;&quot;</span>
+<span class="s2">echo &quot;&quot;</span>
+
+<span class="s2"># DIVIDER</span>
+<span class="s2">if is_service_enabled horizon; then</span>
+<span class="s2">    echo &quot;</span>Horizon is now available at http://<span class="nv">$SERVICE_HOST</span>/<span class="s2">&quot;</span>
+<span class="s2">fi</span>
+
+<span class="s2"># DIVIDER</span>
+<span class="s2">if is_service_enabled key; then</span>
+<span class="s2">    echo &quot;</span>Keystone is serving at <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$SERVICE_HOST</span>:<span class="nv">$KEYSTONE_API_PORT</span>/v2.0/<span class="s2">&quot;</span>
+<span class="s2">    echo &quot;</span>Examples on using novaclient <span class="nb">command </span>line is in exercise.sh<span class="s2">&quot;</span>
+<span class="s2">    echo &quot;</span>The default users are: admin and demo<span class="s2">&quot;</span>
+<span class="s2">    echo &quot;</span>The password: <span class="nv">$ADMIN_PASSWORD</span><span class="s2">&quot;</span>
+<span class="s2">fi</span>
+
+<span class="s2"># DIVIDER</span>
+<span class="s2">echo &quot;</span>This is your host ip: <span class="nv">$HOST_IP</span><span class="s2">&quot;</span>
+
+<span class="s2"># DIVIDER</span>
+<span class="s2">if [[ -n &quot;</span><span class="nv">$EXTRA_FLAGS</span><span class="s2">&quot; ]]; then</span>
+<span class="s2">    echo_summary &quot;</span>WARNING: EXTRA_FLAGS is defined and may need to be converted to EXTRA_OPTS<span class="s2">&quot;</span>
+<span class="s2">fi</span>
+
+<span class="s2"># DIVIDER</span>
+<span class="s2">echo_summary &quot;</span>stack.sh completed in <span class="nv">$SECONDS</span> seconds.<span class="err">&quot;</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Echo text to the log file, summary log file and stdout
 echo_summary &quot;something to say&quot;</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}http://images.ansolabs.com/tty.tgz&quot;</span>
-    <span class="k">fi</span>
-
-<span class="k">    for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">        </span>upload_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
-    <span class="k">done</span>
-<span class="k">fi</span>
-
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Echo text only to stdout, no log files
 echo_nolog &quot;something not for the logs&quot;</p>
-</td><td class=code><div class=highlight><pre>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up logging for <tt class="docutils literal">stack.sh</tt>
 Set <tt class="docutils literal">LOGFILE</tt> to turn on logging
 Append '.xxxxxxxx' to the given name to maintain history
 where 'xxxxxxxx' is a representation of the date the file was created</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -x <span class="nv">$TOP_DIR</span>/local.sh <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Running user script $TOP_DIR/local.sh&quot;</span>
-    <span class="nv">$TOP_DIR</span>/local.sh
-<span class="k">fi</span>
-
-
 </pre></div></td></tr><tr><td class=docs>
 <p>First clean up old log files.  Use the user-specified <tt class="docutils literal">LOGFILE</tt>
 as the template to search for, appending '.*' to match the date
 we added on earlier runs.</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nb">set</span> +o xtrace
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">exec </span>1&gt;&amp;3
 </pre></div></td></tr><tr><td class=docs>
 <p>Redirect output according to config
 Copy stdout to fd 3</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> tee -a <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
-<span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Redirect stdout/stderr to tee to write the log file</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">exec </span>1&gt;&amp;3
-<span class="k">fi</span>
-
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up a second fd for output</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Set fd 1 and 2 to primary logfile</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Horizon is now available at http://$SERVICE_HOST/&quot;</span>
-<span class="k">fi</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Set fd 6 to summary logfile and stdout</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Keystone is serving at $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Examples on using novaclient command line is in exercise.sh&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;The default users are: admin and demo&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;The password: $ADMIN_PASSWORD&quot;</span>
-<span class="k">fi</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Specified logfile name always links to the most recent log</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">echo</span> <span class="s2">&quot;This is your host ip: $HOST_IP&quot;</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up output redirection without log files
 Copy stdout to fd 3</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>echo_summary <span class="s2">&quot;WARNING: EXTRA_FLAGS is defined and may need to be converted to EXTRA_OPTS&quot;</span>
-<span class="k">fi</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Throw away stdout and stderr</p>
-</td><td class=code><div class=highlight><pre>
-echo_summary <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot;</span>
-
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Always send summary fd to original stdout</p>
-</td><td class=code><div class=highlight><pre>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up logging of screen windows
 Set <tt class="docutils literal">SCREEN_LOGDIR</tt> to turn on logging of screen windows to the
