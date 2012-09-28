@@ -480,15 +480,6 @@ override check and attempt installation with <tt class="docutils literal">FORCE=
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Set the paths of certain binaries</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">NOVA_ROOTWRAP</span><span class="o">=</span>/usr/local/bin/nova-rootwrap
-<span class="k">else</span>
-<span class="k">    </span><span class="nv">NOVA_ROOTWRAP</span><span class="o">=</span>/usr/bin/nova-rootwrap
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> keeps function libraries here
 Make sure <tt class="docutils literal">$TOP_DIR/lib</tt> directory is present</p>
 </td><td class=code><div class=highlight><pre>
@@ -746,6 +737,7 @@ address.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/nova
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/n-vol
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
@@ -763,26 +755,6 @@ address.</p>
 <span class="nv">SWIFTCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-swiftclient
 <span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
 <span class="nv">QUANTUM_CLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-quantumclient
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Nova defaults</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">NOVA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
-<span class="nv">NOVACLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-novaclient
-<span class="nv">NOVA_STATE_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="p">:=</span><span class="nv">$DATA_DIR</span><span class="p">/nova</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>INSTANCES_PATH is the previous name for this</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">NOVA_INSTANCES_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_INSTANCES_PATH</span><span class="p">:=</span><span class="k">${</span><span class="nv">INSTANCES_PATH</span><span class="p">:=</span><span class="nv">$NOVA_STATE_PATH</span><span class="p">/instances</span><span class="k">}}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Support entry points installation of console scripts</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$NOVA_DIR</span>/bin <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">NOVA_BIN_DIR</span><span class="o">=</span><span class="nv">$NOVA_DIR</span>/bin
-<span class="k">else</span>
-<span class="k">    </span><span class="nv">NOVA_BIN_DIR</span><span class="o">=</span>/usr/local/bin
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Default Quantum Plugin</p>
@@ -821,12 +793,6 @@ Default admin username</p>
 <span class="nv">VOLUME_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">:-</span><span class="nv">stack</span><span class="p">-volumes</span><span class="k">}</span>
 <span class="nv">VOLUME_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">:-</span><span class="nv">volume</span><span class="p">-</span><span class="k">}</span>
 <span class="nv">INSTANCE_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTANCE_NAME_PREFIX</span><span class="k">:-</span><span class="nv">instance</span><span class="p">-</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Nova supports pluggable schedulers.  The default <tt class="docutils literal">FilterScheduler</tt>
-should work in most cases.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SCHEDULER</span><span class="o">=</span><span class="k">${</span><span class="nv">SCHEDULER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.scheduler.filter_scheduler.FilterScheduler</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Generic helper to configure passwords</p>
@@ -1318,28 +1284,6 @@ current user.</p>
 <span class="s1">    fi</span>
 <span class="s1">fi</span>
 
-<span class="s1">if is_service_enabled n-cpu; then</span>
-
-<span class="s1">    if [[ &quot;$os_PACKAGE&quot; = &quot;deb&quot; ]]; then</span>
-<span class="s1">        LIBVIRT_PKG_NAME=libvirt-bin</span>
-<span class="s1">    else</span>
-<span class="s1">        LIBVIRT_PKG_NAME=libvirt</span>
-<span class="s1">    fi</span>
-<span class="s1">    install_package $LIBVIRT_PKG_NAME</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    if [[ &quot;$LIBVIRT_TYPE&quot; == &quot;lxc&quot; ]]; then</span>
-<span class="s1">        if [[ &quot;$os_PACKAGE&quot; = &quot;deb&quot; ]]; then</span>
-<span class="s1">            if [[ &quot;$DISTRO&quot; &gt; natty ]]; then</span>
-<span class="s1">                install_package cgroup-lite</span>
-<span class="s1">            fi</span>
-<span class="s1">        else</span>
-<span class="s1">            ### FIXME(dtroyer): figure this out</span>
-<span class="s1">            echo &quot;RPM-based cgroup not implemented yet&quot;</span>
-<span class="s1">            yum_install libcgroup-tools</span>
-<span class="s1">        fi</span>
-<span class="s1">    fi</span>
-<span class="s1">fi</span>
-
 <span class="s1">if is_service_enabled swift; then</span>
 <span class="s1"># DIVIDER</span>
 <span class="s1">    install_package memcached</span>
@@ -1369,11 +1313,9 @@ current user.</p>
 
 <span class="s1">install_keystoneclient</span>
 <span class="s1">install_glanceclient</span>
-
-<span class="s1">git_clone $NOVA_REPO $NOVA_DIR $NOVA_BRANCH</span>
+<span class="s1">install_novaclient</span>
 
 <span class="s1"># DIVIDER</span>
-<span class="s1">git_clone $NOVACLIENT_REPO $NOVACLIENT_DIR $NOVACLIENT_BRANCH</span>
 <span class="s1">git_clone $OPENSTACKCLIENT_REPO $OPENSTACKCLIENT_DIR $OPENSTACKCLIENT_BRANCH</span>
 
 <span class="s1"># DIVIDER</span>
@@ -1394,6 +1336,10 @@ current user.</p>
 <span class="s1">if is_service_enabled g-api n-api; then</span>
 <span class="s1"># DIVIDER</span>
 <span class="s1">    install_glance</span>
+<span class="s1">fi</span>
+<span class="s1">if is_service_enabled nova; then</span>
+<span class="s1"># DIVIDER</span>
+<span class="s1">    install_nova</span>
 <span class="s1">fi</span>
 <span class="s1">if is_service_enabled n-novnc; then</span>
 <span class="s1"># DIVIDER</span>
@@ -1427,7 +1373,7 @@ current user.</p>
 
 <span class="s1"># DIVIDER</span>
 <span class="s1">configure_keystoneclient</span>
-<span class="s1">setup_develop $NOVACLIENT_DIR</span>
+<span class="s1">configure_novaclient</span>
 <span class="s1">setup_develop $OPENSTACKCLIENT_DIR</span>
 <span class="s1">if is_service_enabled key g-api n-api swift; then</span>
 <span class="s1">    configure_keystone</span>
@@ -1446,7 +1392,9 @@ current user.</p>
 <span class="s1"># DIVIDER</span>
 <span class="s1">configure_glanceclient</span>
 
-<span class="s1">setup_develop $NOVA_DIR</span>
+<span class="s1">if is_service_enabled nova; then</span>
+<span class="s1">    configure_nova</span>
+<span class="s1">fi</span>
 <span class="s1">if is_service_enabled horizon; then</span>
 <span class="s1">    setup_develop $HORIZON_DIR</span>
 <span class="s1">fi</span>
@@ -1928,180 +1876,9 @@ current user.</p>
 
 <span class="s1"># DIVIDER</span>
 
-<span class="s1">echo_summary &quot;Configuring Nova&quot;</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">NOVA_CONF_DIR=/etc/nova</span>
-<span class="s1">if [[ ! -d $NOVA_CONF_DIR ]]; then</span>
-<span class="s1">    sudo mkdir -p $NOVA_CONF_DIR</span>
-<span class="s1">fi</span>
-<span class="s1">sudo chown `whoami` $NOVA_CONF_DIR</span>
-
-<span class="s1">cp -p $NOVA_DIR/etc/nova/policy.json $NOVA_CONF_DIR</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">if [[ -d $NOVA_CONF_DIR/rootwrap.d ]]; then</span>
-<span class="s1">    sudo rm -rf $NOVA_CONF_DIR/rootwrap.d</span>
-<span class="s1">fi</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">sudo mkdir -m 755 $NOVA_CONF_DIR/rootwrap.d</span>
-<span class="s1">sudo cp $NOVA_DIR/etc/nova/rootwrap.d/*.filters $NOVA_CONF_DIR/rootwrap.d</span>
-<span class="s1">sudo chown -R root:root $NOVA_CONF_DIR/rootwrap.d</span>
-<span class="s1">sudo chmod 644 $NOVA_CONF_DIR/rootwrap.d/*</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">sudo cp $NOVA_DIR/etc/nova/rootwrap.conf $NOVA_CONF_DIR/</span>
-<span class="s1">sudo sed -e &quot;s:^filters_path=.*$:filters_path=$NOVA_CONF_DIR/rootwrap.d:&quot; -i $NOVA_CONF_DIR/rootwrap.conf</span>
-<span class="s1">sudo chown root:root $NOVA_CONF_DIR/rootwrap.conf</span>
-<span class="s1">sudo chmod 0644 $NOVA_CONF_DIR/rootwrap.conf</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">ROOTWRAP_SUDOER_CMD=&quot;$NOVA_ROOTWRAP $NOVA_CONF_DIR/rootwrap.conf *&quot;</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">TEMPFILE=`mktemp`</span>
-<span class="s1">echo &quot;$USER ALL=(root) NOPASSWD: $ROOTWRAP_SUDOER_CMD&quot; &gt;$TEMPFILE</span>
-<span class="s1">chmod 0440 $TEMPFILE</span>
-<span class="s1">sudo chown root:root $TEMPFILE</span>
-<span class="s1">sudo mv $TEMPFILE /etc/sudoers.d/nova-rootwrap</span>
-
-<span class="s1">if is_service_enabled n-api; then</span>
-<span class="s1"># DIVIDER</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    API_RATE_LIMIT=${API_RATE_LIMIT:-&quot;True&quot;}</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    rm -f $NOVA_DIR/bin/nova-api-paste.ini</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    cp $NOVA_DIR/etc/nova/api-paste.ini $NOVA_CONF_DIR</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sed -e &quot;</span>
-<span class="s1">        /^admin_token/i admin_tenant_name = $SERVICE_TENANT_NAME</span>
-<span class="s1">        /admin_tenant_name/s/^.*$/admin_tenant_name = $SERVICE_TENANT_NAME/;</span>
-<span class="s1">        /admin_user/s/^.*$/admin_user = nova/;</span>
-<span class="s1">        /admin_password/s/^.*$/admin_password = $SERVICE_PASSWORD/;</span>
-<span class="s1">        s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
-<span class="s1">        s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g;</span>
-<span class="s1">    &quot; -i $NOVA_CONF_DIR/api-paste.ini</span>
-<span class="s1">fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">function clean_iptables() {</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo iptables -S -v | sed &quot;s/-c [0-9]* [0-9]* //g&quot; | grep &quot;nova&quot; | grep &quot;\-A&quot; |  sed &quot;s/-A/-D/g&quot; | awk &#39;</span><span class="o">{</span>print <span class="s2">&quot;sudo iptables&quot;</span>,<span class="nv">$0</span><span class="o">}</span><span class="s1">&#39; | bash</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo iptables -S -v -t nat | sed &quot;s/-c [0-9]* [0-9]* //g&quot; | grep &quot;nova&quot; |  grep &quot;\-A&quot; | sed &quot;s/-A/-D/g&quot; | awk &#39;</span><span class="o">{</span>print <span class="s2">&quot;sudo iptables -t nat&quot;</span>,<span class="nv">$0</span><span class="o">}</span><span class="s1">&#39; | bash</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo iptables -S -v | sed &quot;s/-c [0-9]* [0-9]* //g&quot; | grep &quot;nova&quot; | grep &quot;\-N&quot; |  sed &quot;s/-N/-X/g&quot; | awk &#39;</span><span class="o">{</span>print <span class="s2">&quot;sudo iptables&quot;</span>,<span class="nv">$0</span><span class="o">}</span><span class="s1">&#39; | bash</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo iptables -S -v -t nat | sed &quot;s/-c [0-9]* [0-9]* //g&quot; | grep &quot;nova&quot; |  grep &quot;\-N&quot; | sed &quot;s/-N/-X/g&quot; | awk &#39;</span><span class="o">{</span>print <span class="s2">&quot;sudo iptables -t nat&quot;</span>,<span class="nv">$0</span><span class="o">}</span><span class="s1">&#39; | bash</span>
-<span class="s1">}</span>
-
-<span class="s1">if is_service_enabled n-cpu; then</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo sysctl -w net.ipv4.ip_forward=1</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo modprobe nbd || true</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    if [[ &quot;$LIBVIRT_TYPE&quot; == &quot;kvm&quot; ]]; then</span>
-<span class="s1">        sudo modprobe kvm || true</span>
-<span class="s1">        if [ ! -e /dev/kvm ]; then</span>
-<span class="s1">            echo &quot;WARNING: Switching to QEMU&quot;</span>
-<span class="s1">            LIBVIRT_TYPE=qemu</span>
-<span class="s1">            if which selinuxenabled 2&gt;&amp;1 &gt; /dev/null &amp;&amp; selinuxenabled; then</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">                sudo setsebool virt_use_execmem on</span>
-<span class="s1">            fi</span>
-<span class="s1">        fi</span>
-<span class="s1">    fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    if [[ &quot;$LIBVIRT_TYPE&quot; == &quot;lxc&quot; ]]; then</span>
-<span class="s1">        if [[ &quot;$os_PACKAGE&quot; = &quot;deb&quot; ]]; then</span>
-<span class="s1">            if [[ ! &quot;$DISTRO&quot; &gt; natty ]]; then</span>
-<span class="s1">                cgline=&quot;none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0&quot;</span>
-<span class="s1">                sudo mkdir -p /cgroup</span>
-<span class="s1">                if ! grep -q cgroup /etc/fstab; then</span>
-<span class="s1">                    echo &quot;$cgline&quot; | sudo tee -a /etc/fstab</span>
-<span class="s1">                fi</span>
-<span class="s1">                if ! mount -n | grep -q cgroup; then</span>
-<span class="s1">                    sudo mount /cgroup</span>
-<span class="s1">                fi</span>
-<span class="s1">            fi</span>
-<span class="s1">        fi</span>
-<span class="s1">    fi</span>
-
-<span class="s1">    QEMU_CONF=/etc/libvirt/qemu.conf</span>
-<span class="s1">    if is_service_enabled quantum &amp;&amp; [[ $Q_PLUGIN = &quot;openvswitch&quot; ]] &amp;&amp; ! sudo grep -q &#39;</span>^cgroup_device_acl<span class="s1">&#39; $QEMU_CONF ; then</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">        cat &lt;&lt;EOF | sudo tee -a $QEMU_CONF</span>
-<span class="s1">cgroup_device_acl = [</span>
-<span class="s1">    &quot;/dev/null&quot;, &quot;/dev/full&quot;, &quot;/dev/zero&quot;,</span>
-<span class="s1">    &quot;/dev/random&quot;, &quot;/dev/urandom&quot;,</span>
-<span class="s1">    &quot;/dev/ptmx&quot;, &quot;/dev/kvm&quot;, &quot;/dev/kqemu&quot;,</span>
-<span class="s1">    &quot;/dev/rtc&quot;, &quot;/dev/hpet&quot;,&quot;/dev/net/tun&quot;,</span>
-<span class="s1">]</span>
-<span class="s1">EOF</span>
-<span class="s1">    fi</span>
-
-<span class="s1">    if [[ &quot;$os_PACKAGE&quot; = &quot;deb&quot; ]]; then</span>
-<span class="s1">        LIBVIRT_DAEMON=libvirt-bin</span>
-<span class="s1">    else</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">        if ! grep ^libvirtd: /etc/group &gt;/dev/null; then</span>
-<span class="s1">            sudo groupadd libvirtd</span>
-<span class="s1">        fi</span>
-<span class="s1">        sudo bash -c &#39;</span>cat <span class="s">&lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
-<span class="s">[libvirt Management Access]</span>
-<span class="s">Identity=unix-group:libvirtd</span>
-<span class="s">Action=org.libvirt.unix.manage</span>
-<span class="s">ResultAny=yes</span>
-<span class="s">ResultInactive=yes</span>
-<span class="s">ResultActive=yes</span>
-<span class="s">EOF</span><span class="s1">&#39;</span>
-<span class="s1">        LIBVIRT_DAEMON=libvirtd</span>
-<span class="s1">    fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo usermod -a -G libvirtd `whoami`</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    restart_service $LIBVIRT_DAEMON</span>
-
-
-<span class="s1"># DIVIDER</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    mkdir -p $NOVA_INSTANCES_PATH</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    if [ -L /dev/disk/by-label/nova-instances ]; then</span>
-<span class="s1">        if ! mount -n | grep -q $NOVA_INSTANCES_PATH; then</span>
-<span class="s1">            sudo mount -L nova-instances $NOVA_INSTANCES_PATH</span>
-<span class="s1">            sudo chown -R `whoami` $NOVA_INSTANCES_PATH</span>
-<span class="s1">        fi</span>
-<span class="s1">    fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    clean_iptables</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    instances=`sudo virsh list --all | grep $INSTANCE_NAME_PREFIX | sed &quot;s/.*\($INSTANCE_NAME_PREFIX[0-9a-fA-F]*\).*/\1/g&quot;`</span>
-<span class="s1">    if [ ! &quot;$instances&quot; = &quot;&quot; ]; then</span>
-<span class="s1">        echo $instances | xargs -n1 sudo virsh destroy || true</span>
-<span class="s1">        echo $instances | xargs -n1 sudo virsh undefine || true</span>
-<span class="s1">    fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo iscsiadm --mode node | grep $VOLUME_NAME_PREFIX | cut -d &quot; &quot; -f2 | xargs sudo iscsiadm --mode node --logout || true</span>
-<span class="s1">    sudo iscsiadm --mode node | grep $VOLUME_NAME_PREFIX | cut -d &quot; &quot; -f2 | sudo iscsiadm --mode node --op delete || true</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo rm -rf $NOVA_INSTANCES_PATH/*</span>
+<span class="s1">if is_service_enabled nova; then</span>
+<span class="s1">    echo_summary &quot;Configuring Nova&quot;</span>
+<span class="s1">    configure_nova</span>
 <span class="s1">fi</span>
 
 <span class="s1">if is_service_enabled n-net q-dhcp; then</span>
@@ -2367,26 +2144,12 @@ current user.</p>
 <span class="s1">    init_nvol</span>
 <span class="s1">fi</span>
 
-<span class="s1">NOVA_CONF=nova.conf</span>
-<span class="s1">function add_nova_opt {</span>
-<span class="s1">    echo &quot;$1&quot; &gt;&gt; $NOVA_CONF_DIR/$NOVA_CONF</span>
-<span class="s1">}</span>
+<span class="s1">if is_service_enabled nova; then</span>
+<span class="s1">    echo_summary &quot;Configuring Nova&quot;</span>
+<span class="s1">    init_nova</span>
+<span class="s1">fi</span>
 
 <span class="s1"># DIVIDER</span>
-<span class="s1">rm -f $NOVA_DIR/bin/nova.conf</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">rm -f $NOVA_CONF_DIR/$NOVA_CONF</span>
-<span class="s1">add_nova_opt &quot;[DEFAULT]&quot;</span>
-<span class="s1">add_nova_opt &quot;verbose=True&quot;</span>
-<span class="s1">add_nova_opt &quot;auth_strategy=keystone&quot;</span>
-<span class="s1">add_nova_opt &quot;allow_resize_to_same_host=True&quot;</span>
-<span class="s1">add_nova_opt &quot;rootwrap_config=$NOVA_CONF_DIR/rootwrap.conf&quot;</span>
-<span class="s1">add_nova_opt &quot;compute_scheduler_driver=$SCHEDULER&quot;</span>
-<span class="s1">add_nova_opt &quot;dhcpbridge_flagfile=$NOVA_CONF_DIR/$NOVA_CONF&quot;</span>
-<span class="s1">add_nova_opt &quot;fixed_range=$FIXED_RANGE&quot;</span>
-<span class="s1">add_nova_opt &quot;s3_host=$SERVICE_HOST&quot;</span>
-<span class="s1">add_nova_opt &quot;s3_port=$S3_SERVICE_PORT&quot;</span>
 <span class="s1">if is_service_enabled quantum; then</span>
 <span class="s1">    add_nova_opt &quot;network_api_class=nova.network.quantumv2.api.API&quot;</span>
 <span class="s1">    add_nova_opt &quot;quantum_admin_username=$Q_ADMIN_USERNAME&quot;</span>
@@ -2412,18 +2175,6 @@ current user.</p>
 <span class="s1">        add_nova_opt &quot;flat_interface=$FLAT_INTERFACE&quot;</span>
 <span class="s1">    fi</span>
 <span class="s1">fi</span>
-<span class="s1">if is_service_enabled n-vol; then</span>
-<span class="s1">    add_nova_opt &quot;volume_group=$VOLUME_GROUP&quot;</span>
-<span class="s1">    add_nova_opt &quot;volume_name_template=${VOLUME_NAME_PREFIX}%s&quot;</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    add_nova_opt &quot;iscsi_helper=tgtadm&quot;</span>
-<span class="s1">fi</span>
-<span class="s1">add_nova_opt &quot;osapi_compute_extension=nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
-<span class="s1">add_nova_opt &quot;my_ip=$HOST_IP&quot;</span>
-<span class="s1">add_nova_opt &quot;sql_connection=$BASE_SQL_CONN/nova?charset=utf8&quot;</span>
-<span class="s1">add_nova_opt &quot;libvirt_type=$LIBVIRT_TYPE&quot;</span>
-<span class="s1">add_nova_opt &quot;libvirt_cpu_mode=none&quot;</span>
-<span class="s1">add_nova_opt &quot;instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
 <span class="s1"># DIVIDER</span>
 <span class="s1">if is_service_enabled n-cpu; then</span>
 <span class="s1">    NOVNCPROXY_URL=${NOVNCPROXY_URL:-&quot;http://$SERVICE_HOST:6080/vnc_auto.html&quot;}</span>
@@ -2440,8 +2191,6 @@ current user.</p>
 <span class="s1">VNCSERVER_LISTEN=${VNCSERVER_LISTEN=127.0.0.1}</span>
 <span class="s1">add_nova_opt &quot;vncserver_listen=$VNCSERVER_LISTEN&quot;</span>
 <span class="s1">add_nova_opt &quot;vncserver_proxyclient_address=$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
-<span class="s1">add_nova_opt &quot;api_paste_config=$NOVA_CONF_DIR/api-paste.ini&quot;</span>
-<span class="s1">add_nova_opt &quot;image_service=nova.image.glance.GlanceImageService&quot;</span>
 <span class="s1">add_nova_opt &quot;ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
 <span class="s1">if is_service_enabled zeromq; then</span>
 <span class="s1">    add_nova_opt &quot;rpc_backend=nova.openstack.common.rpc.impl_zmq&quot;</span>
@@ -2452,50 +2201,6 @@ current user.</p>
 <span class="s1">    add_nova_opt &quot;rabbit_password=$RABBIT_PASSWORD&quot;</span>
 <span class="s1">fi</span>
 <span class="s1">add_nova_opt &quot;glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
-<span class="s1">add_nova_opt &quot;force_dhcp_release=True&quot;</span>
-<span class="s1">if [ -n &quot;$NOVA_STATE_PATH&quot; ]; then</span>
-<span class="s1">    add_nova_opt &quot;state_path=$NOVA_STATE_PATH&quot;</span>
-<span class="s1">fi</span>
-<span class="s1">if [ -n &quot;$NOVA_INSTANCES_PATH&quot; ]; then</span>
-<span class="s1">    add_nova_opt &quot;instances_path=$NOVA_INSTANCES_PATH&quot;</span>
-<span class="s1">fi</span>
-<span class="s1">if [ &quot;$MULTI_HOST&quot; != &quot;False&quot; ]; then</span>
-<span class="s1">    add_nova_opt &quot;multi_host=True&quot;</span>
-<span class="s1">    add_nova_opt &quot;send_arp_for_ha=True&quot;</span>
-<span class="s1">fi</span>
-<span class="s1">if [ &quot;$SYSLOG&quot; != &quot;False&quot; ]; then</span>
-<span class="s1">    add_nova_opt &quot;use_syslog=True&quot;</span>
-<span class="s1">fi</span>
-<span class="s1">if [ &quot;$API_RATE_LIMIT&quot; != &quot;True&quot; ]; then</span>
-<span class="s1">    add_nova_opt &quot;api_rate_limit=False&quot;</span>
-<span class="s1">fi</span>
-<span class="s1">if [ &quot;$LOG_COLOR&quot; == &quot;True&quot; ] &amp;&amp; [ &quot;$SYSLOG&quot; == &quot;False&quot; ]; then</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    add_nova_opt &quot;logging_context_format_string=%(asctime)s %(color)s%(levelname)s %(name)s [[01;36m%(request_id)s [00;36m%(user_name)s %(project_name)s%(color)s] [01;35m%(instance)s%(color)s%(message)s[00m&quot;</span>
-<span class="s1">    add_nova_opt &quot;logging_default_format_string=%(asctime)s %(color)s%(levelname)s %(name)s [[00;36m-%(color)s] [01;35m%(instance)s%(color)s%(message)s[00m&quot;</span>
-<span class="s1">    add_nova_opt &quot;logging_debug_format_suffix=[00;33mfrom (pid=%(process)d) %(funcName)s %(pathname)s:%(lineno)d[00m&quot;</span>
-<span class="s1">    add_nova_opt &quot;logging_exception_prefix=%(color)s%(asctime)s TRACE %(name)s [01;35m%(instance)s[00m&quot;</span>
-<span class="s1">else</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    add_nova_opt &quot;logging_context_format_string=%(asctime)s %(levelname)s %(name)s [%(request_id)s %(user_name)s %(project_name)s] %(instance)s%(message)s&quot;</span>
-<span class="s1">fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">if is_service_enabled cinder; then</span>
-<span class="s1">    add_nova_opt &quot;volume_api_class=nova.volume.cinder.API&quot;</span>
-<span class="s1">fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">if [[ -z &quot;$EXTRA_OPTS&quot; &amp;&amp; -n &quot;$EXTRA_FLAGS&quot; ]]; then</span>
-<span class="s1">    EXTRA_OPTS=$EXTRA_FLAGS</span>
-<span class="s1">fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">for I in &quot;${EXTRA_OPTS[@]}&quot;; do</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    add_nova_opt ${I//--}</span>
-<span class="s1">done</span>
-
 
 <span class="s1"># DIVIDER</span>
 
@@ -2523,22 +2228,6 @@ current user.</p>
 <span class="s1">    add_nova_opt &quot;compute_driver=libvirt.LibvirtDriver&quot;</span>
 <span class="s1">    LIBVIRT_FIREWALL_DRIVER=${LIBVIRT_FIREWALL_DRIVER:-&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;}</span>
 <span class="s1">    add_nova_opt &quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
-<span class="s1">fi</span>
-
-
-<span class="s1"># DIVIDER</span>
-
-<span class="s1"># DIVIDER</span>
-
-<span class="s1">if is_service_enabled mysql &amp;&amp; is_service_enabled nova; then</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e &#39;</span>DROP DATABASE IF EXISTS nova;<span class="s1">&#39;</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e &#39;</span>CREATE DATABASE nova CHARACTER SET latin1;<span class="s1">&#39;</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    $NOVA_BIN_DIR/nova-manage db sync</span>
 <span class="s1">fi</span>
 
 
@@ -2577,7 +2266,6 @@ current user.</p>
 <span class="s1"># DIVIDER</span>
 <span class="s1">if is_service_enabled n-api; then</span>
 <span class="s1">    echo_summary &quot;Starting Nova API&quot;</span>
-<span class="s1">    add_nova_opt &quot;enabled_apis=$NOVA_ENABLED_APIS&quot;</span>
 <span class="s1">    screen_it n-api &quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api&quot;</span>
 <span class="s1">    echo &quot;Waiting for nova-api to start...&quot;</span>
 <span class="s1">    if ! timeout $SERVICE_TIMEOUT sh -c &quot;while ! http_proxy= wget -q -O- http://127.0.0.1:8774; do sleep 1; done&quot;; then</span>
@@ -2640,15 +2328,10 @@ current user.</p>
 <span class="s2">screen_it q-dhcp &quot;</span>python <span class="nv">$AGENT_DHCP_BINARY</span> --config-file <span class="nv">$Q_CONF_FILE</span> --config-file<span class="o">=</span><span class="nv">$Q_DHCP_CONF_FILE</span><span class="s2">&quot;</span>
 <span class="s2">screen_it q-l3 &quot;</span>python <span class="nv">$AGENT_L3_BINARY</span> --config-file <span class="nv">$Q_CONF_FILE</span> --config-file<span class="o">=</span><span class="nv">$Q_L3_CONF_FILE</span><span class="s2">&quot;</span>
 
-<span class="s2">echo_summary &quot;</span>Starting Nova<span class="s2">&quot;</span>
-<span class="s2"># DIVIDER</span>
-<span class="s2">screen_it n-cpu &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> sg libvirtd <span class="nv">$NOVA_BIN_DIR</span>/nova-compute<span class="s2">&quot;</span>
-<span class="s2">screen_it n-crt &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">$NOVA_BIN_DIR</span>/nova-cert<span class="s2">&quot;</span>
-<span class="s2">screen_it n-net &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">$NOVA_BIN_DIR</span>/nova-network<span class="s2">&quot;</span>
-<span class="s2">screen_it n-sch &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> <span class="nv">$NOVA_BIN_DIR</span>/nova-scheduler<span class="s2">&quot;</span>
-<span class="s2">screen_it n-novnc &quot;</span><span class="nb">cd</span> <span class="nv">$NOVNC_DIR</span> <span class="o">&amp;&amp;</span> ./utils/nova-novncproxy --config-file <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span> --web .<span class="s2">&quot;</span>
-<span class="s2">screen_it n-xvnc &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> ./bin/nova-xvpvncproxy --config-file <span class="nv">$NOVA_CONF_DIR</span>/<span class="nv">$NOVA_CONF</span><span class="s2">&quot;</span>
-<span class="s2">screen_it n-cauth &quot;</span><span class="nb">cd</span> <span class="nv">$NOVA_DIR</span> <span class="o">&amp;&amp;</span> ./bin/nova-consoleauth<span class="s2">&quot;</span>
+<span class="s2">if is_service_enabled nova; then</span>
+<span class="s2">    echo_summary &quot;</span>Starting Nova<span class="s2">&quot;</span>
+<span class="s2">    start_nova</span>
+<span class="s2">fi</span>
 <span class="s2">if is_service_enabled n-vol; then</span>
 <span class="s2">    echo_summary &quot;</span>Starting Nova volumes<span class="s2">&quot;</span>
 <span class="s2">    start_nvol</span>
@@ -2838,10 +2521,6 @@ FIXME add to files/apts/quantum, but don't install if not needed!</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Fedora does not started OVS by default</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>Install and configure <strong>LXC</strong> if specified.  LXC is another approach to
-splitting a system into many smaller parts.  LXC uses cgroups and chroot
-to simulate multiple systems.</p>
-</pre></div></td></tr><tr><td class=docs>
 <p>Install memcached for swift.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install python packages into a virtualenv so that we can track them</p>
@@ -2864,6 +2543,8 @@ to simulate multiple systems.</p>
 <p>swift3 middleware to provide S3 emulation to Swift</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>image catalog service</p>
+</pre></div></td></tr><tr><td class=docs>
+<p>compute service</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>a websockets/html5 or flash powered VNC console for vm instances</p>
 </pre></div></td></tr><tr><td class=docs>
@@ -3087,90 +2768,10 @@ Create it if it does not exist</p>
 <div class="section" id="nova">
 <h2>Nova</h2>
 </pre></div></td></tr><tr><td class=docs>
-<p>Put config files in <tt class="docutils literal">/etc/nova</tt> for everyone to find</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Deploy new rootwrap filters files (owned by root).
-Wipe any existing rootwrap.d files first</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Deploy filters to /etc/nova/rootwrap.d</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up rootwrap.conf, pointing to /etc/nova/rootwrap.d</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Specify rootwrap.conf as first parameter to nova-rootwrap</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up the rootwrap sudoers for nova</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Use the sample http middleware configuration supplied in the
-Nova sources.  This paste config adds the configuration required
-for Nova to validate Keystone tokens.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Allow rate limiting to be turned off for testing, like for Tempest
-NOTE: Set API_RATE_LIMIT=&quot;False&quot; to turn OFF rate limiting</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Remove legacy paste config if present</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Get the sample configuration file in place</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Rewrite the authtoken configuration for our Keystone service.
-This is a bit defensive to allow the sample file some variance.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Helper to clean iptables rules</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Delete rules</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Delete nat rules</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Delete chains</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Delete nat chains</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Force IP forwarding on, just on case</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Attempt to load modules: network block device - used to manage qcow images</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Check for kvm (hardware based virtualization).  If unable to initialize
-kvm, we drop back to the slower emulation mode (qemu).  Note: many systems
-come with hardware virtualization disabled in BIOS.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p><a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi?id=753589">https://bugzilla.redhat.com/show_bug.cgi?id=753589</a></p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install and configure <strong>LXC</strong> if specified.  LXC is another approach to
-splitting a system into many smaller parts.  LXC uses cgroups and chroot
-to simulate multiple systems.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Add /dev/net/tun to cgroup_device_acls, needed for type=ethernet interfaces</p>
-</pre></div></td></tr><tr><td class=docs>
-<p><a class="reference external" href="http://wiki.libvirt.org/page/SSHPolicyKitSetup">http://wiki.libvirt.org/page/SSHPolicyKitSetup</a></p>
-</pre></div></td></tr><tr><td class=docs>
-<p>The user that nova runs as needs to be member of <strong>libvirtd</strong> group otherwise
-nova-compute will be unable to use libvirt.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>libvirt detects various settings on startup, as we potentially changed
-the system configuration (modules, filesystems), we need to restart
-libvirt to detect those changes.</p>
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="instance-storage">
-<h3>Instance Storage</h3>
-</pre></div></td></tr><tr><td class=docs>
-<p>Nova stores each instance in its own directory.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>You can specify a different disk to be mounted and used for backing the
-virtual machines.  If there is a partition labeled nova-instances we
-mount it (ext filesystems can be labeled via e2label).</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean iptables from previous runs</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Destroy old instances</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Logout and delete iscsi sessions</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean out the instances directory.</p>
-</pre></div></td></tr><tr><td class=docs>
 <p>Delete traces of nova networks from prior runs</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Force IP forwarding on, just on case</p>
 </pre></div></td></tr><tr><td class=docs>
-</div>
 </div>
 <div class="section" id="storage-service">
 <h2>Storage Service</h2>
@@ -3228,30 +2829,13 @@ ignore it just in case</p>
 <div class="section" id="volume-service">
 <h2>Volume Service</h2>
 </pre></div></td></tr><tr><td class=docs>
-<p>Remove legacy <tt class="docutils literal">nova.conf</tt></p>
-</pre></div></td></tr><tr><td class=docs>
-<p>(Re)create <tt class="docutils literal">nova.conf</tt></p>
-</pre></div></td></tr><tr><td class=docs>
-<p>oneiric no longer supports ietadm</p>
+<p>Additional Nova configuration that is dependent on other services</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>All nova-compute workers need to know the vnc configuration options
 These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Address on which instance vncservers will listen on compute hosts.
 For multi-host, this should be the management ip of the compute host.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Add color to logging output</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Show user_name and project_name instead of user_id and project_id</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>If cinder is enabled, use the cinder volume driver</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Provide some transition from <tt class="docutils literal">EXTRA_FLAGS</tt> to <tt class="docutils literal">EXTRA_OPTS</tt></p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Define extra nova conf flags by defining the array <tt class="docutils literal">EXTRA_OPTS</tt>.
-For Example: <tt class="docutils literal"><span class="pre">EXTRA_OPTS=(foo=true</span> bar=2)</tt></p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Attempt to convert flags to options</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="xenserver">
@@ -3266,21 +2850,6 @@ add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
 </dl>
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="nova-database">
-<h2>Nova Database</h2>
-</pre></div></td></tr><tr><td class=docs>
-<p>All nova components talk to a central database.  We will need to do this step
-only once for an entire cluster.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>(Re)create nova database</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Explicitly use latin1: to avoid lp#829209, nova expects the database to
-use latin1 by default, and then upgrades the database to utf8 (see the
-082_essex.py in nova)</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>(Re)create nova database</p>
-</pre></div></td></tr><tr><td class=docs>
-</div>
 <div class="section" id="heat">
 <h2>Heat</h2>
 </pre></div></td></tr><tr><td class=docs>
@@ -3289,9 +2858,7 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 <div class="section" id="launch-services">
 <h1>Launch Services</h1>
 </pre></div></td></tr><tr><td class=docs>
-<p>Nova api crashes if we start it with a regular screen command,
-so send the start command by forcing text into the window.
-Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES</tt></p>
+<p>Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES</tt></p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Launch the Glance services</p>
 </pre></div></td></tr><tr><td class=docs>
@@ -3321,10 +2888,6 @@ Since quantum command is executed in admin context at this point,
 <p>Create a second pool</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start up the quantum agents if enabled</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>The group <strong>libvirtd</strong> is added to the current user in this script.
-Use 'sg' to execute nova-compute as a member of the <strong>libvirtd</strong> group.
-<tt class="docutils literal">screen_it</tt> checks <tt class="docutils literal">is_service_enabled</tt>, it is not needed here</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Starting the nova-objectstore only if swift3 service is not enabled.
 Swift will act as s3 objectstore.</p>
