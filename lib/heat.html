@@ -400,6 +400,8 @@ runs that a clean run would need to clean up</p>
     <span class="nv">HEAT_METADATA_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_METADATA_PORT</span><span class="k">:-</span><span class="nv">8002</span><span class="k">}</span>
     <span class="nv">HEAT_API_CW_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
     <span class="nv">HEAT_API_CW_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_PORT</span><span class="k">:-</span><span class="nv">8003</span><span class="k">}</span>
+    <span class="nv">HEAT_API_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+    <span class="nv">HEAT_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_PORT</span><span class="k">:-</span><span class="nv">8004</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>cloudformation api</p>
@@ -431,6 +433,37 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
     iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
     iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
+
+</pre></div></td></tr><tr><td class=docs>
+<p>openstack api</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">HEAT_API_CONF</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-api.conf
+    cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-api.conf <span class="nv">$HEAT_API_CONF</span>
+    iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT debug True
+    inicomment <span class="nv">$HEAT_API_CONF</span> DEFAULT log_file
+    iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
+    iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_API_HOST</span>
+    iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT bind_port <span class="nv">$HEAT_API_PORT</span>
+
+    <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT rpc_backend heat.openstack.common.rpc.impl_kombu
+        iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
+        iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
+    <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT rpc_backend heat.openstack.common.rpc.impl_qpid
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nv">HEAT_API_PASTE_INI</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-api-paste.ini
+    cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-api-paste.ini <span class="nv">$HEAT_API_PASTE_INI</span>
+    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
+    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken admin_user heat
+    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
+    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
 
 </pre></div></td></tr><tr><td class=docs>
 <p>engine</p>
@@ -533,6 +566,7 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_heat<span class="o">()</span> <span class="o">{</span>
     screen_it h-eng <span class="s2">&quot;cd $HEAT_DIR; bin/heat-engine --config-file=$HEAT_CONF_DIR/heat-engine.conf&quot;</span>
+    screen_it h-api <span class="s2">&quot;cd $HEAT_DIR; bin/heat-api --config-dir=$HEAT_CONF_DIR/heat-api.conf&quot;</span>
     screen_it h-api-cfn <span class="s2">&quot;cd $HEAT_DIR; bin/heat-api-cfn --config-dir=$HEAT_CONF_DIR/heat-api-cfn.conf&quot;</span>
     screen_it h-api-cw <span class="s2">&quot;cd $HEAT_DIR; bin/heat-api-cloudwatch --config-dir=$HEAT_CONF_DIR/heat-api-cloudwatch.conf&quot;</span>
     screen_it h-meta <span class="s2">&quot;cd $HEAT_DIR; bin/heat-metadata --config-dir=$HEAT_CONF_DIR/heat-metadata.conf&quot;</span>
