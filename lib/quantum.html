@@ -369,6 +369,36 @@ Save trace setting</p>
     sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$bridge</span> bridge-id <span class="nv">$bridge</span>
 <span class="o">}</span>
 
+<span class="k">function </span>quantum_setup_external_bridge<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">bridge</span><span class="o">=</span><span class="nv">$1</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create it if it does not exist</p>
+</td><td class=code><div class=highlight><pre>
+    sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$bridge</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>remove internal ports</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>PORT in <span class="sb">`</span>sudo ovs-vsctl --no-wait list-ports <span class="nv">$bridge</span><span class="sb">`</span>; <span class="k">do</span>
+<span class="k">        </span><span class="nv">TYPE</span><span class="o">=</span><span class="k">$(</span>sudo ovs-vsctl get interface <span class="nv">$PORT</span> <span class="nb">type</span><span class="k">)</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;internal&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="sb">`</span>sudo ip link delete <span class="nv">$PORT</span><span class="sb">`</span> &gt; /dev/null
+            sudo ovs-vsctl --no-wait del-port <span class="nv">$bridge</span> <span class="nv">$PORT</span>
+        <span class="k">fi</span>
+<span class="k">    done</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>ensure no IP is configured on the public bridge</p>
+</td><td class=code><div class=highlight><pre>
+    sudo ip addr flush dev <span class="nv">$bridge</span>
+<span class="o">}</span>
+
+<span class="k">function </span>is_quantum_ovs_base_plugin<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">plguin</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;,openvswitch,ryu,&quot;</span> <span class="o">=</span>~ ,<span class="k">${</span><span class="nv">plugin</span><span class="k">}</span>, <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        return </span>0
+    <span class="k">fi</span>
+<span class="k">    return </span>1
+<span class="o">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>

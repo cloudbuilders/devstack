@@ -788,6 +788,28 @@ Default admin username</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_META_DATA_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_META_DATA_IP</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
 
+<span class="nv">RYU_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/ryu
+</pre></div></td></tr><tr><td class=docs>
+<p>Ryu API Host</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">RYU_API_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_API_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Ryu API Port</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">RYU_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_API_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Ryu OFP Host</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">RYU_OFP_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_OFP_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Ryu OFP Port</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">RYU_OFP_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_OFP_PORT</span><span class="k">:-</span><span class="nv">6633</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Ryu Applications</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">RYU_APPS</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_APPS</span><span class="k">:-</span><span class="nv">ryu</span><span class="p">.app.simple_isolation,ryu.app.rest</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Name of the LVM volume group to use/create for iscsi volumes</p>
 </td><td class=code><div class=highlight><pre>
@@ -1269,7 +1291,7 @@ current user.</p>
 <span class="s1">fi</span>
 
 <span class="s1">if is_service_enabled q-agt; then</span>
-<span class="s1">    if [[ &quot;$Q_PLUGIN&quot; = &quot;openvswitch&quot; ]]; then</span>
+<span class="s1">    if is_quantum_ovs_base_plugin &quot;$Q_PLUGIN&quot;; then</span>
 <span class="s1"># DIVIDER</span>
 <span class="s1">        if [[ &quot;$os_PACKAGE&quot; = &quot;deb&quot; ]]; then</span>
 <span class="s1">            kernel_version=`cat /proc/version | cut -d &quot; &quot; -f3`</span>
@@ -1369,7 +1391,9 @@ current user.</p>
 <span class="s1">if is_service_enabled tempest; then</span>
 <span class="s1">    install_tempest</span>
 <span class="s1">fi</span>
-
+<span class="s1">if is_service_enabled ryu || (is_service_enabled quantum &amp;&amp; [[ &quot;$Q_PLUGIN&quot; = &quot;ryu&quot; ]]); then</span>
+<span class="s1">    git_clone $RYU_REPO $RYU_DIR $RYU_BRANCH</span>
+<span class="s1">fi</span>
 
 <span class="s1"># DIVIDER</span>
 
@@ -1414,6 +1438,9 @@ current user.</p>
 <span class="s1">fi</span>
 <span class="s1">if is_service_enabled tempest; then</span>
 <span class="s1">    configure_tempest</span>
+<span class="s1">fi</span>
+<span class="s1">if is_service_enabled ryu || (is_service_enabled quantum &amp;&amp; [[ &quot;$Q_PLUGIN&quot; = &quot;ryu&quot; ]]); then</span>
+<span class="s1">    setup_develop $RYU_DIR</span>
 <span class="s1">fi</span>
 
 <span class="s1">if [[ $TRACK_DEPENDS = True ]] ; then</span>
@@ -1617,6 +1644,27 @@ current user.</p>
 
 
 <span class="s1"># DIVIDER</span>
+<span class="s1">if is_service_enabled ryu; then</span>
+<span class="s1">    RYU_CONF_DIR=/etc/ryu</span>
+<span class="s1">    if [[ ! -d $RYU_CONF_DIR ]]; then</span>
+<span class="s1">        sudo mkdir -p $RYU_CONF_DIR</span>
+<span class="s1">    fi</span>
+<span class="s1">    sudo chown `whoami` $RYU_CONF_DIR</span>
+<span class="s1">    RYU_CONF=$RYU_CONF_DIR/ryu.conf</span>
+<span class="s1">    sudo rm -rf $RYU_CONF</span>
+
+<span class="s1">    cat &lt;&lt;EOF &gt; $RYU_CONF</span>
+<span class="s1">--app_lists=$RYU_APPS</span>
+<span class="s1">--wsapi_host=$RYU_API_HOST</span>
+<span class="s1">--wsapi_port=$RYU_API_PORT</span>
+<span class="s1">--ofp_listen_host=$RYU_OFP_HOST</span>
+<span class="s1">--ofp_tcp_listen_port=$RYU_OFP_PORT</span>
+<span class="s1">EOF</span>
+<span class="s1">    screen_it ryu &quot;cd $RYU_DIR &amp;&amp; $RYU_DIR/bin/ryu-manager --flagfile $RYU_CONF&quot;</span>
+<span class="s1">fi</span>
+
+
+<span class="s1"># DIVIDER</span>
 
 <span class="s1">if is_service_enabled quantum; then</span>
 <span class="s1">    echo_summary &quot;Configuring Quantum&quot;</span>
@@ -1662,6 +1710,11 @@ current user.</p>
 <span class="s1">        Q_PLUGIN_CONF_FILENAME=linuxbridge_conf.ini</span>
 <span class="s1">        Q_DB_NAME=&quot;quantum_linux_bridge&quot;</span>
 <span class="s1">        Q_PLUGIN_CLASS=&quot;quantum.plugins.linuxbridge.lb_quantum_plugin.LinuxBridgePluginV2&quot;</span>
+<span class="s1">    elif [[ &quot;$Q_PLUGIN&quot; = &quot;ryu&quot; ]]; then</span>
+<span class="s1">        Q_PLUGIN_CONF_PATH=etc/quantum/plugins/ryu</span>
+<span class="s1">        Q_PLUGIN_CONF_FILENAME=ryu.ini</span>
+<span class="s1">        Q_DB_NAME=&quot;ovs_quantum&quot;</span>
+<span class="s1">        Q_PLUGIN_CLASS=&quot;quantum.plugins.ryu.ryu_quantum_plugin.RyuQuantumPluginV2&quot;</span>
 <span class="s1">    else</span>
 <span class="s1">        echo &quot;Unknown Quantum plugin &#39;</span><span class="nv">$Q_PLUGIN</span><span class="s1">&#39;.. exiting&quot;</span>
 <span class="s1">        exit 1</span>
@@ -1755,6 +1808,9 @@ current user.</p>
 <span class="s1">        if [[ &quot;$LB_VLAN_RANGES&quot; != &quot;&quot; ]]; then</span>
 <span class="s1">            iniset /$Q_PLUGIN_CONF_FILE VLANS network_vlan_ranges $LB_VLAN_RANGES</span>
 <span class="s1">        fi</span>
+<span class="s1">    elif [[ &quot;$Q_PLUGIN&quot; = &quot;ryu&quot; ]]; then</span>
+<span class="s1">        iniset /$Q_PLUGIN_CONF_FILE OVS openflow_controller $RYU_OFP_HOST:$RYU_OFP_PORT</span>
+<span class="s1">        iniset /$Q_PLUGIN_CONF_FILE OVS openflow_rest_api $RYU_API_HOST:$RYU_API_PORT</span>
 <span class="s1">    fi</span>
 <span class="s1">fi</span>
 
@@ -1799,6 +1855,14 @@ current user.</p>
 <span class="s1">            iniset /$Q_PLUGIN_CONF_FILE LINUX_BRIDGE physical_interface_mappings $LB_INTERFACE_MAPPINGS</span>
 <span class="s1">        fi</span>
 <span class="s1">        AGENT_BINARY=&quot;$QUANTUM_DIR/bin/quantum-linuxbridge-agent&quot;</span>
+<span class="s1">    elif [[ &quot;$Q_PLUGIN&quot; = &quot;ryu&quot; ]]; then</span>
+<span class="s1"># DIVIDER</span>
+<span class="s1">        OVS_BRIDGE=${OVS_BRIDGE:-br-int}</span>
+<span class="s1">        quantum_setup_ovs_bridge $OVS_BRIDGE</span>
+<span class="s1">        if [ -n &quot;$RYU_INTERNAL_INTERFACE&quot; ]; then</span>
+<span class="s1">            sudo ovs-vsctl --no-wait -- --may-exist add-port $OVS_BRIDGE $RYU_INTERNAL_INTERFACE</span>
+<span class="s1">        fi</span>
+<span class="s1">        AGENT_BINARY=&quot;$QUANTUM_DIR/quantum/plugins/ryu/agent/ryu_quantum_agent.py&quot;</span>
 <span class="s1">    fi</span>
 <span class="s1"># DIVIDER</span>
 <span class="s1">    iniset /$Q_PLUGIN_CONF_FILE AGENT root_helper &quot;$Q_RR_COMMAND&quot;</span>
@@ -1827,6 +1891,9 @@ current user.</p>
 <span class="s1">        iniset $Q_DHCP_CONF_FILE DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver</span>
 <span class="s1">    elif [[ &quot;$Q_PLUGIN&quot; = &quot;linuxbridge&quot; ]]; then</span>
 <span class="s1">        iniset $Q_DHCP_CONF_FILE DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver</span>
+<span class="s1">    elif [[ &quot;$Q_PLUGIN&quot; = &quot;ryu&quot; ]]; then</span>
+<span class="s1">        iniset $Q_DHCP_CONF_FILE DEFAULT interface_driver quantum.agent.linux.interface.RyuInterfaceDriver</span>
+<span class="s1">        iniset $Q_DHCP_CONF_FILE DEFAULT ryu_api_host $RYU_API_HOST:$RYU_API_PORT</span>
 <span class="s1">    fi</span>
 <span class="s1">fi</span>
 
@@ -1853,20 +1920,16 @@ current user.</p>
 <span class="s1">        iniset $Q_L3_CONF_FILE DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver</span>
 <span class="s1">        iniset $Q_L3_CONF_FILE DEFAULT external_network_bridge $PUBLIC_BRIDGE</span>
 <span class="s1"># DIVIDER</span>
-<span class="s1">        sudo ovs-vsctl --no-wait -- --may-exist add-br $PUBLIC_BRIDGE</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">        for PORT in `sudo ovs-vsctl --no-wait list-ports $PUBLIC_BRIDGE`; do</span>
-<span class="s1">            TYPE=$(sudo ovs-vsctl get interface $PORT type)</span>
-<span class="s1">            if [[ &quot;$TYPE&quot; == &quot;internal&quot; ]]; then</span>
-<span class="s1">                echo `sudo ip link delete $PORT` &gt; /dev/null</span>
-<span class="s1">                sudo ovs-vsctl --no-wait del-port $bridge $PORT</span>
-<span class="s1">            fi</span>
-<span class="s1">        done</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">        sudo ip addr flush dev $PUBLIC_BRIDGE</span>
+<span class="s1">        quantum_setup_external_bridge $PUBLIC_BRIDGE</span>
 <span class="s1">    elif [[ &quot;$Q_PLUGIN&quot; = &quot;linuxbridge&quot; ]]; then</span>
 <span class="s1">        iniset $Q_L3_CONF_FILE DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver</span>
 <span class="s1">        iniset $Q_L3_CONF_FILE DEFAULT external_network_bridge &#39;&#39;</span>
+<span class="s1">    elif [[ &quot;$Q_PLUGIN&quot; = &quot;ryu&quot; ]]; then</span>
+<span class="s1">        iniset $Q_L3_CONF_FILE DEFAULT interface_driver quantum.agent.linux.interface.RyuInterfaceDriver</span>
+<span class="s1">        iniset $Q_L3_CONF_FILE DEFAULT external_network_bridge $PUBLIC_BRIDGE</span>
+<span class="s1">        iniset $Q_L3_CONF_FILE DEFAULT ryu_api_host $RYU_API_HOST:$RYU_API_PORT</span>
+<span class="s1"># DIVIDER</span>
+<span class="s1">        quantum_setup_external_bridge $PUBLIC_BRIDGE</span>
 <span class="s1">    fi</span>
 <span class="s1">fi</span>
 
@@ -2026,8 +2089,8 @@ current user.</p>
 <span class="s1">    iniuncomment ${SWIFT_CONFIG_PROXY_SERVER} filter:keystoneauth operator_roles</span>
 <span class="s1">    iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:keystoneauth operator_roles &quot;Member, admin&quot;</span>
 
-<span class="s1">    if is_service_enabled swift3;then</span>
-<span class="s1">        cat &lt;&lt;EOF&gt;&gt;${SWIFT_CONFIG_PROXY_SERVER}</span>
+<span class="s1">    if is_service_enabled swift3; then</span>
+<span class="s1">        cat &lt;&lt;EOF &gt;&gt;${SWIFT_CONFIG_PROXY_SERVER}</span>
 <span class="s1"># DIVIDER</span>
 <span class="s1">[filter:s3token]</span>
 <span class="s1">paste.filter_factory = keystone.middleware.s3_token:filter_factory</span>
@@ -2172,6 +2235,11 @@ current user.</p>
 <span class="s1">        NOVA_VIF_DRIVER=&quot;nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver&quot;</span>
 <span class="s1">    elif [[ &quot;$Q_PLUGIN&quot; = &quot;linuxbridge&quot; ]]; then</span>
 <span class="s1">        NOVA_VIF_DRIVER=&quot;nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver&quot;</span>
+<span class="s1">    elif [[ &quot;$Q_PLUGIN&quot; = &quot;ryu&quot; ]]; then</span>
+<span class="s1">        NOVA_VIF_DRIVER=&quot;quantum.plugins.ryu.nova.vif.LibvirtOpenVswitchOFPRyuDriver&quot;</span>
+<span class="s1">        add_nova_opt &quot;libvirt_ovs_integration_bridge=$OVS_BRIDGE&quot;</span>
+<span class="s1">        add_nova_opt &quot;linuxnet_ovs_ryu_api_host=$RYU_API_HOST:$RYU_API_PORT&quot;</span>
+<span class="s1">        add_nova_opt &quot;libvirt_ovs_ryu_api_host=$RYU_API_HOST:$RYU_API_PORT&quot;</span>
 <span class="s1">    fi</span>
 <span class="s1">    add_nova_opt &quot;libvirt_vif_driver=$NOVA_VIF_DRIVER&quot;</span>
 <span class="s1">    add_nova_opt &quot;linuxnet_interface_driver=$LINUXNET_VIF_DRIVER&quot;</span>
@@ -2308,7 +2376,7 @@ current user.</p>
 <span class="s1">        EXT_NET_ID=$(quantum net-create ext_net -- --router:external=True | grep &#39;</span> id <span class="s1">&#39; | get_field 2)</span>
 <span class="s1">        EXT_GW_IP=$(quantum subnet-create --ip_version 4 $EXT_NET_ID $FLOATING_RANGE -- --enable_dhcp=False | grep &#39;</span>gateway_ip<span class="s1">&#39; | get_field 2)</span>
 <span class="s1">        quantum router-gateway-set $ROUTER_ID $EXT_NET_ID</span>
-<span class="s1">        if [[ &quot;$Q_PLUGIN&quot; = &quot;openvswitch&quot; ]] &amp;&amp; [[ &quot;$Q_USE_NAMESPACE&quot; = &quot;True&quot; ]]; then</span>
+<span class="s1">        if is_quantum_ovs_base_plugin &quot;$Q_PLUGIN&quot; &amp;&amp; [[ &quot;$Q_USE_NAMESPACE&quot; = &quot;True&quot; ]]; then</span>
 <span class="s1">            CIDR_LEN=${FLOATING_RANGE#*/}</span>
 <span class="s1">            sudo ip addr add $EXT_GW_IP/$CIDR_LEN dev $PUBLIC_BRIDGE</span>
 <span class="s1">            sudo ip link set $PUBLIC_BRIDGE up</span>
@@ -2653,6 +2721,13 @@ users).  The user system is external (keystone).</p>
 <p>Store the images in swift if enabled.</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
+<div class="section" id="ryu">
+<h2>Ryu</h2>
+<p>Ryu is not a part of OpenStack project. Please ignore following block if
+you are not interested in Ryu.
+launch ryu manager</p>
+</pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="quantum">
 <h2>Quantum</h2>
 </pre></div></td></tr><tr><td class=docs>
@@ -2748,6 +2823,8 @@ complex physical network configurations.</p>
 LB_VLAN_RANGES and LB_INTERFACE_MAPPINGS in localrc for more
 complex physical network configurations.</p>
 </pre></div></td></tr><tr><td class=docs>
+<p>Set up integration bridge</p>
+</pre></div></td></tr><tr><td class=docs>
 <p>Update config w/rootwrap</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Quantum DHCP</p>
@@ -2764,12 +2841,9 @@ complex physical network configurations.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set debug</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>Set up external bridge
-Create it if it does not exist</p>
+<p>Set up external bridge</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>remove internal ports</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>ensure no IP is configured on the public bridge</p>
+<p>Set up external bridge</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Quantum RPC support - must be updated prior to starting any of the services</p>
 </pre></div></td></tr><tr><td class=docs>
