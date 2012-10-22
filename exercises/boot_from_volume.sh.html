@@ -340,10 +340,8 @@ ul.auto-toc {
 <dl class="docutils">
 <dt>This script demonstrates how to boot from a volume.  It does the following:</dt>
 <dd><ul class="first last simple">
-<li>Create a 'builder' instance</li>
-<li>Attach a volume to the instance</li>
-<li>Format and install an os onto the volume</li>
-<li>Detach volume from builder, and then boot volume-backed instance</li>
+<li>Create a bootable volume</li>
+<li>Boot a volume-backed instance</li>
 </ul>
 </dd>
 </dl>
@@ -393,6 +391,12 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/exerciserc
 
 </pre></div></td></tr><tr><td class=docs>
+<p>If cinder or n-vol are not enabled we exit with exitcode 55 so that
+the exercise is skipped</p>
+</td><td class=code><div class=highlight><pre>
+is_service_enabled cinder n-vol <span class="o">||</span> <span class="nb">exit </span>55
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Boot this image, use first AMI image if unset</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEFAULT_IMAGE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_IMAGE_NAME</span><span class="k">:-</span><span class="nv">ami</span><span class="k">}</span>
@@ -433,7 +437,6 @@ die_if_not_set IMAGE <span class="s2">&quot;Failure getting image&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Instance and volume names</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">INSTANCE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTANCE_NAME</span><span class="k">:-</span><span class="nv">test_instance</span><span class="k">}</span>
 <span class="nv">VOL_INSTANCE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">VOL_INSTANCE_NAME</span><span class="k">:-</span><span class="nv">test_vol_instance</span><span class="k">}</span>
 <span class="nv">VOL_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">VOL_NAME</span><span class="k">:-</span><span class="nv">test_volume</span><span class="k">}</span>
 
@@ -441,12 +444,8 @@ die_if_not_set IMAGE <span class="s2">&quot;Failure getting image&quot;</span>
 <p>Clean-up from previous runs</p>
 </td><td class=code><div class=highlight><pre>
 nova delete <span class="nv">$VOL_INSTANCE_NAME</span> <span class="o">||</span> <span class="nb">true</span>
-nova delete <span class="nv">$INSTANCE_NAME</span> <span class="o">||</span> <span class="nb">true</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Wait till server is gone</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova show $INSTANCE_NAME; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova show $VOL_INSTANCE_NAME; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t terminate!&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
@@ -480,20 +479,6 @@ nova keypair-add <span class="nv">$KEY_NAME</span> &gt; <span class="nv">$KEY_FI
 chmod 600 <span class="nv">$KEY_FILE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Boot our instance</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> --key_name <span class="nv">$KEY_NAME</span> <span class="nv">$INSTANCE_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="sb">`</span>
-die_if_not_set VM_UUID <span class="s2">&quot;Failure launching $INSTANCE_NAME&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>check that the status is active within ACTIVE_TIMEOUT seconds</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become active!&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Delete the old volume</p>
 </td><td class=code><div class=highlight><pre>
 nova volume-delete <span class="nv">$VOL_NAME</span> <span class="o">||</span> <span class="nb">true</span>
@@ -519,22 +504,9 @@ nova volume-delete <span class="nv">$VOL_NAME</span> <span class="o">||</span> <
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Add floating ip to our server</p>
+<p>Create the bootable volume</p>
 </td><td class=code><div class=highlight><pre>
-nova add-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING_IP</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server with floating ip&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create our volume</p>
-</td><td class=code><div class=highlight><pre>
-nova volume-create --display_name<span class="o">=</span><span class="nv">$VOL_NAME</span> 1
+nova volume-create --display_name<span class="o">=</span><span class="nv">$VOL_NAME</span> --image-id <span class="nv">$IMAGE</span> 1
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait for volume to activate</p>
@@ -544,95 +516,7 @@ nova volume-create --display_name<span class="o">=</span><span class="nv">$VOL_N
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>FIXME (anthony) - python-novaclient should accept a volume_name for the attachment param?</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">DEVICE</span><span class="o">=</span>/dev/vdb
 <span class="nv">VOLUME_ID</span><span class="o">=</span><span class="sb">`</span>nova volume-list | grep <span class="nv">$VOL_NAME</span>  | get_field 1<span class="sb">`</span>
-nova volume-attach <span class="nv">$INSTANCE_NAME</span> <span class="nv">$VOLUME_ID</span> <span class="nv">$DEVICE</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Wait till volume is attached</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova volume-list | grep $VOL_NAME | grep in-use; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume $VOL_NAME not created&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>The following script builds our bootable volume.
-To do this, ssh to the builder instance, mount volume, and build a volume-backed image.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">STAGING_DIR</span><span class="o">=</span>/tmp/stage
-<span class="nv">CIRROS_DIR</span><span class="o">=</span>/tmp/cirros
-ssh -o <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no -i <span class="nv">$KEY_FILE</span> <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">}</span>@<span class="nv">$FLOATING_IP</span> <span class="s">&lt;&lt; EOF</span>
-<span class="s">set -o errexit</span>
-<span class="s">set -o xtrace</span>
-<span class="s">sudo mkdir -p $STAGING_DIR</span>
-<span class="s">sudo mkfs.ext3 -b 1024 $DEVICE 1048576</span>
-<span class="s">sudo mount $DEVICE $STAGING_DIR</span>
-<span class="s"># DIVIDER</span>
-<span class="s">sudo touch $STAGING_DIR/cirros-0.3.0-x86_64-rootfs.img.gz</span>
-<span class="s">sudo chown cirros $STAGING_DIR/cirros-0.3.0-x86_64-rootfs.img.gz</span>
-<span class="s">EOF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>The following lines create a writable empty file so that we can scp
-the actual file</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -e cirros-0.3.0-x86_64-rootfs.img.gz <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>wget http://images.ansolabs.com/cirros-0.3.0-x86_64-rootfs.img.gz
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Download cirros</p>
-</td><td class=code><div class=highlight><pre>
-scp -o <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no -i <span class="nv">$KEY_FILE</span> cirros-0.3.0-x86_64-rootfs.img.gz <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">}</span>@<span class="nv">$FLOATING_IP</span>:<span class="nv">$STAGING_DIR</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Copy cirros onto the volume</p>
-</td><td class=code><div class=highlight><pre>
-ssh -o <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no -i <span class="nv">$KEY_FILE</span> <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">}</span>@<span class="nv">$FLOATING_IP</span> <span class="s">&lt;&lt; EOF</span>
-<span class="s">set -o errexit</span>
-<span class="s">set -o xtrace</span>
-<span class="s">cd $STAGING_DIR</span>
-<span class="s">sudo mkdir -p $CIRROS_DIR</span>
-<span class="s">sudo gunzip cirros-0.3.0-x86_64-rootfs.img.gz</span>
-<span class="s">sudo mount cirros-0.3.0-x86_64-rootfs.img $CIRROS_DIR</span>
-
-<span class="s"># DIVIDER</span>
-<span class="s">sudo cp -pr $CIRROS_DIR/* $STAGING_DIR/</span>
-
-<span class="s">cd</span>
-<span class="s">sync</span>
-<span class="s">sudo umount $CIRROS_DIR</span>
-<span class="s"># DIVIDER</span>
-<span class="s">sudo umount $STAGING_DIR || true</span>
-<span class="s">EOF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Unpack cirros into volume</p>
-</td><td class=code><div class=highlight><pre>
-nova volume-detach <span class="nv">$INSTANCE_NAME</span> <span class="nv">$VOLUME_ID</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Copy cirros into our volume</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">VOL_VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --block_device_mapping <span class="nv">vda</span><span class="o">=</span><span class="nv">$VOLUME_ID</span>:::0 --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> --key_name <span class="nv">$KEY_NAME</span> <span class="nv">$VOL_INSTANCE_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="sb">`</span>
-die_if_not_set VOL_VM_UUID <span class="s2">&quot;Failure launching $VOL_INSTANCE_NAME&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>The following typically fails.  Don't know why.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $VOL_VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become active!&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Detach the volume from the builder instance</p>
-</td><td class=code><div class=highlight><pre>
-nova remove-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING_IP</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Boot instance from volume!  This is done with the --block_device_mapping param.
@@ -640,15 +524,24 @@ The format of mapping is:
 &lt;dev_name&gt;=&lt;id&gt;:&lt;type&gt;:&lt;size(GB)&gt;:&lt;delete_on_terminate&gt;
 Leaving the middle two fields blank appears to do-the-right-thing</p>
 </td><td class=code><div class=highlight><pre>
-sleep 1
+<span class="nv">VOL_VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --block_device_mapping <span class="nv">vda</span><span class="o">=</span><span class="nv">$VOLUME_ID</span>:::0 --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> --key_name <span class="nv">$KEY_NAME</span> <span class="nv">$VOL_INSTANCE_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="sb">`</span>
+die_if_not_set VOL_VM_UUID <span class="s2">&quot;Failure launching $VOL_INSTANCE_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Check that the status is active within ACTIVE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
-nova add-floating-ip <span class="nv">$VOL_VM_UUID</span> <span class="nv">$FLOATING_IP</span>
+<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $VOL_VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become active!&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Add floating ip to our server</p>
+</td><td class=code><div class=highlight><pre>
+nova add-floating-ip <span class="nv">$VOL_VM_UUID</span> <span class="nv">$FLOATING_IP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping volume-backed server with floating ip&quot;</span>
@@ -656,20 +549,26 @@ nova add-floating-ip <span class="nv">$VOL_VM_UUID</span> <span class="nv">$FLOA
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Gratuitous sleep, probably hiding a race condition :/</p>
+<p>Make sure our volume-backed instance launched</p>
 </td><td class=code><div class=highlight><pre>
-ssh -o <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no -i <span class="nv">$KEY_FILE</span> <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">}</span>@<span class="nv">$FLOATING_IP</span> <span class="s">&lt;&lt; EOF</span>
-<span class="s">echo &quot;success!&quot;</span>
-<span class="s">EOF</span>
+<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ssh -o StrictHostKeyChecking=no -i $KEY_FILE ${DEFAULT_INSTANCE_USER}@$FLOATING_IP echo success ; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become ssh-able!&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Add floating ip to our server</p>
+<p>Remove floating ip from volume-backed instance</p>
+</td><td class=code><div class=highlight><pre>
+nova remove-floating-ip <span class="nv">$VOL_VM_UUID</span> <span class="nv">$FLOATING_IP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete volume backed instance</p>
 </td><td class=code><div class=highlight><pre>
 nova delete <span class="nv">$VOL_INSTANCE_NAME</span> <span class="o">||</span> <span class="se">\</span>
     die <span class="s2">&quot;Failure deleting instance volume $VOL_INSTANCE_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
+<p>Wait till our volume is no longer in-use</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova volume-list | grep $VOL_NAME | grep available; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume $VOL_NAME not created&quot;</span>
@@ -677,33 +576,19 @@ nova delete <span class="nv">$VOL_INSTANCE_NAME</span> <span class="o">||</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Make sure our volume-backed instance launched</p>
+<p>Delete the volume</p>
 </td><td class=code><div class=highlight><pre>
 nova volume-delete <span class="nv">$VOL_NAME</span> <span class="o">||</span> <span class="se">\</span>
     die <span class="s2">&quot;Failure deleting volume $VOLUME_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Delete volume backed instance</p>
-</td><td class=code><div class=highlight><pre>
-nova delete <span class="nv">$INSTANCE_NAME</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure deleting instance $INSTANCE_NAME&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Wait till our volume is no longer in-use</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova list | grep -q $VM_UUID; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Server $NAME not deleted&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Delete the volume</p>
+<p>De-allocate the floating ip</p>
 </td><td class=code><div class=highlight><pre>
 nova floating-ip-delete <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
     die <span class="s2">&quot;Failure deleting floating IP $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Delete instance</p>
+<p>Delete a secgroup</p>
 </td><td class=code><div class=highlight><pre>
 nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
 
@@ -714,14 +599,8 @@ nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Wait for termination</p>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>De-allocate the floating ip</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Delete a secgroup</p>
-</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
