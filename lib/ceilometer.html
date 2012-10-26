@@ -342,8 +342,7 @@ ENABLED_SERVICES+=ceilometer-acompute,ceilometer-acentral,ceilometer-collector,c
 <p>Dependencies:
 - functions
 - OS_USERNAME, OS_PASSWORD, OS_TENANT_NAME, OS_AUTH_URL set for admin credentials
-- DEST set to the destination directory
-- NOVA_CONF set to the nova configuration file</p>
+- DEST set to the destination directory</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -383,8 +382,7 @@ cleanup_XXX</p>
 <span class="k">    </span><span class="nv">CEILOMETER_BIN_DIR</span><span class="o">=</span>/usr/local/bin
 <span class="k">fi</span>
 <span class="nv">CEILOMETER_CONF_DIR</span><span class="o">=</span>/etc/ceilometer
-<span class="nv">CEILOMETER_AGENT_CONF</span><span class="o">=</span><span class="nv">$CEILOMETER_CONF_DIR</span>/ceilometer-agent.conf
-<span class="nv">CEILOMETER_COLLECTOR_CONF</span><span class="o">=</span><span class="nv">$CEILOMETER_CONF_DIR</span>/ceilometer-collector.conf
+<span class="nv">CEILOMETER_CONF</span><span class="o">=</span><span class="nv">$CEILOMETER_CONF_DIR</span>/ceilometer.conf
 <span class="nv">CEILOMETER_API_LOG_DIR</span><span class="o">=</span>/var/log/ceilometer-api
 
 </pre></div></td></tr><tr><td class=docs>
@@ -410,15 +408,14 @@ runs that a clean run would need to clean up</p>
     <span class="o">[</span> ! -d <span class="nv">$CEILOMETER_API_LOG_DIR</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  sudo mkdir -m 755 -p <span class="nv">$CEILOMETER_API_LOG_DIR</span>
     sudo chown <span class="nv">$USER</span> <span class="nv">$CEILOMETER_API_LOG_DIR</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>ceilometer confs are copy of /etc/nova/nova.conf which must exist first</p>
-</td><td class=code><div class=highlight><pre>
-    grep -v format_string <span class="nv">$NOVA_CONF</span> &gt; <span class="nv">$CEILOMETER_AGENT_CONF</span>
-    iniset <span class="nv">$CEILOMETER_AGENT_CONF</span> DEFAULT rpc_backend <span class="s1">&#39;ceilometer.openstack.common.rpc.impl_kombu&#39;</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT rpc_backend <span class="s1">&#39;ceilometer.openstack.common.rpc.impl_kombu&#39;</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT notification_topics <span class="s1">&#39;notifications,glance_notifications&#39;</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT verbose True
+    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/nova?charset<span class="o">=</span>utf8
 
-    grep -v format_string <span class="nv">$NOVA_CONF</span> &gt; <span class="nv">$CEILOMETER_COLLECTOR_CONF</span>
-    iniset <span class="nv">$CEILOMETER_COLLECTOR_CONF</span> DEFAULT rpc_backend <span class="s1">&#39;ceilometer.openstack.common.rpc.impl_kombu&#39;</span>
-    iniset <span class="nv">$CEILOMETER_COLLECTOR_CONF</span> DEFAULT notification_topics <span class="s1">&#39;notifications,glance_notifications&#39;</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken auth_protocol http
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -432,10 +429,10 @@ runs that a clean run would need to clean up</p>
 <p>start_ceilometer() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_ceilometer<span class="o">()</span> <span class="o">{</span>
-    screen_it ceilometer-acompute <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; sg libvirtd \&quot;$CEILOMETER_BIN_DIR/ceilometer-agent-compute --config-file $CEILOMETER_AGENT_CONF\&quot;&quot;</span>
-    screen_it ceilometer-acentral <span class="s2">&quot;export OS_USERNAME=$OS_USERNAME OS_PASSWORD=$OS_PASSWORD OS_TENANT_NAME=$OS_TENANT_NAME OS_AUTH_URL=$OS_AUTH_URL &amp;&amp; cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-agent-central --config-file $CEILOMETER_AGENT_CONF&quot;</span>
-    screen_it ceilometer-collector <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-collector --config-file $CEILOMETER_COLLECTOR_CONF&quot;</span>
-    screen_it ceilometer-api <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR&quot;</span>
+    screen_it ceilometer-acompute <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; sg libvirtd \&quot;$CEILOMETER_BIN_DIR/ceilometer-agent-compute --config-file $CEILOMETER_CONF\&quot;&quot;</span>
+    screen_it ceilometer-acentral <span class="s2">&quot;export OS_USERNAME=$OS_USERNAME OS_PASSWORD=$OS_PASSWORD OS_TENANT_NAME=$OS_TENANT_NAME OS_AUTH_URL=$OS_AUTH_URL &amp;&amp; cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-agent-central --config-file $CEILOMETER_CONF&quot;</span>
+    screen_it ceilometer-collector <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-collector --config-file $CEILOMETER_CONF&quot;</span>
+    screen_it ceilometer-api <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR --config-file $CEILOMETER_CONF&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
