@@ -543,18 +543,12 @@ nova add-floating-ip <span class="nv">$VOL_VM_UUID</span> <span class="nv">$FLOA
 </pre></div></td></tr><tr><td class=docs>
 <p>Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping volume-backed server with floating ip&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
+ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure our volume-backed instance launched</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ssh -o StrictHostKeyChecking=no -i $KEY_FILE ${DEFAULT_INSTANCE_USER}@$FLOATING_IP echo success ; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become ssh-able!&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
+ssh_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$KEY_FILE</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$DEFAULT_INSTANCE_USER</span> <span class="nv">$ACTIVE_TIMEOUT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Remove floating ip from volume-backed instance</p>

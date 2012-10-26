@@ -1352,6 +1352,48 @@ Inline emphasis start-string without end-string.</div>
         yum install -y <span class="s2">&quot;$@&quot;</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>ping check
+Uses globals <tt class="docutils literal">ENABLED_SERVICES</tt></p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>ping_check<span class="o">()</span> <span class="o">{</span>
+    _ping_check_novanet <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>ping check for nova
+Uses globals <tt class="docutils literal">MULTI_HOST</tt>, <tt class="docutils literal">PRIVATE_NETWORK</tt></p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_ping_check_novanet<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">ip</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">boot_timeout</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nv">MULTI_HOST</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$MULTI_HOST</span><span class="sb">`</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$MULTI_HOST&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$from_net&quot;</span> <span class="o">=</span> <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sleep <span class="nv">$boot_timeout</span>
+        <span class="k">return</span>
+<span class="k">    fi</span>
+<span class="k">    if</span> ! timeout <span class="nv">$boot_timeout</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $ip; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>ssh check</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>ssh_check<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">NET_NAME</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">KEY_FILE</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">FLOATING_IP</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="o">=</span><span class="nv">$4</span>
+    <span class="nb">local </span><span class="nv">ACTIVE_TIMEOUT</span><span class="o">=</span><span class="nv">$5</span>
+    <span class="nb">local </span><span class="nv">probe_cmd</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ssh -o StrictHostKeyChecking=no -i $KEY_FILE ${DEFAULT_INSTANCE_USER}@$FLOATING_IP echo success ; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become ssh-able!&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>

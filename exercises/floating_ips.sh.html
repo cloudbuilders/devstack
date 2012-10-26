@@ -517,29 +517,10 @@ bypass security groups and have direct access to the server.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>get the IP of the server</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;private network&quot;</span> | get_field 2<span class="sb">`</span>
+<span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | get_field 2<span class="sb">`</span>
 die_if_not_set IP <span class="s2">&quot;Failure retrieving IP address&quot;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>for single node deployments, we can ping private ips</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">MULTI_HOST</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$MULTI_HOST</span><span class="sb">`</span>
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$MULTI_HOST&quot;</span> <span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>sometimes the first ping fails (10 seconds isn't enough time for the VM's
-network to respond?), so let's ping for a default of 15 seconds with a
-timeout of a second for each ping.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> ! timeout <span class="nv">$BOOT_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">else</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>On a multi-host system, without vm net access, do a sleep to wait for the boot</p>
-</td><td class=code><div class=highlight><pre>
-    sleep <span class="nv">$BOOT_TIMEOUT</span>
-<span class="k">fi</span>
+ping_check <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> <span class="nv">$IP</span> <span class="nv">$BOOT_TIMEOUT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -586,10 +567,7 @@ nova add-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING
 </pre></div></td></tr><tr><td class=docs>
 <p>test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server with floating ip&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
+ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Allocate an IP from second floating pool</p>
@@ -617,22 +595,19 @@ nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
 </pre></div></td></tr><tr><td class=docs>
 <p>test we can aren't able to ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ping -c1 -w1 $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span>print <span class="s2">&quot;Security group failure - ping should not be allowed!&quot;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;Couldn&#39;t ping server with floating ip&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
+    ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span>
 <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>de-allocate the floating ip</p>
-</td><td class=code><div class=highlight><pre>
-nova floating-ip-delete <span class="nv">$FLOATING_IP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting floating IP $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete second floating IP</p>
 </td><td class=code><div class=highlight><pre>
 nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting floating IP $TEST_FLOATING_IP&quot;</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>de-allocate the floating ip</p>
+</td><td class=code><div class=highlight><pre>
+nova floating-ip-delete <span class="nv">$FLOATING_IP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting floating IP $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Shutdown the server</p>

@@ -2369,14 +2369,14 @@ current user.</p>
 <span class="s1">    TENANT_ID=$(keystone tenant-list | grep &quot; demo &quot; | get_field 1)</span>
 
 <span class="s1"># DIVIDER</span>
-<span class="s1">    NET_ID=$(quantum net-create --tenant_id $TENANT_ID net1 | grep &#39;</span> id <span class="s1">&#39; | get_field 2)</span>
+<span class="s1">    NET_ID=$(quantum net-create --tenant_id $TENANT_ID &quot;$PRIVATE_NETWORK_NAME&quot; | grep &#39;</span> id <span class="s1">&#39; | get_field 2)</span>
 <span class="s1">    SUBNET_ID=$(quantum subnet-create --tenant_id $TENANT_ID --ip_version 4 --gateway $NETWORK_GATEWAY $NET_ID $FIXED_RANGE | grep &#39;</span> id <span class="s1">&#39; | get_field 2)</span>
 <span class="s1">    if is_service_enabled q-l3; then</span>
 <span class="s1"># DIVIDER</span>
 <span class="s1">        ROUTER_ID=$(quantum router-create --tenant_id $TENANT_ID router1 | grep &#39;</span> id <span class="s1">&#39; | get_field 2)</span>
 <span class="s1">        quantum router-interface-add $ROUTER_ID $SUBNET_ID</span>
 <span class="s1"># DIVIDER</span>
-<span class="s1">        EXT_NET_ID=$(quantum net-create ext_net -- --router:external=True | grep &#39;</span> id <span class="s1">&#39; | get_field 2)</span>
+<span class="s1">        EXT_NET_ID=$(quantum net-create &quot;$PUBLIC_NETWORK_NAME&quot; -- --router:external=True | grep &#39;</span> id <span class="s1">&#39; | get_field 2)</span>
 <span class="s1">        EXT_GW_IP=$(quantum subnet-create --ip_version 4 $EXT_NET_ID $FLOATING_RANGE -- --enable_dhcp=False | grep &#39;</span>gateway_ip<span class="s1">&#39; | get_field 2)</span>
 <span class="s1">        quantum router-gateway-set $ROUTER_ID $EXT_NET_ID</span>
 <span class="s1">        if is_quantum_ovs_base_plugin &quot;$Q_PLUGIN&quot; &amp;&amp; [[ &quot;$Q_USE_NAMESPACE&quot; = &quot;True&quot; ]]; then</span>
@@ -2394,10 +2394,10 @@ current user.</p>
 
 <span class="s2">elif is_service_enabled mysql &amp;&amp; is_service_enabled nova; then</span>
 <span class="s2"># DIVIDER</span>
-<span class="s2">    $NOVA_BIN_DIR/nova-manage network create private $FIXED_RANGE 1 $FIXED_NETWORK_SIZE $NETWORK_CREATE_ARGS</span>
+<span class="s2">    $NOVA_BIN_DIR/nova-manage network create &quot;</span><span class="nv">$PRIVATE_NETWORK_NAME</span><span class="s2">&quot; $FIXED_RANGE 1 $FIXED_NETWORK_SIZE $NETWORK_CREATE_ARGS</span>
 
 <span class="s2"># DIVIDER</span>
-<span class="s2">    $NOVA_BIN_DIR/nova-manage floating create $FLOATING_RANGE</span>
+<span class="s2">    $NOVA_BIN_DIR/nova-manage floating create $FLOATING_RANGE --pool=$PUBLIC_NETWORK</span>
 
 <span class="s2"># DIVIDER</span>
 <span class="s2">    $NOVA_BIN_DIR/nova-manage floating create --ip_range=$TEST_FLOATING_RANGE --pool=$TEST_FLOATING_POOL</span>
