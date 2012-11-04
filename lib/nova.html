@@ -338,7 +338,8 @@ Dependencies:
 <tt class="docutils literal">DEST</tt>, <tt class="docutils literal">DATA_DIR</tt> must be defined
 <tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined
 <tt class="docutils literal">LIBVIRT_TYPE</tt> must be defined
-<tt class="docutils literal">INSTANCE_NAME_PREFIX</tt>, <tt class="docutils literal">VOLUME_NAME_PREFIX</tt> must be defined</p>
+<tt class="docutils literal">INSTANCE_NAME_PREFIX</tt>, <tt class="docutils literal">VOLUME_NAME_PREFIX</tt> must be defined
+<tt class="docutils literal">KEYSTONE_TOKEN_FORMAT</tt> must be defined</p>
 </td><td class=code><div class=highlight><pre>
 
 
@@ -375,6 +376,7 @@ cleanup_nova</p>
 <p>INSTANCES_PATH is the previous name for this</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_INSTANCES_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_INSTANCES_PATH</span><span class="p">:=</span><span class="k">${</span><span class="nv">INSTANCES_PATH</span><span class="p">:=</span><span class="nv">$NOVA_STATE_PATH</span><span class="p">/instances</span><span class="k">}}</span>
+<span class="nv">NOVA_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/nova</span><span class="k">}</span>
 
 <span class="nv">NOVA_CONF_DIR</span><span class="o">=</span>/etc/nova
 <span class="nv">NOVA_CONF</span><span class="o">=</span><span class="nv">$NOVA_CONF_DIR</span>/nova.conf
@@ -572,6 +574,10 @@ This is a bit defensive to allow the sample file some variance.</p>
 <span class="s2">            s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
 <span class="s2">            s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g;</span>
 <span class="s2">        &quot;</span> -i <span class="nv">$NOVA_API_PASTE_INI</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span> <span class="o">==</span> <span class="s2">&quot;PKI&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken signing_dir <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled n-cpu; <span class="k">then</span>
@@ -843,6 +849,13 @@ use latin1 by default, and then upgrades the database to utf8 (see the
         <span class="nv">$NOVA_BIN_DIR</span>/nova-manage db sync
     <span class="k">fi</span>
 
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span> <span class="o">==</span> <span class="s2">&quot;PKI&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create cache dir</p>
+</td><td class=code><div class=highlight><pre>
+        sudo mkdir -p <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
+        sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
