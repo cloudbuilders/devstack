@@ -475,7 +475,9 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_ENGINE_HOST</span>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT bind_port <span class="nv">$HEAT_ENGINE_PORT</span>
-    iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/heat?charset<span class="o">=</span>utf8
+    <span class="nb">local </span>dburl
+    database_connection_url dburl heat
+    iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT auth_encryption_key <span class="sb">`</span>hexdump -n 16 -v -e <span class="s1">&#39;/1 &quot;%02x&quot;&#39;</span> /dev/random<span class="sb">`</span>
 
     <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
@@ -548,8 +550,7 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create heat database</p>
 </td><td class=code><div class=highlight><pre>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS heat;&#39;</span>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE heat CHARACTER SET utf8;&#39;</span>
+    recreate_database heat utf8
 
     <span class="nv">$HEAT_DIR</span>/bin/heat-db-setup <span class="nv">$os_PACKAGE</span> -r <span class="nv">$MYSQL_PASSWORD</span>
     <span class="nv">$HEAT_DIR</span>/tools/nova_create_flavors.sh

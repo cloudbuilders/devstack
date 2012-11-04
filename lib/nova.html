@@ -735,7 +735,9 @@ mount it (ext filesystems can be labeled via e2label).</p>
     add_nova_opt <span class="s2">&quot;s3_port=$S3_SERVICE_PORT&quot;</span>
     add_nova_opt <span class="s2">&quot;osapi_compute_extension=nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
     add_nova_opt <span class="s2">&quot;my_ip=$HOST_IP&quot;</span>
-    add_nova_opt <span class="s2">&quot;sql_connection=$BASE_SQL_CONN/nova?charset=utf8&quot;</span>
+    <span class="nb">local </span>dburl
+    database_connection_url dburl nova
+    add_nova_opt <span class="s2">&quot;sql_connection=$dburl&quot;</span>
     add_nova_opt <span class="s2">&quot;libvirt_type=$LIBVIRT_TYPE&quot;</span>
     add_nova_opt <span class="s2">&quot;libvirt_cpu_mode=none&quot;</span>
     add_nova_opt <span class="s2">&quot;instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
@@ -830,18 +832,14 @@ For Example: <tt class="docutils literal"><span class="pre">EXTRA_OPTS=(foo=true
 only once for an entire cluster.</p>
 </td><td class=code><div class=highlight><pre>
 
-    <span class="k">if </span>is_service_enabled mysql <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
+    <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span> <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>(Re)create nova database</p>
-</td><td class=code><div class=highlight><pre>
-        mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS nova;&#39;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Explicitly use latin1: to avoid lp#829209, nova expects the database to
+<p>(Re)create nova database
+Explicitly use latin1: to avoid lp#829209, nova expects the database to
 use latin1 by default, and then upgrades the database to utf8 (see the
 082_essex.py in nova)</p>
 </td><td class=code><div class=highlight><pre>
-        mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE nova CHARACTER SET latin1;&#39;</span>
+        recreate_database nova latin1
 
 </pre></div></td></tr><tr><td class=docs>
 <p>(Re)create nova database</p>

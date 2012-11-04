@@ -376,6 +376,10 @@ and <tt class="docutils literal">DISTRO</tt></p>
 </td><td class=code><div class=highlight><pre>
 GetDistro
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Import database library (must be loaded before stackrc which sources localrc)</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="settings">
@@ -386,14 +390,14 @@ GetDistro
 <p><tt class="docutils literal">stack.sh</tt> is customizable through setting environment variables.  If you
 want to override a setting you can set and export it:</p>
 <pre class="literal-block">
-export MYSQL_PASSWORD=anothersecret
+export DATABASE_PASSWORD=anothersecret
 ./stack.sh
 </pre>
-<p>You can also pass options on a single line <tt class="docutils literal">MYSQL_PASSWORD=simple ./stack.sh</tt></p>
+<p>You can also pass options on a single line <tt class="docutils literal">DATABASE_PASSWORD=simple ./stack.sh</tt></p>
 <p>Additionally, you can put any local variables into a <tt class="docutils literal">localrc</tt> file:</p>
 <pre class="literal-block">
-MYSQL_PASSWORD=anothersecret
-MYSQL_USER=hellaroot
+DATABASE_PASSWORD=anothersecret
+DATABASE_USER=hellaroot
 </pre>
 <p>We try to have sensible defaults, so you should be able to run <tt class="docutils literal">./stack.sh</tt>
 in most cases.  <tt class="docutils literal">localrc</tt> is not distributed with DevStack and will never
@@ -947,30 +951,23 @@ Quantum.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="mysql-rabbitmq-or-qpid">
-<h2>MySQL &amp; (RabbitMQ or Qpid)</h2>
+<div class="section" id="database-configuration">
+<h2>Database configuration</h2>
+<p>To select between database backends, add a line to localrc like:</p>
+<blockquote>
+use_database postgresql</blockquote>
+<p>The available database backends are defined in the DATABASE_BACKENDS
+variable defined in stackrc. By default, MySQL is enabled as the database
+backend.</p>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>We configure Nova, Horizon, Glance and Keystone to use MySQL as their
-database server.  While they share a single server, each has their own
-database and tables.</p>
-</td><td class=code><div class=highlight><pre>
+initialize_database_backends <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;Using $DATABASE_TYPE database backend&quot;</span> <span class="o">||</span> <span class="nb">echo</span> <span class="s2">&quot;No database enabled&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>By default this script will install and configure MySQL.  If you want to
-use an existing server, you can pass in the user/password/host parameters.
-You will need to send the same <tt class="docutils literal">MYSQL_PASSWORD</tt> to every host if you are doing
-a multi-node DevStack installation.</p>
+</div>
+<div class="section" id="rabbitmq-or-qpid">
+<h2>RabbitMQ or Qpid</h2>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">MYSQL_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
-<span class="nv">MYSQL_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_USER</span><span class="k">:-</span><span class="nv">root</span><span class="k">}</span>
-read_password MYSQL_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR MYSQL.&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>NOTE: Don't specify <tt class="docutils literal">/db</tt> in this string so we can use it for multiple services</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">BASE_SQL_CONN</span><span class="o">=</span><span class="k">${</span><span class="nv">BASE_SQL_CONN</span><span class="k">:-</span><span class="nv">mysql</span><span class="p">://</span><span class="nv">$MYSQL_USER</span><span class="p">:</span><span class="nv">$MYSQL_PASSWORD</span><span class="p">@</span><span class="nv">$MYSQL_HOST</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Rabbit connection info</p>
@@ -1255,29 +1252,8 @@ current user.</p>
 <span class="s1">    fi</span>
 <span class="s1">fi</span>
 
-<span class="s1">if is_service_enabled mysql; then</span>
-
-<span class="s1">    if [[ &quot;$os_PACKAGE&quot; = &quot;deb&quot; ]]; then</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">        cat &lt;&lt;MYSQL_PRESEED | sudo debconf-set-selections</span>
-<span class="s1">mysql-server-5.1 mysql-server/root_password password $MYSQL_PASSWORD</span>
-<span class="s1">mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASSWORD</span>
-<span class="s1">mysql-server-5.1 mysql-server/start_on_boot boolean true</span>
-<span class="s1">MYSQL_PRESEED</span>
-<span class="s1">    fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    if [[ ! -e $HOME/.my.cnf ]]; then</span>
-<span class="s1">        cat &lt;&lt;EOF &gt;$HOME/.my.cnf</span>
-<span class="s1">[client]</span>
-<span class="s1">user=$MYSQL_USER</span>
-<span class="s1">password=$MYSQL_PASSWORD</span>
-<span class="s1">host=$MYSQL_HOST</span>
-<span class="s1">EOF</span>
-<span class="s1">        chmod 0600 $HOME/.my.cnf</span>
-<span class="s1">    fi</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    install_package mysql-server</span>
+<span class="s1">if is_service_enabled $DATABASE_BACKENDS; then</span>
+<span class="s1">    install_database</span>
 <span class="s1">fi</span>
 
 <span class="s1">if is_service_enabled horizon; then</span>
@@ -1490,44 +1466,8 @@ current user.</p>
 
 
 <span class="s1"># DIVIDER</span>
-
-<span class="s1">if is_service_enabled mysql; then</span>
-<span class="s1">    echo_summary &quot;Configuring and starting MySQL&quot;</span>
-
-<span class="s1">    if [[ &quot;$os_PACKAGE&quot; = &quot;deb&quot; ]]; then</span>
-<span class="s1">        MY_CONF=/etc/mysql/my.cnf</span>
-<span class="s1">        MYSQL=mysql</span>
-<span class="s1">    else</span>
-<span class="s1">        MY_CONF=/etc/my.cnf</span>
-<span class="s1">        MYSQL=mysqld</span>
-<span class="s1">    fi</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    if [[ &quot;$os_PACKAGE&quot; = &quot;rpm&quot; ]]; then</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">        start_service $MYSQL</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">        sudo mysqladmin -u root password $MYSQL_PASSWORD || true</span>
-<span class="s1">    fi</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo mysql -uroot -p$MYSQL_PASSWORD -h127.0.0.1 -e &quot;GRANT ALL PRIVILEGES ON *.* TO &#39;</span><span class="nv">$MYSQL_USER</span><span class="s1">&#39;@&#39;</span>%<span class="s1">&#39; identified by &#39;</span><span class="nv">$MYSQL_PASSWORD</span><span class="s1">&#39;;&quot;</span>
-
-<span class="s1"># DIVIDER</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    sudo sed -i &#39;</span>/^bind-address/s/127.0.0.1/0.0.0.0/g<span class="s1">&#39; $MY_CONF</span>
-
-<span class="s1"># DIVIDER</span>
-<span class="s1">    if sudo grep -q &quot;default-storage-engine&quot; $MY_CONF; then</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">        sudo bash -c &quot;source $TOP_DIR/functions; iniset $MY_CONF mysqld default-storage-engine InnoDB&quot;</span>
-<span class="s1">    else</span>
-<span class="s1"># DIVIDER</span>
-<span class="s1">        sudo sed -i -e &quot;/^\[mysqld\]/ a \</span>
-<span class="s1">default-storage-engine = InnoDB&quot; $MY_CONF</span>
-<span class="s1">    fi</span>
-
-<span class="s1">    restart_service $MYSQL</span>
+<span class="s1">if is_service_enabled $DATABASE_BACKENDS; then</span>
+<span class="s1">    configure_database</span>
 <span class="s1">fi</span>
 
 <span class="s1">if [ -z &quot;$SCREEN_HARDSTATUS&quot; ]; then</span>
@@ -1729,7 +1669,9 @@ current user.</p>
 <span class="s1">    Q_PLUGIN_CONF_FILE=$Q_PLUGIN_CONF_PATH/$Q_PLUGIN_CONF_FILENAME</span>
 <span class="s1">    cp $QUANTUM_DIR/$Q_PLUGIN_CONF_FILE /$Q_PLUGIN_CONF_FILE</span>
 
-<span class="s1">    iniset /$Q_PLUGIN_CONF_FILE DATABASE sql_connection mysql:\/\/$MYSQL_USER:$MYSQL_PASSWORD@$MYSQL_HOST\/$Q_DB_NAME?charset=utf8</span>
+<span class="s1">    database_connection_url dburl $Q_DB_NAME</span>
+<span class="s1">    iniset /$Q_PLUGIN_CONF_FILE DATABASE sql_connection $dburl</span>
+<span class="s1">    unset dburl</span>
 
 <span class="s1">    Q_CONF_FILE=/etc/quantum/quantum.conf</span>
 <span class="s1">    cp $QUANTUM_DIR/etc/quantum.conf $Q_CONF_FILE</span>
@@ -1755,12 +1697,11 @@ current user.</p>
 <span class="s1">    cp $QUANTUM_DIR/etc/api-paste.ini $Q_API_PASTE_FILE</span>
 <span class="s1">    cp $QUANTUM_DIR/etc/policy.json $Q_POLICY_FILE</span>
 
-<span class="s1">    if is_service_enabled mysql; then</span>
-<span class="s1">            mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e &quot;DROP DATABASE IF EXISTS $Q_DB_NAME;&quot;</span>
-<span class="s1">            mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e &quot;CREATE DATABASE IF NOT EXISTS $Q_DB_NAME CHARACTER SET utf8;&quot;</span>
-<span class="s1">        else</span>
-<span class="s1">            echo &quot;mysql must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
-<span class="s1">            exit 1</span>
+<span class="s1">    if is_service_enabled $DATABASE_BACKENDS; then</span>
+<span class="s1">        recreate_database $Q_DB_NAME utf8</span>
+<span class="s1">    else</span>
+<span class="s1">        echo &quot;A database must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
+<span class="s1">        exit 1</span>
 <span class="s1">    fi</span>
 
 <span class="s1"># DIVIDER</span>
@@ -2388,7 +2329,7 @@ current user.</p>
 <span class="s2">        fi</span>
 <span class="s2">   fi</span>
 
-<span class="s2">elif is_service_enabled mysql &amp;&amp; is_service_enabled nova; then</span>
+<span class="s2">elif is_service_enabled $DATABASE_BACKENDS &amp;&amp; is_service_enabled nova; then</span>
 <span class="s2"># DIVIDER</span>
 <span class="s2">    $NOVA_BIN_DIR/nova-manage network create &quot;</span><span class="nv">$PRIVATE_NETWORK_NAME</span><span class="s2">&quot; $FIXED_RANGE 1 $FIXED_NETWORK_SIZE $NETWORK_CREATE_ARGS</span>
 
@@ -2596,15 +2537,6 @@ an error.  It is also useful for following along as the install occurs.</p>
 <p>Install rabbitmq-server
 the temp file is necessary due to LP: #878600</p>
 </pre></div></td></tr><tr><td class=docs>
-<p>Seed configuration with mysql password so that apt-get install doesn't
-prompt us for a password upon install.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>while <tt class="docutils literal">.my.cnf</tt> is not needed for OpenStack to function, it is useful
-as it allows you to access the mysql databases via <tt class="docutils literal">mysql nova</tt> instead
-of having to specify the username/password each time.</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install mysql-server</p>
-</pre></div></td></tr><tr><td class=docs>
 <p>Install apache2, which is NOPRIME'd</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install deps
@@ -2672,26 +2604,8 @@ TODO(dtroyer): figure out when this is no longer necessary</p>
 <p>change the rabbit password since the default is &quot;guest&quot;</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="mysql">
-<h2>Mysql</h2>
-</pre></div></td></tr><tr><td class=docs>
-<p>Start mysql-server</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>RPM doesn't start the service</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set the root password - only works the first time</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Update the DB to give user ‘$MYSQL_USER’&#64;’%’ full control of the all databases:</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Now update <tt class="docutils literal">my.cnf</tt> for some local needs and restart the mysql service</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Change ‘bind-address’ from localhost (127.0.0.1) to any (0.0.0.0)</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set default db type to InnoDB</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Change it</p>
-</pre></div></td></tr><tr><td class=docs>
-<p>Add it</p>
+<div class="section" id="configure-database">
+<h2>Configure database</h2>
 </pre></div></td></tr><tr><td class=docs>
 <p>Clear screen rc file</p>
 </pre></div></td></tr><tr><td class=docs>

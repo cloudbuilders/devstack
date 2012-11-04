@@ -482,7 +482,9 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_group <span class="nv">$VOLUME_GROUP</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_name_template <span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">}</span>%s
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT iscsi_helper tgtadm
-    iniset <span class="nv">$CINDER_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/cinder?charset<span class="o">=</span>utf8
+    <span class="nb">local </span>dburl
+    database_connection_url dburl cinder
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT api_paste_config <span class="nv">$CINDER_API_PASTE_INI</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT root_helper <span class="s2">&quot;sudo ${CINDER_ROOTWRAP}&quot;</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT osapi_volume_extension cinder.api.openstack.volume.contrib.standard_extensions
@@ -517,12 +519,11 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">NOVA_ENABLED_APIS</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$NOVA_ENABLED_APIS</span> | sed <span class="s2">&quot;s/osapi_volume,//&quot;</span><span class="k">)</span>
 
-    <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
+    <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create cinder database</p>
 </td><td class=code><div class=highlight><pre>
-        mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS cinder;&#39;</span>
-        mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE cinder;&#39;</span>
+        recreate_database cinder utf8
 
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create cinder database</p>

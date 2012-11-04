@@ -443,7 +443,9 @@ This function intentionally left blank</p>
     cp <span class="nv">$GLANCE_DIR</span>/etc/glance-registry.conf <span class="nv">$GLANCE_REGISTRY_CONF</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT debug True
     inicomment <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT log_file
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/glance?charset<span class="o">=</span>utf8
+    <span class="nb">local </span>dburl
+    database_connection_url dburl glance
+    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> paste_deploy flavor keystone
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
@@ -460,7 +462,7 @@ This function intentionally left blank</p>
 <span class="k">    </span>cp <span class="nv">$GLANCE_DIR</span>/etc/glance-api.conf <span class="nv">$GLANCE_API_CONF</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT debug True
     inicomment <span class="nv">$GLANCE_API_CONF</span> DEFAULT log_file
-    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/glance?charset<span class="o">=</span>utf8
+    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT image_cache_dir <span class="nv">$GLANCE_CACHE_DIR</span>/
@@ -525,8 +527,7 @@ This function intentionally left blank</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>(re)create glance database</p>
 </td><td class=code><div class=highlight><pre>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;DROP DATABASE IF EXISTS glance;&#39;</span>
-    mysql -u<span class="nv">$MYSQL_USER</span> -p<span class="nv">$MYSQL_PASSWORD</span> -e <span class="s1">&#39;CREATE DATABASE glance CHARACTER SET utf8;&#39;</span>
+    recreate_database glance utf8
 
     <span class="nv">$GLANCE_BIN_DIR</span>/glance-manage db_sync
 
