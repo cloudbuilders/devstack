@@ -333,17 +333,18 @@ ul.auto-toc {
 
 <p>Initial data for Keystone using python-keystoneclient</p>
 <div class="section" id="tenant-user-roles">
-<h1>Tenant               User      Roles</h1>
-<p>admin                admin     admin
-service              glance    admin
-service              nova      admin, [ResellerAdmin (swift only)]
-service              quantum   admin        # if enabled
-service              swift     admin        # if enabled
-service              cinder    admin        # if enabled
-service              heat      admin        # if enabled
-demo                 admin     admin
-demo                 demo      Member, anotherrole
-invisible_to_admin   demo      Member
+<h1>Tenant               User       Roles</h1>
+<p>admin                admin      admin
+service              glance     admin
+service              nova       admin, [ResellerAdmin (swift only)]
+service              quantum    admin        # if enabled
+service              swift      admin        # if enabled
+service              cinder     admin        # if enabled
+service              heat       admin        # if enabled
+service              ceilometer admin        # if enabled
+demo                 admin      admin
+demo                 demo       Member, anotherrole
+invisible_to_admin   demo       Member
 Tempest Only:
 alt_demo             alt_demo  Member</p>
 <p>Variables set before calling this script:
@@ -630,8 +631,15 @@ configurable in swift-proxy.conf</p>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;ceilometer-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;ceilometer&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">CEILOMETER_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>ceilometer <span class="se">\</span>
+                                              --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+                                              --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                                              --email<span class="o">=</span>ceilometer@example.com<span class="k">)</span>
+    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                           --user_id <span class="nv">$CEILOMETER_USER</span> <span class="se">\</span>
+                           --role_id <span class="nv">$ADMIN_ROLE</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">CEILOMETER_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
             --name<span class="o">=</span>ceilometer <span class="se">\</span>
             --type<span class="o">=</span>metering <span class="se">\</span>
@@ -719,7 +727,6 @@ between two regular users in separate tenants</p>
             --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8776/v1/\$(tenant_id)s&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
-
 
 
 </pre></div></td></tr><tr><td class=docs>

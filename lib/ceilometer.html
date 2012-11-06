@@ -341,8 +341,9 @@ ENABLED_SERVICES+=ceilometer-acompute,ceilometer-acentral,ceilometer-collector,c
 </pre></div></td></tr><tr><td class=docs>
 <p>Dependencies:
 - functions
-- OS_USERNAME, OS_PASSWORD, OS_TENANT_NAME, OS_AUTH_URL set for admin credentials
-- DEST set to the destination directory</p>
+- OS_AUTH_URL for auth in api
+- DEST set to the destination directory
+- SERVICE_PASSWORD, SERVICE_TENANT_NAME for auth in api</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -412,7 +413,17 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
     iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT sql_connection <span class="nv">$BASE_SQL_CONN</span>/nova?charset<span class="o">=</span>utf8
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Install the policy file for the API server</p>
+</td><td class=code><div class=highlight><pre>
+    cp <span class="nv">$CEILOMETER_DIR</span>/etc/ceilometer/policy.json <span class="nv">$CEILOMETER_CONF_DIR</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT policy_file <span class="nv">$CEILOMETER_CONF_DIR</span>/policy.json
+
     iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken auth_protocol http
+    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_user ceilometer
+    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+
     cleanup_ceilometer
 <span class="o">}</span>
 
@@ -428,7 +439,7 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_ceilometer<span class="o">()</span> <span class="o">{</span>
     screen_it ceilometer-acompute <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; sg libvirtd \&quot;$CEILOMETER_BIN_DIR/ceilometer-agent-compute --config-file $CEILOMETER_CONF\&quot;&quot;</span>
-    screen_it ceilometer-acentral <span class="s2">&quot;export OS_USERNAME=$OS_USERNAME OS_PASSWORD=$OS_PASSWORD OS_TENANT_NAME=$OS_TENANT_NAME OS_AUTH_URL=$OS_AUTH_URL &amp;&amp; cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-agent-central --config-file $CEILOMETER_CONF&quot;</span>
+    screen_it ceilometer-acentral <span class="s2">&quot;export OS_USERNAME=ceilometer OS_PASSWORD=$SERVICE_PASSWORD OS_TENANT_NAME=$SERVICE_TENANT_NAME OS_AUTH_URL=$OS_AUTH_URL &amp;&amp; cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-agent-central --config-file $CEILOMETER_CONF&quot;</span>
     screen_it ceilometer-collector <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-collector --config-file $CEILOMETER_CONF&quot;</span>
     screen_it ceilometer-api <span class="s2">&quot;cd $CEILOMETER_DIR &amp;&amp; $CEILOMETER_BIN_DIR/ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR --config-file $CEILOMETER_CONF&quot;</span>
 <span class="o">}</span>
