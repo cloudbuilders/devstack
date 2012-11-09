@@ -427,6 +427,15 @@ This function intentionally left blank</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>durable_glance_queues() - Determine if RabbitMQ queues are durable or not</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>durable_glance_queues<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">test</span> <span class="sb">`</span>rabbitmqctl list_queues name durable | grep <span class="nb">true</span> | wc -l<span class="sb">`</span> -gt 0 <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="nb">test</span> <span class="sb">`</span>rabbitmqctl list_exchanges name durable | grep <span class="nb">true</span> | wc -l<span class="sb">`</span> -gt 0 <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>configure_glance() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_glance<span class="o">()</span> <span class="o">{</span>
@@ -480,7 +489,15 @@ This function intentionally left blank</p>
 <span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT notifier_strategy rabbit
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
-    <span class="k">fi</span>
+        <span class="k">if</span> <span class="o">[[</span> durable_glance_queues -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This gets around <a class="reference external" href="https://bugs.launchpad.net/glance/+bug/1074132">https://bugs.launchpad.net/glance/+bug/1074132</a>
+that results in a g-api server becoming unresponsive during
+startup...</p>
+</td><td class=code><div class=highlight><pre>
+            iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT rabbit_durable_queues True
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span> <span class="o">==</span> <span class="s2">&quot;PKI&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken signing_dir <span class="nv">$GLANCE_AUTH_CACHE_DIR</span>/api
     <span class="k">fi</span>
