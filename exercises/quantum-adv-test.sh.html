@@ -406,15 +406,21 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import exercise configuration</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/exerciserc
-
-</pre></div></td></tr><tr><td class=docs>
 <p>If quantum is not enabled we exit with exitcode 55 which mean
 exercise is skipped.</p>
 </td><td class=code><div class=highlight><pre>
 is_service_enabled quantum <span class="o">&amp;&amp;</span> is_service_enabled q-agt <span class="o">&amp;&amp;</span> is_service_enabled q-dhcp <span class="o">||</span> <span class="nb">exit </span>55
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import quantum fucntions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
+setup_quantum
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import exercise configuration</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/exerciserc
 
 <span class="c">#------------------------------------------------------------------------------</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -437,14 +443,14 @@ is_service_enabled quantum <span class="o">&amp;&amp;</span> is_service_enabled 
 <span class="nv">DEMO2_NUM_NET</span><span class="o">=</span>2
 
 <span class="nv">PUBLIC_NET1_CIDR</span><span class="o">=</span><span class="s2">&quot;200.0.0.0/24&quot;</span>
-<span class="nv">DEMO1_NET1_CIDR</span><span class="o">=</span><span class="s2">&quot;10.1.0.0/24&quot;</span>
-<span class="nv">DEMO2_NET1_CIDR</span><span class="o">=</span><span class="s2">&quot;10.2.0.0/24&quot;</span>
-<span class="nv">DEMO2_NET2_CIDR</span><span class="o">=</span><span class="s2">&quot;10.2.1.0/24&quot;</span>
+<span class="nv">DEMO1_NET1_CIDR</span><span class="o">=</span><span class="s2">&quot;10.10.0.0/24&quot;</span>
+<span class="nv">DEMO2_NET1_CIDR</span><span class="o">=</span><span class="s2">&quot;10.20.0.0/24&quot;</span>
+<span class="nv">DEMO2_NET2_CIDR</span><span class="o">=</span><span class="s2">&quot;10.20.1.0/24&quot;</span>
 
 <span class="nv">PUBLIC_NET1_GATEWAY</span><span class="o">=</span><span class="s2">&quot;200.0.0.1&quot;</span>
-<span class="nv">DEMO1_NET1_GATEWAY</span><span class="o">=</span><span class="s2">&quot;10.1.0.1&quot;</span>
-<span class="nv">DEMO2_NET1_GATEWAY</span><span class="o">=</span><span class="s2">&quot;10.2.0.1&quot;</span>
-<span class="nv">DEMO2_NET2_GATEWAY</span><span class="o">=</span><span class="s2">&quot;10.2.1.1&quot;</span>
+<span class="nv">DEMO1_NET1_GATEWAY</span><span class="o">=</span><span class="s2">&quot;10.10.0.1&quot;</span>
+<span class="nv">DEMO2_NET1_GATEWAY</span><span class="o">=</span><span class="s2">&quot;10.20.0.1&quot;</span>
+<span class="nv">DEMO2_NET2_GATEWAY</span><span class="o">=</span><span class="s2">&quot;10.20.1.1&quot;</span>
 
 <span class="nv">PUBLIC_NUM_VM</span><span class="o">=</span>1
 <span class="nv">DEMO1_NUM_VM</span><span class="o">=</span>1
@@ -559,7 +565,7 @@ and save it.</p>
 
 <span class="k">function </span>confirm_server_active <span class="o">{</span>
     <span class="nb">local </span><span class="nv">VM_UUID</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova  --no_cache show $VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server &#39;$VM_UUID&#39; did not become active!&quot;</span>
     <span class="nb">false</span>
 <span class="k">fi</span>
@@ -605,6 +611,7 @@ and save it.</p>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc admin admin
     add_tenant demo1 demo1 demo1
     add_tenant demo2 demo2 demo2
+    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc demo demo
 <span class="o">}</span>
 
 <span class="k">function </span>delete_tenants_and_users <span class="o">{</span>
@@ -614,6 +621,7 @@ and save it.</p>
     remove_user demo2
     remove_tenant demo2
     <span class="nb">echo</span> <span class="s2">&quot;removed all tenants&quot;</span>
+    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc demo demo
 <span class="o">}</span>
 
 <span class="k">function </span>create_network <span class="o">{</span>
@@ -629,15 +637,8 @@ and save it.</p>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc <span class="nv">$TENANT</span> <span class="nv">$TENANT</span>
     <span class="nb">local </span><span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --tenant_id <span class="nv">$TENANT_ID</span> <span class="nv">$NET_NAME</span> <span class="nv">$EXTRA</span>| grep <span class="s1">&#39; id &#39;</span> | awk <span class="s1">&#39;{print $4}&#39;</span> <span class="k">)</span>
     quantum subnet-create --ip_version 4 --tenant_id <span class="nv">$TENANT_ID</span> --gateway <span class="nv">$GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$CIDR</span>
-    <span class="c">#T0DO(nati) comment out until l3-agent is merged</span>
-    <span class="c">#local ROUTER_ID=$($QUANTUM router-create --tenant_id $TENANT_ID $ROUTER_NAME| grep &#39; id &#39; | awk &#39;{print $4}&#39; )</span>
-    <span class="c">#for NET_NAME in ${NET_NAMES//,/ };do</span>
-</pre></div></td></tr><tr><td class=docs>
-<blockquote>
-SUBNET_ID=`get_subnet_id $NET_NAME`
-$QUANTUM router-interface-create $NAME --subnet_id $SUBNET_ID</blockquote>
-</td><td class=code><div class=highlight><pre>
-    <span class="c">#done</span>
+    quantum-debug probe-create <span class="nv">$NET_ID</span>
+    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc demo demo
 <span class="o">}</span>
 
 <span class="k">function </span>create_networks <span class="o">{</span>
@@ -663,7 +664,7 @@ $QUANTUM router-interface-create $NAME --subnet_id $SUBNET_ID</blockquote>
     <span class="k">done</span>
     <span class="c">#TODO (nati) Add multi-nic test</span>
     <span class="c">#TODO (nati) Add public-net test</span>
-    <span class="nb">local </span><span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova --no_cache boot --flavor <span class="k">$(</span>get_flavor_id m1.tiny<span class="k">)</span> <span class="se">\</span>
+    <span class="nb">local </span><span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="k">$(</span>get_flavor_id m1.tiny<span class="k">)</span> <span class="se">\</span>
         --image <span class="k">$(</span>get_image_id<span class="k">)</span> <span class="se">\</span>
         <span class="nv">$NIC</span> <span class="se">\</span>
         <span class="nv">$TENANT</span>-server<span class="nv">$NUM</span> | grep <span class="s1">&#39; id &#39;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
@@ -681,34 +682,28 @@ $QUANTUM router-interface-create $NAME --subnet_id $SUBNET_ID</blockquote>
 that DHCP is in use, but not L3</p>
 </td><td class=code><div class=highlight><pre>
    <span class="nb">local </span><span class="nv">VM_NAME</span><span class="o">=</span><span class="nv">$1</span>
-   <span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova  --no_cache show <span class="nv">$VM_NAME</span> | grep <span class="s1">&#39;network&#39;</span> | awk <span class="s1">&#39;{print $5}&#39;</span><span class="sb">`</span>
-   <span class="k">if</span> ! timeout <span class="nv">$BOOT_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ping -c1 -w1 $IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Could not ping $VM_NAME&quot;</span>
-        <span class="nb">false</span>
-<span class="nb">   </span><span class="k">fi</span>
+   <span class="nb">local </span><span class="nv">NET_NAME</span><span class="o">=</span><span class="nv">$2</span>
+   <span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$VM_NAME</span> | grep <span class="s1">&#39;network&#39;</span> | awk <span class="s1">&#39;{print $5}&#39;</span><span class="sb">`</span>
+   ping_check <span class="nv">$NET_NAME</span> <span class="nv">$IP</span> <span class="nv">$BOOT_TIMEOUT</span>
 <span class="o">}</span>
 
 <span class="k">function </span>check_vm <span class="o">{</span>
     <span class="nb">local </span><span class="nv">TENANT</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">NUM</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">VM_NAME</span><span class="o">=</span><span class="s2">&quot;$TENANT-server$NUM&quot;</span>
+    <span class="nb">local </span><span class="nv">NET_NAME</span><span class="o">=</span><span class="nv">$3</span>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc <span class="nv">$TENANT</span> <span class="nv">$TENANT</span>
-    ping_ip <span class="nv">$VM_NAME</span>
+    ping_ip <span class="nv">$VM_NAME</span> <span class="nv">$NET_NAME</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO (nati) test ssh connection
 TODO (nati) test inter connection between vm
-TODO (nati) test namespace dhcp
 TODO (nati) test dhcp host routes
-TODO (nati) test multi-nic
-TODO (nati) use test-agent
-TODO (nati) test L3 forwarding
-TODO (nati) test floating ip
-TODO (nati) test security group</p>
+TODO (nati) test multi-nic</p>
 </td><td class=code><div class=highlight><pre>
 <span class="o">}</span>
 
 <span class="k">function </span>check_vms <span class="o">{</span>
-    foreach_tenant_vm <span class="s1">&#39;check_vm ${%TENANT%_NAME} %NUM%&#39;</span>
+    foreach_tenant_vm <span class="s1">&#39;check_vm ${%TENANT%_NAME} %NUM% ${%TENANT%_VM%NUM%_NET}&#39;</span>
 <span class="o">}</span>
 
 <span class="k">function </span>shutdown_vm <span class="o">{</span>
@@ -716,12 +711,12 @@ TODO (nati) test security group</p>
     <span class="nb">local </span><span class="nv">NUM</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc <span class="nv">$TENANT</span> <span class="nv">$TENANT</span>
     <span class="nv">VM_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">TENANT</span><span class="k">}</span>-server<span class="nv">$NUM</span>
-    nova --no_cache delete <span class="nv">$VM_NAME</span>
+    nova delete <span class="nv">$VM_NAME</span>
 <span class="o">}</span>
 
 <span class="k">function </span>shutdown_vms <span class="o">{</span>
     foreach_tenant_vm <span class="s1">&#39;shutdown_vm ${%TENANT%_NAME} %NUM%&#39;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova --no_cache list | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova list | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Some VMs failed to shutdown&quot;</span>
         <span class="nb">false</span>
 <span class="nb">    </span><span class="k">fi</span>
@@ -729,17 +724,22 @@ TODO (nati) test security group</p>
 
 <span class="k">function </span>delete_network <span class="o">{</span>
     <span class="nb">local </span><span class="nv">TENANT</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">NUM</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">NET_NAME</span><span class="o">=</span><span class="s2">&quot;${TENANT}-net$NUM&quot;</span>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc admin admin
     <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>get_tenant_id <span class="nv">$TENANT</span><span class="k">)</span>
     <span class="c">#TODO(nati) comment out until l3-agent merged</span>
     <span class="c">#for res in port subnet net router;do</span>
-    <span class="k">for </span>res in port subnet net;do
-        quantum <span class="k">${</span><span class="nv">res</span><span class="k">}</span>-list -F id -F tenant_id | grep <span class="nv">$TENANT_ID</span> | awk <span class="s1">&#39;{print $2}&#39;</span> | xargs -I % quantum <span class="k">${</span><span class="nv">res</span><span class="k">}</span>-delete %
+    <span class="k">for </span>net_id in <span class="sb">`</span>quantum net-list -c id -c name | grep <span class="nv">$NET_NAME</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>;<span class="k">do</span>
+<span class="k">        </span>delete_probe <span class="nv">$net_id</span>
+        quantum subnet-list | grep <span class="nv">$net_id</span> | awk <span class="s1">&#39;{print $2}&#39;</span> | xargs -I% quantum subnet-delete %
+        quantum net-delete <span class="nv">$net_id</span>
     <span class="k">done</span>
+<span class="k">    </span><span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc demo demo
 <span class="o">}</span>
 
 <span class="k">function </span>delete_networks <span class="o">{</span>
-   foreach_tenant <span class="s1">&#39;delete_network ${%TENANT%_NAME}&#39;</span>
+   foreach_tenant_net <span class="s1">&#39;delete_network ${%TENANT%_NAME} ${%NUM%}&#39;</span>
    <span class="c">#TODO(nati) add secuirty group check after it is implemented</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>source $TOP_DIR/openrc demo1 demo1
@@ -864,6 +864,7 @@ main<span class="o">()</span> <span class="o">{</span>
 <span class="o">}</span>
 
 
+teardown_quantum
 <span class="c">#-------------------------------------------------------------------------------</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kick off script.</p>

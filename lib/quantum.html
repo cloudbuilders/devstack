@@ -339,6 +339,8 @@ Save trace setting</p>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
+<span class="nb">export </span><span class="nv">QUANTUM_TEST_CONFIG_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">QUANTUM_TEST_CONFIG_FILE</span><span class="k">:-</span><span class="s2">&quot;/etc/quantum/debug.ini&quot;</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Configures keystone integration for quantum service and agents</p>
 </td><td class=code><div class=highlight><pre>
@@ -397,6 +399,75 @@ Save trace setting</p>
 <span class="k">        return </span>0
     <span class="k">fi</span>
 <span class="k">    return </span>1
+<span class="o">}</span>
+
+<span class="k">function </span>_get_net_id<span class="o">()</span> <span class="o">{</span>
+    quantum --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> net-list | grep <span class="nv">$1</span> | awk <span class="s1">&#39;{print $2}&#39;</span>
+<span class="o">}</span>
+
+<span class="k">function </span>_get_probe_cmd_prefix<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+    <span class="nv">net_id</span><span class="o">=</span><span class="sb">`</span>_get_net_id <span class="nv">$from_net</span><span class="sb">`</span>
+    <span class="nv">probe_id</span><span class="o">=</span><span class="sb">`</span>quantum-debug --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> probe-list -c id -c network_id | grep <span class="nv">$net_id</span> | awk <span class="s1">&#39;{print $2}&#39;</span> | head -n 1<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;sudo ip netns exec qprobe-$probe_id&quot;</span>
+<span class="o">}</span>
+
+<span class="k">function </span>delete_probe<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+    <span class="nv">net_id</span><span class="o">=</span><span class="sb">`</span>_get_net_id <span class="nv">$from_net</span><span class="sb">`</span>
+    <span class="nv">probe_id</span><span class="o">=</span><span class="sb">`</span>quantum-debug --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> probe-list -c id -c network_id | grep <span class="nv">$net_id</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
+    quantum-debug --os-tenant-name admin --os-username admin probe-delete <span class="nv">$probe_id</span>
+<span class="o">}</span>
+
+<span class="k">function </span>_ping_check_quantum<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">ip</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">timeout_sec</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">expected</span><span class="o">=</span><span class="k">${</span><span class="nv">4</span><span class="k">:-</span><span class="s2">&quot;True&quot;</span><span class="k">}</span>
+    <span class="nb">local </span><span class="nv">check_command</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nv">probe_cmd</span><span class="o">=</span><span class="sb">`</span>_get_probe_cmd_prefix <span class="nv">$from_net</span><span class="sb">`</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$expected&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">check_command</span><span class="o">=</span><span class="s2">&quot;while ! $probe_cmd ping -c1 -w1 $ip; do sleep 1; done&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">check_command</span><span class="o">=</span><span class="s2">&quot;while $probe_cmd ping -c1 -w1 $ip; do sleep 1; done&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> ! timeout <span class="nv">$timeout_sec</span> sh -c <span class="s2">&quot;$check_command&quot;</span>; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$expected&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;[Fail] Couldn&#39;t ping server&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;[Fail] Could ping server&quot;</span>
+        <span class="k">fi</span>
+<span class="k">        </span><span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>ssh check</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_ssh_check_quantum<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">key_file</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">ip</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">user</span><span class="o">=</span><span class="nv">$4</span>
+    <span class="nb">local </span><span class="nv">timeout_sec</span><span class="o">=</span><span class="nv">$5</span>
+    <span class="nb">local </span><span class="nv">probe_cmd</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="nv">probe_cmd</span><span class="o">=</span><span class="sb">`</span>_get_probe_cmd_prefix <span class="nv">$from_net</span><span class="sb">`</span>
+    <span class="k">if</span> ! timeout <span class="nv">$timeout_sec</span> sh -c <span class="s2">&quot;while ! $probe_cmd ssh -o StrictHostKeyChecking=no -i $key_file ${user}@$ip echo success ; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become ssh-able!&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function </span>setup_quantum<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">public_net_id</span><span class="o">=</span><span class="sb">`</span>_get_net_id <span class="nv">$PUBLIC_NETWORK_NAME</span><span class="sb">`</span>
+    quantum-debug --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> probe-create <span class="nv">$public_net_id</span>
+    <span class="nv">private_net_id</span><span class="o">=</span><span class="sb">`</span>_get_net_id <span class="nv">$PRIVATE_NETWORK_NAME</span><span class="sb">`</span>
+    quantum-debug --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> probe-create <span class="nv">$private_net_id</span>
+<span class="o">}</span>
+
+<span class="k">function </span>teardown_quantum<span class="o">()</span> <span class="o">{</span>
+    delete_probe <span class="nv">$PUBLIC_NETWORK_NAME</span>
+    delete_probe <span class="nv">$PRIVATE_NETWORK_NAME</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

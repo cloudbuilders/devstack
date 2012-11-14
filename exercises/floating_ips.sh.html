@@ -380,6 +380,14 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Import quantum functions if needed</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+<span class="k">    </span><span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
+    setup_quantum
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Import exercise configuration</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/exerciserc
@@ -569,18 +577,20 @@ nova add-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING
 </td><td class=code><div class=highlight><pre>
 ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span>
 
+<span class="k">if</span> ! is_service_enabled quantum; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Allocate an IP from second floating pool</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">TEST_FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create <span class="nv">$TEST_FLOATING_POOL</span> | grep <span class="nv">$TEST_FLOATING_POOL</span> | get_field 1<span class="sb">`</span>
-die_if_not_set TEST_FLOATING_IP <span class="s2">&quot;Failure creating floating IP in $TEST_FLOATING_POOL&quot;</span>
+    <span class="nv">TEST_FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create <span class="nv">$TEST_FLOATING_POOL</span> | grep <span class="nv">$TEST_FLOATING_POOL</span> | get_field 1<span class="sb">`</span>
+    die_if_not_set TEST_FLOATING_IP <span class="s2">&quot;Failure creating floating IP in $TEST_FLOATING_POOL&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>list floating addresses</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova floating-ip-list | grep $TEST_FLOATING_POOL | grep -q $TEST_FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Floating IP not allocated&quot;</span>
-    <span class="nb">exit </span>1
+    <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova floating-ip-list | grep $TEST_FLOATING_POOL | grep -q $TEST_FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Floating IP not allocated&quot;</span>
+        <span class="nb">exit </span>1
+     <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -595,14 +605,15 @@ nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
 </pre></div></td></tr><tr><td class=docs>
 <p>test we can aren't able to ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
-    ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span>
+    ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span> Fail
 <span class="k">fi</span>
 
+<span class="k">if</span> ! is_service_enabled quantum; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete second floating IP</p>
 </td><td class=code><div class=highlight><pre>
-nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting floating IP $TEST_FLOATING_IP&quot;</span>
-
+    nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting floating IP $TEST_FLOATING_IP&quot;</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>de-allocate the floating ip</p>
@@ -626,6 +637,10 @@ nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span
 <p>Delete a secgroup</p>
 </td><td class=code><div class=highlight><pre>
 nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+
+<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+<span class="k">    </span>teardown_quantum
+<span class="k">fi</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
