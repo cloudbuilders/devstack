@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>unstack.sh</title>
+    <title>horizon</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>unstack.sh</h1></th>
+        <th class=docs><h1>horizon</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -331,158 +331,199 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>unstack.sh</strong></p>
+<p>lib/horizon
+Functions to control the configuration and operation of the horizon service
+&lt;do not include this template file in <tt class="docutils literal">stack.sh</tt>!&gt;
+Dependencies:
+<tt class="docutils literal">functions</tt> file
+<tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined
+&lt;list other global vars that are assumed to be defined&gt;</p>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Stops that which is started by <tt class="docutils literal">stack.sh</tt> (mostly)
-mysql and rabbit are left running as OpenStack code refreshes
-do not require them to be restarted.</p>
-<p>Stop all processes by setting <tt class="docutils literal">UNSTACK_ALL</tt> or specifying <tt class="docutils literal"><span class="pre">--all</span></tt>
-on the command line</p>
+<p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
+<p>install_horizon
+configure_horizon
+init_horizon
+start_horizon
+stop_horizon
+cleanup_horizon</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Keep track of the current devstack directory.</p>
+<p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nb">set</span> +o xtrace
+
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import common functions</p>
+<div class="section" id="defaults">
+<h1>Defaults</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import database library</p>
+<p>&lt;define global variables here that belong to this project&gt;</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Load local configuration</p>
+<p>Set up default directories</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
+<span class="nv">HORIZON_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/horizon
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Destination path for service data</p>
+<p>Allow overriding the default Apache user and group, default both to
+current user.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
+<span class="nv">APACHE_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_USER</span><span class="k">:-</span><span class="nv">$USER</span><span class="k">}</span>
+<span class="nv">APACHE_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_GROUP</span><span class="k">:-</span><span class="nv">$APACHE_USER</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Get project function libraries</p>
+</div>
+<div class="section" id="entry-points">
+<h1>Entry Points</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
-<tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt></p>
+<p>cleanup_horizon() - Remove residual data files, anything left over from previous
+runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
-GetOSVersion
-
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;--all&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">UNSTACK_ALL</span><span class="o">=</span><span class="k">${</span><span class="nv">UNSTACK_ALL</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
-<span class="k">fi</span>
+<span class="k">function </span>cleanup_horizon<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>kill instances (nova)
+delete image files (glance)
+This function intentionally left blank</p>
+</td><td class=code><div class=highlight><pre>
+    :
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Shut down devstack's screen to get the bulk of OpenStack services in one shot</p>
+<p>configure_horizon() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SCREEN</span><span class="o">=</span><span class="k">$(</span>which screen<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SCREEN&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">SESSION</span><span class="o">=</span><span class="k">$(</span>screen -ls | awk <span class="s1">&#39;/[0-9].stack/ { print $1 }&#39;</span><span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SESSION&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen -X -S <span class="nv">$SESSION</span> quit
+<span class="k">function </span>configure_horizon<span class="o">()</span> <span class="o">{</span>
+    setup_develop <span class="nv">$HORIZON_DIR</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>init_horizon() - Initialize databases, etc.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>init_horizon<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove stale session database.</p>
+</td><td class=code><div class=highlight><pre>
+    rm -f <span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/dashboard_openstack.sqlite3
+
+</pre></div></td></tr><tr><td class=docs>
+<p><tt class="docutils literal">local_settings.py</tt> is used to override horizon default settings.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/local_settings.py
+    cp <span class="nv">$FILES</span>/horizon_settings.py <span class="nv">$local_settings</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Initialize the horizon database (it stores sessions and notices shown to
+users).  The user system is external (keystone).</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>
+    python manage.py syncdb --noinput
+    <span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create an empty directory that apache uses as docroot</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkdir -p <span class="nv">$HORIZON_DIR</span>/.blackhole
+
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
+        <span class="nv">APACHE_CONF</span><span class="o">=</span>sites-available/horizon
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean up the old config name</p>
+</td><td class=code><div class=highlight><pre>
+        sudo rm -f /etc/apache2/sites-enabled/000-default
+</pre></div></td></tr><tr><td class=docs>
+<p>Be a good citizen and use the distro tools here</p>
+</td><td class=code><div class=highlight><pre>
+        sudo touch /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF</span>
+        sudo a2ensite horizon
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install httpd, which is NOPRIME'd</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">APACHE_NAME</span><span class="o">=</span>httpd
+        <span class="nv">APACHE_CONF</span><span class="o">=</span>conf.d/horizon.conf
+        sudo sed <span class="s1">&#39;/^Listen/s/^.*$/Listen 0.0.0.0:80/&#39;</span> -i /etc/httpd/conf/httpd.conf
     <span class="k">fi</span>
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Swift runs daemons</p>
+<p>Configure apache to run horizon</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
-<span class="k">    </span>swift-init all stop 2&gt;/dev/null <span class="o">||</span> <span class="nb">true</span>
-<span class="k">fi</span>
+    sudo sh -c <span class="s2">&quot;sed -e \&quot;</span>
+<span class="s2">        s,%USER%,$APACHE_USER,g;</span>
+<span class="s2">        s,%GROUP%,$APACHE_GROUP,g;</span>
+<span class="s2">        s,%HORIZON_DIR%,$HORIZON_DIR,g;</span>
+<span class="s2">        s,%APACHE_NAME%,$APACHE_NAME,g;</span>
+<span class="s2">        s,%DEST%,$DEST,g;</span>
+<span class="s2">    \&quot; $FILES/apache-horizon.template &gt;/etc/$APACHE_NAME/$APACHE_CONF&quot;</span>
+
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Apache has the WSGI processes</p>
+<p>install_horizon() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
-<span class="k">    </span>stop_horizon
-<span class="k">fi</span>
-
-<span class="nv">SCSI_PERSIST_DIR</span><span class="o">=</span><span class="nv">$CINDER_STATE_PATH</span>/volumes/*
+<span class="k">function </span>install_horizon<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Apache installation, because we mark it NOPRIME</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install apache2, which is NOPRIME'd</p>
+</td><td class=code><div class=highlight><pre>
+        install_package apache2 libapache2-mod-wsgi
+    <span class="k">else</span>
+<span class="k">        </span>sudo rm -f /etc/httpd/conf.d/000-*
+        install_package httpd mod_wsgi
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Get the iSCSI volumes</p>
+<p>NOTE(sdague) quantal changed the name of the node binary</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
-<span class="k">    </span><span class="nv">TARGETS</span><span class="o">=</span><span class="k">$(</span>sudo tgtadm --op show --mode target<span class="k">)</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>If tgt driver isn't running this won't work obviously
-So check the response and restart if need be</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="s2">&quot;tgtd seems to be in a bad state, restarting...&quot;</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>restart_service tgt
-        <span class="k">else</span>
-<span class="k">            </span>restart_service tgtd
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> ! -e <span class="s2">&quot;/usr/bin/node&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>install_package nodejs-legacy
         <span class="k">fi</span>
-<span class="k">        </span><span class="nv">TARGETS</span><span class="o">=</span><span class="k">$(</span>sudo tgtadm --op show --mode target<span class="k">)</span>
-    <span class="k">fi</span>
-
-<span class="k">    if</span> <span class="o">[[</span> -n <span class="s2">&quot;$TARGETS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">iqn_list</span><span class="o">=(</span> <span class="k">$(</span>grep --no-filename -r iqn <span class="nv">$SCSI_PERSIST_DIR</span> | sed <span class="s1">&#39;s/&lt;target //&#39;</span> | sed <span class="s1">&#39;s/&gt;//&#39;</span><span class="k">)</span> <span class="o">)</span>
-        <span class="k">for </span>i in <span class="s2">&quot;${iqn_list[@]}&quot;</span>; <span class="k">do</span>
-<span class="k">            </span><span class="nb">echo </span>removing iSCSI target: <span class="nv">$i</span>
-            sudo tgt-admin --delete <span class="nv">$i</span>
-        <span class="k">done</span>
 <span class="k">    fi</span>
 
-<span class="k">    if </span>is_service_enabled cinder; <span class="k">then</span>
-<span class="k">        </span>sudo rm -rf <span class="nv">$CINDER_STATE_PATH</span>/volumes/*
-    <span class="k">fi</span>
-
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>stop_service tgt
-    <span class="k">else</span>
-<span class="k">        </span>stop_service tgtd
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UNSTACK_ALL&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Stop MySQL server</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
-<span class="k">        </span>stop_service mysql
-    <span class="k">fi</span>
-
-<span class="k">    if </span>is_service_enabled postgresql; <span class="k">then</span>
-<span class="k">        </span>stop_service postgresql
-    <span class="k">fi</span>
+<span class="k">    </span>git_clone <span class="nv">$HORIZON_REPO</span> <span class="nv">$HORIZON_DIR</span> <span class="nv">$HORIZON_BRANCH</span> <span class="nv">$HORIZON_TAG</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Stop rabbitmq-server</p>
+<p>start_horizon() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
-<span class="k">        </span>stop_service rabbitmq-server
-    <span class="k">fi</span>
-<span class="k">fi</span>
+<span class="k">function </span>start_horizon<span class="o">()</span> <span class="o">{</span>
+    restart_service <span class="nv">$APACHE_NAME</span>
+    screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Quantum dhcp agent runs dnsmasq</p>
+<p>stop_horizon() - Stop running processes (non-screen)</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled q-dhcp; <span class="k">then</span>
-<span class="k">    </span><span class="nv">pid</span><span class="o">=</span><span class="k">$(</span>ps aux | awk <span class="s1">&#39;/[d]nsmasq.+interface=tap/ { print $2 }&#39;</span><span class="k">)</span>
-    <span class="o">[</span> ! -z <span class="s2">&quot;$pid&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> sudo <span class="nb">kill</span> -9 <span class="nv">$pid</span>
-<span class="k">fi</span>
+<span class="k">function </span>stop_horizon<span class="o">()</span> <span class="o">{</span>
+    stop_service apache2
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Restore xtrace</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">$XTRACE</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>

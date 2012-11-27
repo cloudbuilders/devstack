@@ -736,6 +736,7 @@ address.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Get project function libraries</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/nova
@@ -1093,20 +1094,6 @@ read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR 
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="horizon">
-<h2>Horizon</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Allow overriding the default Apache user and group, default both to
-current user.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">APACHE_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_USER</span><span class="k">:-</span><span class="nv">$USER</span><span class="k">}</span>
-<span class="nv">APACHE_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_GROUP</span><span class="k">:-</span><span class="nv">$APACHE_USER</span><span class="k">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
 <div class="section" id="log-files">
 <h2>Log files</h2>
 </td><td class=code><div class=highlight><pre>
@@ -1342,18 +1329,6 @@ the temp file is necessary due to LP: #878600</p>
 <span class="k">    </span>install_database
 <span class="k">fi</span>
 
-<span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install apache2, which is NOPRIME'd</p>
-</td><td class=code><div class=highlight><pre>
-        install_package apache2 libapache2-mod-wsgi
-    <span class="k">else</span>
-<span class="k">        </span>sudo rm -f /etc/httpd/conf.d/000-*
-        install_package httpd mod_wsgi
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
 <span class="k">if </span>is_service_enabled q-agt; <span class="k">then</span>
 <span class="k">    if </span>is_quantum_ovs_base_plugin <span class="s2">&quot;$Q_PLUGIN&quot;</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1457,9 +1432,9 @@ install_novaclient
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>django powered web control panel for openstack</p>
+<p>dashboard</p>
 </td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$HORIZON_REPO</span> <span class="nv">$HORIZON_DIR</span> <span class="nv">$HORIZON_BRANCH</span> <span class="nv">$HORIZON_TAG</span>
+    install_horizon
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    </span>git_clone <span class="nv">$QUANTUM_CLIENT_REPO</span> <span class="nv">$QUANTUM_CLIENT_DIR</span> <span class="nv">$QUANTUM_CLIENT_BRANCH</span>
@@ -1527,7 +1502,7 @@ configure_glanceclient
 <span class="k">    </span>configure_nova
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
-<span class="k">    </span>setup_develop <span class="nv">$HORIZON_DIR</span>
+<span class="k">    </span>configure_horizon
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    </span>setup_develop <span class="nv">$QUANTUM_CLIENT_DIR</span>
@@ -1692,7 +1667,7 @@ screen -r <span class="nv">$SCREEN_NAME</span> -X hardstatus alwayslastline <spa
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="id2">
+<div class="section" id="horizon">
 <h2>Horizon</h2>
 </td><td class=code><div class=highlight><pre>
 
@@ -1702,64 +1677,8 @@ screen -r <span class="nv">$SCREEN_NAME</span> -X hardstatus alwayslastline <spa
 
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring and starting Horizon&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Remove stale session database.</p>
-</td><td class=code><div class=highlight><pre>
-    rm -f <span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/dashboard_openstack.sqlite3
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">local_settings.py</tt> is used to override horizon default settings.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/local_settings.py
-    cp <span class="nv">$FILES</span>/horizon_settings.py <span class="nv">$local_settings</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Initialize the horizon database (it stores sessions and notices shown to
-users).  The user system is external (keystone).</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">cd</span> <span class="nv">$HORIZON_DIR</span>
-    python manage.py syncdb --noinput
-    <span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create an empty directory that apache uses as docroot</p>
-</td><td class=code><div class=highlight><pre>
-    sudo mkdir -p <span class="nv">$HORIZON_DIR</span>/.blackhole
-
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
-        <span class="nv">APACHE_CONF</span><span class="o">=</span>sites-available/horizon
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean up the old config name</p>
-</td><td class=code><div class=highlight><pre>
-        sudo rm -f /etc/apache2/sites-enabled/000-default
-</pre></div></td></tr><tr><td class=docs>
-<p>Be a good citizen and use the distro tools here</p>
-</td><td class=code><div class=highlight><pre>
-        sudo touch /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF</span>
-        sudo a2ensite horizon
-    <span class="k">else</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install httpd, which is NOPRIME'd</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">APACHE_NAME</span><span class="o">=</span>httpd
-        <span class="nv">APACHE_CONF</span><span class="o">=</span>conf.d/horizon.conf
-        sudo sed <span class="s1">&#39;/^Listen/s/^.*$/Listen 0.0.0.0:80/&#39;</span> -i /etc/httpd/conf/httpd.conf
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure apache to run horizon</p>
-</td><td class=code><div class=highlight><pre>
-    sudo sh -c <span class="s2">&quot;sed -e \&quot;</span>
-<span class="s2">        s,%USER%,$APACHE_USER,g;</span>
-<span class="s2">        s,%GROUP%,$APACHE_GROUP,g;</span>
-<span class="s2">        s,%HORIZON_DIR%,$HORIZON_DIR,g;</span>
-<span class="s2">        s,%APACHE_NAME%,$APACHE_NAME,g;</span>
-<span class="s2">        s,%DEST%,$DEST,g;</span>
-<span class="s2">    \&quot; $FILES/apache-horizon.template &gt;/etc/$APACHE_NAME/$APACHE_CONF&quot;</span>
-
-    restart_service <span class="nv">$APACHE_NAME</span>
+    init_horizon
+    start_horizon
 <span class="k">fi</span>
 
 
@@ -2823,7 +2742,7 @@ screen_it q-l3 <span class="s2">&quot;python $AGENT_L3_BINARY --config-file $Q_C
     echo_summary <span class="s2">&quot;Starting Ceilometer&quot;</span>
     start_ceilometer
 <span class="k">fi</span>
-screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
+
 screen_it swift <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; $SWIFT_DIR/bin/swift-proxy-server ${SWIFT_CONFIG_DIR}/proxy-server.conf -v&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
