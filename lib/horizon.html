@@ -451,10 +451,20 @@ users).  The user system is external (keystone).</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install httpd, which is NOPRIME'd</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">APACHE_NAME</span><span class="o">=</span>httpd
-        <span class="nv">APACHE_CONF</span><span class="o">=</span>conf.d/horizon.conf
-        sudo sed <span class="s1">&#39;/^Listen/s/^.*$/Listen 0.0.0.0:80/&#39;</span> -i /etc/httpd/conf/httpd.conf
-    <span class="k">fi</span>
+        <span class="k">if </span>is_suse; <span class="k">then</span>
+<span class="k">            </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
+            <span class="nv">APACHE_CONF</span><span class="o">=</span>vhosts.d/horizon.conf
+</pre></div></td></tr><tr><td class=docs>
+<p>Append wsgi to the list of modules to load</p>
+</td><td class=code><div class=highlight><pre>
+            grep -q <span class="s2">&quot;^APACHE_MODULES=.*wsgi&quot;</span> /etc/sysconfig/apache2 <span class="o">||</span>
+                sudo sed <span class="s1">&#39;/^APACHE_MODULES=/s/^\(.*\)&quot;$/\1 wsgi&quot;/&#39;</span> -i /etc/sysconfig/apache2
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">APACHE_NAME</span><span class="o">=</span>httpd
+            <span class="nv">APACHE_CONF</span><span class="o">=</span>conf.d/horizon.conf
+            sudo sed <span class="s1">&#39;/^Listen/s/^.*$/Listen 0.0.0.0:80/&#39;</span> -i /etc/httpd/conf/httpd.conf
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure apache to run horizon</p>
