@@ -334,7 +334,7 @@ ul.auto-toc {
 <p>lib/heat
 Install and start Heat service
 To enable, add the following to localrc
-ENABLED_SERVICES+=,heat,h-api-cfn,h-api-cw,h-eng,h-meta
+ENABLED_SERVICES+=,heat,h-api-cfn,h-api-cw,h-eng
 Dependencies:
 - functions</p>
 </td><td class=code><div class=highlight><pre>
@@ -403,8 +403,6 @@ runs that a clean run would need to clean up</p>
     <span class="nv">HEAT_API_CFN_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CFN_PORT</span><span class="k">:-</span><span class="nv">8000</span><span class="k">}</span>
     <span class="nv">HEAT_ENGINE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_ENGINE_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
     <span class="nv">HEAT_ENGINE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_ENGINE_PORT</span><span class="k">:-</span><span class="nv">8001</span><span class="k">}</span>
-    <span class="nv">HEAT_METADATA_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_METADATA_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
-    <span class="nv">HEAT_METADATA_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_METADATA_PORT</span><span class="k">:-</span><span class="nv">8002</span><span class="k">}</span>
     <span class="nv">HEAT_API_CW_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
     <span class="nv">HEAT_API_CW_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_PORT</span><span class="k">:-</span><span class="nv">8003</span><span class="k">}</span>
     <span class="nv">HEAT_API_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
@@ -483,7 +481,7 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_ENGINE_HOST</span>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT bind_port <span class="nv">$HEAT_ENGINE_PORT</span>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT heat_metadata_server_url http://<span class="nv">$HEAT_API_CFN_HOST</span>:<span class="nv">$HEAT_API_CFN_PORT</span>
-    iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT heat_waitcondition_server_url http://<span class="nv">$HEAT_METADATA_HOST</span>:<span class="nv">$HEAT_METADATA_PORT</span>
+    iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT heat_waitcondition_server_url http://<span class="nv">$HEAT_CFN_HOST</span>:<span class="nv">$HEAT_CFN_PORT</span>/v1/waitcondition
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT heat_watch_server_url http://<span class="nv">$HEAT_API_CW_HOST</span>:<span class="nv">$HEAT_API_CW_PORT</span>
     <span class="nb">local </span>dburl
     database_connection_url dburl heat
@@ -497,28 +495,6 @@ runs that a clean run would need to clean up</p>
     <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT rpc_backend heat.openstack.common.rpc.impl_qpid
     <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>metadata api</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">HEAT_METADATA_CONF</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-metadata.conf
-    cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-metadata.conf <span class="nv">$HEAT_METADATA_CONF</span>
-    iniset <span class="nv">$HEAT_METADATA_CONF</span> DEFAULT debug True
-    inicomment <span class="nv">$HEAT_METADATA_CONF</span> DEFAULT log_file
-    iniset <span class="nv">$HEAT_METADATA_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
-    iniset <span class="nv">$HEAT_METADATA_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_METADATA_HOST</span>
-    iniset <span class="nv">$HEAT_METADATA_CONF</span> DEFAULT bind_port <span class="nv">$HEAT_METADATA_PORT</span>
-
-    <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$HEAT_METADATA_CONF</span> DEFAULT rpc_backend heat.openstack.common.rpc.impl_kombu
-        iniset <span class="nv">$HEAT_METADATA_CONF</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
-        iniset <span class="nv">$HEAT_METADATA_CONF</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
-    <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$HEAT_METADATA_CONF</span> DEFAULT rpc_backend heat.openstack.common.rpc.impl_qpid
-    <span class="k">fi</span>
-
-<span class="k">    </span><span class="nv">HEAT_METADATA_PASTE_INI</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-metadata-paste.ini
-    cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-metadata-paste.ini <span class="nv">$HEAT_METADATA_PASTE_INI</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>cloudwatch api</p>
@@ -588,7 +564,6 @@ runs that a clean run would need to clean up</p>
     screen_it h-api <span class="s2">&quot;cd $HEAT_DIR; bin/heat-api --config-dir=$HEAT_CONF_DIR/heat-api.conf&quot;</span>
     screen_it h-api-cfn <span class="s2">&quot;cd $HEAT_DIR; bin/heat-api-cfn --config-dir=$HEAT_CONF_DIR/heat-api-cfn.conf&quot;</span>
     screen_it h-api-cw <span class="s2">&quot;cd $HEAT_DIR; bin/heat-api-cloudwatch --config-dir=$HEAT_CONF_DIR/heat-api-cloudwatch.conf&quot;</span>
-    screen_it h-meta <span class="s2">&quot;cd $HEAT_DIR; bin/heat-metadata --config-dir=$HEAT_CONF_DIR/heat-metadata.conf&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -598,7 +573,7 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the cinder screen windows</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>serv in h-eng h-api-cfn h-api-cw h-meta; <span class="k">do</span>
+    <span class="k">for </span>serv in h-eng h-api-cfn h-api-cw; <span class="k">do</span>
 <span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
 <span class="nb">    </span><span class="k">done</span>
 <span class="o">}</span>

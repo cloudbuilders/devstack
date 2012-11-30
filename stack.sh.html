@@ -472,7 +472,7 @@ disable_negated_services
 <p>Warn users who aren't on an explicitly supported distro, but allow them to
 override check and attempt installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>oneiric|precise|quantal|raring|f16|f17<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>oneiric|precise|quantal|raring|f16|f17|f18<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: this script has not been tested on $DISTRO&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$FORCE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;If you wish to run this script anyway run with FORCE=yes&quot;</span>
@@ -738,6 +738,7 @@ address.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/nova
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/swift
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
@@ -749,9 +750,7 @@ address.</p>
 <span class="nv">HORIZON_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/horizon
 <span class="nv">OPENSTACKCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-openstackclient
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
-<span class="nv">SWIFT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift
 <span class="nv">SWIFT3_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift3
-<span class="nv">SWIFTCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-swiftclient
 <span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
 <span class="nv">QUANTUM_CLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-quantumclient
 
@@ -991,56 +990,6 @@ initialize_database_backends <span class="o">&amp;&amp;</span> <span class="nb">
 <span class="k">    </span><span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
     read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR RABBIT.&quot;</span>
 <span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="swift">
-<h2>Swift</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>TODO: add logging to different location.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set <tt class="docutils literal">SWIFT_DATA_DIR</tt> to the location of swift drives and objects.
-Default is the common DevStack data directory.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SWIFT_DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">:-${</span><span class="nv">DATA_DIR</span><span class="k">}</span><span class="p">/swift</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set <tt class="docutils literal">SWIFT_CONFIG_DIR</tt> to the location of the configuration files.
-Default is <tt class="docutils literal">/etc/swift</tt>.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SWIFT_CONFIG_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">:-</span><span class="p">/etc/swift</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>DevStack will create a loop-back disk formatted as XFS to store the
-swift data. Set <tt class="docutils literal">SWIFT_LOOPBACK_DISK_SIZE</tt> to the disk size in bytes.
-Default is 1 gigabyte.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">1000000</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>The ring uses a configurable number of bits from a path’s MD5 hash as
-a partition index that designates a device. The number of bits kept
-from the hash is known as the partition power, and 2 to the partition
-power indicates the partition count. Partitioning the full MD5 hash
-ring allows other parts of the cluster to work in batches of items at
-once which ends up either more efficient or at least less complex than
-working with each item separately or the entire cluster all at once.
-By default we define 9 for the partition count (which mean 512).</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">:-</span><span class="nv">9</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set <tt class="docutils literal">SWIFT_REPLICAS</tt> to configure how many replicas are to be
-configured for your Swift cluster.  By default the three replicas would need a
-bit of IO and Memory on a VM you may want to lower that to 1 if you want to do
-only some quick testing.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SWIFT_REPLICAS</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">:-</span><span class="nv">3</span><span class="k">}</span>
 
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1384,7 +1333,6 @@ echo_summary <span class="s2">&quot;Installing OpenStack project source&quot;</s
 install_keystoneclient
 install_glanceclient
 install_novaclient
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Check out the client libs that are used most</p>
 </td><td class=code><div class=highlight><pre>
@@ -1399,15 +1347,10 @@ git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENST
 </td><td class=code><div class=highlight><pre>
     install_keystone
 <span class="k">fi</span>
+
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>storage service</p>
-</td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$SWIFT_REPO</span> <span class="nv">$SWIFT_DIR</span> <span class="nv">$SWIFT_BRANCH</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>storage service client and and Library</p>
-</td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$SWIFTCLIENT_REPO</span> <span class="nv">$SWIFTCLIENT_DIR</span> <span class="nv">$SWIFTCLIENT_BRANCH</span>
+<span class="k">    </span>install_swiftclient
+    install_swift
     <span class="k">if </span>is_service_enabled swift3; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>swift3 middleware to provide S3 emulation to Swift</p>
@@ -1415,6 +1358,7 @@ git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENST
         git_clone <span class="nv">$SWIFT3_REPO</span> <span class="nv">$SWIFT3_DIR</span> <span class="nv">$SWIFT3_BRANCH</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
+
 <span class="k">if </span>is_service_enabled g-api n-api; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>image catalog service</p>
@@ -1486,11 +1430,11 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
 <span class="k">    </span>configure_keystone
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
-<span class="k">    </span>setup_develop <span class="nv">$SWIFT_DIR</span>
-    setup_develop <span class="nv">$SWIFTCLIENT_DIR</span>
-<span class="k">fi</span>
-<span class="k">if </span>is_service_enabled swift3; <span class="k">then</span>
-<span class="k">    </span>setup_develop <span class="nv">$SWIFT3_DIR</span>
+<span class="k">    </span>configure_swift
+    configure_swiftclient
+    <span class="k">if </span>is_service_enabled swift3; <span class="k">then</span>
+<span class="k">        </span>setup_develop <span class="nv">$SWIFT3_DIR</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled g-api n-api; <span class="k">then</span>
 <span class="k">    </span>configure_glance
@@ -2195,292 +2139,14 @@ complex physical network configurations.</p>
 
 <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Swift&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Make sure to kill all swift processes first</p>
-</td><td class=code><div class=highlight><pre>
-    swift-init all stop <span class="o">||</span> <span class="nb">true</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>First do a bit of setup by creating the directories and
-changing the permissions so we can run it as our user.</p>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="nv">USER_GROUP</span><span class="o">=</span><span class="k">$(</span>id -g<span class="k">)</span>
-    sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives
-    sudo chown -R <span class="nv">$USER</span>:<span class="k">${</span><span class="nv">USER_GROUP</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create a loopback disk and format it to XFS.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        if </span>egrep -q <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1 /proc/mounts; <span class="k">then</span>
-<span class="k">            </span>sudo umount <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
-        <span class="k">fi</span>
-<span class="k">    else</span>
-<span class="k">        </span>mkdir -p  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images
-        sudo touch  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
-        sudo chown <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
-
-        dd <span class="k">if</span><span class="o">=</span>/dev/zero <span class="nv">of</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="se">\</span>
-            <span class="nv">bs</span><span class="o">=</span>1024 <span class="nv">count</span><span class="o">=</span>0 <span class="nv">seek</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">}</span>
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Make a fresh XFS filesystem</p>
-</td><td class=code><div class=highlight><pre>
-    mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Mount the disk with mount options to make it as efficient as possible</p>
-</td><td class=code><div class=highlight><pre>
-    mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
-    <span class="k">if</span> ! egrep -q <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1 /proc/mounts; <span class="k">then</span>
-<span class="k">        </span>sudo mount -t xfs -o loop,noatime,nodiratime,nobarrier,logbufs<span class="o">=</span>8  <span class="se">\</span>
-            <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create a link to the above mount</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">        </span>sudo ln -sf <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1/<span class="nv">$x</span> <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/<span class="nv">$x</span>; <span class="k">done</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create all of the directories needed to emulate a few different servers</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">            </span><span class="nv">drive</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1/<span class="k">${</span><span class="nv">x</span><span class="k">}</span>
-            <span class="nv">node</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/<span class="k">${</span><span class="nv">x</span><span class="k">}</span>/node
-            <span class="nv">node_device</span><span class="o">=</span><span class="k">${</span><span class="nv">node</span><span class="k">}</span>/sdb1
-            <span class="o">[[</span> -d <span class="nv">$node</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">continue</span>
-            <span class="o">[[</span> -d <span class="nv">$drive</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">continue</span>
-<span class="k">            </span>sudo install -o <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> -g <span class="nv">$USER_GROUP</span> -d <span class="nv">$drive</span>
-            sudo install -o <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> -g <span class="nv">$USER_GROUP</span> -d <span class="nv">$node_device</span>
-            sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">node</span><span class="k">}</span>
-    <span class="k">done</span>
-
-<span class="k">   </span>sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/<span class="o">{</span>object,container,account<span class="o">}</span>-server /var/run/swift
-   sudo chown -R <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span> /var/run/swift
-
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SWIFT_CONFIG_DIR&quot;</span> !<span class="o">=</span> <span class="s2">&quot;/etc/swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Some swift tools are hard-coded to use <tt class="docutils literal">/etc/swift</tt> and are apparently not going to be fixed.
-Create a symlink if the config dir is moved</p>
-</td><td class=code><div class=highlight><pre>
-        sudo ln -sf <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span> /etc/swift
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Swift use rsync to synchronize between all the different
-partitions (which make more sense when you have a multi-node
-setup) we configure it with our version of rsync.</p>
-</td><td class=code><div class=highlight><pre>
-    sed -e <span class="s2">&quot;</span>
-<span class="s2">        s/%GROUP%/${USER_GROUP}/;</span>
-<span class="s2">        s/%USER%/$USER/;</span>
-<span class="s2">        s,%SWIFT_DATA_DIR%,$SWIFT_DATA_DIR,;</span>
-<span class="s2">    &quot;</span> <span class="nv">$FILES</span>/swift/rsyncd.conf | sudo tee /etc/rsyncd.conf
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo sed -i <span class="s1">&#39;/^RSYNC_ENABLE=false/ { s/false/true/ }&#39;</span> /etc/default/rsync
-    <span class="k">else</span>
-<span class="k">        </span>sudo sed -i <span class="s1">&#39;/disable *= *yes/ { s/yes/no/ }&#39;</span> /etc/xinetd.d/rsync
-    <span class="k">fi</span>
-
-<span class="k">    if </span>is_service_enabled swift3;then
-        <span class="nv">swift_auth_server</span><span class="o">=</span><span class="s2">&quot;s3token &quot;</span>
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>By default Swift will be installed with the tempauth middleware
-which has some default username and password if you have
-configured keystone it will checkout the directory.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">        </span>swift_auth_server+<span class="o">=</span><span class="s2">&quot;authtoken keystoneauth&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nv">swift_auth_server</span><span class="o">=</span>tempauth
-    <span class="k">fi</span>
-
-<span class="k">    </span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/proxy-server.conf
-    cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/proxy-server.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
-
-    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT user
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT user <span class="k">${</span><span class="nv">USER</span><span class="k">}</span>
-
-    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT swift_dir
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT swift_dir <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>
-
-    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT workers
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT workers 1
-
-    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT log_level
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT log_level DEBUG
-
-    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT bind_port
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT bind_port <span class="k">${</span><span class="nv">SWIFT_DEFAULT_BIND_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Only enable Swift3 if we have it enabled in ENABLED_SERVICES</p>
-</td><td class=code><div class=highlight><pre>
-    is_service_enabled swift3 <span class="o">&amp;&amp;</span> <span class="nv">swift3</span><span class="o">=</span>swift3 <span class="o">||</span> <span class="nv">swift3</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> pipeline:main pipeline <span class="s2">&quot;catch_errors healthcheck cache ratelimit ${swift3} ${swift_auth_server} proxy-logging proxy-server&quot;</span>
-
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> app:proxy-server account_autocreate <span class="nb">true</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure Keystone</p>
-</td><td class=code><div class=highlight><pre>
-    sed -i <span class="s1">&#39;/^# \[filter:authtoken\]/,/^# \[filter:keystoneauth\]$/ s/^#[ \t]*//&#39;</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken admin_user swift
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-
-    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:keystoneauth use
-    iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:keystoneauth operator_roles
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:keystoneauth operator_roles <span class="s2">&quot;Member, admin&quot;</span>
-
-    <span class="k">if </span>is_service_enabled swift3; <span class="k">then</span>
-<span class="k">        </span>cat <span class="s">&lt;&lt;EOF &gt;&gt;${SWIFT_CONFIG_PROXY_SERVER}</span>
-<span class="s"># DIVIDER</span>
-<span class="s">[filter:s3token]</span>
-<span class="s">paste.filter_factory = keystone.middleware.s3_token:filter_factory</span>
-<span class="s">auth_port = ${KEYSTONE_AUTH_PORT}</span>
-<span class="s">auth_host = ${KEYSTONE_AUTH_HOST}</span>
-<span class="s">auth_protocol = ${KEYSTONE_AUTH_PROTOCOL}</span>
-<span class="s">auth_token = ${SERVICE_TOKEN}</span>
-<span class="s">admin_token = ${SERVICE_TOKEN}</span>
-
-<span class="s">[filter:swift3]</span>
-<span class="s">use = egg:swift3#swift3</span>
-<span class="s">EOF</span>
-    <span class="k">fi</span>
-
-<span class="k">    </span>cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/swift.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf
-    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/swift.conf swift-hash swift_hash_path_suffix <span class="k">${</span><span class="nv">SWIFT_HASH</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>NOTE(chmou): s3token middleware is not updated yet to use only
-username and password.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">function </span>generate_swift_configuration<span class="o">()</span> <span class="o">{</span>
-        <span class="nb">local </span><span class="nv">server_type</span><span class="o">=</span><span class="nv">$1</span>
-        <span class="nb">local </span><span class="nv">bind_port</span><span class="o">=</span><span class="nv">$2</span>
-        <span class="nb">local </span><span class="nv">log_facility</span><span class="o">=</span><span class="nv">$3</span>
-        <span class="nb">local </span>node_number
-        <span class="nb">local </span>swift_node_config
-
-        <span class="k">for </span>node_number in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">            </span><span class="nv">node_path</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
-            <span class="nv">swift_node_config</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
-
-            cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/<span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-server.conf-sample <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span>
-
-            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT user
-            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT user <span class="k">${</span><span class="nv">USER</span><span class="k">}</span>
-
-            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT bind_port
-            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT bind_port <span class="k">${</span><span class="nv">bind_port</span><span class="k">}</span>
-
-            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT swift_dir
-            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT swift_dir <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>
-
-            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT devices
-            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT devices <span class="k">${</span><span class="nv">node_path</span><span class="k">}</span>
-
-            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT log_facility
-            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT log_facility LOG_LOCAL<span class="k">${</span><span class="nv">log_facility</span><span class="k">}</span>
-
-            iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT mount_check
-            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT mount_check <span class="nb">false</span>
-
-<span class="nb">            </span>iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-replicator vm_test_mode
-            iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-replicator vm_test_mode yes
-
-            <span class="nv">bind_port</span><span class="o">=</span><span class="k">$((</span> <span class="k">${</span><span class="nv">bind_port</span><span class="k">}</span> <span class="o">+</span> <span class="m">10</span> <span class="k">))</span>
-            <span class="nv">log_facility</span><span class="o">=</span><span class="k">$((</span> <span class="k">${</span><span class="nv">log_facility</span><span class="k">}</span> <span class="o">+</span> <span class="m">1</span> <span class="k">))</span>
-        <span class="k">done</span>
-    <span class="o">}</span>
-    generate_swift_configuration object 6010 2
-    generate_swift_configuration container 6011 2
-    generate_swift_configuration account 6012 2
-
-</pre></div></td></tr><tr><td class=docs>
-<p>This function generates an object/account/proxy configuration
-emulating 4 nodes on different ports</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">swift_log_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/logs
-    rm -rf <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
-    mkdir -p <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>/hourly
-    sudo chown -R <span class="nv">$USER</span>:adm <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
-    sed <span class="s2">&quot;s,%SWIFT_LOGDIR%,${swift_log_dir},&quot;</span> <span class="nv">$FILES</span>/swift/rsyslog.conf | sudo <span class="se">\</span>
-        tee /etc/rsyslog.d/10-swift.conf
-    restart_service rsyslog
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Specific configuration for swift for rsyslog. See
-<tt class="docutils literal"><span class="pre">/etc/rsyslog.d/10-swift.conf</span></tt> for more info.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">pushd</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span> &gt;/dev/null <span class="o">&amp;&amp;</span> <span class="o">{</span>
-
-        rm -f *.builder *.ring.gz backups/*.builder backups/*.ring.gz
-
-        <span class="nv">port_number</span><span class="o">=</span>6010
-        swift-ring-builder object.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
-        <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">            </span>swift-ring-builder object.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
-            <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
-        <span class="k">done</span>
-<span class="k">        </span>swift-ring-builder object.builder rebalance
-
-        <span class="nv">port_number</span><span class="o">=</span>6011
-        swift-ring-builder container.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
-        <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">            </span>swift-ring-builder container.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
-            <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
-        <span class="k">done</span>
-<span class="k">        </span>swift-ring-builder container.builder rebalance
-
-        <span class="nv">port_number</span><span class="o">=</span>6012
-        swift-ring-builder account.builder create <span class="k">${</span><span class="nv">SWIFT_PARTITION_POWER_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> 1
-        <span class="k">for </span>x in <span class="k">$(</span>seq <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">            </span>swift-ring-builder account.builder add z<span class="k">${</span><span class="nv">x</span><span class="k">}</span>-127.0.0.1:<span class="k">${</span><span class="nv">port_number</span><span class="k">}</span>/sdb1 1
-            <span class="nv">port_number</span><span class="o">=</span><span class="nv">$[</span>port_number + 10<span class="o">]</span>
-        <span class="k">done</span>
-<span class="k">        </span>swift-ring-builder account.builder rebalance
-
-    <span class="o">}</span> <span class="o">&amp;&amp;</span> <span class="nb">popd</span> &gt;/dev/null
-
-</pre></div></td></tr><tr><td class=docs>
-<p>This is where we create three different rings for swift with
-different object servers binding on different ports.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo /etc/init.d/rsync restart <span class="o">||</span> :
-    <span class="k">else</span>
-<span class="k">        </span>sudo systemctl start xinetd.service
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Start rsync</p>
-</td><td class=code><div class=highlight><pre>
-   swift-init all restart <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">   </span>swift-init proxy stop <span class="o">||</span> <span class="nb">true</span>
-
-<span class="nb">   unset </span>s swift_hash swift_auth_server
+    init_swift
 <span class="k">fi</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>First spawn all the swift services then kill the
-proxy service so we can run it in foreground in screen.
-<tt class="docutils literal"><span class="pre">swift-init</span> ... {stop|restart}</tt> exits with '1' if no servers are running,
-ignore it just in case</p>
+</div>
+<div class="section" id="volume-service">
+<h2>Volume Service</h2>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
@@ -2491,15 +2157,13 @@ ignore it just in case</p>
 <span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Nova&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="volume-service">
-<h2>Volume Service</h2>
+<p>Rebuild the config file from scratch</p>
 </td><td class=code><div class=highlight><pre>
     create_nova_conf
     init_nova
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Rebuild the config file from scratch</p>
+<p>Additional Nova configuration that is dependent on other services</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">        </span>add_nova_opt <span class="s2">&quot;network_api_class=nova.network.quantumv2.api.API&quot;</span>
@@ -2532,7 +2196,8 @@ ignore it just in case</p>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Additional Nova configuration that is dependent on other services</p>
+<p>All nova-compute workers need to know the vnc configuration options
+These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
 <span class="k">        </span><span class="nv">NOVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6080/vnc_auto.html&quot;</span><span class="k">}</span>
@@ -2546,8 +2211,8 @@ ignore it just in case</p>
 <span class="k">        </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
     <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>All nova-compute workers need to know the vnc configuration options
-These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
+<p>Address on which instance vncservers will listen on compute hosts.
+For multi-host, this should be the management ip of the compute host.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
     add_nova_opt <span class="s2">&quot;vncserver_listen=$VNCSERVER_LISTEN&quot;</span>
@@ -2565,8 +2230,9 @@ These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Address on which instance vncservers will listen on compute hosts.
-For multi-host, this should be the management ip of the compute host.</p>
+</div>
+<div class="section" id="xenserver">
+<h2>XenServer</h2>
 </td><td class=code><div class=highlight><pre>
 
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -2580,16 +2246,18 @@ For multi-host, this should be the management ip of the compute host.</p>
         add_nova_opt <span class="s2">&quot;xenapi_connection_password=$XENAPI_PASSWORD&quot;</span>
         add_nova_opt <span class="s2">&quot;flat_injected=False&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="xenserver">
-<h2>XenServer</h2>
+<p>Need to avoid crash due to new firewall support</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
         add_nova_opt <span class="s2">&quot;firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
     <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;openvz&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Using OpenVZ virtualization driver&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Need to avoid crash due to new firewall support</p>
+<dl class="docutils">
+<dt>TODO(deva): OpenVZ driver does not yet work if compute_driver is set here.</dt>
+<dd>Replace connection_type when this is fixed.
+add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
+</dl>
 </td><td class=code><div class=highlight><pre>
         add_nova_opt <span class="s2">&quot;connection_type=openvz&quot;</span>
         <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
@@ -2604,14 +2272,6 @@ For multi-host, this should be the management ip of the compute host.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>TODO(deva): OpenVZ driver does not yet work if compute_driver is set here.</dt>
-<dd>Replace connection_type when this is fixed.
-add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
-</dl>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
 <div class="section" id="launch-services">
@@ -2621,13 +2281,25 @@ add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
 </pre></div></td></tr><tr><td class=docs>
 <p>Only run the services specified in <tt class="docutils literal">ENABLED_SERVICES</tt></p>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Launch Swift Services</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Swift&quot;</span>
+    start_swift
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Launch the Glance services</p>
+</td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled g-api g-reg; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Glance&quot;</span>
     start_glance
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Launch the Glance services</p>
+<p>Create an access key and secret key for nova ec2 register image</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key <span class="o">&amp;&amp;</span> is_service_enabled swift3 <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NOVA_USER_ID</span><span class="o">=</span><span class="k">$(</span>keystone user-list | grep <span class="s1">&#39; nova &#39;</span> | get_field 1<span class="k">)</span>
@@ -2643,7 +2315,7 @@ add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
 screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-rpc-zmq-receiver&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create an access key and secret key for nova ec2 register image</p>
+<p>Launch the nova-api and wait for it to answer before continuing</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Nova API&quot;</span>
@@ -2658,7 +2330,7 @@ screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/no
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Quantum&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Launch the nova-api and wait for it to answer before continuing</p>
+<p>Start the Quantum service</p>
 </td><td class=code><div class=highlight><pre>
     screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for Quantum to start...&quot;</span>
@@ -2668,27 +2340,27 @@ screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/no
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Start the Quantum service</p>
+<p>Configure Quantum elements
+Configure internal network &amp; subnet</p>
 </td><td class=code><div class=highlight><pre>
 
     <span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; demo &quot;</span> | get_field 1<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure Quantum elements
-Configure internal network &amp; subnet</p>
+<p>Create a small network
+Since quantum command is executed in admin context at this point,
+<tt class="docutils literal"><span class="pre">--tenant_id</span></tt> needs to be specified.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --tenant_id <span class="nv">$TENANT_ID</span> <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
     <span class="nv">SUBNET_ID</span><span class="o">=</span><span class="k">$(</span>quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
     <span class="k">if </span>is_service_enabled q-l3; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Create a small network
-Since quantum command is executed in admin context at this point,
-<tt class="docutils literal"><span class="pre">--tenant_id</span></tt> needs to be specified.</p>
+<p>Create a router, and add the private subnet as one of its interfaces</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">ROUTER_ID</span><span class="o">=</span><span class="k">$(</span>quantum router-create --tenant_id <span class="nv">$TENANT_ID</span> router1 | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
         quantum router-interface-add <span class="nv">$ROUTER_ID</span> <span class="nv">$SUBNET_ID</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Create a router, and add the private subnet as one of its interfaces</p>
+<p>Create an external network, and a subnet. Configure the external network as router gw</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">EXT_NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> -- --router:external<span class="o">=</span>True | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
         <span class="nv">EXT_GW_IP</span><span class="o">=</span><span class="k">$(</span>quantum subnet-create --ip_version 4 <span class="nv">$EXT_NET_ID</span> <span class="nv">$FLOATING_RANGE</span> -- --enable_dhcp<span class="o">=</span>False | grep <span class="s1">&#39;gateway_ip&#39;</span> | get_field 2<span class="k">)</span>
@@ -2702,7 +2374,7 @@ Since quantum command is executed in admin context at this point,
         <span class="k">fi</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_NAMESPACE&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Create an external network, and a subnet. Configure the external network as router gw</p>
+<p>Explicitly set router id in l3 agent configuration</p>
 </td><td class=code><div class=highlight><pre>
             iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT router_id <span class="nv">$ROUTER_ID</span>
         <span class="k">fi</span>
@@ -2710,23 +2382,23 @@ Since quantum command is executed in admin context at this point,
 
 <span class="k">elif </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span> <span class="o">&amp;&amp;</span> is_service_enabled n-net; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Explicitly set router id in l3 agent configuration</p>
+<p>Create a small network</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_BIN_DIR</span>/nova-manage network create <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> <span class="nv">$FIXED_RANGE</span> 1 <span class="nv">$FIXED_NETWORK_SIZE</span> <span class="nv">$NETWORK_CREATE_ARGS</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create a small network</p>
+<p>Create some floating ips</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_BIN_DIR</span>/nova-manage floating create <span class="nv">$FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$PUBLIC_NETWORK</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create some floating ips</p>
+<p>Create a second pool</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$NOVA_BIN_DIR</span>/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create a second pool</p>
+<p>Start up the quantum agents if enabled</p>
 </td><td class=code><div class=highlight><pre>
 screen_it q-agt <span class="s2">&quot;python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
 screen_it q-dhcp <span class="s2">&quot;python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE&quot;</span>
@@ -2747,22 +2419,20 @@ screen_it q-l3 <span class="s2">&quot;python $AGENT_L3_BINARY --config-file $Q_C
     start_ceilometer
 <span class="k">fi</span>
 
-screen_it swift <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; $SWIFT_DIR/bin/swift-proxy-server ${SWIFT_CONFIG_DIR}/proxy-server.conf -v&quot;</span>
-
 </pre></div></td></tr><tr><td class=docs>
-<p>Start up the quantum agents if enabled</p>
+<p>Starting the nova-objectstore only if swift3 service is not enabled.
+Swift will act as s3 objectstore.</p>
 </td><td class=code><div class=highlight><pre>
 is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
     screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-objectstore&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Starting the nova-objectstore only if swift3 service is not enabled.
-Swift will act as s3 objectstore.</p>
+<p>Configure and launch heat engine, api and metadata</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure and launch heat engine, api and metadata</p>
+<p>Initialize heat, including replacing nova flavors</p>
 </td><td class=code><div class=highlight><pre>
     echo_summary <span class="s2">&quot;Configuring Heat&quot;</span>
     init_heat
@@ -2772,18 +2442,10 @@ Swift will act as s3 objectstore.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Initialize heat, including replacing nova flavors</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="install-images">
 <h1>Install Images</h1>
 </td><td class=code><div class=highlight><pre>
-
-<span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-<span class="k">    </span>echo_summary <span class="s2">&quot;Uploading images&quot;</span>
-    <span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Upload an image to glance.</p>
@@ -2799,6 +2461,14 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 </dd>
 </dl>
 </td><td class=code><div class=highlight><pre>
+
+<span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Uploading images&quot;</span>
+    <span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Option to upload legacy ami-tty, which works with xenserver</p>
+</td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}https://github.com/downloads/citrix-openstack/warehouse/tty.tgz&quot;</span>
     <span class="k">fi</span>
@@ -2810,7 +2480,8 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Option to upload legacy ami-tty, which works with xenserver</p>
+<p>Configure Tempest last to ensure that the runtime configuration of
+the various OpenStack services can be queried.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled tempest; <span class="k">then</span>
 <span class="k">    </span>configure_tempest
@@ -2818,14 +2489,13 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure Tempest last to ensure that the runtime configuration of
-the various OpenStack services can be queried.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="run-local-script">
 <h1>Run local script</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Run <tt class="docutils literal">local.sh</tt> if it exists to perform user-managed tasks</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -x <span class="nv">$TOP_DIR</span>/local.sh <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Running user script $TOP_DIR/local.sh&quot;</span>
@@ -2834,7 +2504,9 @@ the various OpenStack services can be queried.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Run <tt class="docutils literal">local.sh</tt> if it exists to perform user-managed tasks</p>
+</div>
+<div class="section" id="fin">
+<h1>Fin</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">set</span> +o xtrace
@@ -2842,21 +2514,20 @@ the various OpenStack services can be queried.</p>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">exec </span>1&gt;&amp;3
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="fin">
-<h1>Fin</h1>
+<p>Force all output to stdout and logs now</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> tee -a <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
 <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Force all output to stdout and logs now</p>
+<p>Force all output to stdout now</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">exec </span>1&gt;&amp;3
 <span class="k">fi</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Force all output to stdout now</p>
+<div class="section" id="using-the-cloud">
+<h2>Using the cloud</h2>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
@@ -2864,23 +2535,22 @@ the various OpenStack services can be queried.</p>
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="using-the-cloud">
-<h2>Using the cloud</h2>
+<p>If you installed Horizon on this server you should be able
+to access the site using your browser.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Horizon is now available at http://$SERVICE_HOST/&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If you installed Horizon on this server you should be able
-to access the site using your browser.</p>
+<p>Warn that the default flavors have been changed by Heat</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Heat has replaced the default flavors. View by running: nova flavor-list&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Warn that the default flavors have been changed by Heat</p>
+<p>If Keystone is present you can point <tt class="docutils literal">nova</tt> cli to this server</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Keystone is serving at $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/&quot;</span>
@@ -2890,28 +2560,26 @@ to access the site using your browser.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If Keystone is present you can point <tt class="docutils literal">nova</tt> cli to this server</p>
+<p>Echo <tt class="docutils literal">HOST_IP</tt> - useful for <tt class="docutils literal">build_uec.sh</tt>, which uses dhcp to give the instance an address</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;This is your host ip: $HOST_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Echo <tt class="docutils literal">HOST_IP</tt> - useful for <tt class="docutils literal">build_uec.sh</tt>, which uses dhcp to give the instance an address</p>
+<p>Warn that <tt class="docutils literal">EXTRA_FLAGS</tt> needs to be converted to <tt class="docutils literal">EXTRA_OPTS</tt></p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_FLAGS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;WARNING: EXTRA_FLAGS is defined and may need to be converted to EXTRA_OPTS&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Warn that <tt class="docutils literal">EXTRA_FLAGS</tt> needs to be converted to <tt class="docutils literal">EXTRA_OPTS</tt></p>
+<p>Indicate how long this took to run (bash maintained variable <tt class="docutils literal">SECONDS</tt>)</p>
 </td><td class=code><div class=highlight><pre>
 echo_summary <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Indicate how long this took to run (bash maintained variable <tt class="docutils literal">SECONDS</tt>)</p>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
