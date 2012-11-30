@@ -366,6 +366,11 @@ cleanup_XXX</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>set up default driver</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">CINDER_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_DRIVER</span><span class="k">:-</span><span class="nv">default</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>set up default directories</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">CINDER_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/cinder
@@ -511,6 +516,19 @@ runs that a clean run would need to clean up</p>
         iniset <span class="nv">$CINDER_CONF</span> DEFAULT logging_default_format_string <span class="s2">&quot;%(asctime)s %(color)s%(levelname)s %(name)s [[00;36m-%(color)s] [01;35m%(instance)s%(color)s%(message)s[00m&quot;</span>
         iniset <span class="nv">$CINDER_CONF</span> DEFAULT logging_debug_format_suffix <span class="s2">&quot;[00;33mfrom (pid=%(process)d) %(funcName)s %(pathname)s:%(lineno)d[00m&quot;</span>
         iniset <span class="nv">$CINDER_CONF</span> DEFAULT logging_exception_prefix <span class="s2">&quot;%(color)s%(asctime)s TRACE %(name)s [01;35m%(instance)s[00m&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;XenAPINFS&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+        <span class="o">(</span>
+            <span class="nb">set</span> -u
+            iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_driver <span class="s2">&quot;cinder.volume.xenapi_sm.XenAPINFSDriver&quot;</span>
+            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_connection_url <span class="s2">&quot;$CINDER_XENAPI_CONNECTION_URL&quot;</span>
+            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_connection_username <span class="s2">&quot;$CINDER_XENAPI_CONNECTION_USERNAME&quot;</span>
+            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_connection_password <span class="s2">&quot;$CINDER_XENAPI_CONNECTION_PASSWORD&quot;</span>
+            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_nfs_server <span class="s2">&quot;$CINDER_XENAPI_NFS_SERVER&quot;</span>
+            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_nfs_serverpath <span class="s2">&quot;$CINDER_XENAPI_NFS_SERVERPATH&quot;</span>
+        <span class="o">)</span>
+        <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>1
     <span class="k">fi</span>
 <span class="o">}</span>
 
