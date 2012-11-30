@@ -438,6 +438,13 @@ keystone user-role-add --user_id <span class="nv">$ADMIN_USER</span> --role_id <
 keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <span class="nv">$MEMBER_ROLE</span> --tenant_id <span class="nv">$DEMO_TENANT</span>
 keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <span class="nv">$MEMBER_ROLE</span> --tenant_id <span class="nv">$INVIS_TENANT</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>The ResellerAdmin role is used by Nova and Ceilometer so we need to keep it.
+The admin role in swift allows a user to act as an admin for their tenant,
+but ResellerAdmin is needed for a user to act as any tenant. The name of this
+role is also configurable in swift-proxy.conf</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">RESELLER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>ResellerAdmin<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -488,12 +495,8 @@ keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <s
     <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova needs ResellerAdmin role to download images when accessing
-swift through the s3 api. The admin role in swift allows a user
-to act as an admin for their tenant, but ResellerAdmin is needed
-for a user to act as any tenant. The name of this role is also
-configurable in swift-proxy.conf</p>
+swift through the s3 api.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">RESELLER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>ResellerAdmin<span class="k">)</span>
     keystone user-role-add <span class="se">\</span>
         --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
         --user_id <span class="nv">$NOVA_USER</span> <span class="se">\</span>
@@ -621,6 +624,12 @@ configurable in swift-proxy.conf</p>
     keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
                            --user_id <span class="nv">$CEILOMETER_USER</span> <span class="se">\</span>
                            --role_id <span class="nv">$ADMIN_ROLE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Ceilometer needs ResellerAdmin role to access swift account stats.</p>
+</td><td class=code><div class=highlight><pre>
+    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+                           --user_id <span class="nv">$CEILOMETER_USER</span> <span class="se">\</span>
+                           --role_id <span class="nv">$RESELLER_ROLE</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">CEILOMETER_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
             --name<span class="o">=</span>ceilometer <span class="se">\</span>
