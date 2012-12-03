@@ -581,8 +581,8 @@ sudo privileges and runs as that user.</p>
         &gt; /etc/sudoers.d/50_stack_sh <span class="o">)</span>
 
     <span class="nb">echo</span> <span class="s2">&quot;Copying files to stack user&quot;</span>
-    <span class="nv">STACK_DIR</span><span class="o">=</span><span class="s2">&quot;$DEST/${PWD##*/}&quot;</span>
-    cp -r -f -T <span class="s2">&quot;$PWD&quot;</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
+    <span class="nv">STACK_DIR</span><span class="o">=</span><span class="s2">&quot;$DEST/${TOP_DIR##*/}&quot;</span>
+    cp -r -f -T <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
     chown -R stack <span class="s2">&quot;$STACK_DIR&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SHELL_AFTER_RUN&quot;</span> !<span class="o">=</span> <span class="s2">&quot;no&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">exec </span>su -c <span class="s2">&quot;set -e; cd $STACK_DIR; bash stack.sh; bash&quot;</span> stack
@@ -2052,8 +2052,9 @@ complex physical network configurations.</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT debug True
 
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT metadata_ip <span class="nv">$Q_META_DATA_IP</span>
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
+
+    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT state_path <span class="nv">$DATA_DIR</span>/quantum
 
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
 
@@ -2077,6 +2078,31 @@ complex physical network configurations.</p>
 </td><td class=code><div class=highlight><pre>
         quantum_setup_external_bridge <span class="nv">$PUBLIC_BRIDGE</span>
     <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="c">#Quantum Metadata</span>
+<span class="k">if </span>is_service_enabled q-meta; <span class="k">then</span>
+<span class="k">    </span><span class="nv">AGENT_META_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-metadata-agent&quot;</span>
+    <span class="nv">Q_META_CONF_FILE</span><span class="o">=</span>/etc/quantum/metadata_agent.ini
+
+    cp <span class="nv">$QUANTUM_DIR</span>/etc/metadata_agent.ini <span class="nv">$Q_META_CONF_FILE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set verbose</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT verbose True
+</pre></div></td></tr><tr><td class=docs>
+<p>Set debug</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT debug True
+
+    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT state_path <span class="nv">$DATA_DIR</span>/quantum
+
+    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT nova_metadata_ip <span class="nv">$Q_META_DATA_IP</span>
+
+    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
+
+    quantum_setup_keystone <span class="nv">$Q_META_CONF_FILE</span> DEFAULT set_auth_url
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2186,7 +2212,10 @@ complex physical network configurations.</p>
         <span class="k">fi</span>
 <span class="k">        </span>add_nova_opt <span class="s2">&quot;libvirt_vif_driver=$NOVA_VIF_DRIVER&quot;</span>
         add_nova_opt <span class="s2">&quot;linuxnet_interface_driver=$LINUXNET_VIF_DRIVER&quot;</span>
-    <span class="k">elif </span>is_service_enabled n-net; <span class="k">then</span>
+        <span class="k">if </span>is_service_enabled q-meta; <span class="k">then</span>
+<span class="k">            </span>add_nova_opt <span class="s2">&quot;service_quantum_metadata_proxy=True&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    elif </span>is_service_enabled n-net; <span class="k">then</span>
 <span class="k">        </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.manager.$NET_MAN&quot;</span>
         add_nova_opt <span class="s2">&quot;public_interface=$PUBLIC_INTERFACE&quot;</span>
         add_nova_opt <span class="s2">&quot;vlan_interface=$VLAN_INTERFACE&quot;</span>
@@ -2312,7 +2341,7 @@ add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
     add_nova_opt <span class="s2">&quot;s3_affix_tenant=True&quot;</span>
 <span class="k">fi</span>
 
-screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_DIR/bin/nova-rpc-zmq-receiver&quot;</span>
+screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-rpc-zmq-receiver&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Launch the nova-api and wait for it to answer before continuing</p>
@@ -2402,6 +2431,7 @@ Since quantum command is executed in admin context at this point,
 </td><td class=code><div class=highlight><pre>
 screen_it q-agt <span class="s2">&quot;python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
 screen_it q-dhcp <span class="s2">&quot;python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE&quot;</span>
+screen_it q-meta <span class="s2">&quot;python $AGENT_META_BINARY --config-file $Q_CONF_FILE --config-file=$Q_META_CONF_FILE&quot;</span>
 screen_it q-l3 <span class="s2">&quot;python $AGENT_L3_BINARY --config-file $Q_CONF_FILE --config-file=$Q_L3_CONF_FILE&quot;</span>
 
 <span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
