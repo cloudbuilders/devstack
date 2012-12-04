@@ -1241,12 +1241,18 @@ an error.  It is also useful for following along as the install occurs.</p>
 echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/apts<span class="k">)</span>
+<span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/rpms-suse<span class="k">)</span>
 <span class="k">else</span>
 <span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/rpms<span class="k">)</span>
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$SYSLOG</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>install_package rsyslog-relp
+<span class="k">    if </span>is_suse; <span class="k">then</span>
+<span class="k">        </span>install_package rsyslog-module-relp
+    <span class="k">else</span>
+<span class="k">        </span>install_package rsyslog-relp
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
@@ -1266,8 +1272,12 @@ the temp file is necessary due to LP: #878600</p>
     <span class="k">fi</span>
 <span class="k">elif </span>is_service_enabled zeromq; <span class="k">then</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>install_package zeromq python-zmq
-    <span class="k">else</span>
+<span class="k">        if </span>is_suse; <span class="k">then</span>
+<span class="k">            </span>install_package libzmq1 python-pyzmq
+        <span class="k">else</span>
+<span class="k">            </span>install_package zeromq python-zmq
+        <span class="k">fi</span>
+<span class="k">    else</span>
 <span class="k">        </span>install_package libzmq1 python-zmq
     <span class="k">fi</span>
 <span class="k">fi</span>
