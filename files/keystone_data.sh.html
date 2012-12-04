@@ -334,17 +334,13 @@ ul.auto-toc {
 <p>Initial data for Keystone using python-keystoneclient</p>
 <div class="section" id="tenant-user-roles">
 <h1>Tenant               User       Roles</h1>
-<p>admin                admin      admin
-service              glance     admin
+<p>service              glance     admin
 service              nova       admin, [ResellerAdmin (swift only)]
 service              quantum    admin        # if enabled
 service              swift      admin        # if enabled
 service              cinder     admin        # if enabled
 service              heat       admin        # if enabled
 service              ceilometer admin        # if enabled
-demo                 admin      admin
-demo                 demo       Member, anotherrole
-invisible_to_admin   demo       Member
 Tempest Only:
 alt_demo             alt_demo  Member</p>
 <p>Variables set before calling this script:
@@ -374,31 +370,11 @@ KEYSTONE_CATALOG_BACKEND - used to determine service catalog creation</p>
     <span class="nb">echo</span> <span class="sb">`</span><span class="s2">&quot;$@&quot;</span> | awk <span class="s1">&#39;/ id / { print $4 }&#39;</span><span class="sb">`</span>
 <span class="o">}</span>
 
-
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="tenants">
-<h1>Tenants</h1>
+<p>Lookups</p>
 </td><td class=code><div class=highlight><pre>
-
-<span class="nv">ADMIN_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create --name<span class="o">=</span>admin<span class="k">)</span>
-<span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create --name<span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span><span class="k">)</span>
-<span class="nv">DEMO_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create --name<span class="o">=</span>demo<span class="k">)</span>
-<span class="nv">INVIS_TENANT</span><span class="o">=</span><span class="k">$(</span>get_id keystone tenant-create --name<span class="o">=</span>invisible_to_admin<span class="k">)</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="users">
-<h1>Users</h1>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nv">ADMIN_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>admin <span class="se">\</span>
-                                         --pass<span class="o">=</span><span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
-                                         --email<span class="o">=</span>admin@example.com<span class="k">)</span>
-<span class="nv">DEMO_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>demo <span class="se">\</span>
-                                        --pass<span class="o">=</span><span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
-                                        --email<span class="o">=</span>demo@example.com<span class="k">)</span>
+<span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+<span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -406,37 +382,6 @@ KEYSTONE_CATALOG_BACKEND - used to determine service catalog creation</p>
 <div class="section" id="roles">
 <h1>Roles</h1>
 </td><td class=code><div class=highlight><pre>
-
-<span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>admin<span class="k">)</span>
-<span class="nv">KEYSTONEADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>KeystoneAdmin<span class="k">)</span>
-<span class="nv">KEYSTONESERVICE_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>KeystoneServiceAdmin<span class="k">)</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>ANOTHER_ROLE demonstrates that an arbitrary role may be created and used
-TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">ANOTHER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>anotherrole<span class="k">)</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Add Roles to Users in Tenants</p>
-</td><td class=code><div class=highlight><pre>
-keystone user-role-add --user_id <span class="nv">$ADMIN_USER</span> --role_id <span class="nv">$ADMIN_ROLE</span> --tenant_id <span class="nv">$ADMIN_TENANT</span>
-keystone user-role-add --user_id <span class="nv">$ADMIN_USER</span> --role_id <span class="nv">$ADMIN_ROLE</span> --tenant_id <span class="nv">$DEMO_TENANT</span>
-keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <span class="nv">$ANOTHER_ROLE</span> --tenant_id <span class="nv">$DEMO_TENANT</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>TODO(termie): these two might be dubious</p>
-</td><td class=code><div class=highlight><pre>
-keystone user-role-add --user_id <span class="nv">$ADMIN_USER</span> --role_id <span class="nv">$KEYSTONEADMIN_ROLE</span> --tenant_id <span class="nv">$ADMIN_TENANT</span>
-keystone user-role-add --user_id <span class="nv">$ADMIN_USER</span> --role_id <span class="nv">$KEYSTONESERVICE_ROLE</span> --tenant_id <span class="nv">$ADMIN_TENANT</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>The Member role is used by Horizon and Swift so we need to keep it:</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">MEMBER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>Member<span class="k">)</span>
-keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <span class="nv">$MEMBER_ROLE</span> --tenant_id <span class="nv">$DEMO_TENANT</span>
-keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <span class="nv">$MEMBER_ROLE</span> --tenant_id <span class="nv">$INVIS_TENANT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The ResellerAdmin role is used by Nova and Ceilometer so we need to keep it.
@@ -451,22 +396,6 @@ role is also configurable in swift-proxy.conf</p>
 <div class="section" id="services">
 <h1>Services</h1>
 </td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Keystone</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">KEYSTONE_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
-        --name<span class="o">=</span>keystone <span class="se">\</span>
-        --type<span class="o">=</span>identity <span class="se">\</span>
-        --description<span class="o">=</span><span class="s2">&quot;Keystone Identity Service&quot;</span><span class="k">)</span>
-    keystone endpoint-create <span class="se">\</span>
-        --region RegionOne <span class="se">\</span>
-        --service_id <span class="nv">$KEYSTONE_SERVICE</span> <span class="se">\</span>
-        --publicurl <span class="s2">&quot;http://$SERVICE_HOST:\$(public_port)s/v2.0&quot;</span> <span class="se">\</span>
-        --adminurl <span class="s2">&quot;http://$SERVICE_HOST:\$(admin_port)s/v2.0&quot;</span> <span class="se">\</span>
-        --internalurl <span class="s2">&quot;http://$SERVICE_HOST:\$(public_port)s/v2.0&quot;</span>
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova</p>

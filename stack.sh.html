@@ -1585,17 +1585,22 @@ screen -r <span class="nv">$SCREEN_NAME</span> -X hardstatus alwayslastline <spa
     configure_keystone
     init_keystone
     start_keystone
-    <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= curl -s $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
-      <span class="nb">exit </span>1
-    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up a temporary admin URI for Keystone</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Do the keystone-specific bits from keystone_data.sh</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">export </span><span class="nv">OS_SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span>
+    <span class="nb">export </span><span class="nv">OS_SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span>
+    create_keystone_accounts
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">keystone_data.sh</tt> creates services, admin and demo users, and roles.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
-
     <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span> <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> <span class="nv">SERVICE_PASSWORD</span><span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> <span class="se">\</span>
     <span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span> <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> <span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="nv">$SERVICE_HOST</span> <span class="se">\</span>
     <span class="nv">S3_SERVICE_PORT</span><span class="o">=</span><span class="nv">$S3_SERVICE_PORT</span> <span class="nv">KEYSTONE_CATALOG_BACKEND</span><span class="o">=</span><span class="nv">$KEYSTONE_CATALOG_BACKEND</span> <span class="se">\</span>
@@ -1610,6 +1615,7 @@ screen -r <span class="nv">$SCREEN_NAME</span> -X hardstatus alwayslastline <spa
     <span class="nb">export </span><span class="nv">OS_TENANT_NAME</span><span class="o">=</span>admin
     <span class="nb">export </span><span class="nv">OS_USERNAME</span><span class="o">=</span>admin
     <span class="nb">export </span><span class="nv">OS_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span>
+    <span class="nb">unset </span>OS_SERVICE_TOKEN OS_SERVICE_ENDPOINT
 <span class="k">fi</span>
 
 
@@ -2583,7 +2589,7 @@ to access the site using your browser.</p>
 <p>If Keystone is present you can point <tt class="docutils literal">nova</tt> cli to this server</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Keystone is serving at $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_API_PORT/v2.0/&quot;</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Keystone is serving at $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0/&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Examples on using novaclient command line is in exercise.sh&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;The default users are: admin and demo&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;The password: $ADMIN_PASSWORD&quot;</span>
