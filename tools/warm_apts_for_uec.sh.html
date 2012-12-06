@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>build_tempest.sh</title>
+    <title>warm_apts_for_uec.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>build_tempest.sh</h1></th>
+        <th class=docs><h1>warm_apts_for_uec.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -331,77 +331,82 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>build_tempest.sh</strong></p>
+<p><strong>warm_apts_for_uec.sh</strong></p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Checkout and prepare a Tempest repo: <a class="reference external" href="https://github.com/openstack/tempest.git">https://github.com/openstack/tempest.git</a></p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">function </span>usage <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$0 - Check out and prepare a Tempest repo&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0&quot;</span>
-    <span class="nb">exit </span>1
-<span class="o">}</span>
-
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">=</span> <span class="s2">&quot;-h&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>usage
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Clean up any resources that may be in use</p>
+<p>Echo commands</p>
 </td><td class=code><div class=highlight><pre>
-cleanup<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">set</span> +o errexit
+<span class="nb">set</span> -o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Kill ourselves to signal any calling process</p>
+<p>Exit on error to stop unexpected errors</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">trap </span>2; <span class="nb">kill</span> -2 <span class="nv">$$</span>
-<span class="o">}</span>
-
-<span class="nb">trap </span>cleanup SIGHUP SIGINT SIGTERM SIGQUIT EXIT
+<span class="nb">set</span> -o errexit
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import common functions</p>
+<p>Change dir to top of devstack</p>
 </td><td class=code><div class=highlight><pre>
-. <span class="nv">$TOP_DIR</span>/functions
+<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Abort if localrc is not set</p>
+<p>Echo usage</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$TOP_DIR</span>/localrc <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You must have a localrc with ALL necessary passwords and configuration defined before proceeding.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;See stack.sh for required passwords.&quot;</span>
+usage<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Cache OpenStack dependencies on a uec image to speed up performance.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 [full path to raw uec base image]&quot;</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure this is a raw image</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! qemu-img info <span class="nv">$1</span> | grep -q <span class="s2">&quot;file format: raw&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>usage
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Source params</p>
+<p>Make sure we are in the correct dir</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> ./stackrc
+<span class="k">if</span> <span class="o">[</span> ! -d files/apts <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Please run this script from devstack/tools/&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Where Openstack code lives</p>
+<p>Mount the image</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
-
-<span class="nv">TEMPEST_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/tempest
+<span class="nv">STAGING_DIR</span><span class="o">=</span>/tmp/<span class="sb">`</span><span class="nb">echo</span> <span class="nv">$1</span> | sed  <span class="s2">&quot;s/\//_/g&quot;</span><span class="sb">`</span>.stage
+mkdir -p <span class="nv">$STAGING_DIR</span>
+umount <span class="nv">$STAGING_DIR</span> <span class="o">||</span> <span class="nb">true</span>
+sleep 1
+mount -t ext4 -o loop <span class="nv">$1</span> <span class="nv">$STAGING_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install tests and prerequisites</p>
+<p>Make sure that base requirements are installed</p>
 </td><td class=code><div class=highlight><pre>
-git_clone <span class="nv">$TEMPEST_REPO</span> <span class="nv">$TEMPEST_DIR</span> <span class="nv">$TEMPEST_BRANCH</span>
+cp /etc/resolv.conf <span class="nv">$STAGING_DIR</span>/etc/resolv.conf
 
-<span class="nb">trap</span> - SIGHUP SIGINT SIGTERM SIGQUIT EXIT
+</pre></div></td></tr><tr><td class=docs>
+<p>Perform caching on the base image to speed up subsequent runs</p>
+</td><td class=code><div class=highlight><pre>
+chroot <span class="nv">$STAGING_DIR</span> apt-get update
+chroot <span class="nv">$STAGING_DIR</span> apt-get install -y --download-only <span class="sb">`</span>cat files/apts/* | grep NOPRIME | cut -d<span class="se">\#</span> -f1<span class="sb">`</span>
+chroot <span class="nv">$STAGING_DIR</span> apt-get install -y --force-yes <span class="sb">`</span>cat files/apts/* | grep -v NOPRIME | cut -d<span class="se">\#</span> -f1<span class="sb">`</span> <span class="o">||</span> <span class="nb">true</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Unmount</p>
+</td><td class=code><div class=highlight><pre>
+umount <span class="nv">$STAGING_DIR</span>
 
 
 </pre></div></td></tr><tr><td class=docs>

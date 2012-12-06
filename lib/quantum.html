@@ -339,8 +339,19 @@ Save trace setting</p>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
+<span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
 <span class="nb">export </span><span class="nv">QUANTUM_TEST_CONFIG_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">QUANTUM_TEST_CONFIG_FILE</span><span class="k">:-</span><span class="s2">&quot;/etc/quantum/debug.ini&quot;</span><span class="k">}</span>
 <span class="nv">QUANTUM_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">QUANTUM_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/quantum</span><span class="k">}</span>
+
+<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+<span class="k">    </span><span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
+    <span class="nv">Q_RR_CONF_FILE</span><span class="o">=</span>/etc/quantum/rootwrap.conf
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_ROOTWRAP&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo $QUANTUM_DIR/bin/quantum-rootwrap $Q_RR_CONF_FILE&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configures keystone integration for quantum service and agents</p>
@@ -418,7 +429,7 @@ Save trace setting</p>
     <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
     <span class="nv">net_id</span><span class="o">=</span><span class="sb">`</span>_get_net_id <span class="nv">$from_net</span><span class="sb">`</span>
     <span class="nv">probe_id</span><span class="o">=</span><span class="sb">`</span>quantum-debug --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> probe-list -c id -c network_id | grep <span class="nv">$net_id</span> | awk <span class="s1">&#39;{print $2}&#39;</span> | head -n 1<span class="sb">`</span>
-    <span class="nb">echo</span> <span class="s2">&quot;sudo ip netns exec qprobe-$probe_id&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$Q_RR_COMMAND ip netns exec qprobe-$probe_id&quot;</span>
 <span class="o">}</span>
 
 <span class="k">function </span>delete_probe<span class="o">()</span> <span class="o">{</span>
@@ -436,9 +447,9 @@ Save trace setting</p>
     <span class="nb">local </span><span class="nv">check_command</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
     <span class="nv">probe_cmd</span><span class="o">=</span><span class="sb">`</span>_get_probe_cmd_prefix <span class="nv">$from_net</span><span class="sb">`</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$expected&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">check_command</span><span class="o">=</span><span class="s2">&quot;while ! $probe_cmd ping -c1 -w1 $ip; do sleep 1; done&quot;</span>
+<span class="k">        </span><span class="nv">check_command</span><span class="o">=</span><span class="s2">&quot;while ! $probe_cmd ping -w 1 -c 1 $ip; do sleep 1; done&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span><span class="nv">check_command</span><span class="o">=</span><span class="s2">&quot;while $probe_cmd ping -c1 -w1 $ip; do sleep 1; done&quot;</span>
+<span class="k">        </span><span class="nv">check_command</span><span class="o">=</span><span class="s2">&quot;while $probe_cmd ping -w 1 -c 1 $ip; do sleep 1; done&quot;</span>
     <span class="k">fi</span>
 <span class="k">    if</span> ! timeout <span class="nv">$timeout_sec</span> sh -c <span class="s2">&quot;$check_command&quot;</span>; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$expected&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>

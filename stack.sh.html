@@ -751,7 +751,6 @@ address.</p>
 <span class="nv">OPENSTACKCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-openstackclient
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
 <span class="nv">SWIFT3_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift3
-<span class="nv">QUANTUM_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/quantum
 <span class="nv">QUANTUM_CLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-quantumclient
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1323,12 +1322,6 @@ FIXME add to <tt class="docutils literal">files/apts/quantum</tt>, but don't ins
     <span class="nv">$DEST</span>/.venv/bin/pip freeze &gt; <span class="nv">$DEST</span>/requires-pre-pip
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Install python requirements</p>
-</td><td class=code><div class=highlight><pre>
-echo_summary <span class="s2">&quot;Installing Python prerequisites&quot;</span>
-pip_install <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/pips | sort -u<span class="k">)</span>
-
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="check-out-source">
@@ -1830,15 +1823,8 @@ provider GRE tunnels when <tt class="docutils literal">ENABLE_TENANT_TUNNELS</tt
     iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> DATABASE sql_connection <span class="nv">$dburl</span>
     <span class="nb">unset </span>dburl
 
-    <span class="nv">Q_CONF_FILE</span><span class="o">=</span>/etc/quantum/quantum.conf
     cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$Q_CONF_FILE</span>
-    <span class="nv">Q_RR_CONF_FILE</span><span class="o">=</span>/etc/quantum/rootwrap.conf
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_ROOTWRAP&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo $QUANTUM_DIR/bin/quantum-rootwrap $Q_RR_CONF_FILE&quot;</span>
-    <span class="k">fi</span>
-<span class="k">    </span>cp -p <span class="nv">$QUANTUM_DIR</span>/etc/rootwrap.conf <span class="nv">$Q_RR_CONF_FILE</span>
+    cp -p <span class="nv">$QUANTUM_DIR</span>/etc/rootwrap.conf <span class="nv">$Q_RR_CONF_FILE</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Copy over the config and filter bits</p>
@@ -2135,14 +2121,23 @@ complex physical network configurations.</p>
         iniset <span class="nv">$Q_CONF_FILE</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_DEBUG_COMMAND&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">Q_DEBUG_CONF_FILE</span><span class="o">=</span>/etc/quantum/debug.ini
-        cp <span class="nv">$QUANTUM_DIR</span>/etc/l3_agent.ini <span class="nv">$Q_DEBUG_CONF_FILE</span>
-        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT verbose False
-        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT debug False
-        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT metadata_ip <span class="nv">$Q_META_DATA_IP</span>
-        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
-        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;sudo&quot;</span>
-    <span class="k">fi</span>
+<span class="k">        </span>cp <span class="nv">$QUANTUM_DIR</span>/etc/l3_agent.ini <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span>
+        iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT verbose False
+        iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT debug False
+        iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
+        quantum_setup_keystone <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT set_auth_url
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">==</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
+            iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
+        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
+            iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="s1">&#39;&#39;</span>
+        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.RyuInterfaceDriver
+            iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
+            iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT ryu_api_host <span class="nv">$RYU_API_HOST</span>:<span class="nv">$RYU_API_PORT</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="k">fi</span>
 
 
@@ -2424,7 +2419,9 @@ Since quantum command is executed in admin context at this point,
             iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT router_id <span class="nv">$ROUTER_ID</span>
         <span class="k">fi</span>
 <span class="k">   fi</span>
-
+<span class="k">   if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_DEBUG_COMMAND&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">      </span>setup_quantum
+   <span class="k">fi</span>
 <span class="k">elif </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span> <span class="o">&amp;&amp;</span> is_service_enabled n-net; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a small network</p>
