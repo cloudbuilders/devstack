@@ -334,27 +334,38 @@ ul.auto-toc {
 <p>lib/tempest
 Dependencies:
 <tt class="docutils literal">functions</tt> file
-<tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined
-&lt;list other global vars that are assumed to be defined&gt;</p>
+<tt class="docutils literal">lib/nova</tt> service is runing
+&lt;list other global vars that are assumed to be defined&gt;
+- DEST
+- ADMIN_PASSWORD
+- OS_USERNAME
+- DEFAULT_IMAGE_NAME
+- S3_SERVICE_PORT
+- SERVICE_HOST
+- BASE_SQL_CONN <tt class="docutils literal">lib/database</tt> declares
+Optional Dependencies:
+IDENTITY_*
+ALT_* (similar vars exists in keystone_data.sh)
+IMAGE_*
+LIVE_MIGRATION_AVAILABLE
+DEFAULT_INSTANCE_TYPE
+DEFAULT_INSTANCE_USER
+USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION
+<tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
+<p>install_tempest
+configure_tempest
+init_tempest</p>
 </td><td class=code><div class=highlight><pre>
 
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
-<p>install_XXXX
-configure_XXXX
-init_XXXX
-start_XXXX
-stop_XXXX
-cleanup_XXXX</p>
-</td><td class=code><div class=highlight><pre>
+<span class="c">## start_tempest</span>
+<span class="c">## stop_tempest</span>
+<span class="c">## cleanup_tempest</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
-
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="defaults">
@@ -368,8 +379,13 @@ cleanup_XXXX</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up default directories</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nv">NOVA_SOURCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
 <span class="nv">TEMPEST_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/tempest
-<span class="nv">TEMPEST_CONF_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/tempest/etc
+<span class="nv">TEMPEST_CONF_DIR</span><span class="o">=</span><span class="nv">$TEMPEST_DIR</span>/etc
+<span class="nv">TEMPEST_CONF</span><span class="o">=</span><span class="nv">$TEMPEST_CONF_DIR</span>/tempest.conf
+
+<span class="nv">BUILD_INTERVAL</span><span class="o">=</span>3
+<span class="nv">BUILD_TIMEOUT</span><span class="o">=</span>400
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -382,16 +398,200 @@ cleanup_XXXX</p>
 <p>configure_tempest() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_tempest<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span>IMAGE_LINES
+    <span class="nb">local </span>IMAGES
+    <span class="nb">local </span>NUM_IMAGES
+    <span class="nb">local </span>IMAGE_UUID
+    <span class="nb">local </span>IMAGE_UUID_ALT
+    <span class="nb">local </span>errexit
+
+    <span class="c">#TODO(afazekas):</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>sudo python setup.py deploy
-iniset $tempest_CONF ...
-This function intentionally left blank</p>
-<p>TODO(sdague) actually move the guts of configure tempest
-into this function</p>
+<p>sudo python setup.py deploy</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">cd </span>tools
-    ./configure_tempest.sh
-    <span class="nb">cd</span> ..
+
+</pre></div></td></tr><tr><td class=docs>
+<p>This function exits on an error so that errors don't compound and you see
+only the first error that occured.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">errexit</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep errexit<span class="k">)</span>
+    <span class="nb">set</span> -o errexit
+
+    <span class="c">#Save IFS</span>
+    <span class="nv">ifs</span><span class="o">=</span><span class="nv">$IFS</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Glance should already contain images to be used in tempest
+testing. Here we simply look for images stored in Glance
+and set the appropriate variables for use in the tempest config
+We ignore ramdisk and kernel images, look for the default image
+DEFAULT_IMAGE_NAME. If not found, we set the IMAGE_UUID to the
+first image returned and set IMAGE_UUID_ALT to the second,
+if there is more than one returned...
+... Also ensure we only take active images, so we don't get snapshots in process</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">IMAGE_LINES</span><span class="o">=</span><span class="sb">`</span>glance image-list<span class="sb">`</span>
+    <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\n\r&#39;</span>
+    <span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">for </span>line in <span class="nv">$IMAGE_LINES</span>; <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[</span> -z <span class="nv">$DEFAULT_IMAGE_NAME</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | cut -d&#39; &#39; -f2`&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | grep &quot;</span><span class="nv">$DEFAULT_IMAGE_NAME</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    done</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create array of image UUIDs...</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
+    <span class="nv">IMAGES</span><span class="o">=(</span><span class="nv">$IMAGES</span><span class="o">)</span>
+    <span class="nv">NUM_IMAGES</span><span class="o">=</span><span class="k">${#</span><span class="nv">IMAGES</span><span class="p">[*]</span><span class="k">}</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Found $NUM_IMAGES images&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_IMAGES</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Found no valid images to use!&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nv">IMAGE_UUID</span><span class="o">=</span><span class="k">${</span><span class="nv">IMAGES</span><span class="p">[0]</span><span class="k">}</span>
+    <span class="nv">IMAGE_UUID_ALT</span><span class="o">=</span><span class="nv">$IMAGE_UUID</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_IMAGES</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">IMAGE_UUID_ALT</span><span class="o">=</span><span class="k">${</span><span class="nv">IMAGES</span><span class="p">[1]</span><span class="k">}</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create tempest.conf from tempest.conf.sample
+copy every time, because the image UUIDS are going to change</p>
+</td><td class=code><div class=highlight><pre>
+    cp <span class="nv">$TEMPEST_CONF</span>.sample <span class="nv">$TEMPEST_CONF</span>
+
+    <span class="nv">IDENTITY_USE_SSL</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_USE_SSL</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+    <span class="nv">IDENTITY_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
+    <span class="nv">IDENTITY_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(jaypipes): This is dumb and needs to be removed
+from the Tempest configuration file entirely...</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">IDENTITY_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_PATH</span><span class="k">:-</span><span class="nv">tokens</span><span class="k">}</span>
+
+    <span class="nv">PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>See files/keystone_data.sh where alt_demo user
+and tenant are set up...</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">ALT_USERNAME</span><span class="o">=</span><span class="k">${</span><span class="nv">ALT_USERNAME</span><span class="k">:-</span><span class="nv">alt_demo</span><span class="k">}</span>
+    <span class="nv">ALT_TENANT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">ALT_TENANT_NAME</span><span class="k">:-</span><span class="nv">alt_demo</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Check Nova for existing flavors and, if set, look for the
+DEFAULT_INSTANCE_TYPE and use that. Otherwise, just use the first flavor.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">FLAVOR_LINES</span><span class="o">=</span><span class="sb">`</span>nova flavor-list<span class="sb">`</span>
+    <span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot;$(echo -e &quot;</span><span class="se">\n\r</span><span class="s2">&quot;)&quot;</span>
+    <span class="nv">FLAVORS</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">for </span>line in <span class="nv">$FLAVOR_LINES</span>; <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[</span> -z <span class="nv">$DEFAULT_INSTANCE_TYPE</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">FLAVORS</span><span class="o">=</span><span class="s2">&quot;$FLAVORS `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">FLAVORS</span><span class="o">=</span><span class="s2">&quot;$FLAVORS `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep &quot;</span><span class="nv">$DEFAULT_INSTANCE_TYPE</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    done</span>
+
+<span class="k">    </span><span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
+    <span class="nv">FLAVORS</span><span class="o">=(</span><span class="nv">$FLAVORS</span><span class="o">)</span>
+    <span class="nv">NUM_FLAVORS</span><span class="o">=</span><span class="k">${#</span><span class="nv">FLAVORS</span><span class="p">[*]</span><span class="k">}</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Found $NUM_FLAVORS flavors&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_FLAVORS</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Found no valid flavors to use!&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nv">FLAVOR_REF</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAVORS</span><span class="p">[0]</span><span class="k">}</span>
+    <span class="nv">FLAVOR_REF_ALT</span><span class="o">=</span><span class="nv">$FLAVOR_REF</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_FLAVORS</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">FLAVOR_REF_ALT</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAVORS</span><span class="p">[1]</span><span class="k">}</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Timeouts</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute build_timeout <span class="nv">$BUILD_TIMEOUT</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> volume build_timeout <span class="nv">$BUILD_TIMEOUT</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> boto build_timeout <span class="nv">$BUILD_TIMEOUT</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute build_interval <span class="nv">$BUILD_INTERVAL</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> volume build_interval <span class="nv">$BUILD_INTERVAL</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> boto build_interval <span class="nv">$BUILD_INTERVAL</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> boto http_socket_timeout 5
+
+    iniset <span class="nv">$TEMPEST_CONF</span> identity use_ssl <span class="nv">$IDENTITY_USE_SSL</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> identity host <span class="nv">$IDENTITY_HOST</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> identity port <span class="nv">$IDENTITY_PORT</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> identity path <span class="nv">$IDENTITY_PATH</span>
+
+    iniset <span class="nv">$TEMPEST_CONF</span> compute password <span class="s2">&quot;$PASSWORD&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_username <span class="nv">$ALT_USERNAME</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_password <span class="s2">&quot;$PASSWORD&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_tenant_name <span class="nv">$ALT_TENANT_NAME</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute resize_available False
+    iniset <span class="nv">$TEMPEST_CONF</span> compute change_password_available False
+    iniset <span class="nv">$TEMPEST_CONF</span> compute compute_log_level ERROR
+    <span class="c">#Skip until #1074039 is fixed</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute run_ssh False
+    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">$OS_USERNAME</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute network_for_ssh private
+    iniset <span class="nv">$TEMPEST_CONF</span> compute ip_version_for_ssh 4
+    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_timeout 4
+    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref <span class="nv">$IMAGE_UUID</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref_alt <span class="nv">$IMAGE_UUID_ALT</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref <span class="nv">$FLAVOR_REF</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref_alt <span class="nv">$FLAVOR_REF_ALT</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute source_dir <span class="nv">$NOVA_SOURCE_DIR</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute live_migration_available <span class="k">${</span><span class="nv">LIVE_MIGRATION_AVAILABLE</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute use_block_migration_for_live_migration	<span class="k">${</span><span class="nv">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Inherited behavior, might be wrong</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute bin_dir <span class="nv">$NOVA_BIN_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(jaypipes): Create the key file here... right now, no whitebox
+tests actually use a key.</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute path_to_private_key <span class="nv">$TEMPEST_DIR</span>/id_rsa
+    iniset <span class="nv">$TEMPEST_CONF</span> compute db_uri <span class="nv">$BASE_SQL_CONN</span>/nova
+
+</pre></div></td></tr><tr><td class=docs>
+<p>image</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> image host <span class="k">${</span><span class="nv">IMAGE_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> image port <span class="k">${</span><span class="nv">IMAGE_PORT</span><span class="k">:-</span><span class="nv">9292</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> image password <span class="s2">&quot;$PASSWORD&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>identity-admin</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;identity-admin&quot;</span> password <span class="s2">&quot;$PASSWORD&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>compute admin</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$PASSWORD&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>network</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> network api_version 2.0
+
+    <span class="c">#boto</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> boto ec2_url <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> boto s3_url <span class="s2">&quot;http://$SERVICE_HOST:${S3_SERVICE_PORT:-3333}&quot;</span>
+
+    <span class="nb">echo</span> <span class="s2">&quot;Created tempest configuration file:&quot;</span>
+    cat <span class="nv">$TEMPEST_CONF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Restore IFS</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">IFS</span><span class="o">=</span><span class="nv">$ifs</span>
+    <span class="c">#Restore errexit</span>
+    <span class="nv">$errexit</span>
 <span class="o">}</span>
 
 
@@ -407,7 +607,6 @@ install them here instead.</p>
 </td><td class=code><div class=highlight><pre>
     pip_install -r <span class="nv">$TEMPEST_DIR</span>/tools/pip-requires
 <span class="o">}</span>
-
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
