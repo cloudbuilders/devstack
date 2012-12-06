@@ -344,12 +344,12 @@ SERVICE_{TENANT_NAME|PASSWORD} must be defined
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="stack-sh">
 <h1>stack.sh</h1>
-<p>install_XXX
-configure_XXX
-init_XXX
-start_XXX
-stop_XXX
-cleanup_XXX</p>
+<p>install_cinder
+configure_cinder
+init_cinder
+start_cinder
+stop_cinder
+cleanup_cinder</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -625,7 +625,7 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>_configure_tgt_for_config_d<span class="o">()</span> <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> ! -d /etc/tgt/conf.d/ <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mkdir /etc/tgt/conf.d
+<span class="k">        </span>sudo mkdir -p /etc/tgt/conf.d
         <span class="nb">echo</span> <span class="s2">&quot;include /etc/tgt/conf.d/*.conf&quot;</span> | sudo tee -a /etc/tgt/targets.conf
     <span class="k">fi</span>
 <span class="o">}</span>
@@ -635,11 +635,11 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_cinder<span class="o">()</span> <span class="o">{</span>
     <span class="k">if </span>is_service_enabled c-vol; <span class="k">then</span>
+<span class="k">        </span>_configure_tgt_for_config_d
+        <span class="k">if</span> <span class="o">[[</span> ! -f /etc/tgt/conf.d/stack.conf <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;include $CINDER_STATE_PATH/volumes/*&quot;</span> | sudo tee /etc/tgt/conf.d/stack.conf
+        <span class="k">fi</span>
 <span class="k">        if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">            </span>_configure_tgt_for_config_d
-            <span class="k">if</span> <span class="o">[[</span> ! -f /etc/tgt/conf.d/cinder.conf <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">               </span><span class="nb">echo</span> <span class="s2">&quot;include $CINDER_STATE_PATH/volumes/*&quot;</span> | sudo tee /etc/tgt/conf.d/cinder.conf
-            <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>tgt in oneiric doesn't restart properly if tgtd isn't running
 do it in two steps</p>
