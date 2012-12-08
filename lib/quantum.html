@@ -349,9 +349,55 @@ Save trace setting</p>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_ROOTWRAP&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span><span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo $QUANTUM_DIR/bin/quantum-rootwrap $Q_RR_CONF_FILE&quot;</span>
+<span class="k">        </span><span class="nv">QUANTUM_ROOTWRAP</span><span class="o">=</span><span class="k">$(</span>get_rootwrap_location quantum<span class="k">)</span>
+        <span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo $QUANTUM_ROOTWRAP $Q_RR_CONF_FILE&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>configure_quantum_rootwrap() - configure Quantum's rootwrap</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>configure_quantum_rootwrap<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_ROOTWRAP&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        return</span>
+<span class="k">    fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Deploy new rootwrap filters files (owned by root).
+Wipe any existing rootwrap.d files first</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">Q_CONF_ROOTWRAP_D</span><span class="o">=</span>/etc/quantum/rootwrap.d
+    <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$Q_CONF_ROOTWRAP_D</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo rm -rf <span class="nv">$Q_CONF_ROOTWRAP_D</span>
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Deploy filters to /etc/quantum/rootwrap.d</p>
+</td><td class=code><div class=highlight><pre>
+    mkdir -p -m 755 <span class="nv">$Q_CONF_ROOTWRAP_D</span>
+    cp -pr <span class="nv">$QUANTUM_DIR</span>/etc/quantum/rootwrap.d/* <span class="nv">$Q_CONF_ROOTWRAP_D</span>/
+    sudo chown -R root:root <span class="nv">$Q_CONF_ROOTWRAP_D</span>
+    sudo chmod 644 <span class="nv">$Q_CONF_ROOTWRAP_D</span>/*
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up rootwrap.conf, pointing to /etc/quantum/rootwrap.d</p>
+</td><td class=code><div class=highlight><pre>
+    sudo cp -p <span class="nv">$QUANTUM_DIR</span>/etc/rootwrap.conf <span class="nv">$Q_RR_CONF_FILE</span>
+    sudo sed -e <span class="s2">&quot;s:^filters_path=.*$:filters_path=$Q_CONF_ROOTWRAP_D:&quot;</span> -i <span class="nv">$Q_RR_CONF_FILE</span>
+    sudo chown root:root <span class="nv">$Q_RR_CONF_FILE</span>
+    sudo chmod 0644 <span class="nv">$Q_RR_CONF_FILE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Specify rootwrap.conf as first parameter to quantum-rootwrap</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">ROOTWRAP_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_ROOTWRAP $Q_RR_CONF_FILE *&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up the rootwrap sudoers for quantum</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$USER ALL=(root) NOPASSWD: $ROOTWRAP_SUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+    chmod 0440 <span class="nv">$TEMPFILE</span>
+    sudo chown root:root <span class="nv">$TEMPFILE</span>
+    sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/quantum-rootwrap
+<span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configures keystone integration for quantum service and agents</p>
