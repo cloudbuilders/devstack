@@ -336,21 +336,21 @@ Dependencies:
 <tt class="docutils literal">functions</tt> file
 <tt class="docutils literal">lib/nova</tt> service is runing
 &lt;list other global vars that are assumed to be defined&gt;
-- DEST
-- ADMIN_PASSWORD
-- OS_USERNAME
-- DEFAULT_IMAGE_NAME
-- S3_SERVICE_PORT
-- SERVICE_HOST
-- BASE_SQL_CONN <tt class="docutils literal">lib/database</tt> declares
+- <tt class="docutils literal">DEST</tt>
+- <tt class="docutils literal">ADMIN_PASSWORD</tt>
+- <tt class="docutils literal">DEFAULT_IMAGE_NAME</tt>
+- <tt class="docutils literal">S3_SERVICE_PORT</tt>
+- <tt class="docutils literal">SERVICE_HOST</tt>
+- <tt class="docutils literal">BASE_SQL_CONN</tt> <tt class="docutils literal">lib/database</tt> declares
 Optional Dependencies:
-IDENTITY_*
+IDENTITY_USE_SSL, IDENTITY_HOST, IDENTITY_PORT, IDENTITY_PATH
 ALT_* (similar vars exists in keystone_data.sh)
-IMAGE_*
-LIVE_MIGRATION_AVAILABLE
-DEFAULT_INSTANCE_TYPE
-DEFAULT_INSTANCE_USER
-USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION
+<tt class="docutils literal">OS_USERNAME</tt>
+<tt class="docutils literal">IMAGE_PORT</tt>, <tt class="docutils literal">IMAGE_HOST</tt>
+<tt class="docutils literal">LIVE_MIGRATION_AVAILABLE</tt>
+<tt class="docutils literal">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</tt>
+<tt class="docutils literal">DEFAULT_INSTANCE_TYPE</tt>
+<tt class="docutils literal">DEFAULT_INSTANCE_USER</tt>
 <tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
 <p>install_tempest
 configure_tempest
@@ -398,12 +398,17 @@ init_tempest</p>
 <p>configure_tempest() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_tempest<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span>IMAGE_LINES
-    <span class="nb">local </span>IMAGES
-    <span class="nb">local </span>NUM_IMAGES
-    <span class="nb">local </span>IMAGE_UUID
-    <span class="nb">local </span>IMAGE_UUID_ALT
+    <span class="nb">local </span>image_lines
+    <span class="nb">local </span>images
+    <span class="nb">local </span>num_images
+    <span class="nb">local </span>image_uuid
+    <span class="nb">local </span>image_uuid_alt
     <span class="nb">local </span>errexit
+    <span class="nb">local </span>password
+    <span class="nb">local </span>line
+    <span class="nb">local </span>flavors
+    <span class="nb">local </span>flavors_ref
+    <span class="nb">local </span>flavor_lines
 
     <span class="c">#TODO(afazekas):</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -425,36 +430,36 @@ only the first error that occured.</p>
 testing. Here we simply look for images stored in Glance
 and set the appropriate variables for use in the tempest config
 We ignore ramdisk and kernel images, look for the default image
-DEFAULT_IMAGE_NAME. If not found, we set the IMAGE_UUID to the
-first image returned and set IMAGE_UUID_ALT to the second,
+<tt class="docutils literal">DEFAULT_IMAGE_NAME</tt>. If not found, we set the <tt class="docutils literal">image_uuid</tt> to the
+first image returned and set <tt class="docutils literal">image_uuid_alt</tt> to the second,
 if there is more than one returned...
 ... Also ensure we only take active images, so we don't get snapshots in process</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">IMAGE_LINES</span><span class="o">=</span><span class="sb">`</span>glance image-list<span class="sb">`</span>
+    <span class="nv">image_lines</span><span class="o">=</span><span class="sb">`</span>glance image-list<span class="sb">`</span>
     <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\n\r&#39;</span>
-    <span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">for </span>line in <span class="nv">$IMAGE_LINES</span>; <span class="k">do</span>
+    <span class="nv">images</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">for </span>line in <span class="nv">$image_lines</span>; <span class="k">do</span>
 <span class="k">        if</span> <span class="o">[</span> -z <span class="nv">$DEFAULT_IMAGE_NAME</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | cut -d&#39; &#39; -f2`&quot;</span>
+<span class="k">            </span><span class="nv">images</span><span class="o">=</span><span class="s2">&quot;$images `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | cut -d&#39; &#39; -f2`&quot;</span>
         <span class="k">else</span>
-<span class="k">            </span><span class="nv">IMAGES</span><span class="o">=</span><span class="s2">&quot;$IMAGES `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | grep &quot;</span><span class="nv">$DEFAULT_IMAGE_NAME</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+<span class="k">            </span><span class="nv">images</span><span class="o">=</span><span class="s2">&quot;$images `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | grep &quot;</span><span class="nv">$DEFAULT_IMAGE_NAME</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
         <span class="k">fi</span>
 <span class="k">    done</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create array of image UUIDs...</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
-    <span class="nv">IMAGES</span><span class="o">=(</span><span class="nv">$IMAGES</span><span class="o">)</span>
-    <span class="nv">NUM_IMAGES</span><span class="o">=</span><span class="k">${#</span><span class="nv">IMAGES</span><span class="p">[*]</span><span class="k">}</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Found $NUM_IMAGES images&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_IMAGES</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+    <span class="nv">images</span><span class="o">=(</span><span class="nv">$images</span><span class="o">)</span>
+    <span class="nv">num_images</span><span class="o">=</span><span class="k">${#</span><span class="nv">images</span><span class="p">[*]</span><span class="k">}</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Found $num_images images&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_images</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Found no valid images to use!&quot;</span>
         <span class="nb">exit </span>1
     <span class="k">fi</span>
-<span class="k">    </span><span class="nv">IMAGE_UUID</span><span class="o">=</span><span class="k">${</span><span class="nv">IMAGES</span><span class="p">[0]</span><span class="k">}</span>
-    <span class="nv">IMAGE_UUID_ALT</span><span class="o">=</span><span class="nv">$IMAGE_UUID</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_IMAGES</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IMAGE_UUID_ALT</span><span class="o">=</span><span class="k">${</span><span class="nv">IMAGES</span><span class="p">[1]</span><span class="k">}</span>
+<span class="k">    </span><span class="nv">image_uuid</span><span class="o">=</span><span class="k">${</span><span class="nv">images</span><span class="p">[0]</span><span class="k">}</span>
+    <span class="nv">image_uuid_alt</span><span class="o">=</span><span class="nv">$image_uuid</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_images</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">image_uuid_alt</span><span class="o">=</span><span class="k">${</span><span class="nv">images</span><span class="p">[1]</span><span class="k">}</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -472,7 +477,7 @@ from the Tempest configuration file entirely...</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">IDENTITY_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_PATH</span><span class="k">:-</span><span class="nv">tokens</span><span class="k">}</span>
 
-    <span class="nv">PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
+    <span class="nv">password</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>See files/keystone_data.sh where alt_demo user
@@ -483,31 +488,31 @@ and tenant are set up...</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Check Nova for existing flavors and, if set, look for the
-DEFAULT_INSTANCE_TYPE and use that. Otherwise, just use the first flavor.</p>
+<tt class="docutils literal">DEFAULT_INSTANCE_TYPE</tt> and use that. Otherwise, just use the first flavor.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">FLAVOR_LINES</span><span class="o">=</span><span class="sb">`</span>nova flavor-list<span class="sb">`</span>
-    <span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot;$(echo -e &quot;</span><span class="se">\n\r</span><span class="s2">&quot;)&quot;</span>
-    <span class="nv">FLAVORS</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">for </span>line in <span class="nv">$FLAVOR_LINES</span>; <span class="k">do</span>
+    <span class="nv">flavor_lines</span><span class="o">=</span><span class="sb">`</span>nova flavor-list<span class="sb">`</span>
+    <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\r\n&#39;</span>
+    <span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">for </span>line in <span class="nv">$flavor_lines</span>; <span class="k">do</span>
 <span class="k">        if</span> <span class="o">[</span> -z <span class="nv">$DEFAULT_INSTANCE_TYPE</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">FLAVORS</span><span class="o">=</span><span class="s2">&quot;$FLAVORS `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+<span class="k">            </span><span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;$flavors `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
         <span class="k">else</span>
-<span class="k">            </span><span class="nv">FLAVORS</span><span class="o">=</span><span class="s2">&quot;$FLAVORS `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep &quot;</span><span class="nv">$DEFAULT_INSTANCE_TYPE</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+<span class="k">            </span><span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;$flavors `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep &quot;</span><span class="nv">$DEFAULT_INSTANCE_TYPE</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
     <span class="k">fi</span>
 <span class="k">    done</span>
 
 <span class="k">    </span><span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
-    <span class="nv">FLAVORS</span><span class="o">=(</span><span class="nv">$FLAVORS</span><span class="o">)</span>
-    <span class="nv">NUM_FLAVORS</span><span class="o">=</span><span class="k">${#</span><span class="nv">FLAVORS</span><span class="p">[*]</span><span class="k">}</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Found $NUM_FLAVORS flavors&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_FLAVORS</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+    <span class="nv">flavors</span><span class="o">=(</span><span class="nv">$flavors</span><span class="o">)</span>
+    <span class="nv">num_flavors</span><span class="o">=</span><span class="k">${#</span><span class="nv">flavors</span><span class="p">[*]</span><span class="k">}</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Found $num_flavors flavors&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_flavors</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Found no valid flavors to use!&quot;</span>
         <span class="nb">exit </span>1
     <span class="k">fi</span>
-<span class="k">    </span><span class="nv">FLAVOR_REF</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAVORS</span><span class="p">[0]</span><span class="k">}</span>
-    <span class="nv">FLAVOR_REF_ALT</span><span class="o">=</span><span class="nv">$FLAVOR_REF</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$NUM_FLAVORS</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">FLAVOR_REF_ALT</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAVORS</span><span class="p">[1]</span><span class="k">}</span>
+<span class="k">    </span><span class="nv">flavor_ref</span><span class="o">=</span><span class="k">${</span><span class="nv">flavors</span><span class="p">[0]</span><span class="k">}</span>
+    <span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="nv">$flavor_ref</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_flavors</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="k">${</span><span class="nv">flavors</span><span class="p">[1]</span><span class="k">}</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -526,9 +531,9 @@ DEFAULT_INSTANCE_TYPE and use that. Otherwise, just use the first flavor.</p>
     iniset <span class="nv">$TEMPEST_CONF</span> identity port <span class="nv">$IDENTITY_PORT</span>
     iniset <span class="nv">$TEMPEST_CONF</span> identity path <span class="nv">$IDENTITY_PATH</span>
 
-    iniset <span class="nv">$TEMPEST_CONF</span> compute password <span class="s2">&quot;$PASSWORD&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute password <span class="s2">&quot;$password&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute alt_username <span class="nv">$ALT_USERNAME</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_password <span class="s2">&quot;$PASSWORD&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_password <span class="s2">&quot;$password&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute alt_tenant_name <span class="nv">$ALT_TENANT_NAME</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute resize_available False
     iniset <span class="nv">$TEMPEST_CONF</span> compute change_password_available False
@@ -539,10 +544,10 @@ DEFAULT_INSTANCE_TYPE and use that. Otherwise, just use the first flavor.</p>
     iniset <span class="nv">$TEMPEST_CONF</span> compute network_for_ssh private
     iniset <span class="nv">$TEMPEST_CONF</span> compute ip_version_for_ssh 4
     iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_timeout 4
-    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref <span class="nv">$IMAGE_UUID</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref_alt <span class="nv">$IMAGE_UUID_ALT</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref <span class="nv">$FLAVOR_REF</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref_alt <span class="nv">$FLAVOR_REF_ALT</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref <span class="nv">$image_uuid</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref_alt <span class="nv">$image_uuid_alt</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref <span class="nv">$flavor_ref</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref_alt <span class="nv">$flavor_ref_alt</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute source_dir <span class="nv">$NOVA_SOURCE_DIR</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute live_migration_available <span class="k">${</span><span class="nv">LIVE_MIGRATION_AVAILABLE</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute use_block_migration_for_live_migration	<span class="k">${</span><span class="nv">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
@@ -562,17 +567,17 @@ tests actually use a key.</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$TEMPEST_CONF</span> image host <span class="k">${</span><span class="nv">IMAGE_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
     iniset <span class="nv">$TEMPEST_CONF</span> image port <span class="k">${</span><span class="nv">IMAGE_PORT</span><span class="k">:-</span><span class="nv">9292</span><span class="k">}</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> image password <span class="s2">&quot;$PASSWORD&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> image password <span class="s2">&quot;$password&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>identity-admin</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;identity-admin&quot;</span> password <span class="s2">&quot;$PASSWORD&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;identity-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>compute admin</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$PASSWORD&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>network</p>
