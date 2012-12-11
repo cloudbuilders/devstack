@@ -447,15 +447,19 @@ GetDistro
 
 <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">    </span><span class="nv">PKG_DIR</span><span class="o">=</span><span class="nv">$FILES</span>/apts
-<span class="k">else</span>
+<span class="k">elif </span>is_fedora; <span class="k">then</span>
 <span class="k">    </span><span class="nv">PKG_DIR</span><span class="o">=</span><span class="nv">$FILES</span>/rpms
+<span class="k">else</span>
+<span class="k">    </span>exit_distro_not_supported <span class="s2">&quot;list of packages&quot;</span>
 <span class="k">fi</span>
 
 <span class="k">for </span>p in <span class="k">$(</span>get_packages <span class="nv">$PKG_DIR</span><span class="k">)</span>; <span class="k">do</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">ver</span><span class="o">=</span><span class="k">$(</span>dpkg -s <span class="nv">$p</span> 2&gt;/dev/null | grep <span class="s1">&#39;^Version: &#39;</span> | cut -d<span class="s1">&#39; &#39;</span> -f2<span class="k">)</span>
-    <span class="k">else</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">ver</span><span class="o">=</span><span class="k">$(</span>rpm -q --queryformat <span class="s2">&quot;%{VERSION}-%{RELEASE}\n&quot;</span> <span class="nv">$p</span><span class="k">)</span>
+    <span class="k">else</span>
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;finding version of a package&quot;</span>
     <span class="k">fi</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;pkg|${p}|${ver}&quot;</span>
 <span class="k">done</span>

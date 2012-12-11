@@ -359,28 +359,34 @@ register_database mysql
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/mysql/my.cnf
         <span class="nv">MYSQL</span><span class="o">=</span>mysql
-    <span class="k">else</span>
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
 <span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/my.cnf
-        <span class="k">if </span>is_suse; <span class="k">then</span>
-<span class="k">            </span><span class="nv">MYSQL</span><span class="o">=</span>mysql
-        <span class="k">else</span>
-<span class="k">            </span><span class="nv">MYSQL</span><span class="o">=</span>mysqld
-        <span class="k">fi</span>
-<span class="k">    fi</span>
+        <span class="nv">MYSQL</span><span class="o">=</span>mysqld
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/my.cnf
+        <span class="nv">MYSQL</span><span class="o">=</span>mysql
+    <span class="k">else</span>
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;mysql configuration&quot;</span>
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Start mysql-server</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>RPM doesn't start the service</p>
+<p>service is not started by default</p>
 </td><td class=code><div class=highlight><pre>
         start_service <span class="nv">$MYSQL</span>
+    <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Set the root password - only works the first time</p>
+<p>Set the root password - only works the first time. For Ubuntu, we already
+did that with debconf before installing the package.</p>
 </td><td class=code><div class=highlight><pre>
-        sudo mysqladmin -u root password <span class="nv">$DATABASE_PASSWORD</span> <span class="o">||</span> <span class="nb">true</span>
+    <span class="k">if</span> ! is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>sudo mysqladmin -u root password <span class="nv">$DATABASE_PASSWORD</span> <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">    </span><span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Update the DB to give user ‘$DATABASE_USER’&#64;’%’ full control of the all databases:</p>
 </td><td class=code><div class=highlight><pre>
@@ -444,10 +450,12 @@ of having to specify the username/password each time.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install mysql-server</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_suse; <span class="k">then</span>
+    <span class="k">if </span>is_ubuntu <span class="o">||</span> is_fedora; <span class="k">then</span>
+<span class="k">        </span>install_package mysql-server
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
 <span class="k">        </span>install_package mysql-community-server
     <span class="k">else</span>
-<span class="k">        </span>install_package mysql-server
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;mysql installation&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 

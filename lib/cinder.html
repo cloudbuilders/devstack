@@ -577,9 +577,9 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 <span class="k">        </span>mkdir -p <span class="nv">$CINDER_STATE_PATH</span>/volumes
 
         <span class="k">if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>RPM doesn't start the service</p>
+<p>service is not started by default</p>
 </td><td class=code><div class=highlight><pre>
                 start_service tgtd
             <span class="k">fi</span>
@@ -645,11 +645,19 @@ do it in two steps</p>
 </td><td class=code><div class=highlight><pre>
             sudo stop tgt <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">            </span>sudo start tgt
-        <span class="k">else</span>
+        <span class="k">elif </span>is_fedora; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>bypass redirection to systemctl during restart</p>
 </td><td class=code><div class=highlight><pre>
             sudo /sbin/service --skip-redirect tgtd restart
+        <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">            </span>restart_service tgtd
+        <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>note for other distros: unstack.sh also uses the tgt/tgtd service
+name, and would need to be adjusted too</p>
+</td><td class=code><div class=highlight><pre>
+            exit_distro_not_supported <span class="s2">&quot;restarting tgt&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
