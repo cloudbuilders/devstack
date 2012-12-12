@@ -641,12 +641,15 @@ to simulate multiple systems.</p>
 <span class="k">        if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">            </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirt-bin
         <span class="k">else</span>
+<span class="k">            </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirtd
+        <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p><a class="reference external" href="http://wiki.libvirt.org/page/SSHPolicyKitSetup">http://wiki.libvirt.org/page/SSHPolicyKitSetup</a></p>
+<p>For distributions using polkit to authorize access to libvirt,
+configure polkit accordingly.
+Based on <a class="reference external" href="http://wiki.libvirt.org/page/SSHPolicyKitSetup">http://wiki.libvirt.org/page/SSHPolicyKitSetup</a></p>
 </td><td class=code><div class=highlight><pre>
-            <span class="k">if</span> ! getent group libvirtd &gt;/dev/null; <span class="k">then</span>
-<span class="k">                </span>sudo groupadd libvirtd
-            <span class="k">fi</span>
+        <span class="k">if </span>is_fedora; <span class="k">then</span>
 <span class="k">            </span>sudo bash -c <span class="s1">&#39;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
 <span class="s1">[libvirt Management Access]</span>
 <span class="s1">Identity=unix-group:libvirtd</span>
@@ -655,14 +658,29 @@ to simulate multiple systems.</p>
 <span class="s1">ResultInactive=yes</span>
 <span class="s1">ResultActive=yes</span>
 <span class="s1">EOF&#39;</span>
-            <span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirtd
+        <span class="k">elif </span>is_suse; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Work around the fact that polkit-default-privs overrules pklas
+with 'unix-group:$group'.</p>
+</td><td class=code><div class=highlight><pre>
+            sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
+<span class="s2">[libvirt Management Access]</span>
+<span class="s2">Identity=unix-user:$USER</span>
+<span class="s2">Action=org.libvirt.unix.manage</span>
+<span class="s2">ResultAny=yes</span>
+<span class="s2">ResultInactive=yes</span>
+<span class="s2">ResultActive=yes</span>
+<span class="s2">EOF&quot;</span>
         <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The user that nova runs as needs to be member of <strong>libvirtd</strong> group otherwise
 nova-compute will be unable to use libvirt.</p>
 </td><td class=code><div class=highlight><pre>
-        add_user_to_group <span class="sb">`</span>whoami<span class="sb">`</span> libvirtd
+        <span class="k">if</span> ! getent group libvirtd &gt;/dev/null; <span class="k">then</span>
+<span class="k">            </span>sudo groupadd libvirtd
+        <span class="k">fi</span>
+<span class="k">        </span>add_user_to_group <span class="sb">`</span>whoami<span class="sb">`</span> libvirtd
 
 </pre></div></td></tr><tr><td class=docs>
 <p>libvirt detects various settings on startup, as we potentially changed
