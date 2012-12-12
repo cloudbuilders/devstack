@@ -705,6 +705,7 @@ address.</p>
 <p>Allow the use of an alternate hostname (such as localhost/127.0.0.1) for service endpoints.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
+<span class="nv">SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">http</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure services to use syslog instead of writing to individual log files</p>
@@ -733,6 +734,7 @@ address.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Get project function libraries</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tls
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
@@ -1435,6 +1437,14 @@ configure_glanceclient
     <span class="nb">exit </span>0
 <span class="k">fi</span>
 
+<span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">    </span>configure_CA
+    init_CA
+</pre></div></td></tr><tr><td class=docs>
+<p>Add name to /etc/hosts
+don't be naive and add to existing line!</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="syslog">
@@ -1545,14 +1555,21 @@ init_service_check
 
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Keystone&quot;</span>
-    configure_keystone
     init_keystone
     start_keystone
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up a temporary admin URI for Keystone</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
+    <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
+
+    <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span><span class="nb">export </span><span class="nv">OS_CACERT</span><span class="o">=</span><span class="nv">$INT_CA_DIR</span>/ca-chain.pem
+</pre></div></td></tr><tr><td class=docs>
+<p>Until the client support is fixed, just use the internal endpoint</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span>http://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT_INT</span>/v2.0
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Do the keystone-specific bits from keystone_data.sh</p>

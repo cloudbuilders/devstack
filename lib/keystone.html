@@ -336,7 +336,7 @@ Functions to control the configuration and operation of <strong>Keystone</strong
 Dependencies:
 <tt class="docutils literal">functions</tt> file
 <tt class="docutils literal">BASE_SQL_CONN</tt>
-<tt class="docutils literal">SERVICE_HOST</tt>
+<tt class="docutils literal">SERVICE_HOST</tt>, <tt class="docutils literal">SERVICE_PROTOCOL</tt>
 <tt class="docutils literal">SERVICE_TOKEN</tt>
 <tt class="docutils literal">S3_SERVICE_PORT</tt> (template backend only)</p>
 </td><td class=code><div class=highlight><pre>
@@ -397,10 +397,16 @@ Choose from 'UUID' and 'PKI'</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">KEYSTONE_AUTH_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">KEYSTONE_AUTH_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_PORT</span><span class="k">:-</span><span class="nv">35357</span><span class="k">}</span>
-<span class="nv">KEYSTONE_AUTH_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_PROTOCOL</span><span class="k">:-</span><span class="nv">http</span><span class="k">}</span>
+<span class="nv">KEYSTONE_AUTH_PORT_INT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_PORT_INT</span><span class="k">:-</span><span class="nv">35358</span><span class="k">}</span>
+<span class="nv">KEYSTONE_AUTH_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_PROTOCOL</span><span class="k">:-</span><span class="nv">$SERVICE_PROTOCOL</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Public facing bits</p>
+</td><td class=code><div class=highlight><pre>
 <span class="nv">KEYSTONE_SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">KEYSTONE_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
-<span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">http</span><span class="k">}</span>
+<span class="nv">KEYSTONE_SERVICE_PORT_INT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PORT_INT</span><span class="k">:-</span><span class="nv">5001</span><span class="k">}</span>
+<span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">$SERVICE_PROTOCOL</span><span class="k">}</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -450,7 +456,16 @@ This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">local </span>dburl
     database_connection_url dburl keystone
-    iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_token <span class="s2">&quot;$SERVICE_TOKEN&quot;</span>
+
+    <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set the service ports for a proxy to take the originals</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT public_port <span class="nv">$KEYSTONE_SERVICE_PORT_INT</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_port <span class="nv">$KEYSTONE_AUTH_PORT_INT</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_token <span class="s2">&quot;$SERVICE_TOKEN&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> signing token_format <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> sql connection <span class="nv">$dburl</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> ec2 driver <span class="s2">&quot;keystone.contrib.ec2.backends.sql.Ec2&quot;</span>
@@ -608,9 +623,9 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
         keystone endpoint-create <span class="se">\</span>
             --region RegionOne <span class="se">\</span>
             --service_id <span class="nv">$KEYSTONE_SERVICE</span> <span class="se">\</span>
-            --publicurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:\$(public_port)s/v2.0&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;$KEYSTONE_AUTH_PROTOCOL://$KEYSTONE_AUTH_HOST:\$(admin_port)s/v2.0&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:\$(public_port)s/v2.0&quot;</span>
+            --publicurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;$KEYSTONE_AUTH_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -619,7 +634,7 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 <dd><blockquote class="first">
 complete if they are really unused</blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 156)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 164)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <dl class="last docutils">
 <dt>KEYSTONEADMIN_ROLE=$(keystone role-create </dt>
@@ -692,13 +707,29 @@ Block quote ends without a blank line; unexpected unindent.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_keystone<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>Get right service port for testing</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">local </span><span class="nv">service_port</span><span class="o">=</span><span class="nv">$KEYSTONE_SERVICE_PORT</span>
+    <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span><span class="nv">service_port</span><span class="o">=</span><span class="nv">$KEYSTONE_SERVICE_PORT_INT</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Start Keystone in a screen window</p>
 </td><td class=code><div class=highlight><pre>
     screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= curl -s $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= curl -s http://$SERVICE_HOST:$service_port/v2.0/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
       <span class="nb">exit </span>1
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Start proxies if enabled</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>start_tls_proxy <span class="s1">&#39;*&#39;</span> <span class="nv">$KEYSTONE_SERVICE_PORT</span> <span class="nv">$KEYSTONE_SERVICE_HOST</span> <span class="nv">$KEYSTONE_SERVICE_PORT_INT</span> &amp;
+        start_tls_proxy <span class="s1">&#39;*&#39;</span> <span class="nv">$KEYSTONE_AUTH_PORT</span> <span class="nv">$KEYSTONE_AUTH_HOST</span> <span class="nv">$KEYSTONE_AUTH_PORT_INT</span> &amp;
     <span class="k">fi</span>
 <span class="o">}</span>
 
