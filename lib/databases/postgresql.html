@@ -358,14 +358,23 @@ register_database postgresql
 
 <span class="k">function </span>configure_database_postgresql <span class="o">{</span>
     echo_summary <span class="s2">&quot;Configuring and starting PostgreSQL&quot;</span>
-    <span class="k">if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
+    <span class="k">if </span>is_fedora; <span class="k">then</span>
 <span class="k">        </span><span class="nv">PG_HBA</span><span class="o">=</span>/var/lib/pgsql/data/pg_hba.conf
         <span class="nv">PG_CONF</span><span class="o">=</span>/var/lib/pgsql/data/postgresql.conf
         sudo <span class="o">[</span> -e <span class="nv">$PG_HBA</span> <span class="o">]</span> <span class="o">||</span> sudo postgresql-setup initdb
-    <span class="k">else</span>
+    <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span><span class="nv">PG_DIR</span><span class="o">=</span><span class="sb">`</span>find /etc/postgresql -name pg_hba.conf|xargs dirname<span class="sb">`</span>
         <span class="nv">PG_HBA</span><span class="o">=</span><span class="nv">$PG_DIR</span>/pg_hba.conf
         <span class="nv">PG_CONF</span><span class="o">=</span><span class="nv">$PG_DIR</span>/postgresql.conf
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        </span><span class="nv">PG_HBA</span><span class="o">=</span>/var/lib/pgsql/data/pg_hba.conf
+        <span class="nv">PG_CONF</span><span class="o">=</span>/var/lib/pgsql/data/postgresql.conf
+</pre></div></td></tr><tr><td class=docs>
+<p>initdb is called when postgresql is first started</p>
+</td><td class=code><div class=highlight><pre>
+        sudo <span class="o">[</span> -e <span class="nv">$PG_HBA</span> <span class="o">]</span> <span class="o">||</span> start_service postgresql
+    <span class="k">else</span>
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;postgresql configuration&quot;</span>
     <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Listen on all addresses</p>
@@ -379,7 +388,7 @@ register_database postgresql
 <p>Do password auth for all IPv6 clients</p>
 </td><td class=code><div class=highlight><pre>
     sudo sed -i <span class="s2">&quot;/^host/s/all\s\+::1\/128\s\+ident/$DATABASE_USER\t::0\/0\tpassword/&quot;</span> <span class="nv">$PG_HBA</span>
-    start_service postgresql
+    restart_service postgresql
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If creating the role fails, chances are it already existed. Try to alter it.</p>
