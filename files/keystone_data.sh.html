@@ -335,7 +335,6 @@ ul.auto-toc {
 <div class="section" id="tenant-user-roles">
 <h1>Tenant               User       Roles</h1>
 <p>service              glance     admin
-service              nova       admin, [ResellerAdmin (swift only)]
 service              quantum    admin        # if enabled
 service              swift      admin        # if enabled
 service              cinder     admin        # if enabled
@@ -397,31 +396,8 @@ role is also configurable in swift-proxy.conf</p>
 <h1>Services</h1>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Nova</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">NOVA_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create <span class="se">\</span>
-        --name<span class="o">=</span>nova <span class="se">\</span>
-        --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-        --email<span class="o">=</span>nova@example.com<span class="k">)</span>
-    keystone user-role-add <span class="se">\</span>
-        --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-        --user_id <span class="nv">$NOVA_USER</span> <span class="se">\</span>
-        --role_id <span class="nv">$ADMIN_ROLE</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">NOVA_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
-            --name<span class="o">=</span>nova <span class="se">\</span>
-            --type<span class="o">=</span>compute <span class="se">\</span>
-            --description<span class="o">=</span><span class="s2">&quot;Nova Compute Service&quot;</span><span class="k">)</span>
-        keystone endpoint-create <span class="se">\</span>
-            --region RegionOne <span class="se">\</span>
-            --service_id <span class="nv">$NOVA_SERVICE</span> <span class="se">\</span>
-            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:\$(compute_port)s/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:\$(compute_port)s/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:\$(compute_port)s/v2/\$(tenant_id)s&quot;</span>
-    <span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">NOVA_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-list | awk <span class="s2">&quot;/ nova / { print \$2 }&quot;</span><span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova needs ResellerAdmin role to download images when accessing
 swift through the s3 api.</p>
