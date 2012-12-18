@@ -337,7 +337,6 @@ ul.auto-toc {
 <p>service              glance     admin
 service              quantum    admin        # if enabled
 service              swift      admin        # if enabled
-service              cinder     admin        # if enabled
 service              heat       admin        # if enabled
 service              ceilometer admin        # if enabled
 Tempest Only:
@@ -374,6 +373,7 @@ KEYSTONE_CATALOG_BACKEND - used to determine service catalog creation</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
 <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+<span class="nv">MEMBER_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ Member / { print \$2 }&quot;</span><span class="k">)</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -389,6 +389,7 @@ but ResellerAdmin is needed for a user to act as any tenant. The name of this
 role is also configurable in swift-proxy.conf</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">RESELLER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>ResellerAdmin<span class="k">)</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -604,28 +605,6 @@ between two regular users in separate tenants</p>
         --tenant_id <span class="nv">$ALT_DEMO_TENANT</span> <span class="se">\</span>
         --user_id <span class="nv">$ALT_DEMO_USER</span> <span class="se">\</span>
         --role_id <span class="nv">$MEMBER_ROLE</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;c-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">CINDER_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create --name<span class="o">=</span>cinder <span class="se">\</span>
-                                              --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-                                              --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                                              --email<span class="o">=</span>cinder@example.com<span class="k">)</span>
-    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                           --user_id <span class="nv">$CINDER_USER</span> <span class="se">\</span>
-                           --role_id <span class="nv">$ADMIN_ROLE</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">CINDER_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
-            --name<span class="o">=</span>cinder <span class="se">\</span>
-            --type<span class="o">=</span>volume <span class="se">\</span>
-            --description<span class="o">=</span><span class="s2">&quot;Cinder Service&quot;</span><span class="k">)</span>
-        keystone endpoint-create <span class="se">\</span>
-            --region RegionOne <span class="se">\</span>
-            --service_id <span class="nv">$CINDER_SERVICE</span> <span class="se">\</span>
-            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8776/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8776/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8776/v1/\$(tenant_id)s&quot;</span>
-    <span class="k">fi</span>
 <span class="k">fi</span>
 
 
