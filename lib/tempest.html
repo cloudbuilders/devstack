@@ -409,6 +409,8 @@ init_tempest</p>
     <span class="nb">local </span>flavors
     <span class="nb">local </span>flavors_ref
     <span class="nb">local </span>flavor_lines
+    <span class="nb">local </span>public_network_id
+    <span class="nb">local </span>tenant_networks_reachable
 
     <span class="c">#TODO(afazekas):</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -515,6 +517,17 @@ and tenant are set up...</p>
 <span class="k">        </span><span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="k">${</span><span class="nv">flavors</span><span class="p">[1]</span><span class="k">}</span>
     <span class="k">fi</span>
 
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$Q_USE_NAMESPACE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">tenant_networks_reachable</span><span class="o">=</span><span class="nb">false</span>
+<span class="nb">    </span><span class="k">else</span>
+<span class="k">        </span><span class="nv">tenant_networks_reachable</span><span class="o">=</span><span class="nb">true</span>
+<span class="nb">    </span><span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled q-l3; <span class="k">then</span>
+<span class="k">        </span><span class="nv">public_network_id</span><span class="o">=</span><span class="k">$(</span>quantum net-list | grep <span class="nv">$PUBLIC_NETWORK_NAME</span> | <span class="se">\</span>
+            awk <span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>
+    <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Timeouts</p>
 </td><td class=code><div class=highlight><pre>
@@ -580,9 +593,17 @@ tests actually use a key.</p>
     iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>network admin</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;network-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>network</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$TEMPEST_CONF</span> network api_version 2.0
+    iniset <span class="nv">$TEMPEST_CONF</span> network password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> network tenant_networks_reachable <span class="s2">&quot;$tenant_networks_reachable&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> network public_network_id <span class="s2">&quot;$public_network_id&quot;</span>
 
     <span class="c">#boto</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto ec2_url <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>
