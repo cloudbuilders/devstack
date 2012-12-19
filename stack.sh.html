@@ -450,6 +450,13 @@ http_proxy=http://proxy.example.com:3128/ no_proxy=repo.example.net ./stack.sh</
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Clean up last environment var cache</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$TOP_DIR</span>/.stackenv <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>rm <span class="nv">$TOP_DIR</span>/.stackenv
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Import database configuration</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
@@ -1036,9 +1043,9 @@ Set <tt class="docutils literal">LOGFILE</tt> to turn on logging
 Append '.xxxxxxxx' to the given name to maintain history
 where 'xxxxxxxx' is a representation of the date the file was created</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nv">TIMESTAMP_FORMAT</span><span class="o">=</span><span class="k">${</span><span class="nv">TIMESTAMP_FORMAT</span><span class="k">:-</span><span class="s2">&quot;%F-%H%M%S&quot;</span><span class="k">}</span>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">||</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">LOGDAYS</span><span class="o">=</span><span class="k">${</span><span class="nv">LOGDAYS</span><span class="k">:-</span><span class="nv">7</span><span class="k">}</span>
-    <span class="nv">TIMESTAMP_FORMAT</span><span class="o">=</span><span class="k">${</span><span class="nv">TIMESTAMP_FORMAT</span><span class="k">:-</span><span class="s2">&quot;%F-%H%M%S&quot;</span><span class="k">}</span>
     <span class="nv">CURRENT_LOG_TIME</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+$TIMESTAMP_FORMAT&quot;</span><span class="k">)</span>
 <span class="k">fi</span>
 
@@ -2506,6 +2513,16 @@ the various OpenStack services can be queried.</p>
     echo_summary <span class="s2">&quot;Finished Configuring Tempest&quot;</span>
     <span class="nb">echo</span> <span class="s1">&#39;**************************************************&#39;</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Save some values we generated for later use</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">CURRENT_RUN_TIME</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+$TIMESTAMP_FORMAT&quot;</span><span class="k">)</span>
+<span class="nb">echo</span> <span class="s2">&quot;# $CURRENT_RUN_TIME&quot;</span> &gt;<span class="nv">$TOP_DIR</span>/.stackenv
+<span class="k">for </span>i in BASE_SQL_CONN ENABLED_SERVICES HOST_IP LOGFILE <span class="se">\</span>
+  SERVICE_HOST SERVICE_PROTOCOL TLS_IP; <span class="k">do</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="nv">$i</span><span class="o">=</span><span class="k">${</span><span class="p">!i</span><span class="k">}</span> &gt;&gt;<span class="nv">$TOP_DIR</span>/.stackenv
+<span class="k">done</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
