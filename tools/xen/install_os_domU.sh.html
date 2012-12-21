@@ -784,48 +784,27 @@ network, so XenServer can access Glance API</p>
 <span class="k">        </span>sleep 10
     <span class="k">done</span>
 
+<span class="k">    </span><span class="nb">set</span> +x
+    <span class="nb">echo</span> -n <span class="s2">&quot;Waiting for startup script to finish&quot;</span>
+    <span class="k">while</span> <span class="o">[</span> <span class="sb">`</span>ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> pgrep -c run.sh<span class="sb">`</span> -ge 1 <span class="o">]</span>
+    <span class="k">do</span>
+<span class="k">        </span>sleep 10
+        <span class="nb">echo</span> -n <span class="s2">&quot;.&quot;</span>
+    <span class="k">done</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;done!&quot;</span>
+    <span class="nb">set</span> -x
+
 </pre></div></td></tr><tr><td class=docs>
 <p>output the run.sh.log</p>
 </td><td class=code><div class=highlight><pre>
-    ssh -o <span class="nv">UserKnownHostsFile</span><span class="o">=</span>/dev/null -o <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no stack@<span class="nv">$DOMU_IP</span> <span class="s1">&#39;tail -f run.sh.log&#39;</span> &amp;
-    <span class="nv">TAIL_PID</span><span class="o">=</span><span class="nv">$!</span>
-
-    <span class="k">function </span>kill_tail<span class="o">()</span> <span class="o">{</span>
-        <span class="nb">kill</span> -9 <span class="nv">$TAIL_PID</span>
-        <span class="nb">exit </span>1
-    <span class="o">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Let Ctrl-c kill tail and exit</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">trap </span>kill_tail SIGINT
+    ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> <span class="s1">&#39;cat run.sh.log&#39;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>ensure we kill off the tail if we exit the script early
-for other reasons</p>
+<p>Fail if the expected text is not found</p>
 </td><td class=code><div class=highlight><pre>
-    add_on_exit <span class="s2">&quot;kill -9 $TAIL_PID || true&quot;</span>
+    ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> <span class="s1">&#39;cat run.sh.log&#39;</span> | grep -q <span class="s1">&#39;stack.sh completed in&#39;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>wait silently until stack.sh has finished</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">set</span> +o xtrace
-    <span class="k">while</span> ! ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> <span class="s2">&quot;tail run.sh.log | grep -q &#39;stack.sh completed in&#39;&quot;</span>; <span class="k">do</span>
-<span class="k">        </span>sleep 10
-    <span class="k">done</span>
-<span class="k">    </span><span class="nb">set</span> -o xtrace
-
-</pre></div></td></tr><tr><td class=docs>
-<p>kill the tail process now stack.sh has finished</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">kill</span> -9 <span class="nv">$TAIL_PID</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>check for a failure</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> <span class="s2">&quot;grep -q &#39;stack.sh failed&#39; run.sh.log&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;################################################################################&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;################################################################################&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;All Finished!&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;You can visit the OpenStack Dashboard&quot;</span>
