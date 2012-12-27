@@ -761,28 +761,6 @@ address.</p>
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
 <span class="nv">SWIFT3_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift3
 
-<span class="nv">RYU_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/ryu
-</pre></div></td></tr><tr><td class=docs>
-<p>Ryu API Host</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">RYU_API_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_API_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Ryu API Port</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">RYU_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_API_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Ryu OFP Host</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">RYU_OFP_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_OFP_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Ryu OFP Port</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">RYU_OFP_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_OFP_PORT</span><span class="k">:-</span><span class="nv">6633</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Ryu Applications</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">RYU_APPS</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_APPS</span><span class="k">:-</span><span class="nv">ryu</span><span class="p">.app.simple_isolation,ryu.app.rest</span><span class="k">}</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Should cinder perform secure deletion of volumes?
 Defaults to true, can be set to False to avoid this bug when testing:
@@ -1251,25 +1229,7 @@ the temp file is necessary due to LP: #878600</p>
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled q-agt; <span class="k">then</span>
-<span class="k">    if </span>is_quantum_ovs_base_plugin <span class="s2">&quot;$Q_PLUGIN&quot;</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install deps
-FIXME add to <tt class="docutils literal">files/apts/quantum</tt>, but don't install if not needed!</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">            </span><span class="nv">kernel_version</span><span class="o">=</span><span class="sb">`</span>cat /proc/version | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span>
-            install_package make fakeroot dkms openvswitch-switch openvswitch-datapath-dkms linux-headers-<span class="nv">$kernel_version</span>
-        <span class="k">else</span>
-            <span class="c">### FIXME(dtroyer): Find RPMs for OpenVSwitch</span>
-            <span class="nb">echo</span> <span class="s2">&quot;OpenVSwitch packages need to be located&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Fedora does not started OVS by default</p>
-</td><td class=code><div class=highlight><pre>
-            restart_service openvswitch
-        <span class="k">fi</span>
-<span class="k">    elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">       </span>install_package bridge-utils
-    <span class="k">fi</span>
+<span class="k">    </span>install_quantum_agent_packages
 <span class="k">fi</span>
 
 <span class="nv">TRACK_DEPENDS</span><span class="o">=</span><span class="k">${</span><span class="nv">TRACK_DEPENDS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
@@ -1352,13 +1312,9 @@ git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENST
     install_horizon
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span>git_clone <span class="nv">$QUANTUMCLIENT_REPO</span> <span class="nv">$QUANTUMCLIENT_DIR</span> <span class="nv">$QUANTUMCLIENT_BRANCH</span>
-<span class="k">fi</span>
-<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>quantum</p>
-</td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$QUANTUM_REPO</span> <span class="nv">$QUANTUM_DIR</span> <span class="nv">$QUANTUM_BRANCH</span>
+<span class="k">    </span>install_quantum
+    install_quantumclient
+    install_quantum_third_party
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
 <span class="k">    </span>install_heat
@@ -1372,9 +1328,6 @@ git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENST
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled tempest; <span class="k">then</span>
 <span class="k">    </span>install_tempest
-<span class="k">fi</span>
-<span class="k">if </span>is_service_enabled ryu <span class="o">||</span> <span class="o">(</span>is_service_enabled quantum <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]])</span>; <span class="k">then</span>
-<span class="k">    </span>git_clone <span class="nv">$RYU_REPO</span> <span class="nv">$RYU_DIR</span> <span class="nv">$RYU_BRANCH</span>
 <span class="k">fi</span>
 
 
@@ -1421,8 +1374,8 @@ configure_glanceclient
 <span class="k">    </span>configure_horizon
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span>setup_develop <span class="nv">$QUANTUMCLIENT_DIR</span>
-    setup_develop <span class="nv">$QUANTUM_DIR</span>
+<span class="k">    </span>setup_quantumclient
+    setup_quantum
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
 <span class="k">    </span>configure_heat
@@ -1430,9 +1383,6 @@ configure_glanceclient
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>configure_cinder
-<span class="k">fi</span>
-<span class="k">if </span>is_service_enabled ryu <span class="o">||</span> <span class="o">(</span>is_service_enabled quantum <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]])</span>; <span class="k">then</span>
-<span class="k">    </span>setup_develop <span class="nv">$RYU_DIR</span>
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span> ; <span class="k">then</span>
@@ -1586,6 +1536,7 @@ init_service_check
     create_keystone_accounts
     create_nova_accounts
     create_cinder_accounts
+    create_quantum_accounts
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">keystone_data.sh</tt> creates services, admin and demo users, and roles.</p>
@@ -1651,473 +1602,25 @@ init_service_check
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="ryu">
-<h2>Ryu</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Ryu is not a part of OpenStack project. Please ignore following block if
-you are not interested in Ryu.
-launch ryu manager</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled ryu; <span class="k">then</span>
-<span class="k">    </span><span class="nv">RYU_CONF_DIR</span><span class="o">=</span>/etc/ryu
-    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$RYU_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mkdir -p <span class="nv">$RYU_CONF_DIR</span>
-    <span class="k">fi</span>
-<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$RYU_CONF_DIR</span>
-    <span class="nv">RYU_CONF</span><span class="o">=</span><span class="nv">$RYU_CONF_DIR</span>/ryu.conf
-    sudo rm -rf <span class="nv">$RYU_CONF</span>
-
-    cat <span class="s">&lt;&lt;EOF &gt; $RYU_CONF</span>
-<span class="s">--app_lists=$RYU_APPS</span>
-<span class="s">--wsapi_host=$RYU_API_HOST</span>
-<span class="s">--wsapi_port=$RYU_API_PORT</span>
-<span class="s">--ofp_listen_host=$RYU_OFP_HOST</span>
-<span class="s">--ofp_tcp_listen_port=$RYU_OFP_PORT</span>
-<span class="s">EOF</span>
-    screen_it ryu <span class="s2">&quot;cd $RYU_DIR &amp;&amp; $RYU_DIR/bin/ryu-manager --flagfile $RYU_CONF&quot;</span>
-<span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
 <div class="section" id="quantum">
 <h2>Quantum</h2>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Quantum Network Configuration</p>
-</td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Quantum&quot;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>The following variables control the Quantum openvswitch and
-linuxbridge plugins' allocation of tenant networks and
-availability of provider networks. If these are not configured
-in localrc, tenant networks will be local to the host (with no
-remote connectivity), and no physical resources will be
-available for the allocation of provider networks.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>To use GRE tunnels for tenant networks, set to True in
-localrc. GRE tunnels are only supported by the openvswitch
-plugin, and currently only on Ubuntu.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">ENABLE_TENANT_TUNNELS</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLE_TENANT_TUNNELS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>If using GRE tunnels for tenant networks, specify the range of
-tunnel IDs from which tenant networks are allocated. Can be
-overriden in localrc in necesssary.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">TENANT_TUNNEL_RANGES</span><span class="o">=</span><span class="k">${</span><span class="nv">TENANT_TUNNEL_RANGE</span><span class="k">:-</span><span class="nv">1</span><span class="p">:</span><span class="nv">1000</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>To use VLANs for tenant networks, set to True in localrc. VLANs
-are supported by the openvswitch and linuxbridge plugins, each
-requiring additional configuration described below.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">ENABLE_TENANT_VLANS</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLE_TENANT_VLANS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>If using VLANs for tenant networks, set in localrc to specify
-the range of VLAN VIDs from which tenant networks are
-allocated. An external network switch must be configured to
-trunk these VLANs between hosts for multi-host connectivity.</p>
-<p>Example: <tt class="docutils literal">TENANT_VLAN_RANGE=1000:1999</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">TENANT_VLAN_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">TENANT_VLAN_RANGE</span><span class="k">:-}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>If using VLANs for tenant networks, or if using flat or VLAN
-provider networks, set in localrc to the name of the physical
-network, and also configure OVS_PHYSICAL_BRIDGE for the
-openvswitch agent or LB_PHYSICAL_INTERFACE for the linuxbridge
-agent, as described below.</p>
-<p>Example: <tt class="docutils literal">PHYSICAL_NETWORK=default</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">PHYSICAL_NETWORK</span><span class="o">=</span><span class="k">${</span><span class="nv">PHYSICAL_NETWORK</span><span class="k">:-}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>With the openvswitch plugin, if using VLANs for tenant networks,
-or if using flat or VLAN provider networks, set in localrc to
-the name of the OVS bridge to use for the physical network. The
-bridge will be created if it does not already exist, but a
-physical interface must be manually added to the bridge as a
-port for external connectivity.</p>
-<p>Example: <tt class="docutils literal"><span class="pre">OVS_PHYSICAL_BRIDGE=br-eth1</span></tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">OVS_PHYSICAL_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_PHYSICAL_BRIDGE</span><span class="k">:-}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>With the linuxbridge plugin, if using VLANs for tenant networks,
-or if using flat or VLAN provider networks, set in localrc to
-the name of the network interface to use for the physical
-network.</p>
-<p>Example: <tt class="docutils literal">LB_PHYSICAL_INTERFACE=eth1</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">LB_PHYSICAL_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">LB_PHYSICAL_INTERFACE</span><span class="k">:-}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>With the openvswitch plugin, set to True in localrc to enable
-provider GRE tunnels when <tt class="docutils literal">ENABLE_TENANT_TUNNELS</tt> is False.</p>
-<p>Example: <tt class="docutils literal">OVS_ENABLE_TUNNELING=True</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">OVS_ENABLE_TUNNELING</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_ENABLE_TUNNELING</span><span class="k">:-</span><span class="nv">$ENABLE_TENANT_TUNNELS</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Put config files in <tt class="docutils literal">QUANTUM_CONF_DIR</tt> for everyone to find</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$QUANTUM_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mkdir -p <span class="nv">$QUANTUM_CONF_DIR</span>
-    <span class="k">fi</span>
-<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$QUANTUM_CONF_DIR</span>
-
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/openvswitch
-        <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ovs_quantum_plugin.ini
-        <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;ovs_quantum&quot;</span>
-        <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPluginV2&quot;</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/linuxbridge
-        <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>linuxbridge_conf.ini
-        <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;quantum_linux_bridge&quot;</span>
-        <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.linuxbridge.lb_quantum_plugin.LinuxBridgePluginV2&quot;</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/ryu
-        <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ryu.ini
-        <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;ovs_quantum&quot;</span>
-        <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.ryu.ryu_quantum_plugin.RyuQuantumPluginV2&quot;</span>
-    <span class="k">fi</span>
-
-<span class="k">    if</span> <span class="o">[[</span> <span class="nv">$Q_PLUGIN_CONF_PATH</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">||</span> <span class="nv">$Q_PLUGIN_CONF_FILENAME</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">||</span> <span class="nv">$Q_PLUGIN_CLASS</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Quantum plugin not set.. exiting&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>If needed, move config file from <tt class="docutils literal">$QUANTUM_DIR/etc/quantum</tt> to <tt class="docutils literal">QUANTUM_CONF_DIR</tt></p>
-</td><td class=code><div class=highlight><pre>
-    mkdir -p /<span class="nv">$Q_PLUGIN_CONF_PATH</span>
-    <span class="nv">Q_PLUGIN_CONF_FILE</span><span class="o">=</span><span class="nv">$Q_PLUGIN_CONF_PATH</span>/<span class="nv">$Q_PLUGIN_CONF_FILENAME</span>
-    cp <span class="nv">$QUANTUM_DIR</span>/<span class="nv">$Q_PLUGIN_CONF_FILE</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span>
-
-    database_connection_url dburl <span class="nv">$Q_DB_NAME</span>
-    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> DATABASE sql_connection <span class="nv">$dburl</span>
-    <span class="nb">unset </span>dburl
-
-    cp <span class="nv">$QUANTUM_DIR</span>/etc/quantum.conf <span class="nv">$QUANTUM_CONF</span>
-    configure_quantum_rootwrap
+    configure_quantum
+    init_quantum
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Quantum service (for controller node)</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
-<span class="k">    </span><span class="nv">Q_API_PASTE_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/api-paste.ini
-    <span class="nv">Q_POLICY_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/policy.json
-
-    cp <span class="nv">$QUANTUM_DIR</span>/etc/api-paste.ini <span class="nv">$Q_API_PASTE_FILE</span>
-    cp <span class="nv">$QUANTUM_DIR</span>/etc/policy.json <span class="nv">$Q_POLICY_FILE</span>
-
-    <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
-<span class="k">        </span>recreate_database <span class="nv">$Q_DB_NAME</span> utf8
-    <span class="k">else</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;A database must be enabled in order to use the $Q_PLUGIN Quantum plugin.&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Update either configuration file with plugin</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$QUANTUM_CONF</span> DEFAULT core_plugin <span class="nv">$Q_PLUGIN_CLASS</span>
-
-    iniset <span class="nv">$QUANTUM_CONF</span> DEFAULT auth_strategy <span class="nv">$Q_AUTH_STRATEGY</span>
-    quantum_setup_keystone <span class="nv">$Q_API_PASTE_FILE</span> filter:authtoken
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure plugin</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS tenant_network_type gre
-            iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS tunnel_id_ranges <span class="nv">$TENANT_TUNNEL_RANGES</span>
-        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS tenant_network_type vlan
-        <span class="k">else</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;WARNING - The openvswitch plugin is using local tenant networks, with no connectivity between hosts.&quot;</span>
-        <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Override <tt class="docutils literal">OVS_VLAN_RANGES</tt> and <tt class="docutils literal">OVS_BRIDGE_MAPPINGS</tt> in <tt class="docutils literal">localrc</tt>
-for more complex physical network configurations.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_VLAN_RANGES&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">OVS_VLAN_RANGES</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>
-            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$TENANT_VLAN_RANGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">OVS_VLAN_RANGES</span><span class="o">=</span><span class="nv">$OVS_VLAN_RANGES</span>:<span class="nv">$TENANT_VLAN_RANGE</span>
-            <span class="k">fi</span>
-<span class="k">        fi</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_VLAN_RANGES&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS network_vlan_ranges <span class="nv">$OVS_VLAN_RANGES</span>
-        <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Enable tunnel networks if selected</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$OVS_ENABLE_TUNNELING</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS enable_tunneling True
-        <span class="k">fi</span>
-<span class="k">    elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> VLANS tenant_network_type vlan
-        <span class="k">else</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;WARNING - The linuxbridge plugin is using local tenant networks, with no connectivity between hosts.&quot;</span>
-        <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Override <tt class="docutils literal">LB_VLAN_RANGES</tt> and <tt class="docutils literal">LB_INTERFACE_MAPPINGS</tt> in <tt class="docutils literal">localrc</tt>
-for more complex physical network configurations.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LB_VLAN_RANGES&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">LB_VLAN_RANGES</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>
-            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$TENANT_VLAN_RANGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">LB_VLAN_RANGES</span><span class="o">=</span><span class="nv">$LB_VLAN_RANGES</span>:<span class="nv">$TENANT_VLAN_RANGE</span>
-            <span class="k">fi</span>
-<span class="k">        fi</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$LB_VLAN_RANGES&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> VLANS network_vlan_ranges <span class="nv">$LB_VLAN_RANGES</span>
-        <span class="k">fi</span>
-<span class="k">    elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS openflow_controller <span class="nv">$RYU_OFP_HOST</span>:<span class="nv">$RYU_OFP_PORT</span>
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS openflow_rest_api <span class="nv">$RYU_API_HOST</span>:<span class="nv">$RYU_API_PORT</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Quantum agent (for compute nodes)</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled q-agt; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure agent for plugin</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup integration bridge</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
-        quantum_setup_ovs_bridge <span class="nv">$OVS_BRIDGE</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup agent for tunneling</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_ENABLE_TUNNELING&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Verify tunnels are supported
-REVISIT - also check kernel module support for GRE and patch ports</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="nv">OVS_VERSION</span><span class="o">=</span><span class="sb">`</span>ovs-vsctl --version | head -n 1 | awk <span class="s1">&#39;{print $4;}&#39;</span><span class="sb">`</span>
-            <span class="k">if</span> <span class="o">[</span> <span class="nv">$OVS_VERSION</span> <span class="se">\&lt;</span> <span class="s2">&quot;1.4&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ! is_service_enabled q-svc ; <span class="k">then</span>
-<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;You are running OVS version $OVS_VERSION.&quot;</span>
-                <span class="nb">echo</span> <span class="s2">&quot;OVS 1.4+ is required for tunneling between multiple hosts.&quot;</span>
-                <span class="nb">exit </span>1
-            <span class="k">fi</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS enable_tunneling True
-            iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS local_ip <span class="nv">$HOST_IP</span>
-        <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup physical network bridge mappings.  Override
-<tt class="docutils literal">OVS_VLAN_RANGES</tt> and <tt class="docutils literal">OVS_BRIDGE_MAPPINGS</tt> in <tt class="docutils literal">localrc</tt> for more
-complex physical network configurations.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_BRIDGE_MAPPINGS&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_PHYSICAL_BRIDGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">OVS_BRIDGE_MAPPINGS</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>:<span class="nv">$OVS_PHYSICAL_BRIDGE</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure bridge manually with physical interface as port for multi-node</p>
-</td><td class=code><div class=highlight><pre>
-            sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$OVS_PHYSICAL_BRIDGE</span>
-        <span class="k">fi</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_BRIDGE_MAPPINGS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS bridge_mappings <span class="nv">$OVS_BRIDGE_MAPPINGS</span>
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-openvswitch-agent&quot;</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup physical network interface mappings.  Override
-<tt class="docutils literal">LB_VLAN_RANGES</tt> and <tt class="docutils literal">LB_INTERFACE_MAPPINGS</tt> in <tt class="docutils literal">localrc</tt> for more
-complex physical network configurations.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LB_INTERFACE_MAPPINGS&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$LB_PHYSICAL_INTERFACE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">LB_INTERFACE_MAPPINGS</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>:<span class="nv">$LB_PHYSICAL_INTERFACE</span>
-        <span class="k">fi</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$LB_INTERFACE_MAPPINGS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> LINUX_BRIDGE physical_interface_mappings <span class="nv">$LB_INTERFACE_MAPPINGS</span>
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-linuxbridge-agent&quot;</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up integration bridge</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
-        quantum_setup_ovs_bridge <span class="nv">$OVS_BRIDGE</span>
-        <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$RYU_INTERNAL_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>sudo ovs-vsctl --no-wait -- --may-exist add-port <span class="nv">$OVS_BRIDGE</span> <span class="nv">$RYU_INTERNAL_INTERFACE</span>
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/quantum/plugins/ryu/agent/ryu_quantum_agent.py&quot;</span>
-    <span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Update config w/rootwrap</p>
-</td><td class=code><div class=highlight><pre>
-    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> AGENT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Quantum DHCP</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled q-dhcp; <span class="k">then</span>
-<span class="k">    </span><span class="nv">AGENT_DHCP_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-dhcp-agent&quot;</span>
-
-    <span class="nv">Q_DHCP_CONF_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/dhcp_agent.ini
-
-    cp <span class="nv">$QUANTUM_DIR</span>/etc/dhcp_agent.ini <span class="nv">$Q_DHCP_CONF_FILE</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set verbose</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT verbose True
-</pre></div></td></tr><tr><td class=docs>
-<p>Set debug</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT debug True
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT state_path <span class="nv">$DATA_DIR</span>/quantum
-
-    quantum_setup_keystone <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT set_auth_url
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Update config w/rootwrap</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
-
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.RyuInterfaceDriver
-        iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT ryu_api_host <span class="nv">$RYU_API_HOST</span>:<span class="nv">$RYU_API_PORT</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Quantum L3</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled q-l3; <span class="k">then</span>
-<span class="k">    </span><span class="nv">AGENT_L3_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-l3-agent&quot;</span>
-    <span class="nv">PUBLIC_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-ex</span><span class="k">}</span>
-    <span class="nv">Q_L3_CONF_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/l3_agent.ini
-
-    cp <span class="nv">$QUANTUM_DIR</span>/etc/l3_agent.ini <span class="nv">$Q_L3_CONF_FILE</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set verbose</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT verbose True
-</pre></div></td></tr><tr><td class=docs>
-<p>Set debug</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT debug True
-
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
-
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT state_path <span class="nv">$DATA_DIR</span>/quantum
-
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
-
-    quantum_setup_keystone <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT set_auth_url
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">==</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
-        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up external bridge</p>
-</td><td class=code><div class=highlight><pre>
-        quantum_setup_external_bridge <span class="nv">$PUBLIC_BRIDGE</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
-        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="s1">&#39;&#39;</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.RyuInterfaceDriver
-        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
-        iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT ryu_api_host <span class="nv">$RYU_API_HOST</span>:<span class="nv">$RYU_API_PORT</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up external bridge</p>
-</td><td class=code><div class=highlight><pre>
-        quantum_setup_external_bridge <span class="nv">$PUBLIC_BRIDGE</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-<span class="c">#Quantum Metadata</span>
-<span class="k">if </span>is_service_enabled q-meta; <span class="k">then</span>
-<span class="k">    </span><span class="nv">AGENT_META_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-metadata-agent&quot;</span>
-    <span class="nv">Q_META_CONF_FILE</span><span class="o">=</span><span class="nv">$QUANTUM_CONF_DIR</span>/metadata_agent.ini
-
-    cp <span class="nv">$QUANTUM_DIR</span>/etc/metadata_agent.ini <span class="nv">$Q_META_CONF_FILE</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set verbose</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT verbose True
-</pre></div></td></tr><tr><td class=docs>
-<p>Set debug</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT debug True
-
-    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT state_path <span class="nv">$DATA_DIR</span>/quantum
-
-    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT nova_metadata_ip <span class="nv">$Q_META_DATA_IP</span>
-
-    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
-
-    quantum_setup_keystone <span class="nv">$Q_META_CONF_FILE</span> DEFAULT set_auth_url
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Quantum RPC support - must be updated prior to starting any of the services</p>
+<p>Some Quantum plugins require network controllers which are not
+a part of the OpenStack project. Configure and start them.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span>iniset <span class="nv">$QUANTUM_CONF</span> DEFAULT control_exchange quantum
-    <span class="k">if </span>is_service_enabled qpid ; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$QUANTUM_CONF</span> DEFAULT rpc_backend quantum.openstack.common.rpc.impl_qpid
-    <span class="k">elif </span>is_service_enabled zeromq; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$QUANTUM_CONF</span> DEFAULT rpc_backend quantum.openstack.common.rpc.impl_zmq
-    <span class="k">elif</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$QUANTUM_CONF</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
-        iniset <span class="nv">$QUANTUM_CONF</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
-    <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_DEBUG_COMMAND&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>cp <span class="nv">$QUANTUM_DIR</span>/etc/l3_agent.ini <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span>
-        iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT verbose False
-        iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT debug False
-        iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
-        iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
-        quantum_setup_keystone <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT set_auth_url
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">==</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
-            iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
-        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
-            iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="s1">&#39;&#39;</span>
-        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT interface_driver quantum.agent.linux.interface.RyuInterfaceDriver
-            iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
-            iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT ryu_api_host <span class="nv">$RYU_API_HOST</span>:<span class="nv">$RYU_API_PORT</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
+<span class="k">    </span>configure_quantum_third_party
+    init_quantum_third_party
+    start_quantum_third_party
 <span class="k">fi</span>
 
 
@@ -2183,38 +1686,10 @@ complex physical network configurations.</p>
 <p>Additional Nova configuration that is dependent on other services</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">        </span>add_nova_opt <span class="s2">&quot;network_api_class=nova.network.quantumv2.api.API&quot;</span>
-        add_nova_opt <span class="s2">&quot;quantum_admin_username=$Q_ADMIN_USERNAME&quot;</span>
-        add_nova_opt <span class="s2">&quot;quantum_admin_password=$SERVICE_PASSWORD&quot;</span>
-        add_nova_opt <span class="s2">&quot;quantum_admin_auth_url=$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
-        add_nova_opt <span class="s2">&quot;quantum_auth_strategy=$Q_AUTH_STRATEGY&quot;</span>
-        add_nova_opt <span class="s2">&quot;quantum_admin_tenant_name=$SERVICE_TENANT_NAME&quot;</span>
-        add_nova_opt <span class="s2">&quot;quantum_url=http://$Q_HOST:$Q_PORT&quot;</span>
-
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver&quot;</span><span class="k">}</span>
-        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;linuxbridge&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver&quot;</span><span class="k">}</span>
-        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;quantum.plugins.ryu.nova.vif.LibvirtOpenVswitchOFPRyuDriver&quot;</span><span class="k">}</span>
-            add_nova_opt <span class="s2">&quot;libvirt_ovs_integration_bridge=$OVS_BRIDGE&quot;</span>
-            add_nova_opt <span class="s2">&quot;linuxnet_ovs_ryu_api_host=$RYU_API_HOST:$RYU_API_PORT&quot;</span>
-            add_nova_opt <span class="s2">&quot;libvirt_ovs_ryu_api_host=$RYU_API_HOST:$RYU_API_PORT&quot;</span>
-        <span class="k">fi</span>
-<span class="k">        </span>add_nova_opt <span class="s2">&quot;libvirt_vif_driver=$NOVA_VIF_DRIVER&quot;</span>
-        add_nova_opt <span class="s2">&quot;linuxnet_interface_driver=$LINUXNET_VIF_DRIVER&quot;</span>
-        <span class="k">if </span>is_service_enabled q-meta; <span class="k">then</span>
-<span class="k">            </span>add_nova_opt <span class="s2">&quot;service_quantum_metadata_proxy=True&quot;</span>
-        <span class="k">fi</span>
-<span class="k">    elif </span>is_service_enabled n-net; <span class="k">then</span>
-<span class="k">        </span>add_nova_opt <span class="s2">&quot;network_manager=nova.network.manager.$NET_MAN&quot;</span>
-        add_nova_opt <span class="s2">&quot;public_interface=$PUBLIC_INTERFACE&quot;</span>
-        add_nova_opt <span class="s2">&quot;vlan_interface=$VLAN_INTERFACE&quot;</span>
-        add_nova_opt <span class="s2">&quot;flat_network_bridge=$FLAT_NETWORK_BRIDGE&quot;</span>
-        <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$FLAT_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>add_nova_opt <span class="s2">&quot;flat_interface=$FLAT_INTERFACE&quot;</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
+<span class="k">        </span>create_nova_conf_quantum
+    <span class="k">elif </span>is_service_enabled n-net; <span class="k">then</span>
+<span class="k">        </span>create_nova_conf_nova_network
+    <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>All nova-compute workers need to know the vnc configuration options
 These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
@@ -2349,59 +1824,10 @@ screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/no
 
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Quantum&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Start the Quantum service</p>
-</td><td class=code><div class=highlight><pre>
-    screen_it q-svc <span class="s2">&quot;cd $QUANTUM_DIR &amp;&amp; python $QUANTUM_DIR/bin/quantum-server --config-file $QUANTUM_CONF --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Waiting for Quantum to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://127.0.0.1:9696; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;Quantum did not start&quot;</span>
-      <span class="nb">exit </span>1
-    <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure Quantum elements
-Configure internal network &amp; subnet</p>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; demo &quot;</span> | get_field 1<span class="k">)</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create a small network
-Since quantum command is executed in admin context at this point,
-<tt class="docutils literal"><span class="pre">--tenant_id</span></tt> needs to be specified.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --tenant_id <span class="nv">$TENANT_ID</span> <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">SUBNET_ID</span><span class="o">=</span><span class="k">$(</span>quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-    <span class="k">if </span>is_service_enabled q-l3; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Create a router, and add the private subnet as one of its interfaces</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">ROUTER_ID</span><span class="o">=</span><span class="k">$(</span>quantum router-create --tenant_id <span class="nv">$TENANT_ID</span> router1 | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-        quantum router-interface-add <span class="nv">$ROUTER_ID</span> <span class="nv">$SUBNET_ID</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Create an external network, and a subnet. Configure the external network as router gw</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">EXT_NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> -- --router:external<span class="o">=</span>True | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-        <span class="nv">EXT_GW_IP</span><span class="o">=</span><span class="k">$(</span>quantum subnet-create --ip_version 4 <span class="nv">$EXT_NET_ID</span> <span class="nv">$FLOATING_RANGE</span> -- --enable_dhcp<span class="o">=</span>False | grep <span class="s1">&#39;gateway_ip&#39;</span> | get_field 2<span class="k">)</span>
-        quantum router-gateway-set <span class="nv">$ROUTER_ID</span> <span class="nv">$EXT_NET_ID</span>
-        <span class="k">if </span>is_quantum_ovs_base_plugin <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_NAMESPACE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">CIDR_LEN</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="p">#*/</span><span class="k">}</span>
-            sudo ip addr add <span class="nv">$EXT_GW_IP</span>/<span class="nv">$CIDR_LEN</span> dev <span class="nv">$PUBLIC_BRIDGE</span>
-            sudo ip link <span class="nb">set</span> <span class="nv">$PUBLIC_BRIDGE</span> up
-            <span class="nv">ROUTER_GW_IP</span><span class="o">=</span><span class="sb">`</span>quantum port-list -c fixed_ips -c device_owner | grep router_gateway | awk -F <span class="s1">&#39;&quot;&#39;</span> <span class="s1">&#39;{ print $8; }&#39;</span><span class="sb">`</span>
-            sudo route add -net <span class="nv">$FIXED_RANGE</span> gw <span class="nv">$ROUTER_GW_IP</span>
-        <span class="k">fi</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_NAMESPACE&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Explicitly set router id in l3 agent configuration</p>
-</td><td class=code><div class=highlight><pre>
-            iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT router_id <span class="nv">$ROUTER_ID</span>
-        <span class="k">fi</span>
-<span class="k">   fi</span>
-<span class="k">   if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_DEBUG_COMMAND&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>setup_quantum
-   <span class="k">fi</span>
+    start_quantum_service_and_check
+    create_quantum_initial_network
+    setup_quantum_debug
 <span class="k">elif </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span> <span class="o">&amp;&amp;</span> is_service_enabled n-net; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a small network</p>
@@ -2411,7 +1837,7 @@ Since quantum command is executed in admin context at this point,
 </pre></div></td></tr><tr><td class=docs>
 <p>Create some floating ips</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$NOVA_BIN_DIR</span>/nova-manage floating create <span class="nv">$FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$PUBLIC_NETWORK</span>
+    <span class="nv">$NOVA_BIN_DIR</span>/nova-manage floating create <span class="nv">$FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$PUBLIC_NETWORK_NAME</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a second pool</p>
@@ -2419,14 +1845,9 @@ Since quantum command is executed in admin context at this point,
     <span class="nv">$NOVA_BIN_DIR</span>/nova-manage floating create --ip_range<span class="o">=</span><span class="nv">$TEST_FLOATING_RANGE</span> --pool<span class="o">=</span><span class="nv">$TEST_FLOATING_POOL</span>
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Start up the quantum agents if enabled</p>
-</td><td class=code><div class=highlight><pre>
-screen_it q-agt <span class="s2">&quot;python $AGENT_BINARY --config-file $QUANTUM_CONF --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
-screen_it q-dhcp <span class="s2">&quot;python $AGENT_DHCP_BINARY --config-file $QUANTUM_CONF --config-file=$Q_DHCP_CONF_FILE&quot;</span>
-screen_it q-meta <span class="s2">&quot;python $AGENT_META_BINARY --config-file $QUANTUM_CONF --config-file=$Q_META_CONF_FILE&quot;</span>
-screen_it q-l3 <span class="s2">&quot;python $AGENT_L3_BINARY --config-file $QUANTUM_CONF --config-file=$Q_L3_CONF_FILE&quot;</span>
-
+<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+<span class="k">    </span>start_quantum_agents
+<span class="k">fi</span>
 <span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Nova&quot;</span>
     start_nova
