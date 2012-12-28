@@ -567,9 +567,12 @@ euca-terminate-instances <span class="nv">$INSTANCE</span> <span class="o">||</s
     die <span class="s2">&quot;Failure terminating instance $INSTANCE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Assure it has terminated within a reasonable time</p>
+<p>Assure it has terminated within a reasonable time. The behaviour of this
+case changed with bug/836978. Requesting the status of an invalid instance
+will now return an error message including the instance id, so we need to
+filter that out.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-instances $INSTANCE | grep -q $INSTANCE; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-instances $INSTANCE |grep -v \&quot;InstanceNotFound\&quot; | grep -q $INSTANCE; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t terminate within $TERMINATE_TIMEOUT seconds&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
