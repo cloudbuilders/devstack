@@ -370,6 +370,7 @@ cleanup_swift</p>
 
 <span class="nv">SWIFT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift
 <span class="nv">SWIFTCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-swiftclient
+<span class="nv">SWIFT_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/swift</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO: add logging to different location.</p>
@@ -598,6 +599,7 @@ configured keystone it will checkout the directory.</p>
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken admin_user swift
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:authtoken signing_dir <span class="nv">$SWIFT_AUTH_CACHE_DIR</span>
 
     iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:keystoneauth use
     iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:keystoneauth operator_roles
@@ -720,6 +722,13 @@ emulating 4 nodes on different ports</p>
         swift-ring-builder account.builder rebalance
     <span class="o">}</span> <span class="o">&amp;&amp;</span> <span class="nb">popd</span> &gt;/dev/null
 
+</pre></div></td></tr><tr><td class=docs>
+<p>This is where we create three different rings for swift with
+different object servers binding on different ports.</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkdir -p <span class="nv">$SWIFT_AUTH_CACHE_DIR</span>
+    sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$SWIFT_AUTH_CACHE_DIR</span>
+    rm -f <span class="nv">$SWIFT_AUTH_CACHE_DIR</span>/*
 <span class="o">}</span>
 
 <span class="k">function </span>install_swift<span class="o">()</span> <span class="o">{</span>
@@ -732,8 +741,7 @@ emulating 4 nodes on different ports</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This is where we create three different rings for swift with
-different object servers binding on different ports.</p>
+<p>Create cache dir</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_swift<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
