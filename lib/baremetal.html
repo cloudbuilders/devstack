@@ -421,11 +421,31 @@ in the following order:</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>BM_DNSMASQ_* options must be changed to suit your network environment</p>
+<p>whether to create a fake environment, eg. for devstack-gate</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">BM_DNSMASQ_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_IFACE</span><span class="k">:-</span><span class="nv">$PUBLIC_INTERFACE</span><span class="k">}</span>
-<span class="nv">BM_DNSMASQ_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_IFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
-<span class="nv">BM_DNSMASQ_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.0.2.32,192.0.2.48</span><span class="k">}</span>
+<span class="nv">BM_USE_FAKE_ENV</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$BM_USE_FAKE_ENV</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Extra options to pass to bm_poseur
+change the bridge name or IP: --bridge br99 --bridge-ip 192.0.2.1
+change the virtualization type: --engine qemu</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">BM_POSEUR_EXTRA_OPTS</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_POSEUR_EXTRA_OPTS</span><span class="k">:-}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>BM_DNSMASQ_IFACE should match FLAT_NETWORK_BRIDGE</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$BM_USE_FAKE_ENV&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">BM_DNSMASQ_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_IFACE</span><span class="k">:-</span><span class="nv">br99</span><span class="k">}</span>
+    <span class="nv">BM_DNSMASQ_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.0.2.32,192.0.2.48</span><span class="k">}</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">BM_DNSMASQ_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_IFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>if testing on a physical network,
+BM_DNSMASQ_RANGE must be changed to suit your network</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">BM_DNSMASQ_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_RANGE</span><span class="k">:-}</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <dl class="docutils">
@@ -475,8 +495,8 @@ BaremetalHostManager with multiple nodes and different flavors.</dd>
 <p>Below this, we set some path and filenames.
 Defaults are probably sufficient.</p>
 </td><td class=code><div class=highlight><pre>
-
 <span class="nv">BM_IMAGE_BUILD_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_IMAGE_BUILD_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/diskimage-builder</span><span class="k">}</span>
+<span class="nv">BM_POSEUR_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_POSEUR_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/bm_poseur</span><span class="k">}</span>
 
 <span class="nv">BM_HOST_CURRENT_KERNEL</span><span class="o">=</span><span class="k">$(</span>uname -r<span class="k">)</span>
 <span class="nv">BM_DEPLOY_RAMDISK</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DEPLOY_RAMDISK</span><span class="k">:-</span><span class="nv">bm</span><span class="p">-deploy-</span><span class="nv">$BM_HOST_CURRENT_KERNEL</span><span class="p">-initrd</span><span class="k">}</span>
@@ -518,6 +538,7 @@ so that we can build the deployment kernel &amp; ramdisk</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>prepare_baremetal_toolchain<span class="o">()</span> <span class="o">{</span>
     git_clone <span class="nv">$BM_IMAGE_BUILD_REPO</span> <span class="nv">$BM_IMAGE_BUILD_DIR</span> <span class="nv">$BM_IMAGE_BUILD_BRANCH</span>
+    git_clone <span class="nv">$BM_POSEUR_REPO</span> <span class="nv">$BM_POSEUR_DIR</span> <span class="nv">$BM_POSEUR_BRANCH</span>
 
     <span class="nb">local </span><span class="nv">shellinabox_basename</span><span class="o">=</span><span class="k">$(</span>basename <span class="nv">$BM_SHELL_IN_A_BOX</span><span class="k">)</span>
     <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$DEST</span>/<span class="nv">$shellinabox_basename</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -534,6 +555,38 @@ so that we can build the deployment kernel &amp; ramdisk</p>
         make
         sudo make install
     <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>set up virtualized environment for devstack-gate testing</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>create_fake_baremetal_env<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">bm_poseur</span><span class="o">=</span><span class="s2">&quot;$BM_POSEUR_DIR/bm_poseur&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(deva): add support for &gt;1 VM</p>
+</td><td class=code><div class=highlight><pre>
+    sudo <span class="nv">$bm_poseur</span> <span class="nv">$BM_POSEUR_EXTRA_OPTS</span> create-bridge
+    sudo <span class="nv">$bm_poseur</span> <span class="nv">$BM_POSEUR_EXTRA_OPTS</span> create-vm
+    <span class="nv">BM_FIRST_MAC</span><span class="o">=</span><span class="k">$(</span>sudo <span class="nv">$bm_poseur</span> get-macs<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<dl class="docutils">
+<dt>NOTE: there is currently a limitation in baremetal driver</dt>
+<dd>that requires second MAC even if it is not used.
+Passing a fake value allows this to work.</dd>
+</dl>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 164)</p>
+Definition list ends without a blank line; unexpected unindent.</div>
+<p>TODO(deva): remove this after driver issue is fixed.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">BM_SECOND_MAC</span><span class="o">=</span><span class="s1">&#39;12:34:56:78:90:12&#39;</span>
+<span class="o">}</span>
+
+<span class="k">function </span>cleanup_fake_baremetal_env<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">bm_poseur</span><span class="o">=</span><span class="s2">&quot;$BM_POSEUR_DIR/bm_poseur&quot;</span>
+    sudo <span class="nv">$bm_poseur</span> <span class="nv">$BM_POSEUR_EXTRA_OPTS</span> destroy-vm
+    sudo <span class="nv">$bm_poseur</span> <span class="nv">$BM_POSEUR_EXTRA_OPTS</span> destroy-bridge
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
