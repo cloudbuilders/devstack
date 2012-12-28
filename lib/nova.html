@@ -624,6 +624,13 @@ to simulate multiple systems.</p>
 <span class="k">            fi</span>
 <span class="k">        fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Prepare directories and packages for baremetal driver</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if </span>is_baremetal; <span class="k">then</span>
+<span class="k">            </span>configure_baremetal_nova_dirs
+        <span class="k">fi</span>
+
 <span class="k">        if </span>is_service_enabled quantum <span class="o">&amp;&amp;</span> is_quantum_ovs_base_plugin <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">&amp;&amp;</span> ! sudo grep -q <span class="s1">&#39;^cgroup_device_acl&#39;</span> <span class="nv">$QEMU_CONF</span> ; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Add /dev/net/tun to cgroup_device_acls, needed for type=ethernet interfaces</p>
@@ -800,7 +807,11 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span>dburl
     database_connection_url dburl nova
     add_nova_opt <span class="s2">&quot;sql_connection=$dburl&quot;</span>
-    add_nova_opt <span class="s2">&quot;libvirt_type=$LIBVIRT_TYPE&quot;</span>
+    <span class="k">if </span>is_baremetal; <span class="k">then</span>
+<span class="k">        </span>database_connection_url dburl nova_bm
+        add_nova_opt <span class="s2">&quot;baremetal_sql_connection=$dburl&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>add_nova_opt <span class="s2">&quot;libvirt_type=$LIBVIRT_TYPE&quot;</span>
     add_nova_opt <span class="s2">&quot;libvirt_cpu_mode=none&quot;</span>
     add_nova_opt <span class="s2">&quot;instance_name_template=${INSTANCE_NAME_PREFIX}%08x&quot;</span>
 
@@ -906,7 +917,15 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 <p>(Re)create nova database</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">$NOVA_BIN_DIR</span>/nova-manage db sync
-    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>(Re)create nova baremetal database</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if </span>is_baremetal; <span class="k">then</span>
+<span class="k">            </span>recreate_database nova_bm latin1
+            <span class="nv">$NOVA_BIN_DIR</span>/nova-baremetal-manage db sync
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create cache dir</p>
@@ -914,6 +933,15 @@ use latin1 by default, and then upgrades the database to utf8 (see the
     sudo mkdir -p <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
     sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
     rm -f <span class="nv">$NOVA_AUTH_CACHE_DIR</span>/*
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create the keys folder</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkdir -p <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/keys
+</pre></div></td></tr><tr><td class=docs>
+<p>make sure we own NOVA_STATE_PATH and all subdirs</p>
+</td><td class=code><div class=highlight><pre>
+    sudo chown -R <span class="sb">`</span>whoami<span class="sb">`</span> <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

@@ -752,6 +752,7 @@ address.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tempest
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/baremetal
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the destination directories for OpenStack projects</p>
@@ -843,6 +844,13 @@ we should make sure we use the same variable names as the option names.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span><span class="k">$(</span>grep -o <span class="s1">&#39;flat_network_bridge=[[:alnum:]]*&#39;</span> /proc/cmdline | cut -d<span class="o">=</span> -f 2 | sort -u<span class="k">)</span>
     <span class="nv">GUEST_INTERFACE_DEFAULT</span><span class="o">=</span>eth1
+<span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;baremetal&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">PUBLIC_INTERFACE_DEFAULT</span><span class="o">=</span>eth0
+    <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span>br100
+    <span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+    <span class="nv">FORCE_DHCP_RELEASE</span><span class="o">=</span><span class="k">${</span><span class="nv">FORCE_DHCP_RELEASE</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+    <span class="nv">NET_MAN</span><span class="o">=</span><span class="k">${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">FlatManager</span><span class="k">}</span>
+    <span class="nv">STUB_NETWORK</span><span class="o">=</span><span class="k">${</span><span class="nv">STUB_NETWORK</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
 <span class="k">else</span>
 <span class="k">    </span><span class="nv">PUBLIC_INTERFACE_DEFAULT</span><span class="o">=</span>br100
     <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span>br100
@@ -854,6 +862,7 @@ we should make sure we use the same variable names as the option names.</p>
 <span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">$FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="k">}</span>
 <span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
+<span class="nv">FORCE_DHCP_RELEASE</span><span class="o">=</span><span class="k">${</span><span class="nv">FORCE_DHCP_RELEASE</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Test floating pool and range are used for testing.  They are defined
@@ -1641,9 +1650,9 @@ a part of the OpenStack project. Configure and start them.</p>
 </td><td class=code><div class=highlight><pre>
     sudo killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">    </span>clean_iptables
-    rm -rf <span class="nv">$NOVA_STATE_PATH</span>/networks
-    mkdir -p <span class="nv">$NOVA_STATE_PATH</span>/networks
-
+    rm -rf <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
+    sudo mkdir -p <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
+    sudo chown -R <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
 </pre></div></td></tr><tr><td class=docs>
 <p>Force IP forwarding on, just on case</p>
 </td><td class=code><div class=highlight><pre>
@@ -1745,6 +1754,13 @@ For multi-host, this should be the management ip of the compute host.</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
         add_nova_opt <span class="s2">&quot;firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="openvz">
+<h2>OpenVZ</h2>
+</td><td class=code><div class=highlight><pre>
+
     <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;openvz&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Using OpenVZ virtualization driver&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1757,6 +1773,31 @@ add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
         add_nova_opt <span class="s2">&quot;connection_type=openvz&quot;</span>
         <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
         add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="bare-metal">
+<h2>Bare Metal</h2>
+</td><td class=code><div class=highlight><pre>
+
+    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;baremetal&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>echo_summary <span class="s2">&quot;Using BareMetal driver&quot;</span>
+        add_nova_opt <span class="s2">&quot;compute_driver=nova.virt.baremetal.driver.BareMetalDriver&quot;</span>
+        <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.NoopFirewallDriver&quot;</span><span class="k">}</span>
+        add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
+        add_nova_opt <span class="s2">&quot;baremetal_driver=$BM_DRIVER&quot;</span>
+        add_nova_opt <span class="s2">&quot;baremetal_tftp_root=/tftpboot&quot;</span>
+        add_nova_opt <span class="s2">&quot;instance_type_extra_specs=cpu_arch:$BM_CPU_ARCH&quot;</span>
+        add_nova_opt <span class="s2">&quot;power_manager=$BM_POWER_MANAGER&quot;</span>
+        add_nova_opt <span class="s2">&quot;scheduler_host_manager=nova.scheduler.baremetal_host_manager.BaremetalHostManager&quot;</span>
+        add_nova_opt <span class="s2">&quot;scheduler_default_filters=AllHostsFilter&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="default">
+<h2>Default</h2>
+</td><td class=code><div class=highlight><pre>
+
     <span class="k">else</span>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Using libvirt virtualization driver&quot;</span>
         add_nova_opt <span class="s2">&quot;compute_driver=libvirt.LibvirtDriver&quot;</span>
@@ -1765,6 +1806,14 @@ add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Extra things to prepare nova for baremetal, before nova starts</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled nova <span class="o">&amp;&amp;</span> is_baremetal; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Preparing for nova baremetal&quot;</span>
+    prepare_baremetal_toolchain
+    configure_baremetal_nova_dirs
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1923,21 +1972,72 @@ userdata.  See <a class="reference external" href="https://help.ubuntu.com/commu
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-<span class="k">    </span>echo_summary <span class="s2">&quot;Uploading images&quot;</span>
-    <span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+<span class="k">    </span><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+
+    <span class="k">if </span>is_baremetal; <span class="k">then</span>
+<span class="k">       </span>echo_summary <span class="s2">&quot;Creating and uploading baremetal images&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>build and upload separate deploy kernel &amp; ramdisk</p>
+</td><td class=code><div class=highlight><pre>
+       upload_baremetal_deploy <span class="nv">$TOKEN</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>upload images, separating out the kernel &amp; ramdisk for PXE boot</p>
+</td><td class=code><div class=highlight><pre>
+       <span class="k">for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">           </span>upload_baremetal_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
+       <span class="k">done</span>
+<span class="k">    else</span>
+<span class="k">       </span>echo_summary <span class="s2">&quot;Uploading images&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Option to upload legacy ami-tty, which works with xenserver</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}https://github.com/downloads/citrix-openstack/warehouse/tty.tgz&quot;</span>
-    <span class="k">fi</span>
+       <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">           </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}https://github.com/downloads/citrix-openstack/warehouse/tty.tgz&quot;</span>
+       <span class="k">fi</span>
 
-<span class="k">    for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">        </span>upload_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
-    <span class="k">done</span>
+<span class="k">       for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">           </span>upload_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
+       <span class="k">done</span>
+<span class="k">    fi</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>If we are running nova with baremetal driver, there are a few
+last-mile configuration bits to attend to, which must happen
+after n-api and n-sch have started.
+Also, creating the baremetal flavor must happen after images
+are loaded into glance, though just knowing the IDs is sufficient here</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled nova <span class="o">&amp;&amp;</span> is_baremetal; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>create special flavor for baremetal if we know what images to associate</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="o">[[</span> -n <span class="s2">&quot;$BM_DEPLOY_KERNEL_ID&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$BM_DEPLOY_RAMDISK_ID&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="se">\</span>
+       create_baremetal_flavor <span class="nv">$BM_DEPLOY_KERNEL_ID</span> <span class="nv">$BM_DEPLOY_RAMDISK_ID</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>otherwise user can manually add it later by calling nova-baremetal-manage
+otherwise user can manually add it later by calling nova-baremetal-manage</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="o">[[</span> -n <span class="s2">&quot;$BM_FIRST_MAC&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> add_baremetal_node
+
+</pre></div></td></tr><tr><td class=docs>
+<p>NOTE: we do this here to ensure that our copy of dnsmasq is running</p>
+</td><td class=code><div class=highlight><pre>
+    sudo pkill dnsmasq <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>sudo dnsmasq --conf-file<span class="o">=</span> --port<span class="o">=</span>0 --enable-tftp --tftp-root<span class="o">=</span>/tftpboot <span class="se">\</span>
+        --dhcp-boot<span class="o">=</span>pxelinux.0 --bind-interfaces --pid-file<span class="o">=</span>/var/run/dnsmasq.pid <span class="se">\</span>
+        --interface<span class="o">=</span><span class="nv">$BM_DNSMASQ_IFACE</span> --dhcp-range<span class="o">=</span><span class="nv">$BM_DNSMASQ_RANGE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>ensure callback daemon is running</p>
+</td><td class=code><div class=highlight><pre>
+    sudo pkill nova-baremetal-deploy-helper <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>screen_it baremetal <span class="s2">&quot;nova-baremetal-deploy-helper&quot;</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure Tempest last to ensure that the runtime configuration of
