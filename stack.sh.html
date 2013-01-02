@@ -1184,7 +1184,25 @@ an error.  It is also useful for following along as the install occurs.</p>
 <p>Install package requirements</p>
 </td><td class=code><div class=highlight><pre>
 echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span>
-<span class="nv">$TOP_DIR</span>/tools/install_prereqs.sh
+<span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/apts<span class="k">)</span>
+<span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/rpms<span class="k">)</span>
+<span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/rpms-suse<span class="k">)</span>
+<span class="k">else</span>
+<span class="k">    </span>exit_distro_not_supported <span class="s2">&quot;list of packages&quot;</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$SYSLOG</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    if </span>is_ubuntu <span class="o">||</span> is_fedora; <span class="k">then</span>
+<span class="k">        </span>install_package rsyslog-relp
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        </span>install_package rsyslog-module-relp
+    <span class="k">else</span>
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;rsyslog-relp installation&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
