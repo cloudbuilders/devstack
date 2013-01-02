@@ -335,12 +335,11 @@ ul.auto-toc {
 <span class="c">#!/usr/bin/env bash</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p><strong>quantum.sh</strong></p>
+<p><strong>quantum-adv-test.sh</strong></p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We will use this test to perform integration testing of nova and
-other components with Quantum.</p>
+<p>Perform integration testing of Nova and other components with Quantum.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
@@ -353,6 +352,7 @@ only the first error that occured.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">set</span> -o errtrace
+
 <span class="nb">trap </span>failed ERR
 failed<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
@@ -371,23 +371,10 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o xtrace
 
-<span class="c">#------------------------------------------------------------------------------</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Quantum config check</p>
+<div class="section" id="environment">
+<h1>Environment</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#------------------------------------------------------------------------------</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Warn if quantum is not enabled</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> ! <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: Running quantum test without enabling quantum&quot;</span>
-<span class="k">fi</span>
-
-<span class="c">#------------------------------------------------------------------------------</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Environment</p>
-</td><td class=code><div class=highlight><pre>
-<span class="c">#------------------------------------------------------------------------------</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the current directory</p>
@@ -421,11 +408,11 @@ is_service_enabled quantum <span class="o">&amp;&amp;</span> is_service_enabled 
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/exerciserc
 
-<span class="c">#------------------------------------------------------------------------------</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Test settings for quantum</p>
+</div>
+<div class="section" id="quantum-settings">
+<h1>Quantum Settings</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#------------------------------------------------------------------------------</span>
 
 <span class="nv">TENANTS</span><span class="o">=</span><span class="s2">&quot;DEMO1&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -471,32 +458,22 @@ is_service_enabled quantum <span class="o">&amp;&amp;</span> is_service_enabled 
 <span class="nv">DEMO1_ROUTER1_NET</span><span class="o">=</span><span class="s2">&quot;demo1-net1&quot;</span>
 <span class="nv">DEMO2_ROUTER1_NET</span><span class="o">=</span><span class="s2">&quot;demo2-net1&quot;</span>
 
-<span class="c">#------------------------------------------------------------------------------</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Keystone settings.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="c">#------------------------------------------------------------------------------</span>
 <span class="nv">KEYSTONE</span><span class="o">=</span><span class="s2">&quot;keystone&quot;</span>
 
-<span class="c">#------------------------------------------------------------------------------</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Get a token for clients that don't support service catalog</p>
-</td><td class=code><div class=highlight><pre>
-<span class="c">#------------------------------------------------------------------------------</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>manually create a token by querying keystone (sending JSON data).  Keystone
+<p>Manually create a token by querying keystone (sending JSON data).  Keystone
 returns a token and catalog of endpoints.  We use python to parse the token
 and save it.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | awk <span class="s1">&#39;{print $4}&#39;</span><span class="sb">`</span>
 
-<span class="c">#------------------------------------------------------------------------------</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Various functions.</p>
+</div>
+<div class="section" id="various-functions">
+<h1>Various functions</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#------------------------------------------------------------------------------</span>
+
 <span class="k">function </span>foreach_tenant <span class="o">{</span>
     <span class="nv">COMMAND</span><span class="o">=</span><span class="nv">$1</span>
     <span class="k">for </span>TENANT in <span class="k">${</span><span class="nv">TENANTS</span><span class="p">//,/ </span><span class="k">}</span>;<span class="k">do</span>
@@ -565,10 +542,9 @@ and save it.</p>
 <span class="k">function </span>confirm_server_active <span class="o">{</span>
     <span class="nb">local </span><span class="nv">VM_UUID</span><span class="o">=</span><span class="nv">$1</span>
     <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server &#39;$VM_UUID&#39; did not become active!&quot;</span>
-    <span class="nb">false</span>
-<span class="k">fi</span>
-
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;server &#39;$VM_UUID&#39; did not become active!&quot;</span>
+        <span class="nb">false</span>
+<span class="nb">    </span><span class="k">fi</span>
 <span class="o">}</span>
 
 <span class="k">function </span>add_tenant <span class="o">{</span>
@@ -587,24 +563,14 @@ and save it.</p>
 <span class="k">function </span>remove_tenant <span class="o">{</span>
     <span class="nb">local </span><span class="nv">TENANT</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>get_tenant_id <span class="nv">$TENANT</span><span class="k">)</span>
-
     <span class="nv">$KEYSTONE</span> tenant-delete <span class="nv">$TENANT_ID</span>
 <span class="o">}</span>
 
 <span class="k">function </span>remove_user <span class="o">{</span>
     <span class="nb">local </span><span class="nv">USER</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">USER_ID</span><span class="o">=</span><span class="k">$(</span>get_user_id <span class="nv">$USER</span><span class="k">)</span>
-
     <span class="nv">$KEYSTONE</span> user-delete <span class="nv">$USER_ID</span>
 <span class="o">}</span>
-
-
-
-<span class="c">#------------------------------------------------------------------------------</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>&quot;Create&quot; functions</p>
-</td><td class=code><div class=highlight><pre>
-<span class="c">#------------------------------------------------------------------------------</span>
 
 <span class="k">function </span>create_tenants <span class="o">{</span>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc admin admin
@@ -766,11 +732,12 @@ nova secgroup-delete-rule default icmp -1 -1 0.0.0.0/0</p>
     delete_all
 <span class="o">}</span>
 
-<span class="c">#------------------------------------------------------------------------------</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Test functions.</p>
+</div>
+<div class="section" id="test-functions">
+<h1>Test functions</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#------------------------------------------------------------------------------</span>
+
 <span class="k">function </span>test_functions <span class="o">{</span>
     <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span>get_image_id<span class="k">)</span>
     <span class="nb">echo</span> <span class="nv">$IMAGE</span>
@@ -785,11 +752,12 @@ nova secgroup-delete-rule default icmp -1 -1 0.0.0.0/0</p>
     <span class="nb">echo</span> <span class="nv">$NETWORK_ID</span>
 <span class="o">}</span>
 
-<span class="c">#------------------------------------------------------------------------------</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Usage and main.</p>
+</div>
+<div class="section" id="usage-and-main">
+<h1>Usage and main</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#------------------------------------------------------------------------------</span>
+
 usage<span class="o">()</span> <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$0: [-h]&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;  -h, --help              Display help message&quot;</span>
@@ -862,12 +830,12 @@ main<span class="o">()</span> <span class="o">{</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
 
-
-<span class="c">#-------------------------------------------------------------------------------</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Kick off script.</p>
+</div>
+<div class="section" id="kick-off-script">
+<h1>Kick off script</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#-------------------------------------------------------------------------------</span>
+
 <span class="nb">echo</span> <span class="nv">$*</span>
 main <span class="nv">$*</span>
 
@@ -881,6 +849,7 @@ main <span class="nv">$*</span>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>
