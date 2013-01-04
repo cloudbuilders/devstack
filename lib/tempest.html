@@ -434,32 +434,34 @@ first image returned and set <tt class="docutils literal">image_uuid_alt</tt> to
 if there is more than one returned...
 ... Also ensure we only take active images, so we don't get snapshots in process</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">image_lines</span><span class="o">=</span><span class="sb">`</span>glance image-list<span class="sb">`</span>
-    <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\n\r&#39;</span>
-    <span class="nv">images</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">for </span>line in <span class="nv">$image_lines</span>; <span class="k">do</span>
-<span class="k">        if</span> <span class="o">[</span> -z <span class="nv">$DEFAULT_IMAGE_NAME</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">images</span><span class="o">=</span><span class="s2">&quot;$images `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | cut -d&#39; &#39; -f2`&quot;</span>
-        <span class="k">else</span>
-<span class="k">            </span><span class="nv">images</span><span class="o">=</span><span class="s2">&quot;$images `echo $line | grep -v &quot;</span>^<span class="se">\(</span>ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep -v &quot;</span><span class="se">\(</span>aki<span class="se">\|</span>ari<span class="se">\)</span><span class="s2">&quot; | grep &#39;active&#39; | grep &quot;</span><span class="nv">$DEFAULT_IMAGE_NAME</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+    <span class="nb">declare</span> -a images
+
+    <span class="k">while </span><span class="nb">read</span> -r IMAGE_NAME IMAGE_UUID; <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[</span> <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="o">=</span> <span class="s2">&quot;$DEFAULT_IMAGE_NAME&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">image_uuid</span><span class="o">=</span><span class="s2">&quot;$IMAGE_UUID&quot;</span>
+            <span class="nv">image_uuid_alt</span><span class="o">=</span><span class="s2">&quot;$IMAGE_UUID&quot;</span>
         <span class="k">fi</span>
-<span class="k">    done</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Create array of image UUIDs...</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
-    <span class="nv">images</span><span class="o">=(</span><span class="nv">$images</span><span class="o">)</span>
-    <span class="nv">num_images</span><span class="o">=</span><span class="k">${#</span><span class="nv">images</span><span class="p">[*]</span><span class="k">}</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Found $num_images images&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_images</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Found no valid images to use!&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nv">image_uuid</span><span class="o">=</span><span class="k">${</span><span class="nv">images</span><span class="p">[0]</span><span class="k">}</span>
-    <span class="nv">image_uuid_alt</span><span class="o">=</span><span class="nv">$image_uuid</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_images</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">image_uuid_alt</span><span class="o">=</span><span class="k">${</span><span class="nv">images</span><span class="p">[1]</span><span class="k">}</span>
-    <span class="k">fi</span>
+<span class="k">        </span>images+<span class="o">=(</span><span class="nv">$IMAGE_UUID</span><span class="o">)</span>
+    <span class="k">done</span> &lt; &lt;<span class="o">(</span>glance image-list --status<span class="o">=</span>active | awk -F<span class="s1">&#39;|&#39;</span> <span class="s1">&#39;!/^(+--)|ID|aki|ari/ { print $3,$2 }&#39;</span><span class="o">)</span>
+
+    <span class="k">case</span> <span class="s2">&quot;${#images[*]}&quot;</span> in
+        0<span class="o">)</span>
+            <span class="nb">echo</span> <span class="s2">&quot;Found no valid images to use!&quot;</span>
+            <span class="nb">exit </span>1
+            ;;
+        1<span class="o">)</span>
+            <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$image_uuid&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">image_uuid</span><span class="o">=</span><span class="k">${</span><span class="nv">images</span><span class="p">[0]</span><span class="k">}</span>
+                <span class="nv">image_uuid_alt</span><span class="o">=</span><span class="k">${</span><span class="nv">images</span><span class="p">[0]</span><span class="k">}</span>
+            <span class="k">fi</span>
+            ;;
+        *<span class="o">)</span>
+            <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$image_uuid&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">image_uuid</span><span class="o">=</span><span class="k">${</span><span class="nv">images</span><span class="p">[0]</span><span class="k">}</span>
+                <span class="nv">image_uuid_alt</span><span class="o">=</span><span class="k">${</span><span class="nv">images</span><span class="p">[1]</span><span class="k">}</span>
+            <span class="k">fi</span>
+            ;;
+    <span class="k">esac</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create tempest.conf from tempest.conf.sample
