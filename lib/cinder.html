@@ -398,6 +398,26 @@ cleanup_cinder</p>
 <span class="nv">VOLUME_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">:-</span><span class="nv">volume</span><span class="p">-</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>_clean_volume_group removes all cinder volumes from the specified volume group
+_clean_volume_group $VOLUME_GROUP $VOLUME_NAME_PREFIX</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_clean_volume_group<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">vg</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">vg_prefix</span><span class="o">=</span><span class="nv">$2</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean out existing volumes</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>lv in <span class="sb">`</span>sudo lvs --noheadings -o lv_name <span class="nv">$vg</span><span class="sb">`</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>vg_prefix prefixes the LVs we want</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$vg_prefix}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>sudo lvremove -f <span class="nv">$vg</span>/<span class="nv">$lv</span>
+        <span class="k">fi</span>
+<span class="k">    done</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>cleanup_cinder() - Remove residual data files, anything left over from previous
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
@@ -439,7 +459,10 @@ So check the response and restart if need be</p>
 <span class="k">        </span>stop_service tgtd
     <span class="k">fi</span>
 
-<span class="k">    </span>sudo vgremove -f <span class="nv">$VOLUME_GROUP</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Campsite rule: leave behind a volume group at least as clean as we found it</p>
+</td><td class=code><div class=highlight><pre>
+    _clean_volume_group <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -670,17 +693,10 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 </td><td class=code><div class=highlight><pre>
             sudo tgtadm --op show --mode target | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | grep Target | cut -f3 -d <span class="s1">&#39; &#39;</span> | sudo xargs -n1 tgt-admin --delete <span class="o">||</span> <span class="nb">true</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Clean out existing volumes</p>
+<p>Start with a clean volume group</p>
 </td><td class=code><div class=highlight><pre>
-            <span class="k">for </span>lv in <span class="sb">`</span>sudo lvs --noheadings -o lv_name <span class="nv">$VOLUME_GROUP</span><span class="sb">`</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>VOLUME_NAME_PREFIX prefixes the LVs we want</p>
-</td><td class=code><div class=highlight><pre>
-                <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$VOLUME_NAME_PREFIX}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                    </span>sudo lvremove -f <span class="nv">$VOLUME_GROUP</span>/<span class="nv">$lv</span>
-                <span class="k">fi</span>
-<span class="k">            done</span>
-<span class="k">        fi</span>
+            _clean_volume_group <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+        <span class="k">fi</span>
 <span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
