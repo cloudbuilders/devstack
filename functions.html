@@ -424,8 +424,7 @@ die_if_not_set env-var &quot;message&quot;</p>
         <span class="nb">set</span> +o xtrace
         <span class="nb">local </span><span class="nv">evar</span><span class="o">=</span><span class="nv">$1</span>; <span class="nb">shift</span>
 <span class="nb">        </span><span class="k">if</span> ! is_set <span class="nv">$evar</span> <span class="o">||</span> <span class="o">[</span> <span class="nv">$exitcode</span> !<span class="o">=</span> 0 <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nb">set</span> +o xtrace
-            <span class="nb">echo</span> <span class="nv">$@</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="nv">$@</span>
             <span class="nb">exit</span> -1
         <span class="k">fi</span>
     <span class="o">)</span>
@@ -1096,10 +1095,8 @@ is_package_installed package [package ...]</p>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>dpkg -l <span class="s2">&quot;$@&quot;</span> &gt; /dev/null
-        <span class="k">return</span> <span class="nv">$?</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>rpm --quiet -q <span class="s2">&quot;$@&quot;</span>
-        <span class="k">return</span> <span class="nv">$?</span>
     <span class="k">else</span>
 <span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;finding if a package is installed&quot;</span>
     <span class="k">fi</span>
@@ -1112,10 +1109,7 @@ is_set env-var</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>is_set<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span><span class="nv">var</span><span class="o">=</span><span class="se">\$</span><span class="s2">&quot;$1&quot;</span>
-    <span class="k">if </span><span class="nb">eval</span> <span class="s2">&quot;[ -z \&quot;$var\&quot; ]&quot;</span>; <span class="k">then</span>
-<span class="k">        return </span>1
-    <span class="k">fi</span>
-<span class="k">    return </span>0
+    <span class="nb">eval</span> <span class="s2">&quot;[ -n \&quot;$var\&quot; ]&quot;</span> <span class="c"># For ex.: sh -c &quot;[ -n \&quot;$var\&quot; ]&quot; would be better, but several exercises depends on this</span>
 <span class="o">}</span>
 
 
@@ -1503,11 +1497,9 @@ $1 The name of the database backend to use (mysql, postgresql, ...)</blockquote>
 <p>The backends haven't initialized yet, just save the selection for now</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">DATABASE_TYPE</span><span class="o">=</span><span class="nv">$1</span>
-        <span class="k">return</span>
-<span class="k">    fi</span>
-<span class="k">    </span>use_exclusive_service DATABASE_BACKENDS DATABASE_TYPE <span class="nv">$1</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
-    <span class="nv">ret</span><span class="o">=</span><span class="nv">$?</span>
-    <span class="k">return</span> <span class="nv">$ret</span>
+    <span class="k">else</span>
+<span class="k">        </span>use_exclusive_service DATABASE_BACKENDS DATABASE_TYPE <span class="nv">$1</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1705,7 +1697,6 @@ qpid_is_supported</p>
 not in openSUSE either right now.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="o">(</span> ! <span class="o">([[</span> <span class="s2">&quot;$DISTRO&quot;</span> <span class="o">=</span> <span class="s2">&quot;oneiric&quot;</span> <span class="o">]]</span> <span class="o">||</span> is_suse<span class="o">)</span> <span class="o">)</span>
-    <span class="k">return</span> <span class="nv">$?</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
