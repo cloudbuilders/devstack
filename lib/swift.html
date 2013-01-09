@@ -463,7 +463,7 @@ changing the permissions so we can run it as our user.</p>
 </td><td class=code><div class=highlight><pre>
 
     <span class="nv">USER_GROUP</span><span class="o">=</span><span class="k">$(</span>id -g<span class="k">)</span>
-    sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives
+    sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/<span class="o">{</span>drives,cache<span class="o">}</span>
     sudo chown -R <span class="nv">$USER</span>:<span class="k">${</span><span class="nv">USER_GROUP</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -658,16 +658,24 @@ username and password.</p>
 <span class="k">        </span><span class="nv">swift_node_config</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/object-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
         cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/object-server.conf-sample <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span>
         generate_swift_config <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">node_number</span><span class="k">}</span> <span class="nv">$[</span>OBJECT_PORT_BASE + 10 * <span class="o">(</span>node_number - 1<span class="o">)]</span>
+        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> filter:recon recon_cache_path  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/cache
+</pre></div></td></tr><tr><td class=docs>
+<p>This function generates an object/account/proxy configuration
+emulating 4 nodes on different ports</p>
+</td><td class=code><div class=highlight><pre>
+        sed -i -e <span class="s2">&quot;s,#[ ]*recon_cache_path .*,recon_cache_path = ${SWIFT_DATA_DIR}/cache,&quot;</span> <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span>
 
         <span class="nv">swift_node_config</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/container-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
         cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/container-server.conf-sample <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span>
         generate_swift_config <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">node_number</span><span class="k">}</span> <span class="nv">$[</span>CONTAINER_PORT_BASE + 10 * <span class="o">(</span>node_number - 1<span class="o">)]</span>
         iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> app:container-server allow_versions
         iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> app:container-server allow_versions  <span class="s2">&quot;true&quot;</span>
+        sed -i -e <span class="s2">&quot;s,#[ ]*recon_cache_path .*,recon_cache_path = ${SWIFT_DATA_DIR}/cache,&quot;</span> <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span>
 
         <span class="nv">swift_node_config</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONFIG_DIR</span><span class="k">}</span>/account-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
         cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/account-server.conf-sample <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span>
         generate_swift_config <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">node_number</span><span class="k">}</span> <span class="nv">$[</span>ACCOUNT_PORT_BASE + 10 * <span class="o">(</span>node_number - 1<span class="o">)]</span>
+        sed -i -e <span class="s2">&quot;s,#[ ]*recon_cache_path .*,recon_cache_path = ${SWIFT_DATA_DIR}/cache,&quot;</span> <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span>
     <span class="k">done</span>
 
 <span class="k">    </span><span class="nv">swift_log_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/logs
@@ -679,8 +687,8 @@ username and password.</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This function generates an object/account/proxy configuration
-emulating 4 nodes on different ports</p>
+<p>Using a sed and not iniset/iniuncomment because we want to a global
+modification and make sure it works for new sections.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_swiftclient<span class="o">()</span> <span class="o">{</span>
     setup_develop <span class="nv">$SWIFTCLIENT_DIR</span>
