@@ -494,13 +494,15 @@ and tenant are set up...</p>
     <span class="nv">flavor_lines</span><span class="o">=</span><span class="sb">`</span>nova flavor-list<span class="sb">`</span>
     <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\r\n&#39;</span>
     <span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">for </span>line in <span class="nv">$flavor_lines</span>; <span class="k">do</span>
-<span class="k">        if</span> <span class="o">[</span> -z <span class="nv">$DEFAULT_INSTANCE_TYPE</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;$flavors `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
-        <span class="k">else</span>
-<span class="k">            </span><span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;$flavors `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | grep &quot;</span><span class="nv">$DEFAULT_INSTANCE_TYPE</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
-    <span class="k">fi</span>
-<span class="k">    done</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$DEFAULT_INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        for </span>line in <span class="nv">$flavor_lines</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">f</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$line</span> | awk <span class="s2">&quot;/ $DEFAULT_INSTANCE_TYPE / { print \$2 }&quot;</span><span class="k">)</span>
+            <span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;$flavors $f&quot;</span>
+        <span class="k">done</span>
+<span class="k">    fi</span>
+<span class="k">    for </span>line in <span class="nv">$flavor_lines</span>; <span class="k">do</span>
+<span class="k">        </span><span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;$flavors `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+    <span class="k">done</span>
 
 <span class="k">    </span><span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
     <span class="nv">flavors</span><span class="o">=(</span><span class="nv">$flavors</span><span class="o">)</span>
