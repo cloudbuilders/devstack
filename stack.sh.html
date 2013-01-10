@@ -1705,9 +1705,9 @@ These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
 <span class="k">        </span><span class="nv">NOVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6080/vnc_auto.html&quot;</span><span class="k">}</span>
-        add_nova_opt <span class="s2">&quot;novncproxy_base_url=$NOVNCPROXY_URL&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT novncproxy_base_url <span class="s2">&quot;$NOVNCPROXY_URL&quot;</span>
         <span class="nv">XVPVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">XVPVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6081/console&quot;</span><span class="k">}</span>
-        add_nova_opt <span class="s2">&quot;xvpvncproxy_base_url=$XVPVNCPROXY_URL&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xvpvncproxy_base_url <span class="s2">&quot;$XVPVNCPROXY_URL&quot;</span>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=169.254.0.1</span><span class="k">}</span>
@@ -1719,18 +1719,18 @@ These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
 For multi-host, this should be the management ip of the compute host.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
-    add_nova_opt <span class="s2">&quot;vncserver_listen=$VNCSERVER_LISTEN&quot;</span>
-    add_nova_opt <span class="s2">&quot;vncserver_proxyclient_address=$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
-    add_nova_opt <span class="s2">&quot;ec2_dmz_host=$EC2_DMZ_HOST&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_listen <span class="s2">&quot;$VNCSERVER_LISTEN&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_proxyclient_address <span class="s2">&quot;$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_dmz_host <span class="s2">&quot;$EC2_DMZ_HOST&quot;</span>
     <span class="k">if </span>is_service_enabled zeromq; <span class="k">then</span>
-<span class="k">        </span>add_nova_opt <span class="s2">&quot;rpc_backend=nova.openstack.common.rpc.impl_zmq&quot;</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT rpc_backend <span class="s2">&quot;nova.openstack.common.rpc.impl_zmq&quot;</span>
     <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
-<span class="k">        </span>add_nova_opt <span class="s2">&quot;rpc_backend=nova.rpc.impl_qpid&quot;</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT rpc_backend <span class="s2">&quot;nova.rpc.impl_qpid&quot;</span>
     <span class="k">elif</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>add_nova_opt <span class="s2">&quot;rabbit_host=$RABBIT_HOST&quot;</span>
-        add_nova_opt <span class="s2">&quot;rabbit_password=$RABBIT_PASSWORD&quot;</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT rabbit_host <span class="s2">&quot;$RABBIT_HOST&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT rabbit_password <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span>
     <span class="k">fi</span>
-<span class="k">    </span>add_nova_opt <span class="s2">&quot;glance_api_servers=$GLANCE_HOSTPORT&quot;</span>
+<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT glance_api_servers <span class="s2">&quot;$GLANCE_HOSTPORT&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1742,18 +1742,18 @@ For multi-host, this should be the management ip of the compute host.</p>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Using XenServer virtualization driver&quot;</span>
         read_password XENAPI_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR XEN.&quot;</span>
-        add_nova_opt <span class="s2">&quot;compute_driver=xenapi.XenAPIDriver&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;xenapi.XenAPIDriver&quot;</span>
         <span class="nv">XENAPI_CONNECTION_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">XENAPI_CONNECTION_URL</span><span class="k">:-</span><span class="s2">&quot;http://169.254.0.1&quot;</span><span class="k">}</span>
         <span class="nv">XENAPI_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">XENAPI_USER</span><span class="k">:-</span><span class="s2">&quot;root&quot;</span><span class="k">}</span>
-        add_nova_opt <span class="s2">&quot;xenapi_connection_url=$XENAPI_CONNECTION_URL&quot;</span>
-        add_nova_opt <span class="s2">&quot;xenapi_connection_username=$XENAPI_USER&quot;</span>
-        add_nova_opt <span class="s2">&quot;xenapi_connection_password=$XENAPI_PASSWORD&quot;</span>
-        add_nova_opt <span class="s2">&quot;flat_injected=False&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_connection_url <span class="s2">&quot;$XENAPI_CONNECTION_URL&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_connection_username <span class="s2">&quot;$XENAPI_USER&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_connection_password <span class="s2">&quot;$XENAPI_PASSWORD&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT flat_injected <span class="s2">&quot;False&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Need to avoid crash due to new firewall support</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
-        add_nova_opt <span class="s2">&quot;firewall_driver=$XEN_FIREWALL_DRIVER&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="s2">&quot;$XEN_FIREWALL_DRIVER&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1767,12 +1767,12 @@ For multi-host, this should be the management ip of the compute host.</p>
 <dl class="docutils">
 <dt>TODO(deva): OpenVZ driver does not yet work if compute_driver is set here.</dt>
 <dd>Replace connection_type when this is fixed.
-add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
+iniset $NOVA_CONF DEFAULT compute_driver &quot;openvz.connection.OpenVzConnection&quot;</dd>
 </dl>
 </td><td class=code><div class=highlight><pre>
-        add_nova_opt <span class="s2">&quot;connection_type=openvz&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT connection_type <span class="s2">&quot;openvz&quot;</span>
         <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
-        add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="s2">&quot;$LIBVIRT_FIREWALL_DRIVER&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1782,15 +1782,15 @@ add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
 
     <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;baremetal&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Using BareMetal driver&quot;</span>
-        add_nova_opt <span class="s2">&quot;compute_driver=nova.virt.baremetal.driver.BareMetalDriver&quot;</span>
         <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.NoopFirewallDriver&quot;</span><span class="k">}</span>
-        add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
-        add_nova_opt <span class="s2">&quot;baremetal_driver=$BM_DRIVER&quot;</span>
-        add_nova_opt <span class="s2">&quot;baremetal_tftp_root=/tftpboot&quot;</span>
-        add_nova_opt <span class="s2">&quot;baremetal_instance_type_extra_specs=cpu_arch:$BM_CPU_ARCH&quot;</span>
-        add_nova_opt <span class="s2">&quot;baremetal_power_manager=$BM_POWER_MANAGER&quot;</span>
-        add_nova_opt <span class="s2">&quot;scheduler_host_manager=nova.scheduler.baremetal_host_manager.BaremetalHostManager&quot;</span>
-        add_nova_opt <span class="s2">&quot;scheduler_default_filters=AllHostsFilter&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver nova.virt.baremetal.driver.BareMetalDriver
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="nv">$LIBVIRT_FIREWALL_DRIVER</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_host_manager nova.scheduler.baremetal_host_manager.BaremetalHostManager
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_default_filters AllHostsFilter
+        iniset <span class="nv">$NOVA_CONF</span> baremetal driver <span class="nv">$BM_DRIVER</span>
+        iniset <span class="nv">$NOVA_CONF</span> baremetal instance_type_extra_specs cpu_arch:<span class="nv">$BM_CPU_ARCH</span>
+        iniset <span class="nv">$NOVA_CONF</span> baremetal power_manager <span class="nv">$BM_POWER_MANAGER</span>
+        iniset <span class="nv">$NOVA_CONF</span> baremetal tftp_root /tftpboot
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1800,9 +1800,9 @@ add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
 
     <span class="k">else</span>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Using libvirt virtualization driver&quot;</span>
-        add_nova_opt <span class="s2">&quot;compute_driver=libvirt.LibvirtDriver&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;libvirt.LibvirtDriver&quot;</span>
         <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
-        add_nova_opt <span class="s2">&quot;firewall_driver=$LIBVIRT_FIREWALL_DRIVER&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="s2">&quot;$LIBVIRT_FIREWALL_DRIVER&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -1854,9 +1854,9 @@ add_nova_opt &quot;compute_driver=openvz.connection.OpenVzConnection&quot;</dd>
     <span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone ec2-credentials-create --user_id <span class="nv">$NOVA_USER_ID</span> --tenant_id <span class="nv">$NOVA_TENANT_ID</span><span class="k">)</span>
     <span class="nv">ACCESS_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ access / { print $4 }&#39;</span><span class="k">)</span>
     <span class="nv">SECRET_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ secret / { print $4 }&#39;</span><span class="k">)</span>
-    add_nova_opt <span class="s2">&quot;s3_access_key=$ACCESS_KEY&quot;</span>
-    add_nova_opt <span class="s2">&quot;s3_secret_key=$SECRET_KEY&quot;</span>
-    add_nova_opt <span class="s2">&quot;s3_affix_tenant=True&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_access_key <span class="s2">&quot;$ACCESS_KEY&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_secret_key <span class="s2">&quot;$SECRET_KEY&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_affix_tenant <span class="s2">&quot;True&quot;</span>
 <span class="k">fi</span>
 
 screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-rpc-zmq-receiver&quot;</span>
