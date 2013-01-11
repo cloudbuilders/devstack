@@ -751,7 +751,6 @@ address.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tempest
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/baremetal
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1336,9 +1335,6 @@ git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENST
 <span class="k">    </span>install_ceilometerclient
     install_ceilometer
 <span class="k">fi</span>
-<span class="k">if </span>is_service_enabled tempest; <span class="k">then</span>
-<span class="k">    </span>install_tempest
-<span class="k">fi</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1407,6 +1403,7 @@ configure_glanceclient
 <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 <span class="k">    </span>configure_CA
     init_CA
+    init_cert
 </pre></div></td></tr><tr><td class=docs>
 <p>Add name to /etc/hosts
 don't be naive and add to existing line!</p>
@@ -2051,18 +2048,6 @@ otherwise user can manually add it later by calling nova-baremetal-manage</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure Tempest last to ensure that the runtime configuration of
-the various OpenStack services can be queried.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled tempest; <span class="k">then</span>
-<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Tempest&quot;</span>
-    configure_tempest
-    <span class="nb">echo</span> <span class="s1">&#39;**************************************************&#39;</span>
-    echo_summary <span class="s2">&quot;Finished Configuring Tempest&quot;</span>
-    <span class="nb">echo</span> <span class="s1">&#39;**************************************************&#39;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Save some values we generated for later use</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">CURRENT_RUN_TIME</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+$TIMESTAMP_FORMAT&quot;</span><span class="k">)</span>
@@ -2071,6 +2056,19 @@ the various OpenStack services can be queried.</p>
   SERVICE_HOST SERVICE_PROTOCOL TLS_IP; <span class="k">do</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="nv">$i</span><span class="o">=</span><span class="k">${</span><span class="p">!i</span><span class="k">}</span> &gt;&gt;<span class="nv">$TOP_DIR</span>/.stackenv
 <span class="k">done</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="run-extras">
+<h1>Run extras</h1>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
+        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> stack
+    <span class="k">done</span>
+<span class="k">fi</span>
 
 
 </pre></div></td></tr><tr><td class=docs>

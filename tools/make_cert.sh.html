@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>unstack.sh</title>
+    <title>make_cert.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>unstack.sh</h1></th>
+        <th class=docs><h1>make_cert.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -331,23 +331,22 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>unstack.sh</strong></p>
+<p><strong>make_cert.sh</strong></p>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/usr/bin/env bash</span>
+<span class="c">#!/bin/bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Stops that which is started by <tt class="docutils literal">stack.sh</tt> (mostly)
-mysql and rabbit are left running as OpenStack code refreshes
-do not require them to be restarted.</p>
-<p>Stop all processes by setting <tt class="docutils literal">UNSTACK_ALL</tt> or specifying <tt class="docutils literal"><span class="pre">--all</span></tt>
-on the command line</p>
+<p>Create a CA hierarchy (if necessary) and server certificate</p>
+<p>This mimics the CA structure that DevStack sets up when <tt class="docutils literal">tls_proxy</tt> is enabled
+but in the curent directory unless <tt class="docutils literal">DATA_DIR</tt> is set</p>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Keep track of the current devstack directory.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">ENABLE_TLS</span><span class="o">=</span>True
+<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span><span class="p">/ca-data</span><span class="k">}</span>
+
+<span class="nv">ROOT_CA_DIR</span><span class="o">=</span><span class="nv">$DATA_DIR</span>/root
+<span class="nv">INT_CA_DIR</span><span class="o">=</span><span class="nv">$DATA_DIR</span>/int
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
@@ -355,134 +354,60 @@ on the command line</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import database library</p>
+<p>Import TLS functions</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
+<span class="nb">source </span>lib/tls
+
+<span class="k">function </span>usage <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$0 - Create CA and/or certs&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 commonName [orgUnit]&quot;</span>
+    <span class="nb">exit </span>1
+<span class="o">}</span>
+
+<span class="nv">CN</span><span class="o">=</span><span class="nv">$1</span>
+<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$CN&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>usage
+<span class="k">fi</span>
+<span class="nv">ORG_UNIT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">2</span><span class="k">:-</span><span class="nv">$ORG_UNIT_NAME</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Load local configuration</p>
+<p>Useful on OS/X</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
-
+<span class="k">if</span> <span class="o">[[</span> <span class="sb">`</span>uname -s<span class="sb">`</span> <span class="o">==</span> <span class="s1">&#39;Darwin&#39;</span> <span class="o">&amp;&amp;</span> -d /usr/local/Cellar/openssl <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Destination path for service data</p>
+<p>set up for brew-installed modern OpenSSL</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Get project function libraries</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/baremetal
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/swift
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
-<tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt></p>
-</td><td class=code><div class=highlight><pre>
-GetOSVersion
-
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;--all&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">UNSTACK_ALL</span><span class="o">=</span><span class="k">${</span><span class="nv">UNSTACK_ALL</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+    <span class="nv">OPENSSL_CONF</span><span class="o">=</span>/usr/local/etc/openssl/openssl.cnf
+    <span class="nv">OPENSSL</span><span class="o">=</span>/usr/local/Cellar/openssl/*/bin/openssl
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="run-extras">
-<h1>Run extras</h1>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
-        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> unstack
-    <span class="k">done</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_DEBUG_COMMAND&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
-    teardown_quantum_debug
-<span class="k">fi</span>
+<span class="nv">DEVSTACK_CERT_NAME</span><span class="o">=</span><span class="nv">$CN</span>
+<span class="nv">DEVSTACK_HOSTNAME</span><span class="o">=</span><span class="nv">$CN</span>
+<span class="nv">DEVSTACK_CERT</span><span class="o">=</span><span class="nv">$DATA_DIR</span>/<span class="nv">$DEVSTACK_CERT_NAME</span>.pem
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Shut down devstack's screen to get the bulk of OpenStack services in one shot</p>
+<p>Make sure the CA is set up</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SCREEN</span><span class="o">=</span><span class="k">$(</span>which screen<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SCREEN&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">SESSION</span><span class="o">=</span><span class="k">$(</span>screen -ls | awk <span class="s1">&#39;/[0-9].stack/ { print $1 }&#39;</span><span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SESSION&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen -X -S <span class="nv">$SESSION</span> quit
-    <span class="k">fi</span>
-<span class="k">fi</span>
+configure_CA
+init_CA
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Swift runs daemons</p>
+<p>Create the server cert</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
-<span class="k">    </span>stop_swift
-<span class="k">fi</span>
+make_cert <span class="nv">$INT_CA_DIR</span> <span class="nv">$DEVSTACK_CERT_NAME</span> <span class="nv">$DEVSTACK_HOSTNAME</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Apache has the WSGI processes</p>
+<p>Create a cert bundle</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
-<span class="k">    </span>stop_horizon
-<span class="k">fi</span>
+cat <span class="nv">$INT_CA_DIR</span>/private/<span class="nv">$DEVSTACK_CERT_NAME</span>.key <span class="nv">$INT_CA_DIR</span>/<span class="nv">$DEVSTACK_CERT_NAME</span>.crt <span class="nv">$INT_CA_DIR</span>/cacert.pem &gt;<span class="nv">$DEVSTACK_CERT</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Kill TLS proxies</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
-<span class="k">    </span>killall stud
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>baremetal might have created a fake environment</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled baremetal <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$BM_USE_FAKE_ENV&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>cleanup_fake_baremetal_env
-<span class="k">fi</span>
-
-<span class="nv">SCSI_PERSIST_DIR</span><span class="o">=</span><span class="nv">$CINDER_STATE_PATH</span>/volumes/*
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Get the iSCSI volumes</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
-<span class="k">    </span>cleanup_cinder
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UNSTACK_ALL&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Stop MySQL server</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled mysql; <span class="k">then</span>
-<span class="k">        </span>stop_service mysql
-    <span class="k">fi</span>
-
-<span class="k">    if </span>is_service_enabled postgresql; <span class="k">then</span>
-<span class="k">        </span>stop_service postgresql
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Stop rabbitmq-server</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
-<span class="k">        </span>stop_service rabbitmq-server
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span>stop_quantum
-    stop_quantum_third_party
-<span class="k">fi</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>
