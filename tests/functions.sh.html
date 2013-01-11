@@ -395,6 +395,9 @@ cat &gt;test.ini <span class="s">&lt;&lt;EOF</span>
 
 <span class="s">[ ccc ]</span>
 <span class="s">spaces  =  yes</span>
+
+<span class="s">[ddd]</span>
+<span class="s">empty =</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -421,8 +424,17 @@ iniset test.ini aaa handlers <span class="s2">&quot;11, 22&quot;</span>
 <p>the commented option should not change</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini ccc spaces<span class="k">)</span>
+<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini <span class="s2">&quot; ccc &quot;</span> spaces<span class="k">)</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
+<span class="k">fi</span>
+
+iniset test.ini <span class="s2">&quot;b b&quot;</span> opt_ion 42
+
+<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini <span class="s2">&quot;b b&quot;</span> opt_ion<span class="k">)</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;42&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
 <span class="k">else</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
@@ -448,9 +460,38 @@ iniset test.ini bbb handlers <span class="s2">&quot;33,44&quot;</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
 <span class="k">fi</span>
 
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Test with spaces in section header</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>ini_has_option test.ini ddd empty; <span class="k">then</span>
+<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;OK: ddd.empty present&quot;</span>
+<span class="k">else</span>
+<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;ini_has_option failed: ddd.empty not found&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test without spaces, end of file</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>ini_has_option test.ini bbb handlers; <span class="k">then</span>
+<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;OK: bbb.handlers present&quot;</span>
+<span class="k">else</span>
+<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;ini_has_option failed: bbb.handlers not found&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>test empty option</p>
+</td><td class=code><div class=highlight><pre>
+iniset test.ini ddd empty <span class="s2">&quot;42&quot;</span>
+
+<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini ddd empty<span class="k">)</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;42&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>test non-empty option</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini zzz handlers<span class="k">)</span>
@@ -470,7 +511,7 @@ iniset test.ini zzz handlers <span class="s2">&quot;999&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Test without spaces, end of file</p>
+<p>test changing empty option</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini aaa debug<span class="k">)</span>
@@ -478,6 +519,12 @@ iniset test.ini zzz handlers <span class="s2">&quot;999&quot;</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK aaa.debug not present&quot;</span>
 <span class="k">else</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> ! ini_has_option test.ini aaa debug; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK aaa.debug not present&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ini_has_option failed: aaa.debug&quot;</span>
 <span class="k">fi</span>
 
 iniset test.ini aaa debug <span class="s2">&quot;999&quot;</span>

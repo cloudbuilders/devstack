@@ -878,7 +878,7 @@ inicomment config-file section option</p>
     <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
-    sed -i -e <span class="s2">&quot;/^\[ *$section *\]/,/^\[.*\]/ s|^\($option[ \t]*=.*$\)|#\1|&quot;</span> <span class="nv">$file</span>
+    sed -i -e <span class="s2">&quot;/^\[$section\]/,/^\[.*\]/ s|^\($option[ \t]*=.*$\)|#\1|&quot;</span> <span class="s2">&quot;$file&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -889,7 +889,7 @@ iniuncomment config-file section option</p>
     <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
-    sed -i -e <span class="s2">&quot;/^\[ *$section *\]/,/^\[.*\]/ s|[^ \t]*#[ \t]*\($option[ \t]*=.*$\)|\1|&quot;</span> <span class="nv">$file</span>
+    sed -i -e <span class="s2">&quot;/^\[$section\]/,/^\[.*\]/ s|[^ \t]*#[ \t]*\($option[ \t]*=.*$\)|\1|&quot;</span> <span class="s2">&quot;$file&quot;</span>
 <span class="o">}</span>
 
 
@@ -902,10 +902,22 @@ iniget config-file section option</p>
     <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
     <span class="nb">local </span>line
-    <span class="nv">line</span><span class="o">=</span><span class="k">$(</span>sed -ne <span class="s2">&quot;/^\[ *$section *\]/,/^\[.*\]/ { /^$option[ \t]*=/ p; }&quot;</span> <span class="nv">$file</span><span class="k">)</span>
+    <span class="nv">line</span><span class="o">=</span><span class="k">$(</span>sed -ne <span class="s2">&quot;/^\[$section\]/,/^\[.*\]/ { /^$option[ \t]*=/ p; }&quot;</span> <span class="s2">&quot;$file&quot;</span><span class="k">)</span>
     <span class="nb">echo</span> <span class="k">${</span><span class="nv">line</span><span class="p">#*=</span><span class="k">}</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Determinate is the given option present in the INI file
+ini_has_option config-file section option</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>ini_has_option<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span>line
+    <span class="nv">line</span><span class="o">=</span><span class="k">$(</span>sed -ne <span class="s2">&quot;/^\[$section\]/,/^\[.*\]/ { /^$option[ \t]*=/ p; }&quot;</span> <span class="s2">&quot;$file&quot;</span><span class="k">)</span>
+    <span class="o">[</span> -n <span class="s2">&quot;$line&quot;</span> <span class="o">]</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set an option in an INI file
@@ -916,24 +928,24 @@ iniset config-file section option value</p>
     <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
     <span class="nb">local </span><span class="nv">value</span><span class="o">=</span><span class="nv">$4</span>
-    <span class="k">if</span> ! grep -q <span class="s2">&quot;^\[ *$section *\]&quot;</span> <span class="nv">$file</span>; <span class="k">then</span>
+    <span class="k">if</span> ! grep -q <span class="s2">&quot;^\[$section\]&quot;</span> <span class="s2">&quot;$file&quot;</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Add section at the end</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> -e <span class="s2">&quot;\n[$section]&quot;</span> &gt;&gt;<span class="nv">$file</span>
+        <span class="nb">echo</span> -e <span class="s2">&quot;\n[$section]&quot;</span> &gt;&gt;<span class="s2">&quot;$file&quot;</span>
     <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[[</span> -z <span class="s2">&quot;$(iniget $file $section $option)&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    if</span> ! ini_has_option <span class="s2">&quot;$file&quot;</span> <span class="s2">&quot;$section&quot;</span> <span class="s2">&quot;$option&quot;</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Add it</p>
 </td><td class=code><div class=highlight><pre>
-        sed -i -e <span class="s2">&quot;/^\[ *$section *\]/ a\\</span>
+        sed -i -e <span class="s2">&quot;/^\[$section\]/ a\\</span>
 <span class="s2">$option = $value</span>
-<span class="s2">&quot;</span> <span class="nv">$file</span>
+<span class="s2">&quot;</span> <span class="s2">&quot;$file&quot;</span>
     <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Replace it</p>
 </td><td class=code><div class=highlight><pre>
-        sed -i -e <span class="s2">&quot;/^\[ *$section *\]/,/^\[.*\]/ s|^\($option[ \t]*=[ \t]*\).*$|\1$value|&quot;</span> <span class="nv">$file</span>
+        sed -i -e <span class="s2">&quot;/^\[$section\]/,/^\[.*\]/ s|^\($option[ \t]*=[ \t]*\).*$|\1$value|&quot;</span> <span class="s2">&quot;$file&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -1117,19 +1129,19 @@ is_set env-var</p>
 <p>Wrapper for <tt class="docutils literal">pip install</tt> to set cache and proxy environment variables
 Uses globals <tt class="docutils literal">OFFLINE</tt>, <tt class="docutils literal">PIP_DOWNLOAD_CACHE</tt>, <tt class="docutils literal">PIP_USE_MIRRORS</tt>,</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 340)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 345)</p>
 Unexpected indentation.</div>
 <blockquote>
 <p><tt class="docutils literal">TRACK_DEPENDS</tt>, <a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">*</span></a>_proxy`</p>
 <div class="system-message" id="id5">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 340); <em><a href="#id6">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 345); <em><a href="#id6">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id7">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 340); <em><a href="#id8">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 345); <em><a href="#id8">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 341)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 346)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p>pip_install package [package ...]</p>
 </td><td class=code><div class=highlight><pre>
@@ -1236,7 +1248,7 @@ screen_rc service &quot;command-line&quot;</p>
 This is used for service_check when all the screen_it are called finished
 init_service_check</p>
 <div class="system-message" id="id9">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 382); <em><a href="#id10">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 387); <em><a href="#id10">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_service_check<span class="o">()</span> <span class="o">{</span>
@@ -1288,10 +1300,10 @@ so pip and not distutils processes the dependency chain
 Uses globals <tt class="docutils literal">TRACK_DEPENDES</tt>, <a href="#id11"><span class="problematic" id="id12">``</span></a><a href="#id13"><span class="problematic" id="id14">*</span></a>_proxy`
 setup_develop directory</p>
 <div class="system-message" id="id11">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 397); <em><a href="#id12">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 402); <em><a href="#id12">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id13">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 397); <em><a href="#id14">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 402); <em><a href="#id14">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>setup_develop<span class="o">()</span> <span class="o">{</span>
@@ -1362,13 +1374,13 @@ VAR=$(trueorfalse default-value test-value)</p>
 <p>Retrieve an image from a URL and upload into Glance
 Uses the following variables:</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 423)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 428)</p>
 Unexpected indentation.</div>
 <blockquote>
 <tt class="docutils literal">FILES</tt> must be set to the cache dir
 <tt class="docutils literal">GLANCE_HOSTPORT</tt></blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 425)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 430)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p>upload_image image-url glance-token</p>
 </td><td class=code><div class=highlight><pre>
@@ -1486,7 +1498,7 @@ When called from stackrc/localrc DATABASE_BACKENDS has not been
 initialized yet, just save the configuration selection and call back later
 to validate it.</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 455)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 460)</p>
 Unexpected indentation.</div>
 <blockquote>
 $1 The name of the database backend to use (mysql, postgresql, ...)</blockquote>
@@ -1537,10 +1549,10 @@ wait_for_service timeout url</p>
 Uses globals <tt class="docutils literal">OFFLINE</tt>, <a href="#id15"><span class="problematic" id="id16">``</span></a><a href="#id17"><span class="problematic" id="id18">*</span></a>_proxy`
 yum_install package [package ...]</p>
 <div class="system-message" id="id15">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 475); <em><a href="#id16">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 480); <em><a href="#id16">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id17">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 475); <em><a href="#id18">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 480); <em><a href="#id18">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>yum_install<span class="o">()</span> <span class="o">{</span>
