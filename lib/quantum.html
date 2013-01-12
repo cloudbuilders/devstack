@@ -600,6 +600,8 @@ Set common config for all quantum server and agents.</p>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_ovs_integration_bridge <span class="s2">&quot;$OVS_BRIDGE&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT linuxnet_ovs_ryu_api_host <span class="s2">&quot;$RYU_API_HOST:$RYU_API_PORT&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_ovs_ryu_api_host <span class="s2">&quot;$RYU_API_HOST:$RYU_API_PORT&quot;</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;bigswitch_floodlight&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver&quot;</span><span class="k">}</span>
     <span class="k">fi</span>
 <span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_vif_driver <span class="s2">&quot;$NOVA_VIF_DRIVER&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT linuxnet_interface_driver <span class="s2">&quot;$LINUXNET_VIF_DRIVER&quot;</span>
@@ -742,7 +744,7 @@ FIXME add to <tt class="docutils literal">files/apts/quantum</tt>, but don't ins
 
 <span class="k">function </span>is_quantum_ovs_base_plugin<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span><span class="nv">plugin</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;,openvswitch,ryu,&quot;</span> <span class="o">=</span>~ ,<span class="k">${</span><span class="nv">plugin</span><span class="k">}</span>, <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;,openvswitch,ryu,bigswitch_floodlight,&quot;</span> <span class="o">=</span>~ ,<span class="k">${</span><span class="nv">plugin</span><span class="k">}</span>, <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        return </span>0
     <span class="k">fi</span>
 <span class="k">    return </span>1
@@ -833,6 +835,13 @@ This MUST be called before other _configure_quantum_* functions.</p>
         <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ryu.ini
         <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;ovs_quantum&quot;</span>
         <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.ryu.ryu_quantum_plugin.RyuQuantumPluginV2&quot;</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;bigswitch_floodlight&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/bigswitch
+        <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>restproxy.ini
+        <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;restproxy_quantum&quot;</span>
+        <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.bigswitch.plugin.QuantumRestProxyV2&quot;</span>
+        <span class="nv">BS_FL_CONTROLLERS_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">BS_FL_CONTROLLERS_PORT</span><span class="k">:-</span><span class="nv">localhost</span><span class="p">:</span><span class="nv">80</span><span class="k">}</span>
+        <span class="nv">BS_FL_CONTROLLER_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">BS_FL_CONTROLLER_TIMEOUT</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="nv">$Q_PLUGIN_CONF_PATH</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">||</span> <span class="nv">$Q_PLUGIN_CONF_FILENAME</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">||</span> <span class="nv">$Q_PLUGIN_CLASS</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1134,6 +1143,9 @@ for more complex physical network configurations.</p>
 <span class="k">    elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS openflow_controller <span class="nv">$RYU_OFP_HOST</span>:<span class="nv">$RYU_OFP_PORT</span>
         iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS openflow_rest_api <span class="nv">$RYU_API_HOST</span>:<span class="nv">$RYU_API_PORT</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;bigswitch_floodlight&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> RESTPROXY servers <span class="nv">$BS_FL_CONTROLLERS_PORT</span>
+        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> RESTPROXY servertimeout <span class="nv">$BS_FL_CONTROLLER_TIMEOUT</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -1227,6 +1239,8 @@ Wipe any existing rootwrap.d files first</p>
 <span class="k">        </span>iniset <span class="nv">$conf_file</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;ryu&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$conf_file</span> DEFAULT interface_driver quantum.agent.linux.interface.RyuInterfaceDriver
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;bigswitch_floodlight&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$conf_file</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -1323,7 +1337,7 @@ Wipe any existing rootwrap.d files first</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>A comma-separated list of 3rd party programs</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">QUANTUM_THIRD_PARTIES</span><span class="o">=</span><span class="s2">&quot;ryu&quot;</span>
+<span class="nv">QUANTUM_THIRD_PARTIES</span><span class="o">=</span><span class="s2">&quot;ryu,bigswitch_floodlight&quot;</span>
 <span class="k">for </span>third_party in <span class="k">${</span><span class="nv">QUANTUM_THIRD_PARTIES</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
 <span class="k">    </span><span class="nb">source </span>lib/<span class="nv">$third_party</span>
 <span class="k">done</span>
