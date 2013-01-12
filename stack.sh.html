@@ -560,22 +560,23 @@ sudo privileges and runs as that user.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$EUID</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">ROOTSLEEP</span><span class="o">=</span><span class="k">${</span><span class="nv">ROOTSLEEP</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
+<span class="k">    </span><span class="nv">STACK_USER</span><span class="o">=</span><span class="nv">$DEFAULT_STACK_USER</span>
+    <span class="nv">ROOTSLEEP</span><span class="o">=</span><span class="k">${</span><span class="nv">ROOTSLEEP</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
     <span class="nb">echo</span> <span class="s2">&quot;You are running this script as root.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;In $ROOTSLEEP seconds, we will create a user &#39;stack&#39; and run as that user&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;In $ROOTSLEEP seconds, we will create a user &#39;$STACK_USER&#39; and run as that user&quot;</span>
     sleep <span class="nv">$ROOTSLEEP</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Give the non-root user the ability to run as <strong>root</strong> via <tt class="docutils literal">sudo</tt></p>
 </td><td class=code><div class=highlight><pre>
     is_package_installed sudo <span class="o">||</span> install_package sudo
-    <span class="k">if</span> ! getent group stack &gt;/dev/null; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Creating a group called stack&quot;</span>
-        groupadd stack
+    <span class="k">if</span> ! getent group <span class="nv">$STACK_USER</span> &gt;/dev/null; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Creating a group called $STACK_USER&quot;</span>
+        groupadd <span class="nv">$STACK_USER</span>
     <span class="k">fi</span>
-<span class="k">    if</span> ! getent passwd stack &gt;/dev/null; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Creating a user called stack&quot;</span>
-        useradd -g stack -s /bin/bash -d <span class="nv">$DEST</span> -m stack
+<span class="k">    if</span> ! getent passwd <span class="nv">$STACK_USER</span> &gt;/dev/null; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Creating a user called $STACK_USER&quot;</span>
+        useradd -g <span class="nv">$STACK_USER</span> -s /bin/bash -d <span class="nv">$DEST</span> -m <span class="nv">$STACK_USER</span>
     <span class="k">fi</span>
 
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Giving stack user passwordless sudo privileges&quot;</span>
@@ -584,20 +585,22 @@ sudo privileges and runs as that user.</p>
 </td><td class=code><div class=highlight><pre>
     grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
         <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> &gt;&gt; /etc/sudoers
-    <span class="o">(</span> <span class="nb">umask </span>226 <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;stack ALL=(ALL) NOPASSWD:ALL&quot;</span> <span class="se">\</span>
+    <span class="o">(</span> <span class="nb">umask </span>226 <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(ALL) NOPASSWD:ALL&quot;</span> <span class="se">\</span>
         &gt; /etc/sudoers.d/50_stack_sh <span class="o">)</span>
 
-    <span class="nb">echo</span> <span class="s2">&quot;Copying files to stack user&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Copying files to $STACK_USER user&quot;</span>
     <span class="nv">STACK_DIR</span><span class="o">=</span><span class="s2">&quot;$DEST/${TOP_DIR##*/}&quot;</span>
     cp -r -f -T <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
-    chown -R stack <span class="s2">&quot;$STACK_DIR&quot;</span>
+    chown -R <span class="nv">$STACK_USER</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
+    <span class="nb">cd</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SHELL_AFTER_RUN&quot;</span> !<span class="o">=</span> <span class="s2">&quot;no&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">exec </span>su -c <span class="s2">&quot;set -e; cd $STACK_DIR; bash stack.sh; bash&quot;</span> stack
+<span class="k">        </span><span class="nb">exec </span>sudo -u <span class="nv">$STACK_USER</span>  bash -l -c <span class="s2">&quot;set -e; bash stack.sh; bash&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span><span class="nb">exec </span>su -c <span class="s2">&quot;set -e; cd $STACK_DIR; bash stack.sh&quot;</span> stack
+<span class="k">        </span><span class="nb">exec </span>sudo -u <span class="nv">$STACK_USER</span> bash -l -c <span class="s2">&quot;set -e; source stack.sh&quot;</span>
     <span class="k">fi</span>
 <span class="k">    </span><span class="nb">exit </span>1
 <span class="k">else</span>
+<span class="k">    </span><span class="nv">STACK_USER</span><span class="o">=</span><span class="sb">`</span>whoami<span class="sb">`</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>We're not <strong>root</strong>, make sure <tt class="docutils literal">sudo</tt> is available</p>
 </td><td class=code><div class=highlight><pre>
@@ -613,12 +616,12 @@ sudo privileges and runs as that user.</p>
 <p>Set up devstack sudoers</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-    <span class="nb">echo</span> <span class="s2">&quot;`whoami` ALL=(root) NOPASSWD:ALL&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD:ALL&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Some binaries might be under /sbin or /usr/sbin, so make sure sudo will
 see them by forcing PATH</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">echo</span> <span class="s2">&quot;Defaults:`whoami` secure_path=/sbin:/usr/sbin:/usr/bin:/bin:/usr/local/sbin:/usr/local/bin&quot;</span> &gt;&gt; <span class="nv">$TEMPFILE</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Defaults:$STACK_USER secure_path=/sbin:/usr/sbin:/usr/bin:/bin:/usr/local/sbin:/usr/local/bin&quot;</span> &gt;&gt; <span class="nv">$TEMPFILE</span>
     chmod 0440 <span class="nv">$TEMPFILE</span>
     sudo chown root:root <span class="nv">$TEMPFILE</span>
     sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/50_stack_sh
@@ -634,7 +637,7 @@ see them by forcing PATH</p>
 </td><td class=code><div class=highlight><pre>
 sudo mkdir -p <span class="nv">$DEST</span>
 <span class="k">if</span> <span class="o">[</span> ! -w <span class="nv">$DEST</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$DEST</span>
+<span class="k">    </span>sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$DEST</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -656,7 +659,7 @@ operation.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
 sudo mkdir -p <span class="nv">$DATA_DIR</span>
-sudo chown <span class="sb">`</span>whoami<span class="sb">`</span> <span class="nv">$DATA_DIR</span>
+sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$DATA_DIR</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
