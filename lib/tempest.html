@@ -488,35 +488,45 @@ and tenant are set up...</p>
     <span class="nv">ALT_TENANT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">ALT_TENANT_NAME</span><span class="k">:-</span><span class="nv">alt_demo</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Check Nova for existing flavors and, if set, look for the
-<tt class="docutils literal">DEFAULT_INSTANCE_TYPE</tt> and use that. Otherwise, just use the first flavor.</p>
+<p>If the <tt class="docutils literal">DEFAULT_INSTANCE_TYPE</tt> not declared, use the new behavior
+Tempest creates instane types for himself</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">flavor_lines</span><span class="o">=</span><span class="sb">`</span>nova flavor-list<span class="sb">`</span>
-    <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\r\n&#39;</span>
-    <span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$DEFAULT_INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        for </span>line in <span class="nv">$flavor_lines</span>; <span class="k">do</span>
+    <span class="k">if</span>  <span class="o">[[</span> -z <span class="s2">&quot;$DEFAULT_INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>nova flavor-create m1.pico 42 32 0 1
+        <span class="nv">flavor_ref</span><span class="o">=</span>42
+        nova flavor-create m1.nano 84 64 0 1
+        <span class="nv">flavor_ref_alt</span><span class="o">=</span>84
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Check Nova for existing flavors and, if set, look for the
+<tt class="docutils literal">DEFAULT_INSTANCE_TYPE</tt> and use that.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">flavor_lines</span><span class="o">=</span><span class="sb">`</span>nova flavor-list<span class="sb">`</span>
+        <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\r\n&#39;</span>
+        <span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="k">for </span>line in <span class="nv">$flavor_lines</span>; <span class="k">do</span>
 <span class="k">            </span><span class="nv">f</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$line</span> | awk <span class="s2">&quot;/ $DEFAULT_INSTANCE_TYPE / { print \$2 }&quot;</span><span class="k">)</span>
             <span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;$flavors $f&quot;</span>
         <span class="k">done</span>
-<span class="k">    fi</span>
-<span class="k">    for </span>line in <span class="nv">$flavor_lines</span>; <span class="k">do</span>
-<span class="k">        </span><span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;$flavors `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
-    <span class="k">done</span>
 
-<span class="k">    </span><span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
-    <span class="nv">flavors</span><span class="o">=(</span><span class="nv">$flavors</span><span class="o">)</span>
-    <span class="nv">num_flavors</span><span class="o">=</span><span class="k">${#</span><span class="nv">flavors</span><span class="p">[*]</span><span class="k">}</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Found $num_flavors flavors&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_flavors</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Found no valid flavors to use!&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nv">flavor_ref</span><span class="o">=</span><span class="k">${</span><span class="nv">flavors</span><span class="p">[0]</span><span class="k">}</span>
-    <span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="nv">$flavor_ref</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_flavors</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="k">${</span><span class="nv">flavors</span><span class="p">[1]</span><span class="k">}</span>
-    <span class="k">fi</span>
+<span class="k">        for </span>line in <span class="nv">$flavor_lines</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;$flavors `echo $line | grep -v &quot;</span>^<span class="se">\(</span>|<span class="se">\s</span>*ID<span class="se">\|</span>+--<span class="se">\)</span><span class="s2">&quot; | cut -d&#39; &#39; -f2`&quot;</span>
+        <span class="k">done</span>
+
+<span class="k">        </span><span class="nv">IFS</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
+        <span class="nv">flavors</span><span class="o">=(</span><span class="nv">$flavors</span><span class="o">)</span>
+        <span class="nv">num_flavors</span><span class="o">=</span><span class="k">${#</span><span class="nv">flavors</span><span class="p">[*]</span><span class="k">}</span>
+        <span class="nb">echo</span> <span class="s2">&quot;Found $num_flavors flavors&quot;</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_flavors</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;Found no valid flavors to use!&quot;</span>
+            <span class="nb">exit </span>1
+        <span class="k">fi</span>
+<span class="k">        </span><span class="nv">flavor_ref</span><span class="o">=</span><span class="k">${</span><span class="nv">flavors</span><span class="p">[0]</span><span class="k">}</span>
+        <span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="nv">$flavor_ref</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_flavors</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="k">${</span><span class="nv">flavors</span><span class="p">[1]</span><span class="k">}</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$Q_USE_NAMESPACE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">tenant_networks_reachable</span><span class="o">=</span><span class="nb">false</span>
