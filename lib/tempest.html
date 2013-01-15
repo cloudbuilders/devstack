@@ -343,6 +343,9 @@ Dependencies:
 - <tt class="docutils literal">S3_SERVICE_PORT</tt>
 - <tt class="docutils literal">SERVICE_HOST</tt>
 - <tt class="docutils literal">BASE_SQL_CONN</tt> <tt class="docutils literal">lib/database</tt> declares
+- <tt class="docutils literal">PUBLIC_NETWORK_NAME</tt>
+- <tt class="docutils literal">Q_USE_NAMESPACE</tt>
+- <tt class="docutils literal">Q_ROUTER_NAME</tt>
 Optional Dependencies:
 IDENTITY_USE_SSL, IDENTITY_HOST, IDENTITY_PORT, IDENTITY_PATH
 ALT_* (similar vars exists in keystone_data.sh)
@@ -405,6 +408,7 @@ configure_tempest</p>
     <span class="nb">local </span>flavors_ref
     <span class="nb">local </span>flavor_lines
     <span class="nb">local </span>public_network_id
+    <span class="nb">local </span>public_router_id
     <span class="nb">local </span>tenant_networks_reachable
 
 </pre></div></td></tr><tr><td class=docs>
@@ -537,7 +541,15 @@ Tempest creates instane types for himself</p>
 <span class="k">    if </span>is_service_enabled q-l3; <span class="k">then</span>
 <span class="k">        </span><span class="nv">public_network_id</span><span class="o">=</span><span class="k">$(</span>quantum net-list | grep <span class="nv">$PUBLIC_NETWORK_NAME</span> | <span class="se">\</span>
             awk <span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>
-    <span class="k">fi</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$Q_USE_NAMESPACE&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If namespaces are disabled, devstack will create a single
+public router that tempest should be configured to use.</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="nv">public_router_id</span><span class="o">=</span><span class="k">$(</span>quantum router-list | awk <span class="s2">&quot;/ $Q_ROUTER_NAME / \</span>
+<span class="s2">               { print \$2 }&quot;</span><span class="k">)</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Timeouts</p>
@@ -623,6 +635,7 @@ tests actually use a key.</p>
     iniset <span class="nv">$TEMPEST_CONF</span> network password <span class="s2">&quot;$password&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> network tenant_networks_reachable <span class="s2">&quot;$tenant_networks_reachable&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> network public_network_id <span class="s2">&quot;$public_network_id&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> network public_router_id <span class="s2">&quot;$public_router_id&quot;</span>
 
     <span class="c">#boto</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto ec2_url <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>

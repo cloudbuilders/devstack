@@ -457,9 +457,10 @@ http_proxy=http://proxy.example.com:3128/ no_proxy=repo.example.net ./stack.sh</
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import database configuration</p>
+<p>Import common services (database, message queue) configuration</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/rpc_backend
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Validate database selection
@@ -487,10 +488,11 @@ override check and attempt installation with <tt class="docutils literal">FORCE=
     <span class="k">fi</span>
 <span class="k">fi</span>
 
-<span class="k">if </span>is_service_enabled qpid <span class="o">&amp;&amp;</span> ! qpid_is_supported; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Qpid support is not available for this version of your distribution.&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure we only have one rpc backend enabled,
+and the specified rpc backend is available on your platform.</p>
+</td><td class=code><div class=highlight><pre>
+check_rpc_backend
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> keeps function libraries here
@@ -521,25 +523,6 @@ templates and other useful files in the <tt class="docutils literal">files</tt> 
     <span class="nb">echo</span> <span class="s2">&quot;To destroy this session, type &#39;./unstack.sh&#39;.&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Make sure we only have one rpc backend enabled.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">rpc_backend_cnt</span><span class="o">=</span>0
-<span class="k">for </span>svc in qpid zeromq rabbit; <span class="k">do</span>
-<span class="k">    </span>is_service_enabled <span class="nv">$svc</span> <span class="o">&amp;&amp;</span>
-        <span class="o">((</span>rpc_backend_cnt++<span class="o">))</span>
-<span class="k">done</span>
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$rpc_backend_cnt&quot;</span> -gt 1 <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: only one rpc backend may be enabled,&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;       set only one of &#39;rabbit&#39;, &#39;qpid&#39;, &#39;zeromq&#39;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;       via ENABLED_SERVICES.&quot;</span>
-<span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$rpc_backend_cnt&quot;</span> <span class="o">==</span> 0 <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: at least one rpc backend must be enabled,&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;       set one of &#39;rabbit&#39;, &#39;qpid&#39;, &#39;zeromq&#39;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;       via ENABLED_SERVICES.&quot;</span>
-<span class="k">fi</span>
-<span class="nb">unset </span>rpc_backend_cnt
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up logging level</p>
@@ -1206,34 +1189,7 @@ echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span
     <span class="k">fi</span>
 <span class="k">fi</span>
 
-<span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install rabbitmq-server
-the temp file is necessary due to LP: #878600</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">tfile</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
-    install_package rabbitmq-server &gt; <span class="s2">&quot;$tfile&quot;</span> 2&gt;&amp;1
-    cat <span class="s2">&quot;$tfile&quot;</span>
-    rm -f <span class="s2">&quot;$tfile&quot;</span>
-<span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
-<span class="k">    if </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span>install_package qpid-cpp-server-daemon
-    <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span>install_package qpidd
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;qpid installation&quot;</span>
-    <span class="k">fi</span>
-<span class="k">elif </span>is_service_enabled zeromq; <span class="k">then</span>
-<span class="k">    if </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span>install_package zeromq python-zmq
-    <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span>install_package libzmq1 python-zmq
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>install_package libzmq1 python-pyzmq
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;zeromq installation&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
+install_rpc_backend
 
 <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
 <span class="k">    </span>install_database
@@ -1447,26 +1403,7 @@ don't be naive and add to existing line!</p>
 <div class="section" id="finalize-queue-installation">
 <h2>Finalize queue installation</h2>
 </td><td class=code><div class=highlight><pre>
-
-<span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Start rabbitmq-server</p>
-</td><td class=code><div class=highlight><pre>
-    echo_summary <span class="s2">&quot;Starting RabbitMQ&quot;</span>
-    <span class="k">if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>service is not started by default</p>
-</td><td class=code><div class=highlight><pre>
-        restart_service rabbitmq-server
-    <span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>change the rabbit password since the default is &quot;guest&quot;</p>
-</td><td class=code><div class=highlight><pre>
-    sudo rabbitmqctl change_password guest <span class="nv">$RABBIT_PASSWORD</span>
-<span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
-<span class="k">    </span>echo_summary <span class="s2">&quot;Starting qpid&quot;</span>
-    restart_service qpidd
-<span class="k">fi</span>
+restart_rpc_backend
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1723,15 +1660,8 @@ For multi-host, this should be the management ip of the compute host.</p>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_listen <span class="s2">&quot;$VNCSERVER_LISTEN&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_proxyclient_address <span class="s2">&quot;$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_dmz_host <span class="s2">&quot;$EC2_DMZ_HOST&quot;</span>
-    <span class="k">if </span>is_service_enabled zeromq; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT rpc_backend <span class="s2">&quot;nova.openstack.common.rpc.impl_zmq&quot;</span>
-    <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT rpc_backend <span class="s2">&quot;nova.rpc.impl_qpid&quot;</span>
-    <span class="k">elif</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT rabbit_host <span class="s2">&quot;$RABBIT_HOST&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT rabbit_password <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span>
-    <span class="k">fi</span>
-<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT glance_api_servers <span class="s2">&quot;$GLANCE_HOSTPORT&quot;</span>
+    iniset_rpc_backend nova <span class="nv">$NOVA_CONF</span> DEFAULT
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT glance_api_servers <span class="s2">&quot;$GLANCE_HOSTPORT&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
