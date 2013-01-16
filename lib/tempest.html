@@ -346,10 +346,11 @@ Dependencies:
 - <tt class="docutils literal">PUBLIC_NETWORK_NAME</tt>
 - <tt class="docutils literal">Q_USE_NAMESPACE</tt>
 - <tt class="docutils literal">Q_ROUTER_NAME</tt>
+- <tt class="docutils literal">VIRT_DRIVER</tt>
+- <tt class="docutils literal">LIBVIRT_TYPE</tt>
 Optional Dependencies:
 IDENTITY_USE_SSL, IDENTITY_HOST, IDENTITY_PORT, IDENTITY_PATH
 ALT_* (similar vars exists in keystone_data.sh)
-<tt class="docutils literal">OS_USERNAME</tt>
 <tt class="docutils literal">IMAGE_PORT</tt>, <tt class="docutils literal">IMAGE_HOST</tt>
 <tt class="docutils literal">LIVE_MIGRATION_AVAILABLE</tt>
 <tt class="docutils literal">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</tt>
@@ -357,7 +358,8 @@ ALT_* (similar vars exists in keystone_data.sh)
 <tt class="docutils literal">DEFAULT_INSTANCE_USER</tt>
 <tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
 <p>install_tempest
-configure_tempest</p>
+configure_tempest
+init_tempest</p>
 </td><td class=code><div class=highlight><pre>
 
 
@@ -386,6 +388,8 @@ configure_tempest</p>
 <span class="nv">BUILD_TIMEOUT</span><span class="o">=</span>400
 
 
+<span class="nv">BOTO_MATERIALS_PATH</span><span class="o">=</span><span class="s2">&quot;$DEST/devstack/files/images/s3-materials/cirros-0.3.0&quot;</span>
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="entry-points">
@@ -410,6 +414,7 @@ configure_tempest</p>
     <span class="nb">local </span>public_network_id
     <span class="nb">local </span>public_router_id
     <span class="nb">local </span>tenant_networks_reachable
+    <span class="nb">local </span><span class="nv">boto_instance_type</span><span class="o">=</span><span class="s2">&quot;m1.tiny&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(afazekas):
@@ -498,6 +503,7 @@ Tempest creates instane types for himself</p>
     <span class="k">if</span>  <span class="o">[[</span> -z <span class="s2">&quot;$DEFAULT_INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>nova flavor-create m1.nano 42 64 0 1
         <span class="nv">flavor_ref</span><span class="o">=</span>42
+        <span class="nv">boto_instance_type</span><span class="o">=</span>m1.nano
         nova flavor-create m1.micro 84 128 0 1
         <span class="nv">flavor_ref_alt</span><span class="o">=</span>84
     <span class="k">else</span>
@@ -505,6 +511,7 @@ Tempest creates instane types for himself</p>
 <p>Check Nova for existing flavors and, if set, look for the
 <tt class="docutils literal">DEFAULT_INSTANCE_TYPE</tt> and use that.</p>
 </td><td class=code><div class=highlight><pre>
+        <span class="nv">boto_instance_type</span><span class="o">=</span><span class="nv">$DEFAULT_INSTANCE_TYPE</span>
         <span class="nv">flavor_lines</span><span class="o">=</span><span class="sb">`</span>nova flavor-list<span class="sb">`</span>
         <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\r\n&#39;</span>
         <span class="nv">flavors</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
@@ -584,10 +591,10 @@ so reuse same tenant for now</p>
 <span class="k">    </span>iniset <span class="nv">$TEMPEST_CONF</span> compute allow_tenant_isolation <span class="k">${</span><span class="nv">TEMPEST_ALLOW_TENANT_ISOLATION</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
     <span class="c">#Skip until #1074039 is fixed</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute run_ssh False
-    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">$OS_USERNAME</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute network_for_ssh <span class="nv">$PRIVATE_NETWORK_NAME</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute ip_version_for_ssh 4
-    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_timeout 4
+    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_timeout <span class="nv">$BUILD_TIMEOUT</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref <span class="nv">$image_uuid</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref_alt <span class="nv">$image_uuid_alt</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref <span class="nv">$flavor_ref</span>
@@ -640,6 +647,9 @@ tests actually use a key.</p>
     <span class="c">#boto</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto ec2_url <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto s3_url <span class="s2">&quot;http://$SERVICE_HOST:${S3_SERVICE_PORT:-3333}&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> boto s3_materials_path <span class="s2">&quot;$BOTO_MATERIALS_PATH&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> boto instance_type <span class="s2">&quot;$boto_instance_type&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> boto http_socket_timeout 30
 
     <span class="nb">echo</span> <span class="s2">&quot;Created tempest configuration file:&quot;</span>
     cat <span class="nv">$TEMPEST_CONF</span>
@@ -663,6 +673,39 @@ tests actually use a key.</p>
 install them here instead.</p>
 </td><td class=code><div class=highlight><pre>
     pip_install -r <span class="nv">$TEMPEST_DIR</span>/tools/pip-requires
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>init_tempest() - Initialize ec2 images</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>init_tempest<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">base_image_name</span><span class="o">=</span>cirros-0.3.0-x86_64
+</pre></div></td></tr><tr><td class=docs>
+<p>/opt/stack/devstack/files/images/cirros-0.3.0-x86_64-uec</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">local </span><span class="nv">devstack_dir</span><span class="o">=</span><span class="s2">&quot;$DEST/devstack&quot;</span>
+    <span class="nb">local </span><span class="nv">image_dir</span><span class="o">=</span><span class="s2">&quot;$devstack_dir/files/images/${base_image_name}-uec&quot;</span>
+    <span class="nb">local </span><span class="nv">kernel</span><span class="o">=</span><span class="s2">&quot;$image_dir/${base_image_name}-vmlinuz&quot;</span>
+    <span class="nb">local </span><span class="nv">ramdisk</span><span class="o">=</span><span class="s2">&quot;$image_dir/${base_image_name}-initrd&quot;</span>
+    <span class="nb">local </span><span class="nv">disk_image</span><span class="o">=</span><span class="s2">&quot;$image_dir/${base_image_name}-blank.img&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>if the cirros uec downloaded and the system is uec capable</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$kernel&quot;</span> -a -f <span class="s2">&quot;$ramdisk&quot;</span> -a -f <span class="s2">&quot;$disk_image&quot;</span> -a  <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;openvz&quot;</span> <span class="se">\</span>
+         -a <span class="se">\(</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;lxc&quot;</span> -o <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;libvirt&quot;</span> <span class="se">\)</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">       </span><span class="nb">echo</span> <span class="s2">&quot;Prepare aki/ari/ami Images&quot;</span>
+       <span class="o">(</span> <span class="c">#new namespace</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>tenant:demo ; user: demo</p>
+</td><td class=code><div class=highlight><pre>
+           <span class="nb">source</span> <span class="nv">$devstack_dir</span>/accrc/demo/demo
+           euca-bundle-image -i <span class="s2">&quot;$kernel&quot;</span> --kernel <span class="nb">true</span> -d <span class="s2">&quot;$BOTO_MATERIALS_PATH&quot;</span>
+           euca-bundle-image -i <span class="s2">&quot;$ramdisk&quot;</span> --ramdisk <span class="nb">true</span> -d <span class="s2">&quot;$BOTO_MATERIALS_PATH&quot;</span>
+           euca-bundle-image -i <span class="s2">&quot;$disk_image&quot;</span> -d <span class="s2">&quot;$BOTO_MATERIALS_PATH&quot;</span>
+       <span class="o">)</span> 2&gt;&amp;1 &lt;/dev/null | cat
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Boto materials are not prepared&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
