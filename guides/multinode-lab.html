@@ -51,17 +51,14 @@
         </div>
         
         <h3>Minimal Ubuntu Install</h3>
-        <p>You need to have a fresh install of Ubuntu 11.10 (Oneiric) on all of your nodes.  
+        <p>You need to have a fresh install of Ubuntu 12.04 (Precise) on all of your nodes.  
         You can download the 
         <a href="https://help.ubuntu.com/community/Installation/MinimalCD">Minimal CD</a> 
-        for Oneiric (only 23MB) since DevStack will download &amp; install all the additional 
+        for Precise (only 27MB) since DevStack will download &amp; install all the additional 
         dependencies.</p>
 
         <p>Install a couple of packages to bootstrap configuration:</p>
         <pre>apt-get install -y git sudo</pre>
-<!--
-        <pre>apt-get install -y bridge-utils git sudo vlan vim-nox</pre>
--->
 
         <h3>Network Configuration</h3>
         <p>The first iteration of the lab uses OpenStack's FlatDHCP network controller so
@@ -109,7 +106,8 @@
         about the name, we'll use <code>stack</code> here. Every node must use the same name and
         preferably uid. If you created a user during the OS install you can use it and give it
         sudo priviledges below.  Otherwise create the stack user:</p>
-        <pre>useradd -U -G sudo -s /bin/bash -m stack</pre>
+        <pre>groupadd stack
+useradd -g stack -s /bin/bash -d /opt/stack -m stack</pre>
         <p>This user will be making many changes to your system during installation and operation
         so it needs to have sudo priviledges to root without a password:</p>
         <pre>echo "stack ALL=(ALL) NOPASSWD: ALL" &gt;&gt; /etc/sudoers</pre>
@@ -175,7 +173,7 @@ SERVICE_TOKEN=xyzpdqlazydog
 MYSQL_HOST=192.168.42.11
 RABBIT_HOST=192.168.42.11
 GLANCE_HOSTPORT=192.168.42.11:9292
-ENABLED_SERVICES=n-cpu,n-net,n-api,n-vol</pre>
+ENABLED_SERVICES=n-cpu,n-net,n-api,c-sch,c-api,c-vol</pre>
 <!-- save for vlan
 FLAT_INTERFACE=eth0.926
 -->
@@ -224,29 +222,31 @@ PASSWORD=BigSecrete
 TENANT=$NAME
 keystone tenant-create --name=$NAME
 keystone user-create --name=$NAME --pass=$PASSWORD
-keystone user-role-add --user=user-id --tenant_id=tenant-id --role=role-id</pre>
+keystone user-role-add --user-id=&lt;bob-user-id&gt; --tenant-id=&lt;bob-tenant-id&gt; --role-id=&lt;member-role-id&gt;
+# member-role-id comes from the existing member role created by stack.sh
+# keystone role-list</pre>
 
         <h3>Swift</h3>
         <p>Swift requires a significant amount of resources and is disabled by default in DevStack.
         The support in DevStack is geared toward a minimal installation but can be used for
         testing.  To implement a true multi-node test of Swift required more than DevStack provides.  
-        Enabling it is as simple as setting <code>ENABLED_SERVICES</code> in <code>localrc</code>:
-        <pre>ENABLED_SERVICES=${ENABLED_SERVICES},swift</pre>
+        Enabling it is as simple as enabling the <code>swift</code> service in <code>localrc</code>:
+        <pre>enable_service swift</pre>
 
         <p>Swift will put its data files in <code>SWIFT_DATA_DIR</code> (default <code>/opt/stack/data/swift</code>).
         The size of the data 'partition' created (really a loop-mounted file) is set by
         <code>SWIFT_LOOPBACK_DISK_SIZE</code>.  The Swift config files are located in 
-        <code>SWIFT_CONFIG_DIR</code>.  All of these settings can be overridden in
+        <code>SWIFT_CONFIG_DIR</code> (default <code>/etc/swift</code>).  All of these settings can be overridden in
         (wait for it...) <code>localrc</code>.</p>
 
         <h3>Volumes</h3>
-        <p>DevStack will automatically use an existing LVM volume group named <code>nova-volumes</code> 
-        to store cloud-created volumes. If <code>nova-volumes</code> doesn't exist, DevStack 
-        will set up a 2Gb loop-mounted file to contain it.  This obviously limits the
+        <p>DevStack will automatically use an existing LVM volume group named <code>stack-volumes</code> 
+        to store cloud-created volumes. If <code>stack-volumes</code> doesn't exist, DevStack 
+        will set up a 5Gb loop-mounted file to contain it.  This obviously limits the
         number and size of volumes that can be created inside OpenStack.  The size can be
         overridden by setting <code>VOLUME_BACKING_FILE_SIZE</code> in <code>localrc</code>.</p>
 
-        <p><code>nova-volumes</code> can be pre-created on any physical volume supported by
+        <p><code>stack-volumes</code> can be pre-created on any physical volume supported by
         Linux's LVM.  The name of the volume group can be changed by setting <code>VOLUME_GROUP</code>
         in <code>localrc</code>. <code>stack.sh</code> deletes
         all logical volumes in <code>VOLUME_GROUP</code> that begin with 
@@ -256,7 +256,7 @@ keystone user-role-add --user=user-id --tenant_id=tenant-id --role=role-id</pre>
         <p>The details of creating the volume group depends on the server hardware involved 
         but looks something like this:</p>
         <pre>pvcreate /dev/sdc
-vgcreate nova-volumes /dev/sdc</pre>
+vgcreate stack-volumes /dev/sdc</pre>
 
         <h3>Syslog</h3>
         <p>DevStack is capable of using <code>rsyslog</code> to agregate logging across the cluster.
