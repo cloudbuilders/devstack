@@ -745,6 +745,7 @@ address.</p>
 <span class="nv">HORIZON_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/horizon
 <span class="nv">OPENSTACKCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-openstackclient
 <span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
+<span class="nv">SPICE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/spice-html5
 <span class="nv">SWIFT3_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/swift3
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1272,6 +1273,12 @@ git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENST
 </td><td class=code><div class=highlight><pre>
     git_clone <span class="nv">$NOVNC_REPO</span> <span class="nv">$NOVNC_DIR</span> <span class="nv">$NOVNC_BRANCH</span>
 <span class="k">fi</span>
+<span class="k">if </span>is_service_enabled n-spice; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>a websockets/html5 or flash powered SPICE console for vm instances</p>
+</td><td class=code><div class=highlight><pre>
+    git_clone <span class="nv">$SPICE_REPO</span> <span class="nv">$SPICE_DIR</span> <span class="nv">$SPICE_BRANCH</span>
+<span class="k">fi</span>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>dashboard</p>
@@ -1646,20 +1653,43 @@ These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT novncproxy_base_url <span class="s2">&quot;$NOVNCPROXY_URL&quot;</span>
         <span class="nv">XVPVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">XVPVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6081/console&quot;</span><span class="k">}</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT xvpvncproxy_base_url <span class="s2">&quot;$XVPVNCPROXY_URL&quot;</span>
+        <span class="nv">SPICEHTML5PROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICEHTML5PROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6082/spice_auto.html&quot;</span><span class="k">}</span>
+        iniset <span class="nv">$NOVA_CONF</span> spice html5proxy_base_url <span class="s2">&quot;$SPICEHTML5PROXY_URL&quot;</span>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=169.254.0.1</span><span class="k">}</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
     <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled n-novnc <span class="o">||</span> is_service_enabled n-xvnc ; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Address on which instance vncservers will listen on compute hosts.
 For multi-host, this should be the management ip of the compute host.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_listen <span class="s2">&quot;$VNCSERVER_LISTEN&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_proxyclient_address <span class="s2">&quot;$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_dmz_host <span class="s2">&quot;$EC2_DMZ_HOST&quot;</span>
+      <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+      iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="nb">true</span>
+<span class="nb">      </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_listen <span class="s2">&quot;$VNCSERVER_LISTEN&quot;</span>
+      iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_proxyclient_address <span class="s2">&quot;$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
+    <span class="k">else</span>
+<span class="k">      </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="nb">false</span>
+<span class="nb">    </span><span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled n-spice; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Address on which instance spiceservers will listen on compute hosts.
+For multi-host, this should be the management ip of the compute host.</p>
+</td><td class=code><div class=highlight><pre>
+      <span class="nv">SPICESERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICESERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+      <span class="nv">SPICESERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICESERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+      iniset <span class="nv">$NOVA_CONF</span> spice enabled <span class="nb">true</span>
+<span class="nb">      </span>iniset <span class="nv">$NOVA_CONF</span> spice server_listen <span class="s2">&quot;$SPICESERVER_LISTEN&quot;</span>
+      iniset <span class="nv">$NOVA_CONF</span> spice server_proxyclient_address <span class="s2">&quot;$SPICESERVER_PROXYCLIENT_ADDRESS&quot;</span>
+    <span class="k">else</span>
+<span class="k">      </span>iniset <span class="nv">$NOVA_CONF</span> spice enabled <span class="nb">false</span>
+<span class="nb">    </span><span class="k">fi</span>
+
+<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_dmz_host <span class="s2">&quot;$EC2_DMZ_HOST&quot;</span>
     iniset_rpc_backend nova <span class="nv">$NOVA_CONF</span> DEFAULT
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT glance_api_servers <span class="s2">&quot;$GLANCE_HOSTPORT&quot;</span>
 
