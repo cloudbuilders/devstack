@@ -348,10 +348,9 @@ Dependencies:
 - <tt class="docutils literal">Q_ROUTER_NAME</tt>
 - <tt class="docutils literal">VIRT_DRIVER</tt>
 - <tt class="docutils literal">LIBVIRT_TYPE</tt>
+- <tt class="docutils literal">KEYSTONE_SERVICE_PROTOCOL</tt>, <tt class="docutils literal">KEYSTONE_SERVICE_HOST</tt> from lib/keystone
 Optional Dependencies:
-IDENTITY_USE_SSL, IDENTITY_HOST, IDENTITY_PORT, IDENTITY_PATH
 ALT_* (similar vars exists in keystone_data.sh)
-<tt class="docutils literal">IMAGE_PORT</tt>, <tt class="docutils literal">IMAGE_HOST</tt>
 <tt class="docutils literal">LIVE_MIGRATION_AVAILABLE</tt>
 <tt class="docutils literal">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</tt>
 <tt class="docutils literal">DEFAULT_INSTANCE_TYPE</tt>
@@ -478,15 +477,6 @@ copy every time, because the image UUIDS are going to change</p>
 </td><td class=code><div class=highlight><pre>
     cp <span class="nv">$TEMPEST_CONF</span>.sample <span class="nv">$TEMPEST_CONF</span>
 
-    <span class="nv">IDENTITY_USE_SSL</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_USE_SSL</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-    <span class="nv">IDENTITY_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
-    <span class="nv">IDENTITY_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_PORT</span><span class="k">:-</span><span class="nv">5000</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>TODO(jaypipes): This is dumb and needs to be removed
-from the Tempest configuration file entirely...</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">IDENTITY_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">IDENTITY_PATH</span><span class="k">:-</span><span class="nv">tokens</span><span class="k">}</span>
-
     <span class="nv">password</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -569,15 +559,23 @@ public router that tempest should be configured to use.</p>
     iniset <span class="nv">$TEMPEST_CONF</span> boto build_interval <span class="nv">$BUILD_INTERVAL</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto http_socket_timeout 5
 
-    iniset <span class="nv">$TEMPEST_CONF</span> identity use_ssl <span class="nv">$IDENTITY_USE_SSL</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> identity host <span class="nv">$IDENTITY_HOST</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> identity port <span class="nv">$IDENTITY_PORT</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> identity path <span class="nv">$IDENTITY_PATH</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Identity</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> identity uri <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:5000/v2.0/&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> identity password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> identity alt_username <span class="nv">$ALT_USERNAME</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> identity alt_password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> identity alt_tenant_name <span class="nv">$ALT_TENANT_NAME</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> identity admin_password <span class="s2">&quot;$password&quot;</span>
 
-    iniset <span class="nv">$TEMPEST_CONF</span> compute password <span class="s2">&quot;$password&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_username <span class="nv">$ALT_USERNAME</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_password <span class="s2">&quot;$password&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_tenant_name <span class="nv">$ALT_TENANT_NAME</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Compute</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_username <span class="nv">$ALT_USERNAME</span> <span class="c"># DEPRECATED</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute alt_tenant_name <span class="nv">$ALT_TENANT_NAME</span> <span class="c"># DEPRECATED</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute resize_available False
     iniset <span class="nv">$TEMPEST_CONF</span> compute change_password_available False
     iniset <span class="nv">$TEMPEST_CONF</span> compute compute_log_level ERROR
@@ -591,55 +589,61 @@ so reuse same tenant for now</p>
 <span class="k">    </span>iniset <span class="nv">$TEMPEST_CONF</span> compute allow_tenant_isolation <span class="k">${</span><span class="nv">TEMPEST_ALLOW_TENANT_ISOLATION</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
     <span class="c">#Skip until #1074039 is fixed</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute run_ssh False
-    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span> <span class="c"># DEPRECATED</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute network_for_ssh <span class="nv">$PRIVATE_NETWORK_NAME</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute ip_version_for_ssh 4
     iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_timeout <span class="nv">$BUILD_TIMEOUT</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref <span class="nv">$image_uuid</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref_alt <span class="nv">$image_uuid_alt</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute image_alt_ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref <span class="nv">$flavor_ref</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref_alt <span class="nv">$flavor_ref_alt</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute source_dir <span class="nv">$NOVA_SOURCE_DIR</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute live_migration_available <span class="k">${</span><span class="nv">LIVE_MIGRATION_AVAILABLE</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
     iniset <span class="nv">$TEMPEST_CONF</span> compute use_block_migration_for_live_migration <span class="k">${</span><span class="nv">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute source_dir <span class="nv">$NOVA_SOURCE_DIR</span> <span class="c"># DEPRECATED</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute bin_dir <span class="nv">$NOVA_BIN_DIR</span> <span class="c"># DEPRECATED</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute path_to_private_key <span class="nv">$TEMPEST_DIR</span>/id_rsa <span class="c"># DEPRECATED</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> compute db_uri <span class="nv">$BASE_SQL_CONN</span>/nova <span class="c"># DEPRECATED</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Inherited behavior, might be wrong</p>
+<p>Whitebox</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute bin_dir <span class="nv">$NOVA_BIN_DIR</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> whitebox source_dir <span class="nv">$NOVA_SOURCE_DIR</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> whitebox bin_dir <span class="nv">$NOVA_BIN_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(jaypipes): Create the key file here... right now, no whitebox
 tests actually use a key.</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute path_to_private_key <span class="nv">$TEMPEST_DIR</span>/id_rsa
-    iniset <span class="nv">$TEMPEST_CONF</span> compute db_uri <span class="nv">$BASE_SQL_CONN</span>/nova
+    iniset <span class="nv">$TEMPEST_CONF</span> whitebox path_to_private_key <span class="nv">$TEMPEST_DIR</span>/id_rsa
+    iniset <span class="nv">$TEMPEST_CONF</span> whitebox db_uri <span class="nv">$BASE_SQL_CONN</span>/nova
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>image</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> image host <span class="k">${</span><span class="nv">IMAGE_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> image port <span class="k">${</span><span class="nv">IMAGE_PORT</span><span class="k">:-</span><span class="nv">9292</span><span class="k">}</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> image password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> image password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>identity-admin</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;identity-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;identity-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>compute admin</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>network admin</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;network-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;network-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>network</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$TEMPEST_CONF</span> network api_version 2.0
-    iniset <span class="nv">$TEMPEST_CONF</span> network password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> network password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
     iniset <span class="nv">$TEMPEST_CONF</span> network tenant_networks_reachable <span class="s2">&quot;$tenant_networks_reachable&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> network public_network_id <span class="s2">&quot;$public_network_id&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> network public_router_id <span class="s2">&quot;$public_router_id&quot;</span>
@@ -650,6 +654,7 @@ tests actually use a key.</p>
     iniset <span class="nv">$TEMPEST_CONF</span> boto s3_materials_path <span class="s2">&quot;$BOTO_MATERIALS_PATH&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto instance_type <span class="s2">&quot;$boto_instance_type&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto http_socket_timeout 30
+    iniset <span class="nv">$TEMPEST_CONF</span> boto ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
 
     <span class="nb">echo</span> <span class="s2">&quot;Created tempest configuration file:&quot;</span>
     cat <span class="nv">$TEMPEST_CONF</span>
