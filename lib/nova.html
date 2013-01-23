@@ -663,13 +663,27 @@ to simulate multiple systems.</p>
 <span class="k">            </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirtd
         <span class="k">fi</span>
 
+
+
+<span class="k">        if </span>is_fedora; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>For distributions using polkit to authorize access to libvirt,
-configure polkit accordingly.
-Based on <a class="reference external" href="http://wiki.libvirt.org/page/SSHPolicyKitSetup">http://wiki.libvirt.org/page/SSHPolicyKitSetup</a></p>
+<p>Starting with fedora 18 enable stack-user to virsh -c qemu:///system
+by creating a policy-kit rule for stack-user</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if </span>is_fedora; <span class="k">then</span>
-<span class="k">            </span>sudo bash -c <span class="s1">&#39;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
+            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_RELEASE&quot;</span> -ge <span class="s2">&quot;18&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">rules_dir</span><span class="o">=</span>/etc/polkit-1/rules.d
+                sudo mkdir -p <span class="nv">$rules_dir</span>
+                sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt; $rules_dir/50-libvirt-$STACK_USER.rules</span>
+<span class="s2">polkit.addRule(function(action, subject) {</span>
+<span class="s2">     if (action.id == &#39;org.libvirt.unix.manage&#39; &amp;&amp;</span>
+<span class="s2">         subject.user == &#39;&quot;</span><span class="nv">$STACK_USER</span><span class="s2">&quot;&#39;) {</span>
+<span class="s2">         return polkit.Result.YES;</span>
+<span class="s2">     }</span>
+<span class="s2">});</span>
+<span class="s2">EOF&quot;</span>
+                <span class="nb">unset </span>rules_dir
+            <span class="k">else</span>
+<span class="k">                </span>sudo bash -c <span class="s1">&#39;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
 <span class="s1">[libvirt Management Access]</span>
 <span class="s1">Identity=unix-group:libvirtd</span>
 <span class="s1">Action=org.libvirt.unix.manage</span>
@@ -677,7 +691,8 @@ Based on <a class="reference external" href="http://wiki.libvirt.org/page/SSHPol
 <span class="s1">ResultInactive=yes</span>
 <span class="s1">ResultActive=yes</span>
 <span class="s1">EOF&#39;</span>
-        <span class="k">elif </span>is_suse; <span class="k">then</span>
+            <span class="k">fi</span>
+<span class="k">        elif </span>is_suse; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Work around the fact that polkit-default-privs overrules pklas
 with 'unix-group:$group'.</p>
