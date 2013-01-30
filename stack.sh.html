@@ -1589,10 +1589,17 @@ a part of the OpenStack project. Configure and start them.</p>
 
 <span class="k">if </span>is_service_enabled n-net q-dhcp; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Delete traces of nova networks from prior runs</p>
+<p>Delete traces of nova networks from prior runs
+Do not kill any dnsmasq instance spawned by NetworkManager</p>
 </td><td class=code><div class=highlight><pre>
-    sudo killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>clean_iptables
+    <span class="nv">netman_pid</span><span class="o">=</span><span class="k">$(</span>pidof NetworkManager <span class="o">||</span> <span class="nb">true</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$netman_pid&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo killall dnsmasq <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span><span class="k">else</span>
+<span class="k">        </span>sudo ps h -o pid,ppid -C dnsmasq | grep -v <span class="nv">$netman_pid</span> | awk <span class="s1">&#39;{print $1}&#39;</span> | sudo xargs <span class="nb">kill</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span><span class="k">fi</span>
+
+<span class="k">    </span>clean_iptables
     rm -rf <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
     sudo mkdir -p <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
     sudo chown -R <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
