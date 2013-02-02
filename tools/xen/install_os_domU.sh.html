@@ -622,6 +622,12 @@ and/or create VM from template</p>
 <span class="nv">SNAME_FIRST_BOOT</span><span class="o">=</span><span class="s2">&quot;before_first_boot&quot;</span>
 
 <span class="k">function </span>wait_for_VM_to_halt<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">set</span> +x
+    <span class="nb">echo</span> <span class="s2">&quot;Waiting for the VM to halt.  Progress in-VM can be checked with vncviewer:&quot;</span>
+    <span class="nv">mgmt_ip</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$XENAPI_CONNECTION_URL</span> | tr -d -c <span class="s1">&#39;1234567890.&#39;</span><span class="k">)</span>
+    <span class="nv">domid</span><span class="o">=</span><span class="k">$(</span>xe vm-list name-label<span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="nv">params</span><span class="o">=</span>dom-id <span class="nv">minimal</span><span class="o">=</span><span class="nb">true</span><span class="k">)</span>
+    <span class="nv">port</span><span class="o">=</span><span class="k">$(</span>xenstore-read /local/domain/<span class="nv">$domid</span>/console/vnc-port<span class="k">)</span>
+    <span class="nb">echo</span> <span class="s2">&quot;vncviewer -via $mgmt_ip localhost:${port:2}&quot;</span>
     <span class="k">while </span><span class="nb">true</span>
 <span class="nb">    </span><span class="k">do</span>
 <span class="k">        </span><span class="nv">state</span><span class="o">=</span><span class="k">$(</span>xe_min vm-list name-label<span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span> power-state<span class="o">=</span>halted<span class="k">)</span>
@@ -629,10 +635,11 @@ and/or create VM from template</p>
         <span class="k">then</span>
 <span class="k">            </span><span class="nb">break</span>
 <span class="nb">        </span><span class="k">else</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for &quot;</span><span class="nv">$GUEST_NAME</span><span class="s2">&quot; to finish installation...&quot;</span>
+<span class="k">            </span><span class="nb">echo</span> -n <span class="s2">&quot;.&quot;</span>
             sleep 20
         <span class="k">fi</span>
 <span class="k">    done</span>
+<span class="k">    </span><span class="nb">set</span> -x
 <span class="o">}</span>
 
 <span class="nv">templateuuid</span><span class="o">=</span><span class="k">$(</span>xe template-list name-label<span class="o">=</span><span class="s2">&quot;$TNAME&quot;</span><span class="k">)</span>
@@ -821,13 +828,15 @@ network, so XenServer can access Glance API</p>
 </td><td class=code><div class=highlight><pre>
     ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> <span class="s1">&#39;cat run.sh.log&#39;</span> | grep -q <span class="s1">&#39;stack.sh completed in&#39;</span>
 
+    <span class="nb">set</span> +x
     <span class="nb">echo</span> <span class="s2">&quot;################################################################################&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;All Finished!&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;You can visit the OpenStack Dashboard&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;at http://$DOMU_IP, and contact other services at the usual ports.&quot;</span>
 <span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;################################################################################&quot;</span>
+<span class="k">    </span><span class="nb">set</span> +x
+    <span class="nb">echo</span> <span class="s2">&quot;################################################################################&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;All Finished!&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Now, you can monitor the progress of the stack.sh installation by &quot;</span>
