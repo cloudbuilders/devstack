@@ -376,10 +376,9 @@ and <tt class="docutils literal">DISTRO</tt></p>
 GetDistro
 
 
-
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="settings">
-<h1>Settings</h1>
+<div class="section" id="global-settings">
+<h1>Global Settings</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -411,30 +410,14 @@ allow you to safely override those settings.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="proxy-settings">
-<h2>Proxy Settings</h2>
+<div class="section" id="local-settings">
+<h2>Local Settings</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>HTTP and HTTPS proxy servers are supported via the usual environment variables [1]
-<tt class="docutils literal">http_proxy</tt>, <tt class="docutils literal">https_proxy</tt> and <tt class="docutils literal">no_proxy</tt>. They can be set in
-<tt class="docutils literal">localrc</tt> if necessary or on the command line:</p>
-<pre class="literal-block">
-[1] http://www.w3.org/Daemon/User/Proxies/ProxyClients.html
-</pre>
-<blockquote>
-http_proxy=http://proxy.example.com:3128/ no_proxy=repo.example.net ./stack.sh</blockquote>
+<p>Make sure the proxy config is visible to sub-processes</p>
 </td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$http_proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">export </span><span class="nv">http_proxy</span><span class="o">=</span><span class="nv">$http_proxy</span>
-<span class="k">fi</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$https_proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">export </span><span class="nv">https_proxy</span><span class="o">=</span><span class="nv">$https_proxy</span>
-<span class="k">fi</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$no_proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">export </span><span class="nv">no_proxy</span><span class="o">=</span><span class="nv">$no_proxy</span>
-<span class="k">fi</span>
+export_proxy_variables
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Destination path for installation <tt class="docutils literal">DEST</tt></p>
@@ -444,9 +427,8 @@ http_proxy=http://proxy.example.com:3128/ no_proxy=repo.example.net ./stack.sh</
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-</div>
 <div class="section" id="sanity-check">
-<h1>Sanity Check</h1>
+<h2>Sanity Check</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -531,6 +513,7 @@ templates and other useful files in the <tt class="docutils literal">files</tt> 
 
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="root-access">
 <h2>root Access</h2>
 </td><td class=code><div class=highlight><pre>
@@ -1184,28 +1167,11 @@ an error.  It is also useful for following along as the install occurs.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install package requirements</p>
+<p>Install package requirements
+Source it so the entire environment is available</p>
 </td><td class=code><div class=highlight><pre>
 echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span>
-<span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/apts<span class="k">)</span>
-<span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/rpms<span class="k">)</span>
-<span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">    </span>install_package <span class="k">$(</span>get_packages <span class="nv">$FILES</span>/rpms-suse<span class="k">)</span>
-<span class="k">else</span>
-<span class="k">    </span>exit_distro_not_supported <span class="s2">&quot;list of packages&quot;</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$SYSLOG</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    if </span>is_ubuntu <span class="o">||</span> is_fedora; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-relp
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-module-relp
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;rsyslog-relp installation&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/tools/install_prereqs.sh
 
 install_rpc_backend
 

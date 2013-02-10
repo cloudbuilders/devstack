@@ -350,37 +350,42 @@ ul.auto-toc {
 </table>
 </td><td class=code><div class=highlight><pre>
 
-
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$1&quot;</span> <span class="o">&amp;&amp;</span>  <span class="s2">&quot;$1&quot;</span> <span class="o">=</span> <span class="s2">&quot;-f&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">FORCE</span><span class="o">=</span>1
+<span class="k">    </span><span class="nv">FORCE_PREREQ</span><span class="o">=</span>1
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>If TOP_DIR is set we're being sourced rather than running stand-alone
+or in a sub-shell</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the devstack directory</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+    <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
+    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
 <tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt>
 and <tt class="docutils literal">DISTRO</tt></p>
 </td><td class=code><div class=highlight><pre>
-GetDistro
+    GetDistro
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Needed to get <tt class="docutils literal">ENABLED_SERVICES</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
+    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Prereq dirs are here</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+    <span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Minimum wait time</p>
@@ -392,15 +397,16 @@ GetDistro
 <span class="nv">NOW</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+%s&quot;</span><span class="k">)</span>
 <span class="nv">LAST_RUN</span><span class="o">=</span><span class="k">$(</span>head -1 <span class="nv">$PREREQ_RERUN_MARKER</span> 2&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> <span class="s2">&quot;0&quot;</span><span class="k">)</span>
 <span class="nv">DELTA</span><span class="o">=</span><span class="k">$((</span><span class="nv">$NOW</span> <span class="o">-</span> <span class="nv">$LAST_RUN</span><span class="k">))</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$DELTA</span> -lt <span class="nv">$PREREQ_RERUN_SECONDS</span> <span class="o">&amp;&amp;</span> -z <span class="s2">&quot;$FORCE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$DELTA</span> -lt <span class="nv">$PREREQ_RERUN_SECONDS</span> <span class="o">&amp;&amp;</span> -z <span class="s2">&quot;$FORCE_PREREQ&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Re-run time has not expired ($(($PREREQ_RERUN_SECONDS - $DELTA)) seconds remaining); exiting...&quot;</span>
-    <span class="nb">exit </span>0
+    <span class="k">return </span>0
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure the proxy config is visible to sub-processes</p>
 </td><td class=code><div class=highlight><pre>
-re_export_proxy_variables
+export_proxy_variables
+
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="install-packages">
