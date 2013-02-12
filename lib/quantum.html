@@ -669,10 +669,21 @@ Set common config for all quantum server and agents.</p>
 Since quantum command is executed in admin context at this point,
 <tt class="docutils literal"><span class="pre">--tenant_id</span></tt> needs to be specified.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --tenant_id <span class="nv">$TENANT_ID</span> <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">SUBNET_ID</span><span class="o">=</span><span class="k">$(</span>quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+    <span class="k">if </span>is_baremetal; <span class="k">then</span>
+<span class="k">        </span>sudo ovs-vsctl add-port <span class="nv">$OVS_PHYSICAL_BRIDGE</span> <span class="nv">$PUBLIC_INTERFACE</span>
+        <span class="k">for </span>IP in <span class="k">$(</span>ip addr show dev <span class="nv">$PUBLIC_INTERFACE</span> | grep <span class="s1">&#39; inet &#39;</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>; <span class="k">do</span>
+<span class="k">            </span>sudo ip addr del <span class="nv">$IP</span> dev <span class="nv">$PUBLIC_INTERFACE</span>
+            sudo ip addr add <span class="nv">$IP</span> dev <span class="nv">$OVS_PHYSICAL_BRIDGE</span>
+        <span class="k">done</span>
+<span class="k">        </span><span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create <span class="nv">$PHYSICAL_NETWORK</span> --tenant_id <span class="nv">$TENANT_ID</span> --provider:network_type flat --provider:physical_network <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        <span class="nv">SUBNET_ID</span><span class="o">=</span><span class="k">$(</span>quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 <span class="k">${</span><span class="nv">ALLOCATION_POOL</span><span class="p">:+--allocation-pool </span><span class="nv">$ALLOCATION_POOL</span><span class="k">}</span> --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        sudo ifconfig <span class="nv">$OVS_PHYSICAL_BRIDGE</span> up
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --tenant_id <span class="nv">$TENANT_ID</span> <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        <span class="nv">SUBNET_ID</span><span class="o">=</span><span class="k">$(</span>quantum subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 --gateway <span class="nv">$NETWORK_GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+    <span class="k">fi</span>
 
-    <span class="k">if </span>is_service_enabled q-l3; <span class="k">then</span>
+<span class="k">    if </span>is_service_enabled q-l3; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a router, and add the private subnet as one of its interfaces</p>
 </td><td class=code><div class=highlight><pre>
