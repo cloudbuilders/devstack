@@ -1211,9 +1211,9 @@ restart_service service-name</p>
 screen_it service &quot;command-line&quot;</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>screen_it <span class="o">{</span>
-    <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
     <span class="nv">SCREEN_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">SCREEN_NAME</span><span class="k">:-</span><span class="nv">stack</span><span class="k">}</span>
     <span class="nv">SERVICE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/status</span><span class="k">}</span>
+    <span class="nv">SCREEN_DEV</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$SCREEN_DEV</span><span class="sb">`</span>
 
     <span class="k">if </span>is_service_enabled <span class="nv">$1</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1222,20 +1222,25 @@ screen_it service &quot;command-line&quot;</p>
         screen_rc <span class="s2">&quot;$1&quot;</span> <span class="s2">&quot;$2&quot;</span>
 
         screen -S <span class="nv">$SCREEN_NAME</span> -X screen -t <span class="nv">$1</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SCREEN_DEV&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>sleep to allow bash to be ready to be send the command - we are
 creating a new window in screen and then sends characters, so if
 bash isn't running by the time we send the command, nothing happens</p>
 </td><td class=code><div class=highlight><pre>
-        sleep 1.5
+            sleep 1.5
 
-        <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X logfile <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log
-            screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X log on
-            ln -sf <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.log
+            <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X logfile <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log
+                screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X log on
+                ln -sf <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.log
+            <span class="k">fi</span>
+<span class="k">            </span><span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
+            screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2 || touch \&quot;$SERVICE_DIR/$SCREEN_NAME/$1.failure\&quot;$NL&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X <span class="nb">exec</span> /bin/bash -c <span class="s2">&quot;$2 || touch \&quot;$SERVICE_DIR/$SCREEN_NAME/$1.failure\&quot;&quot;</span>
         <span class="k">fi</span>
-<span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2 || touch \&quot;$SERVICE_DIR/$SCREEN_NAME/$1.failure\&quot;$NL&quot;</span>
-    <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="o">}</span>
 
 
