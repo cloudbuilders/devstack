@@ -826,15 +826,10 @@ that we just uploaded in glance</p>
 <span class="o">}</span>
 
 <span class="k">function </span>clear_baremetal_of_all_nodes<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">list</span><span class="o">=</span><span class="k">$(</span>nova-baremetal-manage node list | tail -n +2 | awk <span class="s1">&#39;{print $1}&#39;</span> <span class="k">)</span>
+    <span class="nv">list</span><span class="o">=</span><span class="k">$(</span>nova baremetal-node-list | awk -F <span class="s1">&#39;| &#39;</span> <span class="s1">&#39;NR&gt;3 {print $2}&#39;</span> <span class="k">)</span>
     <span class="k">for </span>node in <span class="nv">$list</span>
     <span class="k">do</span>
-<span class="k">        </span>nova-baremetal-manage node delete <span class="nv">$node</span>
-    <span class="k">done</span>
-<span class="k">    </span><span class="nv">list</span><span class="o">=</span><span class="k">$(</span>nova-baremetal-manage interface list | tail -n +2 | awk <span class="s1">&#39;{print $1}&#39;</span> <span class="k">)</span>
-    <span class="k">for </span>iface in <span class="nv">$list</span>
-    <span class="k">do</span>
-<span class="k">        </span>nova-baremetal-manage interface delete <span class="nv">$iface</span>
+<span class="k">        </span>nova baremetal-node-delete <span class="nv">$node</span>
     <span class="k">done</span>
 <span class="o">}</span>
 
@@ -847,16 +842,18 @@ Defaults to using BM_FIRST_MAC and BM_SECOND_MAC if parameters not specified</p>
     <span class="nv">mac_1</span><span class="o">=</span><span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="nv">$BM_FIRST_MAC</span><span class="k">}</span>
     <span class="nv">mac_2</span><span class="o">=</span><span class="k">${</span><span class="nv">2</span><span class="k">:-</span><span class="nv">$BM_SECOND_MAC</span><span class="k">}</span>
 
-    <span class="nv">id</span><span class="o">=</span><span class="k">$(</span>nova-baremetal-manage node create <span class="se">\</span>
-       --host<span class="o">=</span><span class="nv">$BM_HOSTNAME</span> --prov_mac<span class="o">=</span><span class="nv">$mac_1</span> <span class="se">\</span>
-       --cpus<span class="o">=</span><span class="nv">$BM_FLAVOR_CPU</span> --memory_mb<span class="o">=</span><span class="nv">$BM_FLAVOR_RAM</span> <span class="se">\</span>
-       --local_gb<span class="o">=</span><span class="nv">$BM_FLAVOR_ROOT_DISK</span> --terminal_port<span class="o">=</span>0 <span class="se">\</span>
-       --pm_address<span class="o">=</span><span class="nv">$BM_PM_ADDR</span> --pm_user<span class="o">=</span><span class="nv">$BM_PM_USER</span> --pm_password<span class="o">=</span><span class="nv">$BM_PM_PASS</span> <span class="se">\</span>
-       <span class="k">)</span>
+    <span class="nv">id</span><span class="o">=</span><span class="k">$(</span>nova baremetal-node-create <span class="se">\</span>
+       --pm_address<span class="o">=</span><span class="s2">&quot;$BM_PM_ADDR&quot;</span> <span class="se">\</span>
+       --pm_user<span class="o">=</span><span class="s2">&quot;$BM_PM_USER&quot;</span> <span class="se">\</span>
+       --pm_password<span class="o">=</span><span class="s2">&quot;$BM_PM_PASS&quot;</span> <span class="se">\</span>
+       <span class="s2">&quot;$BM_HOSTNAME&quot;</span> <span class="se">\</span>
+       <span class="s2">&quot;$BM_FLAVOR_CPU&quot;</span> <span class="se">\</span>
+       <span class="s2">&quot;$BM_FLAVOR_RAM&quot;</span> <span class="se">\</span>
+       <span class="s2">&quot;$BM_FLAVOR_ROOT_DISK&quot;</span> <span class="se">\</span>
+       <span class="s2">&quot;$mac_1&quot;</span> <span class="se">\</span>
+       | grep <span class="s1">&#39; id &#39;</span> | get_field 2 <span class="k">)</span>
     <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$id&quot;</span> <span class="o">]</span> <span class="o">||</span> die <span class="s2">&quot;Error adding baremetal node&quot;</span>
-    <span class="nv">id2</span><span class="o">=</span><span class="k">$(</span>nova-baremetal-manage interface create <span class="se">\</span>
-       --node_id<span class="o">=</span><span class="nv">$id</span> --mac_address<span class="o">=</span><span class="nv">$mac_2</span> --datapath_id<span class="o">=</span>0 --port_no<span class="o">=</span>0 <span class="se">\</span>
-       <span class="k">)</span>
+    <span class="nv">id2</span><span class="o">=</span><span class="k">$(</span>nova baremetal-add-interface <span class="s2">&quot;$id&quot;</span> <span class="s2">&quot;$mac_2&quot;</span> <span class="k">)</span>
     <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$id2&quot;</span> <span class="o">]</span> <span class="o">||</span> die <span class="s2">&quot;Error adding interface to barmetal node $id&quot;</span>
 <span class="o">}</span>
 
