@@ -566,23 +566,14 @@ for Nova to validate Keystone tokens.</p>
 </td><td class=code><div class=highlight><pre>
         cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_CONF_DIR</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Rewrite the authtoken configuration for our Keystone service.
-This is a bit defensive to allow the sample file some variance.</p>
-</td><td class=code><div class=highlight><pre>
-        sed -e <span class="s2">&quot;</span>
-<span class="s2">            /^admin_token/i admin_tenant_name = $SERVICE_TENANT_NAME</span>
-<span class="s2">            /admin_tenant_name/s/^.*$/admin_tenant_name = $SERVICE_TENANT_NAME/;</span>
-<span class="s2">            /admin_user/s/^.*$/admin_user = nova/;</span>
-<span class="s2">            /admin_password/s/^.*$/admin_password = $SERVICE_PASSWORD/;</span>
-<span class="s2">            s,%SERVICE_TENANT_NAME%,$SERVICE_TENANT_NAME,g;</span>
-<span class="s2">            s,%SERVICE_TOKEN%,$SERVICE_TOKEN,g;</span>
-<span class="s2">        &quot;</span> -i <span class="nv">$NOVA_API_PASTE_INI</span>
         iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$SERVICE_HOST</span>
         <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 <span class="k">            </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$SERVICE_PROTOCOL</span>
         <span class="k">fi</span>
-<span class="k">    fi</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+        iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_user nova
+        iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    <span class="k">fi</span>
 
 <span class="k">    </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken signing_dir <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
 
@@ -913,6 +904,18 @@ For Example: <tt class="docutils literal"><span class="pre">EXTRA_OPTS=(foo=true
     <span class="k">done</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>create_nova_cache_dir() - Part of the init_nova() process</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>create_nova_cache_dir<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create cache dir</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkdir -p <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
+    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
+    rm -f <span class="nv">$NOVA_AUTH_CACHE_DIR</span>/*
+<span class="o">}</span>
+
 <span class="k">function </span>create_nova_conf_nova_network<span class="o">()</span> <span class="o">{</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT network_manager <span class="s2">&quot;nova.network.manager.$NET_MAN&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT public_interface <span class="s2">&quot;$PUBLIC_INTERFACE&quot;</span>
@@ -924,20 +927,24 @@ For Example: <tt class="docutils literal"><span class="pre">EXTRA_OPTS=(foo=true
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>create_nova_keys_dir() - Part of the init_nova() process</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>create_nova_keys_dir<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create keys dir</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkdir -p <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/keys
+    sudo chown -R <span class="nv">$STACK_USER</span> <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>init_nova() - Initialize databases, etc.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_nova<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="nova-database">
-<h1>Nova Database</h1>
+<p>All nova components talk to a central database.
+Only do this step once on the API node for an entire cluster.</p>
 </td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>All nova components talk to a central database.  We will need to do this step
-only once for an entire cluster.</p>
-</td><td class=code><div class=highlight><pre>
-
     <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span> <span class="o">&amp;&amp;</span> is_service_enabled n-api; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>(Re)create nova database
@@ -948,7 +955,7 @@ use latin1 by default, and then upgrades the database to utf8 (see the
         recreate_database nova latin1
 
 </pre></div></td></tr><tr><td class=docs>
-<p>(Re)create nova database</p>
+<p>Migrate nova database</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">$NOVA_BIN_DIR</span>/nova-manage db sync
 
@@ -961,21 +968,8 @@ use latin1 by default, and then upgrades the database to utf8 (see the
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Create cache dir</p>
-</td><td class=code><div class=highlight><pre>
-    sudo mkdir -p <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
-    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
-    rm -f <span class="nv">$NOVA_AUTH_CACHE_DIR</span>/*
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create the keys folder</p>
-</td><td class=code><div class=highlight><pre>
-    sudo mkdir -p <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/keys
-</pre></div></td></tr><tr><td class=docs>
-<p>make sure we own NOVA_STATE_PATH and all subdirs</p>
-</td><td class=code><div class=highlight><pre>
-    sudo chown -R <span class="nv">$STACK_USER</span> <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>
+<span class="k">    </span>create_nova_cache_dir
+    create_nova_keys_dir
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

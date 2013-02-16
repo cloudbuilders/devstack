@@ -647,6 +647,48 @@ create_cinder_accounts<span class="o">()</span> <span class="o">{</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>create_cinder_cache_dir() - Part of the init_cinder() process</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>create_cinder_cache_dir<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create cache dir</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkdir -p <span class="nv">$CINDER_AUTH_CACHE_DIR</span>
+    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$CINDER_AUTH_CACHE_DIR</span>
+    rm -f <span class="nv">$CINDER_AUTH_CACHE_DIR</span>/*
+<span class="o">}</span>
+
+create_cinder_volume_group<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure a default volume group called '<cite>stack-volumes</cite>' for the volume
+service if it does not yet exist.  If you don't wish to use a file backed
+volume group, create your own volume group called <tt class="docutils literal"><span class="pre">stack-volumes</span></tt> before
+invoking <tt class="docutils literal">stack.sh</tt>.</p>
+<p>By default, the backing file is 5G in size, and is stored in <tt class="docutils literal">/opt/stack/data</tt>.</p>
+</td><td class=code><div class=highlight><pre>
+
+    <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Only create if the file doesn't already exists</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
+
+        <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
+<span class="k">            </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+<span class="k">    </span>mkdir -p <span class="nv">$CINDER_STATE_PATH</span>/volumes
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>init_cinder() - Initialize database and volume group</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_cinder<span class="o">()</span> <span class="o">{</span>
@@ -657,39 +699,19 @@ create_cinder_accounts<span class="o">()</span> <span class="o">{</span>
 
     <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>(re)create cinder database</p>
+<p>(Re)create cinder database</p>
 </td><td class=code><div class=highlight><pre>
         recreate_database cinder utf8
 
 </pre></div></td></tr><tr><td class=docs>
-<p>(re)create cinder database</p>
+<p>Migrate cinder database</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">$CINDER_BIN_DIR</span>/cinder-manage db sync
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled c-vol; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure a default volume group called '<cite>stack-volumes</cite>' for the volume
-service if it does not yet exist.  If you don't wish to use a file backed
-volume group, create your own volume group called <tt class="docutils literal"><span class="pre">stack-volumes</span></tt> before
-invoking <tt class="docutils literal">stack.sh</tt>.</p>
-<p>By default, the backing file is 5G in size, and is stored in <tt class="docutils literal">/opt/stack/data</tt>.</p>
-</td><td class=code><div class=highlight><pre>
 
-        <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Only create if the file doesn't already exists</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
-            <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>; <span class="k">fi</span>
-<span class="k">        fi</span>
-
-<span class="k">        </span>mkdir -p <span class="nv">$CINDER_STATE_PATH</span>/volumes
+<span class="k">        </span>create_cinder_volume_group
 
         <span class="k">if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
 <span class="k">            if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
@@ -710,12 +732,7 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Create cache dir</p>
-</td><td class=code><div class=highlight><pre>
-    sudo mkdir -p <span class="nv">$CINDER_AUTH_CACHE_DIR</span>
-    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$CINDER_AUTH_CACHE_DIR</span>
-    rm -f <span class="nv">$CINDER_AUTH_CACHE_DIR</span>/*
+<span class="k">    </span>create_cinder_cache_dir
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
