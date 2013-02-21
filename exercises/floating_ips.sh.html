@@ -337,8 +337,7 @@ ul.auto-toc {
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>we will use the <tt class="docutils literal">nova</tt> cli tool provided by the <tt class="docutils literal"><span class="pre">python-novaclient</span></tt>
-package to work out the instance connectivity</p>
+<p>Test instance connectivity with the <tt class="docutils literal">nova</tt> command from <tt class="docutils literal"><span class="pre">python-novaclient</span></tt></p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
@@ -397,7 +396,7 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="k">:-</span><span class="nv">m1</span><span class="p">.tiny</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Boot this image, use first AMi image if unset</p>
+<p>Boot this image, use first AMI image if unset</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DEFAULT_IMAGE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_IMAGE_NAME</span><span class="k">:-</span><span class="nv">ami</span><span class="k">}</span>
 
@@ -415,6 +414,11 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <p>Additional floating IP pool and range</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TEST_FLOATING_POOL</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_POOL</span><span class="k">:-</span><span class="nv">test</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Instance name</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">VM_NAME</span><span class="o">=</span><span class="s2">&quot;ex-float&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -434,12 +438,7 @@ nova list
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Nova has a <strong>deprecated</strong> way of listing images.</p>
-</td><td class=code><div class=highlight><pre>
-nova image-list
-
-</pre></div></td></tr><tr><td class=docs>
-<p>But we recommend using glance directly</p>
+<p>List the images available</p>
 </td><td class=code><div class=highlight><pre>
 glance image-list
 
@@ -447,6 +446,7 @@ glance image-list
 <p>Grab the id of the image to launch</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span>glance image-list | egrep <span class="s2">&quot; $DEFAULT_IMAGE_NAME &quot;</span> | get_field 1<span class="k">)</span>
+die_if_not_set IMAGE <span class="s2">&quot;Failure getting image $DEFAULT_IMAGE_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -455,7 +455,7 @@ glance image-list
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>List of secgroups:</p>
+<p>List security groups</p>
 </td><td class=code><div class=highlight><pre>
 nova secgroup-list
 
@@ -471,50 +471,62 @@ nova secgroup-list
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Configure Security Group Rules</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! nova secgroup-list-rules <span class="nv">$SECGROUP</span> | grep -q icmp; <span class="k">then</span>
+<span class="k">    </span>nova secgroup-add-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
+<span class="k">fi</span>
+<span class="k">if</span> ! nova secgroup-list-rules <span class="nv">$SECGROUP</span> | grep -q <span class="s2">&quot; tcp .* 22 &quot;</span>; <span class="k">then</span>
+<span class="k">    </span>nova secgroup-add-rule <span class="nv">$SECGROUP</span> tcp 22 22 0.0.0.0/0
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>List secgroup rules</p>
+</td><td class=code><div class=highlight><pre>
+nova secgroup-list-rules <span class="nv">$SECGROUP</span>
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="determinine-instance-type">
-<h2>Determinine instance type</h2>
+<div class="section" id="set-up-instance">
+<h2>Set up instance</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>List of instance types:</p>
+<p>List flavors</p>
 </td><td class=code><div class=highlight><pre>
 nova flavor-list
 
-<span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | grep <span class="nv">$DEFAULT_INSTANCE_TYPE</span> | get_field 1<span class="sb">`</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Select a flavor</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="k">$(</span>nova flavor-list | grep <span class="nv">$DEFAULT_INSTANCE_TYPE</span> | get_field 1<span class="k">)</span>
 <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>grab the first flavor in the list to launch if default doesn't exist</p>
 </td><td class=code><div class=highlight><pre>
-   <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | head -n 4 | tail -n 1 | get_field 1<span class="sb">`</span>
+   <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="k">$(</span>nova flavor-list | head -n 4 | tail -n 1 | get_field 1<span class="k">)</span>
 <span class="k">fi</span>
 
-<span class="nv">NAME</span><span class="o">=</span><span class="s2">&quot;ex-float&quot;</span>
-
-<span class="nv">VM_UUID</span><span class="o">=</span><span class="sb">`</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> <span class="nv">$NAME</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="sb">`</span>
-die_if_not_set VM_UUID <span class="s2">&quot;Failure launching $NAME&quot;</span>
-
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean-up from previous runs</p>
+</td><td class=code><div class=highlight><pre>
+nova delete <span class="nv">$VM_NAME</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova show $VM_NAME; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t terminate!&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-</div>
-<div class="section" id="testing">
-<h1>Testing</h1>
+<div class="section" id="boot-instance">
+<h2>Boot instance</h2>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>First check if it spins up (becomes active and responds to ping on
-internal ip).  If you run this script from a nova node, you should
-bypass security groups and have direct access to the server.</p>
-</td><td class=code><div class=highlight><pre>
+<span class="nv">VM_UUID</span><span class="o">=</span><span class="k">$(</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> <span class="nv">$VM_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+die_if_not_set VM_UUID <span class="s2">&quot;Failure launching $VM_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="waiting-for-boot">
-<h2>Waiting for boot</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>check that the status is active within ACTIVE_TIMEOUT seconds</p>
+<p>Check that the status is active within ACTIVE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become active!&quot;</span>
@@ -522,43 +534,30 @@ bypass security groups and have direct access to the server.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>get the IP of the server</p>
+<p>Get the instance IP</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">IP</span><span class="o">=</span><span class="sb">`</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | get_field 2<span class="sb">`</span>
+<span class="nv">IP</span><span class="o">=</span><span class="k">$(</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | get_field 2<span class="k">)</span>
 die_if_not_set IP <span class="s2">&quot;Failure retrieving IP address&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Private IPs can be pinged in single node deployments</p>
+</td><td class=code><div class=highlight><pre>
 ping_check <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> <span class="nv">$IP</span> <span class="nv">$BOOT_TIMEOUT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="security-groups-floating-ips">
-<h2>Security Groups &amp; Floating IPs</h2>
+<div class="section" id="floating-ips">
+<h2>Floating IPs</h2>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">if</span> ! nova secgroup-list-rules <span class="nv">$SECGROUP</span> | grep -q icmp; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>allow icmp traffic (ping)</p>
+<p>Allocate a floating IP from the default pool</p>
 </td><td class=code><div class=highlight><pre>
-    nova secgroup-add-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0
-    <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova secgroup-list-rules $SECGROUP | grep -q icmp; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Security group rule not created&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
-<span class="k">fi</span>
+<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="k">$(</span>nova floating-ip-create | grep <span class="nv">$DEFAULT_FLOATING_POOL</span> | get_field 1<span class="k">)</span>
+die_if_not_set FLOATING_IP <span class="s2">&quot;Failure creating floating IP from pool $DEFAULT_FLOATING_POOL&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>List rules for a secgroup</p>
-</td><td class=code><div class=highlight><pre>
-nova secgroup-list-rules <span class="nv">$SECGROUP</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>allocate a floating ip from default pool</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create | grep <span class="nv">$DEFAULT_FLOATING_POOL</span> | get_field 1<span class="sb">`</span>
-die_if_not_set FLOATING_IP <span class="s2">&quot;Failure creating floating IP&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>list floating addresses</p>
+<p>List floating addresses</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova floating-ip-list | grep -q $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Floating IP not allocated&quot;</span>
@@ -566,13 +565,13 @@ die_if_not_set FLOATING_IP <span class="s2">&quot;Failure creating floating IP&q
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>add floating ip to our server</p>
+<p>Add floating IP to our server</p>
 </td><td class=code><div class=highlight><pre>
 nova add-floating-ip <span class="nv">$VM_UUID</span> <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure adding floating IP $FLOATING_IP to $NAME&quot;</span>
+    die <span class="s2">&quot;Failure adding floating IP $FLOATING_IP to $VM_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
+<p>Test we can ping our floating IP within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
 ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span>
 
@@ -580,7 +579,7 @@ ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class=
 </pre></div></td></tr><tr><td class=docs>
 <p>Allocate an IP from second floating pool</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">TEST_FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>nova floating-ip-create <span class="nv">$TEST_FLOATING_POOL</span> | grep <span class="nv">$TEST_FLOATING_POOL</span> | get_field 1<span class="sb">`</span>
+    <span class="nv">TEST_FLOATING_IP</span><span class="o">=</span><span class="k">$(</span>nova floating-ip-create <span class="nv">$TEST_FLOATING_POOL</span> | grep <span class="nv">$TEST_FLOATING_POOL</span> | get_field 1<span class="k">)</span>
     die_if_not_set TEST_FLOATING_IP <span class="s2">&quot;Failure creating floating IP in $TEST_FLOATING_POOL&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -593,49 +592,58 @@ ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class=
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>dis-allow icmp traffic (ping)</p>
+<p>Dis-allow icmp traffic (ping)</p>
 </td><td class=code><div class=highlight><pre>
-nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0 <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group rule from $SECGROUP&quot;</span>
+nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0 <span class="o">||</span> <span class="se">\</span>
+    die <span class="s2">&quot;Failure deleting security group rule from $SECGROUP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>FIXME (anthony): make xs support security groups</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;xenserver&quot;</span> -a <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;openvz&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>test we can aren't able to ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
+<p>Test we can aren't able to ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
     ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span> Fail
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="clean-up">
+<h2>Clean up</h2>
+</td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> ! is_service_enabled quantum; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete second floating IP</p>
 </td><td class=code><div class=highlight><pre>
-    nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting floating IP $TEST_FLOATING_IP&quot;</span>
+    nova floating-ip-delete <span class="nv">$TEST_FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
+        die <span class="s2">&quot;Failure deleting floating IP $TEST_FLOATING_IP&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>de-allocate the floating ip</p>
+<p>Delete the floating ip</p>
 </td><td class=code><div class=highlight><pre>
-nova floating-ip-delete <span class="nv">$FLOATING_IP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting floating IP $FLOATING_IP&quot;</span>
+nova floating-ip-delete <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
+    die <span class="s2">&quot;Failure deleting floating IP $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Shutdown the server</p>
+<p>Delete instance</p>
 </td><td class=code><div class=highlight><pre>
-nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting instance $NAME&quot;</span>
-
+nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting instance $VM_NAME&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait for termination</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova list | grep -q $VM_UUID; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Server $NAME not deleted&quot;</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Server $VM_NAME not deleted&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Delete a secgroup</p>
+<p>Delete secgroup</p>
 </td><td class=code><div class=highlight><pre>
-nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
+    die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>

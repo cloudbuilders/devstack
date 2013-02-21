@@ -395,10 +395,9 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/exerciserc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>run test as the admin user</p>
+<p>Test as the admin user</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">_OLD_USERNAME</span><span class="o">=</span><span class="nv">$OS_USERNAME</span>
-<span class="nv">OS_USERNAME</span><span class="o">=</span>admin
+. openrc admin admin
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -414,7 +413,7 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 exit_if_aggregate_present<span class="o">()</span> <span class="o">{</span>
     <span class="nv">aggregate_name</span><span class="o">=</span><span class="nv">$1</span>
 
-    <span class="k">if</span> <span class="o">[</span> <span class="sb">`</span>nova aggregate-list | grep -c <span class="s2">&quot; $aggregate_name &quot;</span><span class="sb">`</span> <span class="o">==</span> 0 <span class="o">]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="k">$(</span>nova aggregate-list | grep -c <span class="s2">&quot; $aggregate_name &quot;</span><span class="k">)</span> <span class="o">==</span> 0 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;SUCCESS $aggregate_name not present&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;ERROR found aggregate: $aggregate_name&quot;</span>
@@ -424,8 +423,8 @@ exit_if_aggregate_present<span class="o">()</span> <span class="o">{</span>
 
 exit_if_aggregate_present <span class="nv">$AGGREGATE_NAME</span>
 
-<span class="nv">AGGREGATE_ID</span><span class="o">=</span><span class="sb">`</span>nova aggregate-create <span class="nv">$AGGREGATE_NAME</span> <span class="nv">$AGGREGATE_A_ZONE</span> | grep <span class="s2">&quot; $AGGREGATE_NAME &quot;</span> | get_field 1<span class="sb">`</span>
-<span class="nv">AGGREGATE2_ID</span><span class="o">=</span><span class="sb">`</span>nova aggregate-create <span class="nv">$AGGREGATE2_NAME</span> <span class="nv">$AGGREGATE_A_ZONE</span> | grep <span class="s2">&quot; $AGGREGATE2_NAME &quot;</span> | get_field 1<span class="sb">`</span>
+<span class="nv">AGGREGATE_ID</span><span class="o">=</span><span class="k">$(</span>nova aggregate-create <span class="nv">$AGGREGATE_NAME</span> <span class="nv">$AGGREGATE_A_ZONE</span> | grep <span class="s2">&quot; $AGGREGATE_NAME &quot;</span> | get_field 1<span class="k">)</span>
+<span class="nv">AGGREGATE2_ID</span><span class="o">=</span><span class="k">$(</span>nova aggregate-create <span class="nv">$AGGREGATE2_NAME</span> <span class="nv">$AGGREGATE_A_ZONE</span> | grep <span class="s2">&quot; $AGGREGATE2_NAME &quot;</span> | get_field 1<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>check aggregate created</p>
@@ -499,7 +498,7 @@ nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | egrep <span class
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;xenserver&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;TODO(johngarbutt) add tests for add/remove host from pool aggregate&quot;</span>
 <span class="k">fi</span>
-<span class="nv">FIRST_HOST</span><span class="o">=</span><span class="sb">`</span>nova host-list | grep compute | get_field 1 | head -1<span class="sb">`</span>
+<span class="nv">FIRST_HOST</span><span class="o">=</span><span class="k">$(</span>nova host-list | grep compute | get_field 1 | head -1<span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure can add two aggregates to same host</p>
 </td><td class=code><div class=highlight><pre>
@@ -520,15 +519,6 @@ nova aggregate-remove-host <span class="nv">$AGGREGATE_ID</span> <span class="nv
 nova aggregate-delete <span class="nv">$AGGREGATE_ID</span>
 nova aggregate-delete <span class="nv">$AGGREGATE2_ID</span>
 exit_if_aggregate_present <span class="nv">$AGGREGATE_NAME</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="test-complete">
-<h1>Test complete</h1>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">OS_USERNAME</span><span class="o">=</span><span class="nv">$_OLD_USERNAME</span>
-<span class="nb">echo</span> <span class="s2">&quot;AGGREGATE TEST PASSED&quot;</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
