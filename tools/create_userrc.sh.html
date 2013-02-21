@@ -331,13 +331,18 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>The services users usually in the service tenant.
-rc files for service users, is out of scope.
-Supporting different tanent for services is out of scope.</p>
+<p><strong>create_userrc.sh</strong></p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
-<span class="c">#Warning: This script just for development purposes</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Pre-create rc files and credentials for the default users.</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Warning: This script just for development purposes</p>
+</td><td class=code><div class=highlight><pre>
 
 <span class="nv">ACCOUNT_DIR</span><span class="o">=</span>./accrc
 
@@ -351,15 +356,15 @@ cat <span class="s">&lt;&lt;EOF</span>
 
 <span class="s">Target account directory hierarchy:</span>
 <span class="s">target_dir-|</span>
-<span class="s">|-cacert.pem</span>
-<span class="s">|-tenant1-name|</span>
-<span class="s">|             |- user1</span>
-<span class="s">|             |- user1-cert.pem</span>
-<span class="s">|             |- user1-pk.pem</span>
-<span class="s">|             |- user2</span>
-<span class="s">|             ..</span>
-<span class="s">|-tenant2-name..</span>
-<span class="s">..</span>
+<span class="s">           |-cacert.pem</span>
+<span class="s">           |-tenant1-name|</span>
+<span class="s">           |             |- user1</span>
+<span class="s">           |             |- user1-cert.pem</span>
+<span class="s">           |             |- user1-pk.pem</span>
+<span class="s">           |             |- user2</span>
+<span class="s">           |             ..</span>
+<span class="s">           |-tenant2-name..</span>
+<span class="s">           ..</span>
 
 <span class="s">Optional Arguments</span>
 <span class="s">-P include password to the rc files; with -A it assume all users password is the same</span>
@@ -385,13 +390,18 @@ cat <span class="s">&lt;&lt;EOF</span>
 
 <span class="k">if</span> ! <span class="nv">options</span><span class="o">=</span><span class="k">$(</span>getopt -o hPAp:u:r:C: -l os-username:,os-password:,os-tenant-name:,os-tenant-id:,os-auth-url:,target-dir:,skip-tenant:,help,debug -- <span class="s2">&quot;$@&quot;</span><span class="k">)</span>
 <span class="k">then</span>
-<span class="c">#parse error</span>
-display_help
-<span class="nb">exit </span>1
+    <span class="c">#parse error</span>
+    display_help
+    <span class="nb">exit </span>1
 <span class="k">fi</span>
 <span class="nb">eval set</span> -- <span class="nv">$options</span>
 <span class="nv">ADDPASS</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>The services users usually in the service tenant.
+rc files for service users, is out of scope.
+Supporting different tanent for services is out of scope.</p>
+</td><td class=code><div class=highlight><pre>
 <span class="nv">SKIP_TENANT</span><span class="o">=</span><span class="s2">&quot;,service,&quot;</span> <span class="c"># tenant names are between commas(,)</span>
 <span class="nv">MODE</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 <span class="nv">ROLE</span><span class="o">=</span>Member
@@ -504,14 +514,14 @@ The Serial does not seams correctly marked either</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Try to preserve the original file on fail (best effort)</p>
 </td><td class=code><div class=highlight><pre>
-    mv <span class="s2">&quot;$ec2_private_key&quot;</span> <span class="s2">&quot;$ec2_private_key.old&quot;</span> &amp;&gt;/dev/null
-    mv <span class="s2">&quot;$ec2_cert&quot;</span> <span class="s2">&quot;$ec2_cert.old&quot;</span> &amp;&gt;/dev/null
+    mv -f <span class="s2">&quot;$ec2_private_key&quot;</span> <span class="s2">&quot;$ec2_private_key.old&quot;</span> &amp;&gt;/dev/null
+    mv -f <span class="s2">&quot;$ec2_cert&quot;</span> <span class="s2">&quot;$ec2_cert.old&quot;</span> &amp;&gt;/dev/null
 </pre></div></td></tr><tr><td class=docs>
 <p>It will not create certs when the password is incorrect</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> ! nova --os-password <span class="s2">&quot;$user_passwd&quot;</span> --os-username <span class="s2">&quot;$user_name&quot;</span> --os-tenant-name <span class="s2">&quot;$tenant_name&quot;</span> x509-create-cert <span class="s2">&quot;$ec2_private_key&quot;</span> <span class="s2">&quot;$ec2_cert&quot;</span>; <span class="k">then</span>
-<span class="k">        </span>mv <span class="s2">&quot;$ec2_private_key.old&quot;</span> <span class="s2">&quot;$ec2_private_key&quot;</span> &amp;&gt;/dev/null
-        mv <span class="s2">&quot;$ec2_cert.old&quot;</span> <span class="s2">&quot;$ec2_cert&quot;</span> &amp;&gt;/dev/null
+<span class="k">        </span>mv -f <span class="s2">&quot;$ec2_private_key.old&quot;</span> <span class="s2">&quot;$ec2_private_key&quot;</span> &amp;&gt;/dev/null
+        mv -f <span class="s2">&quot;$ec2_cert.old&quot;</span> <span class="s2">&quot;$ec2_cert&quot;</span> &amp;&gt;/dev/null
     <span class="k">fi</span>
 <span class="k">    </span>cat &gt;<span class="s2">&quot;$rcfile&quot;</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s"># DIVIDER</span>
