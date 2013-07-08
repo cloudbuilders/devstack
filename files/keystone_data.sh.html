@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -335,9 +347,9 @@ ul.auto-toc {
 <div class="section" id="tenant-user-roles">
 <h1>Tenant               User       Roles</h1>
 <p>service              glance     admin
-service              swift      admin        # if enabled
-service              heat       admin        # if enabled
-service              ceilometer admin        # if enabled
+service              swift      service        # if enabled
+service              heat       service        # if enabled
+service              ceilometer admin          # if enabled
 Tempest Only:
 alt_demo             alt_demo  Member</p>
 <p>Variables set before calling this script:
@@ -388,6 +400,10 @@ but ResellerAdmin is needed for a user to act as any tenant. The name of this
 role is also configurable in swift-proxy.conf</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">RESELLER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>ResellerAdmin<span class="k">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Service role, so service users do not have to be admins</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SERVICE_ROLE</span><span class="o">=</span><span class="k">$(</span>get_id keystone role-create --name<span class="o">=</span>service<span class="k">)</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -396,7 +412,7 @@ role is also configurable in swift-proxy.conf</p>
 <h1>Services</h1>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;s-proxy&quot;</span> <span class="o">||</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NOVA_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-list | awk <span class="s2">&quot;/ nova / { print \$2 }&quot;</span><span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova needs ResellerAdmin role to download images when accessing
@@ -418,7 +434,7 @@ swift through the s3 api.</p>
                                               --email<span class="o">=</span>heat@example.com<span class="k">)</span>
     keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
                            --user_id <span class="nv">$HEAT_USER</span> <span class="se">\</span>
-                           --role_id <span class="nv">$ADMIN_ROLE</span>
+                           --role_id <span class="nv">$SERVICE_ROLE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>heat_stack_user role is for users created by Heat</p>
 </td><td class=code><div class=highlight><pre>
@@ -477,7 +493,8 @@ swift through the s3 api.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Swift</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">||</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;s-proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>get_id keystone user-create <span class="se">\</span>
         --name<span class="o">=</span>swift <span class="se">\</span>
         --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
@@ -486,7 +503,7 @@ swift through the s3 api.</p>
     keystone user-role-add <span class="se">\</span>
         --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
         --user_id <span class="nv">$SWIFT_USER</span> <span class="se">\</span>
-        --role_id <span class="nv">$ADMIN_ROLE</span>
+        --role_id <span class="nv">$SERVICE_ROLE</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">SWIFT_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
             --name<span class="o">=</span>swift <span class="se">\</span>
@@ -523,9 +540,9 @@ swift through the s3 api.</p>
         keystone endpoint-create <span class="se">\</span>
             --region RegionOne <span class="se">\</span>
             --service_id <span class="nv">$CEILOMETER_SERVICE</span> <span class="se">\</span>
-            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8777/&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8777/&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8777/&quot;</span>
+            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8777&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8777&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8777&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -550,7 +567,7 @@ swift through the s3 api.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>S3</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-obj&quot;</span> <span class="o">||</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-obj&quot;</span> <span class="o">||</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift3&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">S3_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_id keystone service-create <span class="se">\</span>
             --name<span class="o">=</span>s3 <span class="se">\</span>
@@ -583,6 +600,8 @@ between two regular users in separate tenants</p>
 <span class="k">fi</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

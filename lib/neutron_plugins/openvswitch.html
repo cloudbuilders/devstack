@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
-<title>Quantum Open vSwtich plugin</title>
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<title>Neutron Open vSwitch plugin</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -328,8 +340,8 @@ ul.auto-toc {
 </style>
 </head>
 <body>
-<div class="document" id="quantum-open-vswtich-plugin">
-<h1 class="title">Quantum Open vSwtich plugin</h1>
+<div class="document" id="neutron-open-vswitch-plugin">
+<h1 class="title">Neutron Open vSwitch plugin</h1>
 
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
@@ -337,138 +349,21 @@ ul.auto-toc {
 <span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum_plugins/ovs_base
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/openvswitch_agent
 
-<span class="k">function </span>quantum_plugin_create_nova_conf<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver&quot;</span><span class="k">}</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_vif_driver nova.virt.xenapi.vif.XenAPIOpenVswitchDriver
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_ovs_integration_bridge <span class="nv">$FLAT_NETWORK_BRIDGE</span>
-    <span class="k">fi</span>
+<span class="k">function </span>neutron_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/neutron/plugins/openvswitch
+    <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ovs_neutron_plugin.ini
+    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;ovs_neutron&quot;</span>
+    <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.openvswitch.ovs_neutron_plugin.OVSNeutronPluginV2&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>quantum_plugin_install_agent_packages<span class="o">()</span> <span class="o">{</span>
-    _quantum_ovs_base_install_agent_packages
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/openvswitch
-    <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ovs_quantum_plugin.ini
-    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;ovs_quantum&quot;</span>
-    <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPluginV2&quot;</span>
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_debug_command<span class="o">()</span> <span class="o">{</span>
-    _quantum_ovs_base_configure_debug_command
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_dhcp_agent<span class="o">()</span> <span class="o">{</span>
-    :
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_l3_agent<span class="o">()</span> <span class="o">{</span>
-    _quantum_ovs_base_configure_l3_agent
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_plugin_agent<span class="o">()</span> <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup integration bridge</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
-    _quantum_ovs_base_setup_bridge <span class="nv">$OVS_BRIDGE</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup agent for tunneling</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_ENABLE_TUNNELING&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Verify tunnels are supported
-REVISIT - also check kernel module support for GRE and patch ports</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">OVS_VERSION</span><span class="o">=</span><span class="sb">`</span>ovs-vsctl --version | head -n 1 | awk <span class="s1">&#39;{print $4;}&#39;</span><span class="sb">`</span>
-        <span class="k">if</span> <span class="o">[</span> <span class="nv">$OVS_VERSION</span> <span class="se">\&lt;</span> <span class="s2">&quot;1.4&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ! is_service_enabled q-svc ; <span class="k">then</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;You are running OVS version $OVS_VERSION.&quot;</span>
-            <span class="nb">echo</span> <span class="s2">&quot;OVS 1.4+ is required for tunneling between multiple hosts.&quot;</span>
-            <span class="nb">exit </span>1
-        <span class="k">fi</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS enable_tunneling True
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS local_ip <span class="nv">$HOST_IP</span>
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup physical network bridge mappings.  Override
-<tt class="docutils literal">OVS_VLAN_RANGES</tt> and <tt class="docutils literal">OVS_BRIDGE_MAPPINGS</tt> in <tt class="docutils literal">localrc</tt> for more
-complex physical network configurations.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_BRIDGE_MAPPINGS&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_PHYSICAL_BRIDGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">OVS_BRIDGE_MAPPINGS</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>:<span class="nv">$OVS_PHYSICAL_BRIDGE</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure bridge manually with physical interface as port for multi-node</p>
-</td><td class=code><div class=highlight><pre>
-        sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$OVS_PHYSICAL_BRIDGE</span>
-    <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_BRIDGE_MAPPINGS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS bridge_mappings <span class="nv">$OVS_BRIDGE_MAPPINGS</span>
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-openvswitch-agent&quot;</span>
-
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Nova will always be installed along with quantum for a domU
-devstack install, so it should be safe to rely on nova.conf
-for xenapi configuration.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">Q_RR_DOM0_COMMAND</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-rootwrap-xen-dom0 $NOVA_CONF&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Under XS/XCP, the ovs agent needs to target the dom0
-integration bridge.  This is enabled by using a root wrapper
-that executes commands on dom0 via a XenAPI plugin.</p>
-</td><td class=code><div class=highlight><pre>
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> AGENT root_helper <span class="s2">&quot;$Q_RR_DOM0_COMMAND&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>FLAT_NETWORK_BRIDGE is the dom0 integration bridge.  To
-ensure the bridge lacks direct connectivity, set
-VM_VLAN=-1;VM_DEV=invalid in localrc</p>
-</td><td class=code><div class=highlight><pre>
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS integration_bridge <span class="nv">$FLAT_NETWORK_BRIDGE</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>The ovs agent needs to ensure that the ports associated with
-a given network share the same local vlan tag.  On
-single-node XS/XCP, this requires monitoring both the dom0
-bridge, where VM's are attached, and the domU bridge, where
-dhcp servers are attached.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if </span>is_service_enabled q-dhcp; <span class="k">then</span>
-<span class="k">            </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS domu_integration_bridge <span class="nv">$OVS_BRIDGE</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>DomU will use the regular rootwrap</p>
-</td><td class=code><div class=highlight><pre>
-            iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> AGENT domu_root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Plug the vm interface into the domU integration bridge.</p>
-</td><td class=code><div class=highlight><pre>
-            sudo ip addr flush dev <span class="nv">$GUEST_INTERFACE_DEFAULT</span>
-            sudo ip link <span class="nb">set</span> <span class="nv">$OVS_BRIDGE</span> up
-</pre></div></td></tr><tr><td class=docs>
-<p>Assign the VM IP only if it has been set explicitly</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VM_IP&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span>sudo ip addr add <span class="nv">$VM_IP</span> dev <span class="nv">$OVS_BRIDGE</span>
-            <span class="k">fi</span>
-<span class="k">            </span>sudo ovs-vsctl add-port <span class="nv">$OVS_BRIDGE</span> <span class="nv">$GUEST_INTERFACE_DEFAULT</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS tenant_network_type gre
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS tunnel_id_ranges <span class="nv">$TENANT_TUNNEL_RANGES</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs tenant_network_type gre
+        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs tunnel_id_ranges <span class="nv">$TENANT_TUNNEL_RANGES</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS tenant_network_type vlan
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs tenant_network_type vlan
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;WARNING - The openvswitch plugin is using local tenant networks, with no connectivity between hosts.&quot;</span>
     <span class="k">fi</span>
@@ -484,20 +379,33 @@ for more complex physical network configurations.</p>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_VLAN_RANGES&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS network_vlan_ranges <span class="nv">$OVS_VLAN_RANGES</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs network_vlan_ranges <span class="nv">$OVS_VLAN_RANGES</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Enable tunnel networks if selected</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="nv">$OVS_ENABLE_TUNNELING</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> OVS enable_tunneling True
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs enable_tunneling True
     <span class="k">fi</span>
+
+<span class="k">    </span>_neutron_ovs_base_configure_firewall_driver
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Define extra &quot;OVS&quot; configuration options when q-svc is configured by defining
+the array <tt class="docutils literal">Q_SRV_EXTRA_OPTS</tt>.
+For Example: <tt class="docutils literal"><span class="pre">Q_SRV_EXTRA_OPTS=(foo=true</span> bar=2)</tt></p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_SRV_EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
+    <span class="k">done</span>
 <span class="o">}</span>
 
-<span class="k">function </span>quantum_plugin_setup_interface_driver<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
-    iniset <span class="nv">$conf_file</span> DEFAULT interface_driver quantum.agent.linux.interface.OVSInterfaceDriver
+<span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>
+    <span class="k">return </span>0
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -506,6 +414,8 @@ for more complex physical network configurations.</p>
 <span class="nv">$MY_XTRACE</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

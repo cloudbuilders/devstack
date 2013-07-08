@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -398,8 +410,8 @@ cleanup_glance</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="entry-points">
-<h1>Entry Points</h1>
+<div class="section" id="functions">
+<h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -409,25 +421,15 @@ runs that a clean run would need to clean up</p>
 <span class="k">function </span>cleanup_glance<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>kill instances (nova)
-delete image files (glance)
-This function intentionally left blank</p>
+delete image files (glance)</p>
 </td><td class=code><div class=highlight><pre>
-    :
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>configure_glanceclient() - Set config files, create data dirs, etc</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_glanceclient<span class="o">()</span> <span class="o">{</span>
-    setup_develop <span class="nv">$GLANCECLIENT_DIR</span>
+    sudo rm -rf <span class="nv">$GLANCE_CACHE_DIR</span> <span class="nv">$GLANCE_IMAGE_DIR</span> <span class="nv">$GLANCE_AUTH_CACHE_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_glance() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_glance<span class="o">()</span> <span class="o">{</span>
-    setup_develop <span class="nv">$GLANCE_DIR</span>
-
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$GLANCE_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$GLANCE_CONF_DIR</span>
     <span class="k">fi</span>
@@ -439,8 +441,7 @@ This function intentionally left blank</p>
     cp <span class="nv">$GLANCE_DIR</span>/etc/glance-registry.conf <span class="nv">$GLANCE_REGISTRY_CONF</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT debug True
     inicomment <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT log_file
-    <span class="nb">local </span>dburl
-    database_connection_url dburl glance
+    <span class="nb">local </span><span class="nv">dburl</span><span class="o">=</span><span class="sb">`</span>database_connection_url glance<span class="sb">`</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> paste_deploy flavor keystone
@@ -472,12 +473,22 @@ This function intentionally left blank</p>
 <span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT notifier_strategy qpid
     <span class="k">elif</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT notifier_strategy rabbit
-        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
-        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
     <span class="k">fi</span>
-<span class="k">    </span>iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken signing_dir <span class="nv">$GLANCE_AUTH_CACHE_DIR</span>/api
+<span class="k">    </span>iniset_rpc_backend glance <span class="nv">$GLANCE_API_CONF</span> DEFAULT
+    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken signing_dir <span class="nv">$GLANCE_AUTH_CACHE_DIR</span>/api
 
-    cp -p <span class="nv">$GLANCE_DIR</span>/etc/glance-registry-paste.ini <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Store the images in swift if enabled.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT default_store swift
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_auth_address <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_user <span class="nv">$SERVICE_TENANT_NAME</span>:glance
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_key <span class="nv">$SERVICE_PASSWORD</span>
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_create_container_on_put True
+    <span class="k">fi</span>
+
+<span class="k">    </span>cp -p <span class="nv">$GLANCE_DIR</span>/etc/glance-registry-paste.ini <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
 
     cp -p <span class="nv">$GLANCE_DIR</span>/etc/glance-api-paste.ini <span class="nv">$GLANCE_API_PASTE_INI</span>
 
@@ -548,6 +559,7 @@ This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_glanceclient<span class="o">()</span> <span class="o">{</span>
     git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLIENT_DIR</span> <span class="nv">$GLANCECLIENT_BRANCH</span>
+    setup_develop <span class="nv">$GLANCECLIENT_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -555,6 +567,7 @@ This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_glance<span class="o">()</span> <span class="o">{</span>
     git_clone <span class="nv">$GLANCE_REPO</span> <span class="nv">$GLANCE_DIR</span> <span class="nv">$GLANCE_BRANCH</span>
+    setup_develop <span class="nv">$GLANCE_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -565,8 +578,7 @@ This function intentionally left blank</p>
     screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for g-api ($GLANCE_HOSTPORT) to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://$GLANCE_HOSTPORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;g-api did not start&quot;</span>
-      <span class="nb">exit </span>1
+<span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;g-api did not start&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -581,12 +593,21 @@ This function intentionally left blank</p>
 <span class="nb">    </span>screen -S <span class="nv">$SCREEN_NAME</span> -p g-reg -X <span class="nb">kill</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

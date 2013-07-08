@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -397,7 +409,7 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Test as the admin user</p>
 </td><td class=code><div class=highlight><pre>
-. openrc admin admin
+. <span class="nv">$TOP_DIR</span>/openrc admin admin
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -416,7 +428,7 @@ exit_if_aggregate_present<span class="o">()</span> <span class="o">{</span>
     <span class="k">if</span> <span class="o">[</span> <span class="k">$(</span>nova aggregate-list | grep -c <span class="s2">&quot; $aggregate_name &quot;</span><span class="k">)</span> <span class="o">==</span> 0 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;SUCCESS $aggregate_name not present&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;ERROR found aggregate: $aggregate_name&quot;</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;found aggregate: $aggregate_name&quot;</span>
         <span class="nb">exit</span> -1
     <span class="k">fi</span>
 <span class="o">}</span>
@@ -429,7 +441,7 @@ exit_if_aggregate_present <span class="nv">$AGGREGATE_NAME</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>check aggregate created</p>
 </td><td class=code><div class=highlight><pre>
-nova aggregate-list | grep -q <span class="s2">&quot; $AGGREGATE_NAME &quot;</span> <span class="o">||</span> die <span class="s2">&quot;Aggregate $AGGREGATE_NAME not created&quot;</span>
+nova aggregate-list | grep -q <span class="s2">&quot; $AGGREGATE_NAME &quot;</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Aggregate $AGGREGATE_NAME not created&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -439,8 +451,7 @@ nova aggregate-list | grep -q <span class="s2">&quot; $AGGREGATE_NAME &quot;</sp
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>nova aggregate-create <span class="nv">$AGGREGATE_NAME</span> <span class="nv">$AGGREGATE_A_ZONE</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR could create duplicate aggregate&quot;</span>
-    <span class="nb">exit</span> -1
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;could create duplicate aggregate&quot;</span>
 <span class="k">fi</span>
 
 
@@ -484,7 +495,7 @@ nova aggregate-set-metadata <span class="nv">$AGGREGATE_ID</span> <span class="n
 nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | grep <span class="nv">$META_DATA_1_KEY</span>
 nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | grep <span class="nv">$META_DATA_3_KEY</span>
 
-nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | grep <span class="nv">$META_DATA_2_KEY</span> <span class="o">&amp;&amp;</span> die <span class="s2">&quot;ERROR metadata was not cleared&quot;</span>
+nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | grep <span class="nv">$META_DATA_2_KEY</span> <span class="o">&amp;&amp;</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;ERROR metadata was not cleared&quot;</span>
 
 nova aggregate-set-metadata <span class="nv">$AGGREGATE_ID</span> <span class="nv">$META_DATA_3_KEY</span> <span class="nv">$META_DATA_1_KEY</span>
 nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | egrep <span class="s2">&quot;{u&#39;availability_zone&#39;: u&#39;$AGGREGATE_A_ZONE&#39;}|{}&quot;</span>
@@ -505,8 +516,7 @@ nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | egrep <span class
 nova aggregate-add-host <span class="nv">$AGGREGATE_ID</span> <span class="nv">$FIRST_HOST</span>
 nova aggregate-add-host <span class="nv">$AGGREGATE2_ID</span> <span class="nv">$FIRST_HOST</span>
 <span class="k">if </span>nova aggregate-add-host <span class="nv">$AGGREGATE2_ID</span> <span class="nv">$FIRST_HOST</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR could add duplicate host to single aggregate&quot;</span>
-    <span class="nb">exit</span> -1
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;could add duplicate host to single aggregate&quot;</span>
 <span class="k">fi</span>
 nova aggregate-remove-host <span class="nv">$AGGREGATE2_ID</span> <span class="nv">$FIRST_HOST</span>
 nova aggregate-remove-host <span class="nv">$AGGREGATE_ID</span> <span class="nv">$FIRST_HOST</span>
@@ -526,6 +536,8 @@ exit_if_aggregate_present <span class="nv">$AGGREGATE_NAME</span>
 <span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

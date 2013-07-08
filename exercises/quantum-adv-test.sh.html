@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -335,11 +347,11 @@ ul.auto-toc {
 <span class="c">#!/usr/bin/env bash</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p><strong>quantum-adv-test.sh</strong></p>
+<p><strong>neutron-adv-test.sh</strong></p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Perform integration testing of Nova and other components with Quantum.</p>
+<p>Perform integration testing of Nova and other components with Neutron.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
@@ -348,7 +360,7 @@ ul.auto-toc {
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This script exits on an error so that errors don't compound and you see
-only the first error that occured.</p>
+only the first error that occurred.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">set</span> -o errtrace
@@ -393,15 +405,14 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If quantum is not enabled we exit with exitcode 55 which mean
-exercise is skipped.</p>
+<p>Import neutron functions</p>
 </td><td class=code><div class=highlight><pre>
-is_service_enabled quantum <span class="o">&amp;&amp;</span> is_service_enabled q-agt <span class="o">&amp;&amp;</span> is_service_enabled q-dhcp <span class="o">||</span> <span class="nb">exit </span>55
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import quantum fucntions</p>
+<p>If neutron is not enabled we exit with exitcode 55, which means exercise is skipped.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
+neutron_plugin_check_adv_test_requirements <span class="o">||</span> <span class="nb">exit </span>55
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import exercise configuration</p>
@@ -410,8 +421,8 @@ is_service_enabled quantum <span class="o">&amp;&amp;</span> is_service_enabled 
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="quantum-settings">
-<h1>Quantum Settings</h1>
+<div class="section" id="neutron-settings">
+<h1>Neutron Settings</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">TENANTS</span><span class="o">=</span><span class="s2">&quot;DEMO1&quot;</span>
@@ -529,7 +540,7 @@ and save it.</p>
 
 <span class="k">function </span>get_network_id <span class="o">{</span>
     <span class="nb">local </span><span class="nv">NETWORK_NAME</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
-    <span class="nb">local </span><span class="nv">NETWORK_ID</span><span class="o">=</span><span class="sb">`</span>quantum net-list -F id  -- --name<span class="o">=</span><span class="nv">$NETWORK_NAME</span> | awk <span class="s2">&quot;NR==4&quot;</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
+    <span class="nb">local </span><span class="nv">NETWORK_ID</span><span class="o">=</span><span class="sb">`</span>neutron net-list -F id  -- --name<span class="o">=</span><span class="nv">$NETWORK_NAME</span> | awk <span class="s2">&quot;NR==4&quot;</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
     <span class="nb">echo</span> <span class="nv">$NETWORK_ID</span>
 <span class="o">}</span>
 
@@ -600,9 +611,9 @@ and save it.</p>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc admin admin
     <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>get_tenant_id <span class="nv">$TENANT</span><span class="k">)</span>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc <span class="nv">$TENANT</span> <span class="nv">$TENANT</span>
-    <span class="nb">local </span><span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>quantum net-create --tenant_id <span class="nv">$TENANT_ID</span> <span class="nv">$NET_NAME</span> <span class="nv">$EXTRA</span>| grep <span class="s1">&#39; id &#39;</span> | awk <span class="s1">&#39;{print $4}&#39;</span> <span class="k">)</span>
-    quantum subnet-create --ip_version 4 --tenant_id <span class="nv">$TENANT_ID</span> --gateway <span class="nv">$GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$CIDR</span>
-    quantum-debug probe-create <span class="nv">$NET_ID</span>
+    <span class="nb">local </span><span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>neutron net-create --tenant_id <span class="nv">$TENANT_ID</span> <span class="nv">$NET_NAME</span> <span class="nv">$EXTRA</span>| grep <span class="s1">&#39; id &#39;</span> | awk <span class="s1">&#39;{print $4}&#39;</span> <span class="k">)</span>
+    neutron subnet-create --ip_version 4 --tenant_id <span class="nv">$TENANT_ID</span> --gateway <span class="nv">$GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$CIDR</span>
+    neutron-debug probe-create --device-owner compute <span class="nv">$NET_ID</span>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc demo demo
 <span class="o">}</span>
 
@@ -633,7 +644,7 @@ and save it.</p>
         --image <span class="k">$(</span>get_image_id<span class="k">)</span> <span class="se">\</span>
         <span class="nv">$NIC</span> <span class="se">\</span>
         <span class="nv">$TENANT</span>-server<span class="nv">$NUM</span> | grep <span class="s1">&#39; id &#39;</span> | cut -d<span class="s2">&quot;|&quot;</span> -f3 | sed <span class="s1">&#39;s/ //g&#39;</span><span class="sb">`</span>
-    die_if_not_set VM_UUID <span class="s2">&quot;Failure launching $TENANT-server$NUM&quot;</span> VM_UUID
+    die_if_not_set <span class="nv">$LINENO</span> VM_UUID <span class="s2">&quot;Failure launching $TENANT-server$NUM&quot;</span>
     confirm_server_active <span class="nv">$VM_UUID</span>
 <span class="o">}</span>
 
@@ -682,9 +693,8 @@ TODO (nati) test multi-nic</p>
 <span class="k">function </span>shutdown_vms <span class="o">{</span>
     foreach_tenant_vm <span class="s1">&#39;shutdown_vm ${%TENANT%_NAME} %NUM%&#39;</span>
     <span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova list | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Some VMs failed to shutdown&quot;</span>
-        <span class="nb">false</span>
-<span class="nb">    </span><span class="k">fi</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Some VMs failed to shutdown&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 <span class="k">function </span>delete_network <span class="o">{</span>
@@ -695,16 +705,16 @@ TODO (nati) test multi-nic</p>
     <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>get_tenant_id <span class="nv">$TENANT</span><span class="k">)</span>
     <span class="c">#TODO(nati) comment out until l3-agent merged</span>
     <span class="c">#for res in port subnet net router;do</span>
-    <span class="k">for </span>net_id in <span class="sb">`</span>quantum net-list -c id -c name | grep <span class="nv">$NET_NAME</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>;<span class="k">do</span>
+    <span class="k">for </span>net_id in <span class="sb">`</span>neutron net-list -c id -c name | grep <span class="nv">$NET_NAME</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>;<span class="k">do</span>
 <span class="k">        </span>delete_probe <span class="nv">$net_id</span>
-        quantum subnet-list | grep <span class="nv">$net_id</span> | awk <span class="s1">&#39;{print $2}&#39;</span> | xargs -I% quantum subnet-delete %
-        quantum net-delete <span class="nv">$net_id</span>
+        neutron subnet-list | grep <span class="nv">$net_id</span> | awk <span class="s1">&#39;{print $2}&#39;</span> | xargs -I% neutron subnet-delete %
+        neutron net-delete <span class="nv">$net_id</span>
     <span class="k">done</span>
 <span class="k">    </span><span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc demo demo
 <span class="o">}</span>
 
 <span class="k">function </span>delete_networks <span class="o">{</span>
-   foreach_tenant_net <span class="s1">&#39;delete_network ${%TENANT%_NAME} ${%NUM%}&#39;</span>
+   foreach_tenant_net <span class="s1">&#39;delete_network ${%TENANT%_NAME} %NUM%&#39;</span>
    <span class="c">#TODO(nati) add secuirty group check after it is implemented</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>source $TOP_DIR/openrc demo1 demo1
@@ -845,6 +855,8 @@ main <span class="nv">$*</span>
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

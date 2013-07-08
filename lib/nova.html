@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -380,6 +392,9 @@ cleanup_nova</p>
 
 <span class="nv">NOVA_CONF_DIR</span><span class="o">=</span>/etc/nova
 <span class="nv">NOVA_CONF</span><span class="o">=</span><span class="nv">$NOVA_CONF_DIR</span>/nova.conf
+<span class="nv">NOVA_CELLS_CONF</span><span class="o">=</span><span class="nv">$NOVA_CONF_DIR</span>/nova-cells.conf
+<span class="nv">NOVA_CELLS_DB</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_CELLS_DB</span><span class="k">:-</span><span class="nv">nova_cell</span><span class="k">}</span>
+
 <span class="nv">NOVA_API_PASTE_INI</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_API_PASTE_INI</span><span class="k">:-</span><span class="nv">$NOVA_CONF_DIR</span><span class="p">/api-paste.ini</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -418,16 +433,82 @@ should work in most cases.</p>
 
 <span class="nv">QEMU_CONF</span><span class="o">=</span>/etc/libvirt/qemu.conf
 
+<span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
+<span class="nv">SPICE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/spice-html5
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="entry-points">
-<h1>Entry Points</h1>
+<div class="section" id="nova-network-configuration">
+<h1>Nova Network Configuration</h1>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">function </span>add_nova_opt <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> &gt;&gt;<span class="nv">$NOVA_CONF</span>
-<span class="o">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set defaults according to the virt driver</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">PUBLIC_INTERFACE_DEFAULT</span><span class="o">=</span>eth2
+    <span class="nv">GUEST_INTERFACE_DEFAULT</span><span class="o">=</span>eth1
+</pre></div></td></tr><tr><td class=docs>
+<p>Allow <tt class="docutils literal">build_domU.sh</tt> to specify the flat network bridge via kernel args</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span><span class="k">$(</span>sed -e <span class="s1">&#39;s/.* flat_network_bridge=\([[:alnum:]]*\).*$/\1/g&#39;</span> /proc/cmdline<span class="k">)</span>
+    <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">        </span><span class="nv">XEN_INTEGRATION_BRIDGE</span><span class="o">=</span><span class="k">$(</span>sed -e <span class="s1">&#39;s/.* xen_integration_bridge=\([[:alnum:]]*\).*$/\1/g&#39;</span> /proc/cmdline<span class="k">)</span>
+    <span class="k">fi</span>
+<span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;baremetal&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">NETWORK_MANAGER</span><span class="o">=</span><span class="k">${</span><span class="nv">NETWORK_MANAGER</span><span class="k">:-</span><span class="nv">FlatManager</span><span class="k">}</span>
+    <span class="nv">PUBLIC_INTERFACE_DEFAULT</span><span class="o">=</span>eth0
+    <span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+    <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span>br100
+    <span class="nv">STUB_NETWORK</span><span class="o">=</span><span class="k">${</span><span class="nv">STUB_NETWORK</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">PUBLIC_INTERFACE_DEFAULT</span><span class="o">=</span>br100
+    <span class="nv">GUEST_INTERFACE_DEFAULT</span><span class="o">=</span>eth0
+    <span class="nv">FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="o">=</span>br100
+<span class="k">fi</span>
+
+<span class="nv">NETWORK_MANAGER</span><span class="o">=</span><span class="k">${</span><span class="nv">NETWORK_MANAGER</span><span class="k">:-${</span><span class="nv">NET_MAN</span><span class="k">:-</span><span class="nv">FlatDHCPManager</span><span class="k">}}</span>
+<span class="nv">PUBLIC_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_INTERFACE</span><span class="k">:-</span><span class="nv">$PUBLIC_INTERFACE_DEFAULT</span><span class="k">}</span>
+<span class="nv">VLAN_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">VLAN_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
+<span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">$FLAT_NETWORK_BRIDGE_DEFAULT</span><span class="k">}</span>
+<span class="nv">EC2_DMZ_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_DMZ_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>If you are using the FlatDHCP network mode on multiple hosts, set the
+<tt class="docutils literal">FLAT_INTERFACE</tt> variable but make sure that the interface doesn't already
+have an IP or you risk breaking things.</p>
+<p><strong>DHCP Warning</strong>:  If your flat interface device uses DHCP, there will be a
+hiccup while the network is moved from the flat interface to the flat network
+bridge.  This will happen when you launch your first instance.  Upon launch
+you will lose all connectivity to the node, and the VM launch will probably
+fail.</p>
+<p>If you are running on a single node and don't need to access the VMs from
+devices other than that node, you can set <tt class="docutils literal">FLAT_INTERFACE=</tt>
+This will stop nova from bridging any interfaces into <tt class="docutils literal">FLAT_NETWORK_BRIDGE</tt>.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">FLAT_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLAT_INTERFACE</span><span class="k">:-</span><span class="nv">$GUEST_INTERFACE_DEFAULT</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p><tt class="docutils literal">MULTI_HOST</tt> is a mode where each compute node runs its own network node.  This
+allows network operations and routing for a VM to occur on the server that is
+running the VM - removing a SPOF and bandwidth bottleneck.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MULTI_HOST</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$MULTI_HOST</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test floating pool and range are used for testing.  They are defined
+here until the admin APIs can replace nova-manage</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TEST_FLOATING_POOL</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_POOL</span><span class="k">:-</span><span class="nv">test</span><span class="k">}</span>
+<span class="nv">TEST_FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.253.0/29</span><span class="k">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="functions">
+<h1>Functions</h1>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Helper to clean iptables rules</p>
@@ -468,27 +549,25 @@ runs that a clean run would need to clean up</p>
         <span class="nv">instances</span><span class="o">=</span><span class="sb">`</span>sudo virsh list --all | grep <span class="nv">$INSTANCE_NAME_PREFIX</span> | sed <span class="s2">&quot;s/.*\($INSTANCE_NAME_PREFIX[0-9a-fA-F]*\).*/\1/g&quot;</span><span class="sb">`</span>
         <span class="k">if</span> <span class="o">[</span> ! <span class="s2">&quot;$instances&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="nv">$instances</span> | xargs -n1 sudo virsh destroy <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">            echo</span> <span class="nv">$instances</span> | xargs -n1 sudo virsh undefine <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">            echo</span> <span class="nv">$instances</span> | xargs -n1 sudo virsh undefine --managed-save <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">        </span><span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Logout and delete iscsi sessions</p>
 </td><td class=code><div class=highlight><pre>
-        sudo iscsiadm --mode node | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | cut -d <span class="s2">&quot; &quot;</span> -f2 | xargs sudo iscsiadm --mode node --logout <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">        </span>sudo iscsiadm --mode node | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | cut -d <span class="s2">&quot; &quot;</span> -f2 | sudo iscsiadm --mode node --op delete <span class="o">||</span> <span class="nb">true</span>
+        <span class="nv">tgts</span><span class="o">=</span><span class="k">$(</span>sudo iscsiadm --mode node | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | cut -d <span class="s1">&#39; &#39;</span> -f2<span class="k">)</span>
+        <span class="k">for </span>target in <span class="nv">$tgts</span>; <span class="k">do</span>
+<span class="k">            </span>sudo iscsiadm --mode node -T <span class="nv">$target</span> --logout <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">        </span><span class="k">done</span>
+<span class="k">        </span>sudo iscsiadm --mode node --op delete <span class="o">||</span> <span class="nb">true</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean out the instances directory.</p>
 </td><td class=code><div class=highlight><pre>
         sudo rm -rf <span class="nv">$NOVA_INSTANCES_PATH</span>/*
     <span class="k">fi</span>
-<span class="o">}</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>configure_novaclient() - Set config files, create data dirs, etc</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_novaclient<span class="o">()</span> <span class="o">{</span>
-    setup_develop <span class="nv">$NOVACLIENT_DIR</span>
+<span class="k">    </span>sudo rm -rf <span class="nv">$NOVA_STATE_PATH</span> <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -535,8 +614,6 @@ Wipe any existing rootwrap.d files first</p>
 <p>configure_nova() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_nova<span class="o">()</span> <span class="o">{</span>
-    setup_develop <span class="nv">$NOVA_DIR</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Put config files in <tt class="docutils literal">/etc/nova</tt> for everyone to find</p>
 </td><td class=code><div class=highlight><pre>
@@ -566,9 +643,9 @@ for Nova to validate Keystone tokens.</p>
 </td><td class=code><div class=highlight><pre>
         cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_CONF_DIR</span>
 
-        iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$SERVICE_HOST</span>
+        iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
         <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
-<span class="k">            </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$SERVICE_PROTOCOL</span>
+<span class="k">            </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
         <span class="k">fi</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
         iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_user nova
@@ -583,46 +660,48 @@ for Nova to validate Keystone tokens.</p>
 </td><td class=code><div class=highlight><pre>
         sudo sysctl -w net.ipv4.ip_forward<span class="o">=</span>1
 
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Attempt to load modules: network block device - used to manage qcow images</p>
 </td><td class=code><div class=highlight><pre>
-        sudo modprobe nbd <span class="o">||</span> <span class="nb">true</span>
+            sudo modprobe nbd <span class="o">||</span> <span class="nb">true</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Check for kvm (hardware based virtualization).  If unable to initialize
 kvm, we drop back to the slower emulation mode (qemu).  Note: many systems
 come with hardware virtualization disabled in BIOS.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;kvm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>sudo modprobe kvm <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">            </span><span class="k">if</span> <span class="o">[</span> ! -e /dev/kvm <span class="o">]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: Switching to QEMU&quot;</span>
-                <span class="nv">LIBVIRT_TYPE</span><span class="o">=</span>qemu
-                <span class="k">if </span>which selinuxenabled 2&gt;&amp;1 &gt; /dev/null <span class="o">&amp;&amp;</span> selinuxenabled; <span class="k">then</span>
+            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;kvm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>sudo modprobe kvm <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">                </span><span class="k">if</span> <span class="o">[</span> ! -e /dev/kvm <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: Switching to QEMU&quot;</span>
+                    <span class="nv">LIBVIRT_TYPE</span><span class="o">=</span>qemu
+                    <span class="k">if </span>which selinuxenabled 2&gt;&amp;1 &gt; /dev/null <span class="o">&amp;&amp;</span> selinuxenabled; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p><a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi?id=753589">https://bugzilla.redhat.com/show_bug.cgi?id=753589</a></p>
 </td><td class=code><div class=highlight><pre>
-                    sudo setsebool virt_use_execmem on
-                <span class="k">fi</span>
+                        sudo setsebool virt_use_execmem on
+                    <span class="k">fi</span>
+<span class="k">                fi</span>
 <span class="k">            fi</span>
-<span class="k">        fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Install and configure <strong>LXC</strong> if specified.  LXC is another approach to
 splitting a system into many smaller parts.  LXC uses cgroups and chroot
 to simulate multiple systems.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">                if</span> <span class="o">[[</span> ! <span class="s2">&quot;$DISTRO&quot;</span> &gt; natty <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                    </span><span class="nv">cgline</span><span class="o">=</span><span class="s2">&quot;none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0&quot;</span>
-                    sudo mkdir -p /cgroup
-                    <span class="k">if</span> ! grep -q cgroup /etc/fstab; <span class="k">then</span>
-<span class="k">                        </span><span class="nb">echo</span> <span class="s2">&quot;$cgline&quot;</span> | sudo tee -a /etc/fstab
-                    <span class="k">fi</span>
-<span class="k">                    if</span> ! mount -n | grep -q cgroup; <span class="k">then</span>
-<span class="k">                        </span>sudo mount /cgroup
-                    <span class="k">fi</span>
+            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">                    if</span> <span class="o">[[</span> ! <span class="s2">&quot;$DISTRO&quot;</span> &gt; natty <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                        </span><span class="nv">cgline</span><span class="o">=</span><span class="s2">&quot;none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0&quot;</span>
+                        sudo mkdir -p /cgroup
+                        <span class="k">if</span> ! grep -q cgroup /etc/fstab; <span class="k">then</span>
+<span class="k">                            </span><span class="nb">echo</span> <span class="s2">&quot;$cgline&quot;</span> | sudo tee -a /etc/fstab
+                        <span class="k">fi</span>
+<span class="k">                        if</span> ! mount -n | grep -q cgroup; <span class="k">then</span>
+<span class="k">                            </span>sudo mount /cgroup
+                        <span class="k">fi</span>
+<span class="k">                    fi</span>
 <span class="k">                fi</span>
 <span class="k">            fi</span>
 <span class="k">        fi</span>
@@ -634,11 +713,12 @@ to simulate multiple systems.</p>
 <span class="k">            </span>configure_baremetal_nova_dirs
         <span class="k">fi</span>
 
-<span class="k">        if </span>is_service_enabled quantum <span class="o">&amp;&amp;</span> is_quantum_ovs_base_plugin <span class="o">&amp;&amp;</span> ! sudo grep -q <span class="s1">&#39;^cgroup_device_acl&#39;</span> <span class="nv">$QEMU_CONF</span> ; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            if </span>is_service_enabled neutron <span class="o">&amp;&amp;</span> is_neutron_ovs_base_plugin <span class="o">&amp;&amp;</span> ! sudo grep -q <span class="s1">&#39;^cgroup_device_acl&#39;</span> <span class="nv">$QEMU_CONF</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Add /dev/net/tun to cgroup_device_acls, needed for type=ethernet interfaces</p>
 </td><td class=code><div class=highlight><pre>
-            cat <span class="s">&lt;&lt;EOF | sudo tee -a $QEMU_CONF</span>
+                cat <span class="s">&lt;&lt;EOF | sudo tee -a $QEMU_CONF</span>
 <span class="s">cgroup_device_acl = [</span>
 <span class="s">    &quot;/dev/null&quot;, &quot;/dev/full&quot;, &quot;/dev/zero&quot;,</span>
 <span class="s">    &quot;/dev/random&quot;, &quot;/dev/urandom&quot;,</span>
@@ -646,49 +726,31 @@ to simulate multiple systems.</p>
 <span class="s">    &quot;/dev/rtc&quot;, &quot;/dev/hpet&quot;,&quot;/dev/net/tun&quot;,</span>
 <span class="s">]</span>
 <span class="s">EOF</span>
-        <span class="k">fi</span>
-
-<span class="k">        if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">            </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirt-bin
-        <span class="k">else</span>
-<span class="k">            </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirtd
-        <span class="k">fi</span>
-
-
-
-<span class="k">        if </span>is_fedora; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Starting with fedora 18 enable stack-user to virsh -c qemu:///system
-by creating a policy-kit rule for stack-user</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_RELEASE&quot;</span> -ge <span class="s2">&quot;18&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">rules_dir</span><span class="o">=</span>/etc/polkit-1/rules.d
-                sudo mkdir -p <span class="nv">$rules_dir</span>
-                sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt; $rules_dir/50-libvirt-$STACK_USER.rules</span>
-<span class="s2">polkit.addRule(function(action, subject) {</span>
-<span class="s2">     if (action.id == &#39;org.libvirt.unix.manage&#39; &amp;&amp;</span>
-<span class="s2">         subject.user == &#39;&quot;</span><span class="nv">$STACK_USER</span><span class="s2">&quot;&#39;) {</span>
-<span class="s2">         return polkit.Result.YES;</span>
-<span class="s2">     }</span>
-<span class="s2">});</span>
-<span class="s2">EOF&quot;</span>
-                <span class="nb">unset </span>rules_dir
-            <span class="k">else</span>
-<span class="k">                </span>sudo bash -c <span class="s1">&#39;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
-<span class="s1">[libvirt Management Access]</span>
-<span class="s1">Identity=unix-group:libvirtd</span>
-<span class="s1">Action=org.libvirt.unix.manage</span>
-<span class="s1">ResultAny=yes</span>
-<span class="s1">ResultInactive=yes</span>
-<span class="s1">ResultActive=yes</span>
-<span class="s1">EOF&#39;</span>
             <span class="k">fi</span>
-<span class="k">        elif </span>is_suse; <span class="k">then</span>
+
+<span class="k">            if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">                </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirt-bin
+            <span class="k">else</span>
+<span class="k">                </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirtd
+            <span class="k">fi</span>
+
+<span class="k">            if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
+<span class="k">                if </span>is_fedora <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">||</span> <span class="s2">&quot;$os_RELEASE&quot;</span> -le <span class="s2">&quot;17&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                    </span>sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
+<span class="s2">[libvirt Management Access]</span>
+<span class="s2">Identity=unix-group:$LIBVIRT_GROUP</span>
+<span class="s2">Action=org.libvirt.unix.manage</span>
+<span class="s2">ResultAny=yes</span>
+<span class="s2">ResultInactive=yes</span>
+<span class="s2">ResultActive=yes</span>
+<span class="s2">EOF&quot;</span>
+                <span class="k">elif </span>is_suse <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="nv">$os_RELEASE</span> <span class="o">=</span> 12.2 <span class="o">||</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span> <span class="s2">&quot;SUSE LINUX&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Work around the fact that polkit-default-privs overrules pklas
+<p>openSUSE &lt; 12.3 or SLE
+Work around the fact that polkit-default-privs overrules pklas
 with 'unix-group:$group'.</p>
 </td><td class=code><div class=highlight><pre>
-            sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
+                    sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
 <span class="s2">[libvirt Management Access]</span>
 <span class="s2">Identity=unix-user:$USER</span>
 <span class="s2">Action=org.libvirt.unix.manage</span>
@@ -696,24 +758,42 @@ with 'unix-group:$group'.</p>
 <span class="s2">ResultInactive=yes</span>
 <span class="s2">ResultActive=yes</span>
 <span class="s2">EOF&quot;</span>
-        <span class="k">fi</span>
+                <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Starting with fedora 18 and opensuse-12.3 enable stack-user to
+virsh -c qemu:///system by creating a policy-kit rule for
+stack-user using the new Javascript syntax</p>
+</td><td class=code><div class=highlight><pre>
+                    <span class="nv">rules_dir</span><span class="o">=</span>/etc/polkit-1/rules.d
+                    sudo mkdir -p <span class="nv">$rules_dir</span>
+                    sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt; $rules_dir/50-libvirt-$STACK_USER.rules</span>
+<span class="s2">polkit.addRule(function(action, subject) {</span>
+<span class="s2">     if (action.id == &#39;org.libvirt.unix.manage&#39; &amp;&amp;</span>
+<span class="s2">         subject.user == &#39;&quot;</span><span class="nv">$STACK_USER</span><span class="s2">&quot;&#39;) {</span>
+<span class="s2">         return polkit.Result.YES;</span>
+<span class="s2">     }</span>
+<span class="s2">});</span>
+<span class="s2">EOF&quot;</span>
+                    <span class="nb">unset </span>rules_dir
+                <span class="k">fi</span>
+<span class="k">            fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The user that nova runs as needs to be member of <strong>libvirtd</strong> group otherwise
 nova-compute will be unable to use libvirt.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> ! getent group libvirtd &gt;/dev/null; <span class="k">then</span>
-<span class="k">            </span>sudo groupadd libvirtd
-        <span class="k">fi</span>
-<span class="k">        </span>add_user_to_group <span class="nv">$STACK_USER</span> libvirtd
+            <span class="k">if</span> ! getent group <span class="nv">$LIBVIRT_GROUP</span> &gt;/dev/null; <span class="k">then</span>
+<span class="k">                </span>sudo groupadd <span class="nv">$LIBVIRT_GROUP</span>
+            <span class="k">fi</span>
+<span class="k">            </span>add_user_to_group <span class="nv">$STACK_USER</span> <span class="nv">$LIBVIRT_GROUP</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>libvirt detects various settings on startup, as we potentially changed
 the system configuration (modules, filesystems), we need to restart
 libvirt to detect those changes.</p>
 </td><td class=code><div class=highlight><pre>
-        restart_service <span class="nv">$LIBVIRT_DAEMON</span>
-
+            restart_service <span class="nv">$LIBVIRT_DAEMON</span>
+        <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -724,7 +804,8 @@ libvirt to detect those changes.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova stores each instance in its own directory.</p>
 </td><td class=code><div class=highlight><pre>
-        mkdir -p <span class="nv">$NOVA_INSTANCES_PATH</span>
+        sudo mkdir -p <span class="nv">$NOVA_INSTANCES_PATH</span>
+        sudo chown -R <span class="nv">$STACK_USER</span> <span class="nv">$NOVA_INSTANCES_PATH</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>You can specify a different disk to be mounted and used for backing the
@@ -737,12 +818,7 @@ mount it (ext filesystems can be labeled via e2label).</p>
                 sudo chown -R <span class="nv">$STACK_USER</span> <span class="nv">$NOVA_INSTANCES_PATH</span>
             <span class="k">fi</span>
 <span class="k">        fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean up old instances</p>
-</td><td class=code><div class=highlight><pre>
-        cleanup_nova
-    <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -807,7 +883,6 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
 <p>(Re)create <tt class="docutils literal">nova.conf</tt></p>
 </td><td class=code><div class=highlight><pre>
     rm -f <span class="nv">$NOVA_CONF</span>
-    add_nova_opt <span class="s2">&quot;[DEFAULT]&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT verbose <span class="s2">&quot;True&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT debug <span class="s2">&quot;True&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT auth_strategy <span class="s2">&quot;keystone&quot;</span>
@@ -817,24 +892,32 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_scheduler_driver <span class="s2">&quot;$SCHEDULER&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT dhcpbridge_flagfile <span class="s2">&quot;$NOVA_CONF&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT force_dhcp_release <span class="s2">&quot;True&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT fixed_range <span class="s2">&quot;$FIXED_RANGE&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT fixed_range <span class="s2">&quot;&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT default_floating_pool <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_host <span class="s2">&quot;$SERVICE_HOST&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_port <span class="s2">&quot;$S3_SERVICE_PORT&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT osapi_compute_extension <span class="s2">&quot;nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT my_ip <span class="s2">&quot;$HOST_IP&quot;</span>
-    <span class="nb">local </span>dburl
-    database_connection_url dburl nova
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT sql_connection <span class="s2">&quot;$dburl&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT sql_connection <span class="sb">`</span>database_connection_url nova<span class="sb">`</span>
     <span class="k">if </span>is_baremetal; <span class="k">then</span>
-<span class="k">        </span>database_connection_url dburl nova_bm
-        iniset <span class="nv">$NOVA_CONF</span> baremetal sql_connection <span class="nv">$dburl</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> baremetal sql_connection <span class="sb">`</span>database_connection_url nova_bm<span class="sb">`</span>
     <span class="k">fi</span>
-<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_type <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_cpu_mode <span class="s2">&quot;none&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_name_template <span class="s2">&quot;${INSTANCE_NAME_PREFIX}%08x&quot;</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_type <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_cpu_mode <span class="s2">&quot;none&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_name_template <span class="s2">&quot;${INSTANCE_NAME_PREFIX}%08x&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> osapi_v3 enabled <span class="s2">&quot;True&quot;</span>
 
-    <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
+    <span class="k">if </span>is_fedora; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>nova defaults to /usr/local/bin, but fedora pip likes to
+install things in /usr/bin</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT bindir <span class="s2">&quot;/usr/bin&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled n-api; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT enabled_apis <span class="s2">&quot;$NOVA_ENABLED_APIS&quot;</span>
         <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -880,10 +963,8 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
 <span class="k">    if </span>is_service_enabled ceilometer; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_usage_audit <span class="s2">&quot;True&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_usage_audit_period <span class="s2">&quot;hour&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT notification_driver <span class="s2">&quot;nova.openstack.common.notifier.rpc_notifier&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT notification_driver <span class="s2">&quot;ceilometer.compute.nova_notifier&quot;</span>
+        iniset_multiline <span class="nv">$NOVA_CONF</span> DEFAULT notification_driver <span class="s2">&quot;nova.openstack.common.notifier.rpc_notifier&quot;</span> <span class="s2">&quot;ceilometer.compute.nova_notifier&quot;</span>
     <span class="k">fi</span>
-
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Provide some transition from <tt class="docutils literal">EXTRA_FLAGS</tt> to <tt class="docutils literal">EXTRA_OPTS</tt></p>
@@ -902,6 +983,81 @@ For Example: <tt class="docutils literal"><span class="pre">EXTRA_OPTS=(foo=true
 </td><td class=code><div class=highlight><pre>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
     <span class="k">done</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>All nova-compute workers need to know the vnc configuration options
+These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
+<span class="k">        </span><span class="nv">NOVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6080/vnc_auto.html&quot;</span><span class="k">}</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT novncproxy_base_url <span class="s2">&quot;$NOVNCPROXY_URL&quot;</span>
+        <span class="nv">XVPVNCPROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">XVPVNCPROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6081/console&quot;</span><span class="k">}</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xvpvncproxy_base_url <span class="s2">&quot;$XVPVNCPROXY_URL&quot;</span>
+        <span class="nv">SPICEHTML5PROXY_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICEHTML5PROXY_URL</span><span class="k">:-</span><span class="s2">&quot;http://$SERVICE_HOST:6082/spice_auto.html&quot;</span><span class="k">}</span>
+        iniset <span class="nv">$NOVA_CONF</span> spice html5proxy_base_url <span class="s2">&quot;$SPICEHTML5PROXY_URL&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=169.254.0.1</span><span class="k">}</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled n-novnc <span class="o">||</span> is_service_enabled n-xvnc; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Address on which instance vncservers will listen on compute hosts.
+For multi-host, this should be the management ip of the compute host.</p>
+</td><td class=code><div class=highlight><pre>
+      <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+      iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="nb">true</span>
+<span class="nb">      </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_listen <span class="s2">&quot;$VNCSERVER_LISTEN&quot;</span>
+      iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_proxyclient_address <span class="s2">&quot;$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
+    <span class="k">else</span>
+<span class="k">      </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="nb">false</span>
+<span class="nb">    </span><span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled n-spice; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Address on which instance spiceservers will listen on compute hosts.
+For multi-host, this should be the management ip of the compute host.</p>
+</td><td class=code><div class=highlight><pre>
+      <span class="nv">SPICESERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICESERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+      <span class="nv">SPICESERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICESERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+      iniset <span class="nv">$NOVA_CONF</span> spice enabled <span class="nb">true</span>
+<span class="nb">      </span>iniset <span class="nv">$NOVA_CONF</span> spice server_listen <span class="s2">&quot;$SPICESERVER_LISTEN&quot;</span>
+      iniset <span class="nv">$NOVA_CONF</span> spice server_proxyclient_address <span class="s2">&quot;$SPICESERVER_PROXYCLIENT_ADDRESS&quot;</span>
+    <span class="k">else</span>
+<span class="k">      </span>iniset <span class="nv">$NOVA_CONF</span> spice enabled <span class="nb">false</span>
+<span class="nb">    </span><span class="k">fi</span>
+
+<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_dmz_host <span class="s2">&quot;$EC2_DMZ_HOST&quot;</span>
+    iniset_rpc_backend nova <span class="nv">$NOVA_CONF</span> DEFAULT
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT glance_api_servers <span class="s2">&quot;$GLANCE_HOSTPORT&quot;</span>
+<span class="o">}</span>
+
+<span class="k">function </span>init_nova_cells<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
+<span class="k">        </span>cp <span class="nv">$NOVA_CONF</span> <span class="nv">$NOVA_CELLS_CONF</span>
+        iniset <span class="nv">$NOVA_CELLS_CONF</span> DEFAULT sql_connection <span class="sb">`</span>database_connection_url <span class="nv">$NOVA_CELLS_DB</span><span class="sb">`</span>
+        iniset <span class="nv">$NOVA_CELLS_CONF</span> DEFAULT rabbit_virtual_host child_cell
+        iniset <span class="nv">$NOVA_CELLS_CONF</span> DEFAULT dhcpbridge_flagfile <span class="nv">$NOVA_CELLS_CONF</span>
+        iniset <span class="nv">$NOVA_CELLS_CONF</span> cells <span class="nb">enable </span>True
+        iniset <span class="nv">$NOVA_CELLS_CONF</span> cells name child
+
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_topic cells
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_api_class nova.compute.cells_api.ComputeCellsAPI
+        iniset <span class="nv">$NOVA_CONF</span> cells <span class="nb">enable </span>True
+        iniset <span class="nv">$NOVA_CONF</span> cells name region
+
+        <span class="k">if </span>is_service_enabled n-api-meta; <span class="k">then</span>
+<span class="k">            </span><span class="nv">NOVA_ENABLED_APIS</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$NOVA_ENABLED_APIS</span> | sed <span class="s2">&quot;s/,metadata//&quot;</span><span class="k">)</span>
+            iniset <span class="nv">$NOVA_CONF</span> DEFAULT enabled_apis <span class="nv">$NOVA_ENABLED_APIS</span>
+            iniset <span class="nv">$NOVA_CELLS_CONF</span> DEFAULT enabled_apis metadata
+        <span class="k">fi</span>
+
+        <span class="nv">$NOVA_BIN_DIR</span>/nova-manage --config-file <span class="nv">$NOVA_CELLS_CONF</span> db sync
+        <span class="nv">$NOVA_BIN_DIR</span>/nova-manage --config-file <span class="nv">$NOVA_CELLS_CONF</span> cell create --name<span class="o">=</span>region --cell_type<span class="o">=</span>parent --username<span class="o">=</span>guest --hostname<span class="o">=</span><span class="nv">$RABBIT_HOST</span> --port<span class="o">=</span>5672 --password<span class="o">=</span><span class="nv">$RABBIT_PASSWORD</span> --virtual_host<span class="o">=</span>/ --woffset<span class="o">=</span>0 --wscale<span class="o">=</span>1
+        <span class="nv">$NOVA_BIN_DIR</span>/nova-manage cell create --name<span class="o">=</span>child --cell_type<span class="o">=</span>child --username<span class="o">=</span>guest --hostname<span class="o">=</span><span class="nv">$RABBIT_HOST</span> --port<span class="o">=</span>5672 --password<span class="o">=</span><span class="nv">$RABBIT_PASSWORD</span> --virtual_host<span class="o">=</span>child_cell --woffset<span class="o">=</span>0 --wscale<span class="o">=</span>1
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -917,7 +1073,7 @@ For Example: <tt class="docutils literal"><span class="pre">EXTRA_OPTS=(foo=true
 <span class="o">}</span>
 
 <span class="k">function </span>create_nova_conf_nova_network<span class="o">()</span> <span class="o">{</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT network_manager <span class="s2">&quot;nova.network.manager.$NET_MAN&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT network_manager <span class="s2">&quot;nova.network.manager.$NETWORK_MANAGER&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT public_interface <span class="s2">&quot;$PUBLIC_INTERFACE&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT vlan_interface <span class="s2">&quot;$VLAN_INTERFACE&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT flat_network_bridge <span class="s2">&quot;$FLAT_NETWORK_BRIDGE&quot;</span>
@@ -959,6 +1115,10 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 </td><td class=code><div class=highlight><pre>
         <span class="nv">$NOVA_BIN_DIR</span>/nova-manage db sync
 
+        <span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
+<span class="k">            </span>recreate_database <span class="nv">$NOVA_CELLS_DB</span> latin1
+        <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>(Re)create nova baremetal database</p>
 </td><td class=code><div class=highlight><pre>
@@ -977,6 +1137,7 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_novaclient<span class="o">()</span> <span class="o">{</span>
     git_clone <span class="nv">$NOVACLIENT_REPO</span> <span class="nv">$NOVACLIENT_DIR</span> <span class="nv">$NOVACLIENT_BRANCH</span>
+    setup_develop <span class="nv">$NOVACLIENT_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -984,33 +1145,40 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_nova<span class="o">()</span> <span class="o">{</span>
     <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
-<span class="k">        if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">            </span>install_package libvirt-bin
-        <span class="k">elif </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
-<span class="k">            </span>install_package libvirt
-        <span class="k">else</span>
-<span class="k">            </span>exit_distro_not_supported <span class="s2">&quot;libvirt installation&quot;</span>
-        <span class="k">fi</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">                </span>install_package kvm
+                install_package libvirt-bin
+                install_package python-libvirt
+            <span class="k">elif </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
+<span class="k">                </span>install_package kvm
+                install_package libvirt
+                install_package libvirt-python
+            <span class="k">else</span>
+<span class="k">                </span>exit_distro_not_supported <span class="s2">&quot;libvirt installation&quot;</span>
+            <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Install and configure <strong>LXC</strong> if specified.  LXC is another approach to
 splitting a system into many smaller parts.  LXC uses cgroups and chroot
 to simulate multiple systems.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">                if</span> <span class="o">[[</span> <span class="s2">&quot;$DISTRO&quot;</span> &gt; natty <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                    </span>install_package cgroup-lite
+            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">                    if</span> <span class="o">[[</span> <span class="s2">&quot;$DISTRO&quot;</span> &gt; natty <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                        </span>install_package cgroup-lite
+                    <span class="k">fi</span>
+<span class="k">                else</span>
+                    <span class="c">### FIXME(dtroyer): figure this out</span>
+                    <span class="nb">echo</span> <span class="s2">&quot;RPM-based cgroup not implemented yet&quot;</span>
+                    yum_install libcgroup-tools
                 <span class="k">fi</span>
-<span class="k">            else</span>
-                <span class="c">### FIXME(dtroyer): figure this out</span>
-                <span class="nb">echo</span> <span class="s2">&quot;RPM-based cgroup not implemented yet&quot;</span>
-                yum_install libcgroup-tools
-            <span class="k">fi</span>
+<span class="k">            fi</span>
 <span class="k">        fi</span>
 <span class="k">    fi</span>
 
 <span class="k">    </span>git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_DIR</span> <span class="nv">$NOVA_BRANCH</span>
+    setup_develop <span class="nv">$NOVA_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1028,8 +1196,7 @@ to simulate multiple systems.</p>
 <span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for nova-api to start...&quot;</span>
     <span class="k">if</span> ! wait_for_service <span class="nv">$SERVICE_TIMEOUT</span> http://<span class="nv">$SERVICE_HOST</span>:<span class="nv">$service_port</span>; <span class="k">then</span>
-<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;nova-api did not start&quot;</span>
-      <span class="nb">exit </span>1
+<span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;nova-api did not start&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1044,20 +1211,45 @@ to simulate multiple systems.</p>
 <p>start_nova() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_nova<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">NOVA_CONF_BOTTOM</span><span class="o">=</span><span class="nv">$NOVA_CONF</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>The group <strong>libvirtd</strong> is added to the current user in this script.
-Use 'sg' to execute nova-compute as a member of the <strong>libvirtd</strong> group.
-<tt class="docutils literal">screen_it</tt> checks <tt class="docutils literal">is_service_enabled</tt>, it is not needed here</p>
+<p><tt class="docutils literal">screen_it</tt> checks <tt class="docutils literal">is_service_enabled</tt>, it is not needed here</p>
 </td><td class=code><div class=highlight><pre>
     screen_it n-cond <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-conductor&quot;</span>
-    screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg libvirtd $NOVA_BIN_DIR/nova-compute&quot;</span>
-    screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cert&quot;</span>
-    screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-network&quot;</span>
-    screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-scheduler&quot;</span>
+
+    <span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
+<span class="k">        </span><span class="nv">NOVA_CONF_BOTTOM</span><span class="o">=</span><span class="nv">$NOVA_CELLS_CONF</span>
+        screen_it n-cond <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-conductor --config-file $NOVA_CELLS_CONF&quot;</span>
+        screen_it n-cell <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $NOVA_CONF&quot;</span>
+        screen_it n-cell <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $NOVA_CELLS_CONF&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>The group <strong>$LIBVIRT_GROUP</strong> is added to the current user in this script.
+Use 'sg' to execute nova-compute as a member of the <strong>$LIBVIRT_GROUP</strong> group.</p>
+</td><td class=code><div class=highlight><pre>
+        screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg $LIBVIRT_GROUP &#39;$NOVA_BIN_DIR/nova-compute --config-file $NOVA_CONF_BOTTOM&#39;&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $NOVA_CONF_BOTTOM&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cert&quot;</span>
+    screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-network --config-file $NOVA_CONF_BOTTOM&quot;</span>
+    screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-scheduler --config-file $NOVA_CONF_BOTTOM&quot;</span>
+    screen_it n-api-meta <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api-metadata --config-file $NOVA_CONF_BOTTOM&quot;</span>
+
     screen_it n-novnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-novncproxy --config-file $NOVA_CONF --web $NOVNC_DIR&quot;</span>
     screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-xvpvncproxy --config-file $NOVA_CONF&quot;</span>
     screen_it n-spice <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-spicehtml5proxy --config-file $NOVA_CONF --web $SPICE_DIR&quot;</span>
     screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-consoleauth&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Starting the nova-objectstore only if swift3 service is not enabled.
+Swift will act as s3 objectstore.</p>
+</td><td class=code><div class=highlight><pre>
+    is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
+        screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-objectstore&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1065,19 +1257,30 @@ Use 'sg' to execute nova-compute as a member of the <strong>libvirtd</strong> gr
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>stop_nova<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Kill the nova screen windows</p>
+<p>Kill the nova screen windows
+Some services are listed here twice since more than one instance
+of a service may be running in certain configs.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>serv in n-api n-cpu n-crt n-net n-sch n-novnc n-xvnc n-cauth n-cond n-spice; <span class="k">do</span>
+    <span class="k">for </span>serv in n-api n-cpu n-crt n-net n-sch n-novnc n-xvnc n-cauth n-spice n-cond n-cond n-cell n-cell n-api-meta; <span class="k">do</span>
 <span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
 <span class="nb">    </span><span class="k">done</span>
 <span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

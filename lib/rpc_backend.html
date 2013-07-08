@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -354,17 +366,33 @@ iniset_rpc_backend</p>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
+
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="entry-points">
-<h1>Entry Points</h1>
+<div class="section" id="functions">
+<h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure we only have one rpc backend enabled.
 Also check the specified rpc backend is available on your platform.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>check_rpc_backend<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">rpc_backend_cnt</span><span class="o">=</span>0
+    <span class="nb">local </span><span class="nv">rpc_needed</span><span class="o">=</span>1
+</pre></div></td></tr><tr><td class=docs>
+<p>We rely on the fact that filenames in lib/* match the service names
+that can be passed as arguments to is_service_enabled.
+We check for a call to iniset_rpc_backend in these files, meaning
+the service needs a backend.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">rpc_candidates</span><span class="o">=</span><span class="k">$(</span>grep -rl iniset_rpc_backend <span class="nv">$TOP_DIR</span>/lib/ | awk -F/ <span class="s1">&#39;{print $NF}&#39;</span><span class="k">)</span>
+    <span class="k">for </span>c in <span class="k">${</span><span class="nv">rpc_candidates</span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">        if </span>is_service_enabled <span class="nv">$c</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">rpc_needed</span><span class="o">=</span>0
+            <span class="nb">break</span>
+<span class="nb">        </span><span class="k">fi</span>
+<span class="k">    done</span>
+<span class="k">    </span><span class="nb">local </span><span class="nv">rpc_backend_cnt</span><span class="o">=</span>0
     <span class="k">for </span>svc in qpid zeromq rabbit; <span class="k">do</span>
 <span class="k">        </span>is_service_enabled <span class="nv">$svc</span> <span class="o">&amp;&amp;</span>
         <span class="o">((</span>rpc_backend_cnt++<span class="o">))</span>
@@ -373,15 +401,58 @@ Also check the specified rpc backend is available on your platform.</p>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: only one rpc backend may be enabled,&quot;</span>
         <span class="nb">echo</span> <span class="s2">&quot;       set only one of &#39;rabbit&#39;, &#39;qpid&#39;, &#39;zeromq&#39;&quot;</span>
         <span class="nb">echo</span> <span class="s2">&quot;       via ENABLED_SERVICES.&quot;</span>
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$rpc_backend_cnt&quot;</span> <span class="o">==</span> 0 <span class="o">]</span>; <span class="k">then</span>
+    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$rpc_backend_cnt&quot;</span> <span class="o">==</span> 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$rpc_needed&quot;</span> <span class="o">==</span> 0 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: at least one rpc backend must be enabled,&quot;</span>
         <span class="nb">echo</span> <span class="s2">&quot;       set one of &#39;rabbit&#39;, &#39;qpid&#39;, &#39;zeromq&#39;&quot;</span>
         <span class="nb">echo</span> <span class="s2">&quot;       via ENABLED_SERVICES.&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled qpid <span class="o">&amp;&amp;</span> ! qpid_is_supported; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Qpid support is not available for this version of your distribution.&quot;</span>
-        <span class="nb">exit </span>1
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Qpid support is not available for this version of your distribution.&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>clean up after rpc backend - eradicate all traces so changing backends
+produces a clean switch</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>cleanup_rpc_backend <span class="o">{</span>
+    <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Obliterate rabbitmq-server</p>
+</td><td class=code><div class=highlight><pre>
+        uninstall_package rabbitmq-server
+        sudo killall epmd
+        <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>And the Erlang runtime too</p>
+</td><td class=code><div class=highlight><pre>
+            sudo aptitude purge -y ~nerlang
+        <span class="k">fi</span>
+<span class="k">    elif </span>is_service_enabled qpid; <span class="k">then</span>
+<span class="k">        if </span>is_fedora; <span class="k">then</span>
+<span class="k">            </span>uninstall_package qpid-cpp-server
+        <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
+<span class="k">            </span>uninstall_package qpidd
+        <span class="k">else</span>
+<span class="k">            </span>exit_distro_not_supported <span class="s2">&quot;qpid installation&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    elif </span>is_service_enabled zeromq; <span class="k">then</span>
+<span class="k">        if </span>is_fedora; <span class="k">then</span>
+<span class="k">            </span>uninstall_package zeromq python-zmq redis
+        <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
+<span class="k">            </span>uninstall_package libzmq1 python-zmq redis-server
+        <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">            </span>uninstall_package libzmq1 python-pyzmq redis
+        <span class="k">else</span>
+<span class="k">            </span>exit_distro_not_supported <span class="s2">&quot;zeromq installation&quot;</span>
+        <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Necessary directory for socket location.</p>
+</td><td class=code><div class=highlight><pre>
+        sudo mkdir -p /var/run/openstack
+        sudo chown <span class="nv">$STACK_USER</span> /var/run/openstack
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -400,19 +471,34 @@ the temp file is necessary due to LP: #878600</p>
         rm -f <span class="s2">&quot;$tfile&quot;</span>
     <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
 <span class="k">        if </span>is_fedora; <span class="k">then</span>
-<span class="k">            </span>install_package qpid-cpp-server-daemon
-        <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
+<span class="k">            </span>install_package qpid-cpp-server
+            <span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>RHEL6 leaves &quot;auth=yes&quot; in /etc/qpidd.conf, it needs to
+be no or you get GSS authentication errors as it
+attempts to default to this.</p>
+</td><td class=code><div class=highlight><pre>
+                sudo sed -i.bak <span class="s1">&#39;s/^auth=yes$/auth=no/&#39;</span> /etc/qpidd.conf
+            <span class="k">fi</span>
+<span class="k">        elif </span>is_ubuntu; <span class="k">then</span>
 <span class="k">            </span>install_package qpidd
+            sudo sed -i <span class="s1">&#39;/PLAIN/!s/mech_list: /mech_list: PLAIN /&#39;</span> /etc/sasl2/qpidd.conf
+            sudo chmod o+r /etc/qpid/qpidd.sasldb
         <span class="k">else</span>
 <span class="k">            </span>exit_distro_not_supported <span class="s2">&quot;qpid installation&quot;</span>
         <span class="k">fi</span>
 <span class="k">    elif </span>is_service_enabled zeromq; <span class="k">then</span>
-<span class="k">        if </span>is_fedora; <span class="k">then</span>
-<span class="k">            </span>install_package zeromq python-zmq
+</pre></div></td></tr><tr><td class=docs>
+<p>NOTE(ewindisch): Redis is not strictly necessary
+but there is a matchmaker driver that works
+really well &amp; out of the box for multi-node.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if </span>is_fedora; <span class="k">then</span>
+<span class="k">            </span>install_package zeromq python-zmq redis
         <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
-<span class="k">            </span>install_package libzmq1 python-zmq
+<span class="k">            </span>install_package libzmq1 python-zmq redis-server
         <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">            </span>install_package libzmq1 python-pyzmq
+<span class="k">            </span>install_package libzmq1 python-pyzmq redis
         <span class="k">else</span>
 <span class="k">            </span>exit_distro_not_supported <span class="s2">&quot;zeromq installation&quot;</span>
         <span class="k">fi</span>
@@ -438,7 +524,16 @@ the temp file is necessary due to LP: #878600</p>
 <p>change the rabbit password since the default is &quot;guest&quot;</p>
 </td><td class=code><div class=highlight><pre>
         sudo rabbitmqctl change_password guest <span class="nv">$RABBIT_PASSWORD</span>
-    <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
+        <span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Add partitioned access for the child cell</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="k">if</span> <span class="o">[</span> -z <span class="sb">`</span>sudo rabbitmqctl list_vhosts | grep child_cell<span class="sb">`</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                </span>sudo rabbitmqctl add_vhost child_cell
+                sudo rabbitmqctl set_permissions -p child_cell guest <span class="s2">&quot;.*&quot;</span> <span class="s2">&quot;.*&quot;</span> <span class="s2">&quot;.*&quot;</span>
+            <span class="k">fi</span>
+<span class="k">        fi</span>
+<span class="k">    elif </span>is_service_enabled qpid; <span class="k">then</span>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Starting qpid&quot;</span>
         restart_service qpidd
     <span class="k">fi</span>
@@ -453,9 +548,21 @@ the temp file is necessary due to LP: #878600</p>
     <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$3</span>
     <span class="k">if </span>is_service_enabled zeromq; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$file</span> <span class="nv">$section</span> rpc_backend <span class="k">${</span><span class="nv">package</span><span class="k">}</span>.openstack.common.rpc.impl_zmq
+        iniset <span class="nv">$file</span> <span class="nv">$section</span> rpc_zmq_matchmaker <span class="se">\</span>
+            <span class="k">${</span><span class="nv">package</span><span class="k">}</span>.openstack.common.rpc.matchmaker_redis.MatchMakerRedis
+</pre></div></td></tr><tr><td class=docs>
+<p>Set MATCHMAKER_REDIS_HOST if running multi-node.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">MATCHMAKER_REDIS_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MATCHMAKER_REDIS_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
+        iniset <span class="nv">$file</span> matchmaker_redis host <span class="nv">$MATCHMAKER_REDIS_HOST</span>
     <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$file</span> <span class="nv">$section</span> rpc_backend <span class="k">${</span><span class="nv">package</span><span class="k">}</span>.openstack.common.rpc.impl_qpid
-    <span class="k">elif </span>is_service_enabled rabbit <span class="o">||</span> <span class="o">{</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="o">}</span>; <span class="k">then</span>
+        <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">            </span><span class="nv">QPID_PASSWORD</span><span class="o">=</span><span class="sb">`</span>sudo strings /etc/qpid/qpidd.sasldb | grep -B1 admin | head -1<span class="sb">`</span>
+            iniset <span class="nv">$file</span> <span class="nv">$section</span> qpid_password <span class="nv">$QPID_PASSWORD</span>
+            iniset <span class="nv">$file</span> <span class="nv">$section</span> qpid_username admin
+        <span class="k">fi</span>
+<span class="k">    elif </span>is_service_enabled rabbit <span class="o">||</span> <span class="o">{</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="o">}</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$file</span> <span class="nv">$section</span> rpc_backend <span class="k">${</span><span class="nv">package</span><span class="k">}</span>.openstack.common.rpc.impl_kombu
         iniset <span class="nv">$file</span> <span class="nv">$section</span> rabbit_host <span class="nv">$RABBIT_HOST</span>
         iniset <span class="nv">$file</span> <span class="nv">$section</span> rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
@@ -478,12 +585,21 @@ not in openSUSE either right now.</p>
     <span class="o">(</span> ! <span class="o">([[</span> <span class="s2">&quot;$DISTRO&quot;</span> <span class="o">=</span> <span class="s2">&quot;oneiric&quot;</span> <span class="o">]]</span> <span class="o">||</span> is_suse<span class="o">)</span> <span class="o">)</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

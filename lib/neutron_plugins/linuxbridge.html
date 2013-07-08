@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
-<title>Quantum Linux Bridge plugin</title>
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<title>Neutron Linux Bridge plugin</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -328,8 +340,8 @@ ul.auto-toc {
 </style>
 </head>
 <body>
-<div class="document" id="quantum-linux-bridge-plugin">
-<h1 class="title">Quantum Linux Bridge plugin</h1>
+<div class="document" id="neutron-linux-bridge-plugin">
+<h1 class="title">Neutron Linux Bridge plugin</h1>
 
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
@@ -337,58 +349,16 @@ ul.auto-toc {
 <span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
-<span class="k">function </span>is_quantum_ovs_base_plugin<span class="o">()</span> <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>linuxbridge doesn't use OVS</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">return </span>1
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_create_nova_conf<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.vif.QuantumLinuxBridgeVIFDriver&quot;</span><span class="k">}</span>
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_install_agent_packages<span class="o">()</span> <span class="o">{</span>
-    install_package bridge-utils
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/quantum/plugins/linuxbridge
+<span class="k">function </span>neutron_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/neutron/plugins/linuxbridge
     <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>linuxbridge_conf.ini
-    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;quantum_linux_bridge&quot;</span>
-    <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;quantum.plugins.linuxbridge.lb_quantum_plugin.LinuxBridgePluginV2&quot;</span>
+    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;neutron_linux_bridge&quot;</span>
+    <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.linuxbridge.lb_neutron_plugin.LinuxBridgePluginV2&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>quantum_plugin_configure_debug_command<span class="o">()</span> <span class="o">{</span>
-    iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_dhcp_agent<span class="o">()</span> <span class="o">{</span>
-    :
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_l3_agent<span class="o">()</span> <span class="o">{</span>
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_plugin_agent<span class="o">()</span> <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Setup physical network interface mappings.  Override
-<tt class="docutils literal">LB_VLAN_RANGES</tt> and <tt class="docutils literal">LB_INTERFACE_MAPPINGS</tt> in <tt class="docutils literal">localrc</tt> for more
-complex physical network configurations.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LB_INTERFACE_MAPPINGS&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$LB_PHYSICAL_INTERFACE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">LB_INTERFACE_MAPPINGS</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>:<span class="nv">$LB_PHYSICAL_INTERFACE</span>
-    <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$LB_INTERFACE_MAPPINGS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> LINUX_BRIDGE physical_interface_mappings <span class="nv">$LB_INTERFACE_MAPPINGS</span>
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$QUANTUM_DIR/bin/quantum-linuxbridge-agent&quot;</span>
-<span class="o">}</span>
-
-<span class="k">function </span>quantum_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> VLANS tenant_network_type vlan
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> vlans tenant_network_type vlan
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;WARNING - The linuxbridge plugin is using local tenant networks, with no connectivity between hosts.&quot;</span>
     <span class="k">fi</span>
@@ -404,13 +374,32 @@ for more complex physical network configurations.</p>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$LB_VLAN_RANGES&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> VLANS network_vlan_ranges <span class="nv">$LB_VLAN_RANGES</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> vlans network_vlan_ranges <span class="nv">$LB_VLAN_RANGES</span>
     <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.linux.iptables_firewall.IptablesFirewallDriver
+    <span class="k">else</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.firewall.NoopFirewallDriver
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Define extra &quot;LINUX_BRIDGE&quot; configuration options when q-svc is configured by defining
+the array <tt class="docutils literal">Q_SRV_EXTRA_OPTS</tt>.
+For Example: <tt class="docutils literal"><span class="pre">Q_SRV_EXTRA_OPTS=(foo=true</span> bar=2)</tt></p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_SRV_EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> linux_bridge <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
+    <span class="k">done</span>
 <span class="o">}</span>
 
-<span class="k">function </span>quantum_plugin_setup_interface_driver<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
-    iniset <span class="nv">$conf_file</span> DEFAULT interface_driver quantum.agent.linux.interface.BridgeInterfaceDriver
+<span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>0 means True here</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">return </span>0
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -419,6 +408,8 @@ for more complex physical network configurations.</p>
 <span class="nv">$MY_XTRACE</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

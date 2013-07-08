@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -343,74 +355,69 @@ and shuts down the VM to signal the script has completed</p>
 <span class="c">#!/bin/bash</span>
 
 
-<span class="nb">set</span> -x
-</pre></div></td></tr><tr><td class=docs>
-<p>Echo commands</p>
-</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+<span class="nb">set</span> -o nounset
 <span class="nb">set</span> -o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configurable nuggets</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">GUEST_PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
-<span class="nv">STAGING_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">STAGING_DIR</span><span class="k">:-</span><span class="nv">stage</span><span class="k">}</span>
-<span class="nv">DO_TGZ</span><span class="o">=</span><span class="k">${</span><span class="nv">DO_TGZ</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
-<span class="nv">XS_TOOLS_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">XS_TOOLS_PATH</span><span class="k">:-</span><span class="s2">&quot;/root/xs-tools.deb&quot;</span><span class="k">}</span>
-<span class="nv">STACK_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">STACK_USER</span><span class="k">:-</span><span class="nv">stack</span><span class="k">}</span>
+<span class="nv">GUEST_PASSWORD</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+<span class="nv">XS_TOOLS_PATH</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
+<span class="nv">STACK_USER</span><span class="o">=</span><span class="s2">&quot;$3&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Install basics</p>
 </td><td class=code><div class=highlight><pre>
-chroot <span class="nv">$STAGING_DIR</span> apt-get update
-chroot <span class="nv">$STAGING_DIR</span> apt-get install -y cracklib-runtime curl wget ssh openssh-server tcpdump ethtool
-chroot <span class="nv">$STAGING_DIR</span> apt-get install -y curl wget ssh openssh-server python-pip git vim-nox sudo
-chroot <span class="nv">$STAGING_DIR</span> pip install xenapi
+apt-get update
+apt-get install -y cracklib-runtime curl wget ssh openssh-server tcpdump ethtool
+apt-get install -y curl wget ssh openssh-server python-pip git vim-nox sudo
+pip install xenapi
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Install XenServer guest utilities</p>
 </td><td class=code><div class=highlight><pre>
-cp <span class="nv">$XS_TOOLS_PATH</span> <span class="k">${</span><span class="nv">STAGING_DIR</span><span class="k">}${</span><span class="nv">XS_TOOLS_PATH</span><span class="k">}</span>
-chroot <span class="nv">$STAGING_DIR</span> dpkg -i <span class="nv">$XS_TOOLS_PATH</span>
-chroot <span class="nv">$STAGING_DIR</span> update-rc.d -f xe-linux-distribution remove
-chroot <span class="nv">$STAGING_DIR</span> update-rc.d xe-linux-distribution defaults
+dpkg -i <span class="nv">$XS_TOOLS_PATH</span>
+update-rc.d -f xe-linux-distribution remove
+update-rc.d xe-linux-distribution defaults
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make a small cracklib dictionary, so that passwd still works, but we don't
 have the big dictionary.</p>
 </td><td class=code><div class=highlight><pre>
-mkdir -p <span class="nv">$STAGING_DIR</span>/usr/share/cracklib
-<span class="nb">echo </span>a | chroot <span class="nv">$STAGING_DIR</span> cracklib-packer
+mkdir -p /usr/share/cracklib
+<span class="nb">echo </span>a | cracklib-packer
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make /etc/shadow, and set the root password</p>
 </td><td class=code><div class=highlight><pre>
-chroot <span class="nv">$STAGING_DIR</span> <span class="s2">&quot;pwconv&quot;</span>
-<span class="nb">echo</span> <span class="s2">&quot;root:$GUEST_PASSWORD&quot;</span> | chroot <span class="nv">$STAGING_DIR</span> chpasswd
+pwconv
+<span class="nb">echo</span> <span class="s2">&quot;root:$GUEST_PASSWORD&quot;</span> | chpasswd
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Put the VPX into UTC.</p>
 </td><td class=code><div class=highlight><pre>
-rm -f <span class="nv">$STAGING_DIR</span>/etc/localtime
+rm -f /etc/localtime
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Add stack user</p>
 </td><td class=code><div class=highlight><pre>
-chroot <span class="nv">$STAGING_DIR</span> groupadd libvirtd
-chroot <span class="nv">$STAGING_DIR</span> useradd <span class="nv">$STACK_USER</span> -s /bin/bash -d /opt/stack -G libvirtd
-<span class="nb">echo</span> <span class="nv">$STACK_USER</span>:<span class="nv">$GUEST_PASSWORD</span> | chroot <span class="nv">$STAGING_DIR</span> chpasswd
-<span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(ALL) NOPASSWD: ALL&quot;</span> &gt;&gt; <span class="nv">$STAGING_DIR</span>/etc/sudoers
+groupadd libvirtd
+useradd <span class="nv">$STACK_USER</span> -s /bin/bash -d /opt/stack -G libvirtd
+<span class="nb">echo</span> <span class="nv">$STACK_USER</span>:<span class="nv">$GUEST_PASSWORD</span> | chpasswd
+<span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(ALL) NOPASSWD: ALL&quot;</span> &gt;&gt; /etc/sudoers
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Give ownership of /opt/stack to stack user</p>
 </td><td class=code><div class=highlight><pre>
-chroot <span class="nv">$STAGING_DIR</span> chown -R <span class="nv">$STACK_USER</span> /opt/stack
+chown -R <span class="nv">$STACK_USER</span> /opt/stack
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make our ip address hostnames look nice at the command prompt</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">echo</span> <span class="s2">&quot;export PS1=&#39;${debian_chroot:+($debian_chroot)}\\u@\\H:\\w\\$ &#39;&quot;</span> &gt;&gt; <span class="nv">$STAGING_DIR</span>/opt/stack/.bashrc
-<span class="nb">echo</span> <span class="s2">&quot;export PS1=&#39;${debian_chroot:+($debian_chroot)}\\u@\\H:\\w\\$ &#39;&quot;</span> &gt;&gt; <span class="nv">$STAGING_DIR</span>/root/.bashrc
-<span class="nb">echo</span> <span class="s2">&quot;export PS1=&#39;${debian_chroot:+($debian_chroot)}\\u@\\H:\\w\\$ &#39;&quot;</span> &gt;&gt; <span class="nv">$STAGING_DIR</span>/etc/profile
+<span class="nb">echo</span> <span class="s2">&quot;export PS1=&#39;${debian_chroot:+($debian_chroot)}\\u@\\H:\\w\\$ &#39;&quot;</span> &gt;&gt; /opt/stack/.bashrc
+<span class="nb">echo</span> <span class="s2">&quot;export PS1=&#39;${debian_chroot:+($debian_chroot)}\\u@\\H:\\w\\$ &#39;&quot;</span> &gt;&gt; /root/.bashrc
+<span class="nb">echo</span> <span class="s2">&quot;export PS1=&#39;${debian_chroot:+($debian_chroot)}\\u@\\H:\\w\\$ &#39;&quot;</span> &gt;&gt; /etc/profile
 
 <span class="k">function </span>setup_vimrc <span class="o">{</span>
     <span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$1</span> <span class="o">]</span>; <span class="k">then</span>
@@ -429,24 +436,19 @@ chroot <span class="nv">$STAGING_DIR</span> chown -R <span class="nv">$STACK_USE
 </pre></div></td></tr><tr><td class=docs>
 <p>Setup simple .vimrcs</p>
 </td><td class=code><div class=highlight><pre>
-setup_vimrc <span class="nv">$STAGING_DIR</span>/root/.vimrc
-setup_vimrc <span class="nv">$STAGING_DIR</span>/opt/stack/.vimrc
-
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$DO_TGZ&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Compress</p>
-</td><td class=code><div class=highlight><pre>
-    rm -f stage.tgz
-    tar cfz stage.tgz stage
-<span class="k">fi</span>
+setup_vimrc /root/.vimrc
+setup_vimrc /opt/stack/.vimrc
 
 </pre></div></td></tr><tr><td class=docs>
 <p>remove self from local.rc
 so this script is not run again</p>
 </td><td class=code><div class=highlight><pre>
 rm -rf /etc/rc.local
-mv /etc/rc.local.preparebackup /etc/rc.local
-cp <span class="nv">$STAGING_DIR</span>/etc/rc.local <span class="nv">$STAGING_DIR</span>/etc/rc.local.backup
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Restore rc.local file</p>
+</td><td class=code><div class=highlight><pre>
+cp /etc/rc.local.preparebackup /etc/rc.local
 
 </pre></div></td></tr><tr><td class=docs>
 <p>shutdown to notify we are done</p>
@@ -454,6 +456,8 @@ cp <span class="nv">$STAGING_DIR</span>/etc/rc.local <span class="nv">$STAGING_D
 shutdown -h now
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

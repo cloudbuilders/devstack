@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -347,7 +359,7 @@ library to test ec2 compatibility</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This script exits on an error so that errors don't compound and you see
-only the first error that occured.</p>
+only the first error that occurred.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o errexit
 
@@ -382,10 +394,10 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/eucarc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import quantum functions if needed</p>
+<p>Import neutron functions if needed</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span><span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
+<span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">    </span><span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -419,7 +431,7 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <p>Find a machine image to boot</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>euca-describe-images | grep machine | grep <span class="k">${</span><span class="nv">DEFAULT_IMAGE_NAME</span><span class="k">}</span> | cut -f2 | head -n1<span class="sb">`</span>
-die_if_not_set IMAGE <span class="s2">&quot;Failure getting image $DEFAULT_IMAGE_NAME&quot;</span>
+die_if_not_set <span class="nv">$LINENO</span> IMAGE <span class="s2">&quot;Failure getting image $DEFAULT_IMAGE_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Add a secgroup</p>
@@ -427,8 +439,7 @@ die_if_not_set IMAGE <span class="s2">&quot;Failure getting image $DEFAULT_IMAGE
 <span class="k">if</span> ! euca-describe-groups | grep -q <span class="nv">$SECGROUP</span>; <span class="k">then</span>
 <span class="k">    </span>euca-add-group -d <span class="s2">&quot;$SECGROUP description&quot;</span> <span class="nv">$SECGROUP</span>
     <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-groups | grep -q $SECGROUP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Security group not created&quot;</span>
-        <span class="nb">exit </span>1
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Security group not created&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -436,14 +447,13 @@ die_if_not_set IMAGE <span class="s2">&quot;Failure getting image $DEFAULT_IMAGE
 <p>Launch it</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">INSTANCE</span><span class="o">=</span><span class="sb">`</span>euca-run-instances -g <span class="nv">$SECGROUP</span> -t <span class="nv">$DEFAULT_INSTANCE_TYPE</span> <span class="nv">$IMAGE</span> | grep INSTANCE | cut -f2<span class="sb">`</span>
-die_if_not_set INSTANCE <span class="s2">&quot;Failure launching instance&quot;</span>
+die_if_not_set <span class="nv">$LINENO</span> INSTANCE <span class="s2">&quot;Failure launching instance&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Assure it has booted within a reasonable time</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$RUNNING_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-instances $INSTANCE | grep -q running; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become active within $RUNNING_TIMEOUT seconds&quot;</span>
-    <span class="nb">exit </span>1
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;server didn&#39;t become active within $RUNNING_TIMEOUT seconds&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -452,53 +462,49 @@ die_if_not_set INSTANCE <span class="s2">&quot;Failure launching instance&quot;<
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;c-vol&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">   </span><span class="nv">VOLUME_ZONE</span><span class="o">=</span><span class="sb">`</span>euca-describe-availability-zones | head -n1 | cut -f2<span class="sb">`</span>
-   die_if_not_set VOLUME_ZONE <span class="s2">&quot;Failure to find zone for volume&quot;</span>
+   die_if_not_set <span class="nv">$LINENO</span> VOLUME_ZONE <span class="s2">&quot;Failure to find zone for volume&quot;</span>
 
    <span class="nv">VOLUME</span><span class="o">=</span><span class="sb">`</span>euca-create-volume -s 1 -z <span class="nv">$VOLUME_ZONE</span> | cut -f2<span class="sb">`</span>
-   die_if_not_set VOLUME <span class="s2">&quot;Failure to create volume&quot;</span>
+   die_if_not_set <span class="nv">$LINENO</span> VOLUME <span class="s2">&quot;Failure to create volume&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Test that volume has been created</p>
 </td><td class=code><div class=highlight><pre>
-   <span class="nv">VOLUME</span><span class="o">=</span><span class="sb">`</span>euca-describe-volumes | cut -f2<span class="sb">`</span>
-   die_if_not_set VOLUME <span class="s2">&quot;Failure to get volume&quot;</span>
+   <span class="nv">VOLUME</span><span class="o">=</span><span class="sb">`</span>euca-describe-volumes <span class="nv">$VOLUME</span> | cut -f2<span class="sb">`</span>
+   die_if_not_set <span class="nv">$LINENO</span> VOLUME <span class="s2">&quot;Failure to get volume&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Test volume has become available</p>
 </td><td class=code><div class=highlight><pre>
    <span class="k">if</span> ! timeout <span class="nv">$RUNNING_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-volumes $VOLUME | grep -q available; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">       </span><span class="nb">echo</span> <span class="s2">&quot;volume didnt become available within $RUNNING_TIMEOUT seconds&quot;</span>
-       <span class="nb">exit </span>1
+<span class="k">       </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;volume didn&#39;t become available within $RUNNING_TIMEOUT seconds&quot;</span>
    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Attach volume to an instance</p>
 </td><td class=code><div class=highlight><pre>
    euca-attach-volume -i <span class="nv">$INSTANCE</span> -d <span class="nv">$ATTACH_DEVICE</span> <span class="nv">$VOLUME</span> <span class="o">||</span> <span class="se">\</span>
-       die <span class="s2">&quot;Failure attaching volume $VOLUME to $INSTANCE&quot;</span>
-   <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-volumes $VOLUME | grep -q in-use; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">       </span><span class="nb">echo</span> <span class="s2">&quot;Could not attach $VOLUME to $INSTANCE&quot;</span>
-       <span class="nb">exit </span>1
+       die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure attaching volume $VOLUME to $INSTANCE&quot;</span>
+   <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-volumes $VOLUME | grep -A 1 in-use | grep -q attach; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">       </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Could not attach $VOLUME to $INSTANCE&quot;</span>
    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Detach volume from an instance</p>
 </td><td class=code><div class=highlight><pre>
    euca-detach-volume <span class="nv">$VOLUME</span> <span class="o">||</span> <span class="se">\</span>
-       die <span class="s2">&quot;Failure detaching volume $VOLUME to $INSTANCE&quot;</span>
+       die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure detaching volume $VOLUME to $INSTANCE&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-volumes $VOLUME | grep -q available; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Could not detach $VOLUME to $INSTANCE&quot;</span>
-        <span class="nb">exit </span>1
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Could not detach $VOLUME to $INSTANCE&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Remove volume</p>
 </td><td class=code><div class=highlight><pre>
     euca-delete-volume <span class="nv">$VOLUME</span> <span class="o">||</span> <span class="se">\</span>
-        die <span class="s2">&quot;Failure to delete volume&quot;</span>
+        die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure to delete volume&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-volumes | grep $VOLUME; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">       </span><span class="nb">echo</span> <span class="s2">&quot;Could not delete $VOLUME&quot;</span>
-       <span class="nb">exit </span>1
+<span class="k">       </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Could not delete $VOLUME&quot;</span>
     <span class="k">fi</span>
 <span class="k">else</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume Tests Skipped&quot;</span>
@@ -508,19 +514,19 @@ die_if_not_set INSTANCE <span class="s2">&quot;Failure launching instance&quot;<
 <p>Allocate floating address</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>euca-allocate-address | cut -f2<span class="sb">`</span>
-die_if_not_set FLOATING_IP <span class="s2">&quot;Failure allocating floating IP&quot;</span>
+die_if_not_set <span class="nv">$LINENO</span> FLOATING_IP <span class="s2">&quot;Failure allocating floating IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Associate floating address</p>
 </td><td class=code><div class=highlight><pre>
 euca-associate-address -i <span class="nv">$INSTANCE</span> <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure associating address $FLOATING_IP to $INSTANCE&quot;</span>
+    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure associating address $FLOATING_IP to $INSTANCE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Authorize pinging</p>
 </td><td class=code><div class=highlight><pre>
 euca-authorize -P icmp -s 0.0.0.0/0 -t -1:-1 <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure authorizing rule in $SECGROUP&quot;</span>
+    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure authorizing rule in $SECGROUP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
@@ -531,41 +537,39 @@ ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class=
 <p>Revoke pinging</p>
 </td><td class=code><div class=highlight><pre>
 euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure revoking rule in $SECGROUP&quot;</span>
+    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure revoking rule in $SECGROUP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Release floating address</p>
 </td><td class=code><div class=highlight><pre>
 euca-disassociate-address <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure disassociating address $FLOATING_IP&quot;</span>
+    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure disassociating address $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait just a tick for everything above to complete so release doesn't fail</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-addresses | grep $INSTANCE | grep -q $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Floating ip $FLOATING_IP not disassociated within $ASSOCIATE_TIMEOUT seconds&quot;</span>
-    <span class="nb">exit </span>1
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Floating ip $FLOATING_IP not disassociated within $ASSOCIATE_TIMEOUT seconds&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Release floating address</p>
 </td><td class=code><div class=highlight><pre>
 euca-release-address <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure releasing address $FLOATING_IP&quot;</span>
+    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure releasing address $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait just a tick for everything above to complete so terminate doesn't fail</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-addresses | grep -q $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Floating ip $FLOATING_IP not released within $ASSOCIATE_TIMEOUT seconds&quot;</span>
-    <span class="nb">exit </span>1
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Floating ip $FLOATING_IP not released within $ASSOCIATE_TIMEOUT seconds&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Terminate instance</p>
 </td><td class=code><div class=highlight><pre>
 euca-terminate-instances <span class="nv">$INSTANCE</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure terminating instance $INSTANCE&quot;</span>
+    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure terminating instance $INSTANCE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Assure it has terminated within a reasonable time. The behaviour of this
@@ -573,15 +577,14 @@ case changed with bug/836978. Requesting the status of an invalid instance
 will now return an error message including the instance id, so we need to
 filter that out.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-instances $INSTANCE | grep -ve \&quot;\\\(InstanceNotFound\\\|InvalidInstanceID\[.\]NotFound\\\)\&quot; | grep -q $INSTANCE; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t terminate within $TERMINATE_TIMEOUT seconds&quot;</span>
-    <span class="nb">exit </span>1
+<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-instances $INSTANCE | grep -ve &#39;\(InstanceNotFound\|InvalidInstanceID\.NotFound\)&#39; | grep -q $INSTANCE; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;server didn&#39;t terminate within $TERMINATE_TIMEOUT seconds&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete secgroup</p>
 </td><td class=code><div class=highlight><pre>
-euca-delete-group <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+euca-delete-group <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
@@ -589,6 +592,8 @@ euca-delete-group <span class="nv">$SECGROUP</span> <span class="o">||</span> di
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

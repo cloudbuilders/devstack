@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -334,7 +346,7 @@ ul.auto-toc {
 <p>lib/heat
 Install and start <strong>Heat</strong> service
 To enable, add the following to localrc
-ENABLED_SERVICES+=,heat,h-api-cfn,h-api-cw,h-eng</p>
+ENABLED_SERVICES+=,heat,h-api,h-api-cfn,h-api-cw,h-eng</p>
 </td><td class=code><div class=highlight><pre>
 
 
@@ -368,10 +380,19 @@ cleanup_heat</p>
 <div class="section" id="defaults">
 <h1>Defaults</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">HEAT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/heat
-<span class="nv">HEATCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-heatclient
+
 </pre></div></td></tr><tr><td class=docs>
 <p>set up default directories</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">HEAT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/heat
+<span class="nv">HEATCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-heatclient
+<span class="nv">HEAT_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/heat</span><span class="k">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="functions">
+<h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -379,10 +400,7 @@ cleanup_heat</p>
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>cleanup_heat<span class="o">()</span> <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>This function intentionally left blank</p>
-</td><td class=code><div class=highlight><pre>
-    :
+    sudo rm -rf <span class="nv">$HEAT_AUTH_CACHE_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -412,6 +430,11 @@ runs that a clean run would need to clean up</p>
     <span class="nv">HEAT_API_CW_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_PORT</span><span class="k">:-</span><span class="nv">8003</span><span class="k">}</span>
     <span class="nv">HEAT_API_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
     <span class="nv">HEAT_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_PORT</span><span class="k">:-</span><span class="nv">8004</span><span class="k">}</span>
+    <span class="nv">HEAT_API_PASTE_FILE</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/api-paste.ini
+    <span class="nv">HEAT_POLICY_FILE</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/policy.json
+
+    cp <span class="nv">$HEAT_DIR</span>/etc/heat/api-paste.ini <span class="nv">$HEAT_API_PASTE_FILE</span>
+    cp <span class="nv">$HEAT_DIR</span>/etc/heat/policy.json <span class="nv">$HEAT_POLICY_FILE</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Cloudformation API</p>
@@ -423,20 +446,18 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_API_CFN_HOST</span>
     iniset <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT bind_port <span class="nv">$HEAT_API_CFN_PORT</span>
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> keystone_authtoken admin_user heat
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> keystone_authtoken signing_dir <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api-cfn
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
 
     iniset_rpc_backend heat <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT
-
-    <span class="nv">HEAT_API_CFN_PASTE_INI</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-api-cfn-paste.ini
-    cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-api-cfn-paste.ini <span class="nv">$HEAT_API_CFN_PASTE_INI</span>
-    iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
-    iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:authtoken admin_user heat
-    iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
-    iniset <span class="nv">$HEAT_API_CFN_PASTE_INI</span> filter:ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
 
 </pre></div></td></tr><tr><td class=docs>
 <p>OpenStack API</p>
@@ -448,20 +469,19 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_API_HOST</span>
     iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT bind_port <span class="nv">$HEAT_API_PORT</span>
+    iniset <span class="nv">$HEAT_API_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+    iniset <span class="nv">$HEAT_API_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="nv">$HEAT_API_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$HEAT_API_CONF</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
+    iniset <span class="nv">$HEAT_API_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniset <span class="nv">$HEAT_API_CONF</span> keystone_authtoken admin_user heat
+    iniset <span class="nv">$HEAT_API_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    iniset <span class="nv">$HEAT_API_CONF</span> keystone_authtoken signing_dir <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api
+    iniset <span class="nv">$HEAT_API_CONF</span> ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
+    iniset <span class="nv">$HEAT_API_CONF</span> ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
 
     iniset_rpc_backend heat <span class="nv">$HEAT_API_CONF</span> DEFAULT
 
-    <span class="nv">HEAT_API_PASTE_INI</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-api-paste.ini
-    cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-api-paste.ini <span class="nv">$HEAT_API_PASTE_INI</span>
-    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
-    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken admin_user heat
-    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
-    iniset <span class="nv">$HEAT_API_PASTE_INI</span> filter:ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
 
 </pre></div></td></tr><tr><td class=docs>
 <p>engine</p>
@@ -476,9 +496,7 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT heat_metadata_server_url http://<span class="nv">$HEAT_API_CFN_HOST</span>:<span class="nv">$HEAT_API_CFN_PORT</span>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT heat_waitcondition_server_url http://<span class="nv">$HEAT_API_CFN_HOST</span>:<span class="nv">$HEAT_API_CFN_PORT</span>/v1/waitcondition
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT heat_watch_server_url http://<span class="nv">$HEAT_API_CW_HOST</span>:<span class="nv">$HEAT_API_CW_PORT</span>
-    <span class="nb">local </span>dburl
-    database_connection_url dburl heat
-    iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
+    iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT sql_connection <span class="sb">`</span>database_connection_url heat<span class="sb">`</span>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT auth_encryption_key <span class="sb">`</span>hexdump -n 16 -v -e <span class="s1">&#39;/1 &quot;%02x&quot;&#39;</span> /dev/random<span class="sb">`</span>
 
     iniset_rpc_backend heat <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT
@@ -493,20 +511,19 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_API_CW_HOST</span>
     iniset <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT bind_port <span class="nv">$HEAT_API_CW_PORT</span>
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> keystone_authtoken admin_user heat
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> keystone_authtoken signing_dir <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api-cloudwatch
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
 
     iniset_rpc_backend heat <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT
 
-    <span class="nv">HEAT_API_CW_PASTE_INI</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-api-cloudwatch-paste.ini
-    cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-api-cloudwatch-paste.ini <span class="nv">$HEAT_API_CW_PASTE_INI</span>
-    iniset <span class="nv">$HEAT_API_CW_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$HEAT_API_CW_PASTE_INI</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$HEAT_API_CW_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="nv">$HEAT_API_CW_PASTE_INI</span> filter:authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
-    iniset <span class="nv">$HEAT_API_CW_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$HEAT_API_CW_PASTE_INI</span> filter:authtoken admin_user heat
-    iniset <span class="nv">$HEAT_API_CW_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$HEAT_API_CW_PASTE_INI</span> filter:ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
-    iniset <span class="nv">$HEAT_API_CW_PASTE_INI</span> filter:ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -519,8 +536,23 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
     recreate_database heat utf8
 
-    <span class="nv">$HEAT_DIR</span>/bin/heat-db-setup <span class="nv">$os_PACKAGE</span> -r <span class="nv">$DATABASE_PASSWORD</span>
-    <span class="nv">$HEAT_DIR</span>/tools/nova_create_flavors.sh
+    <span class="nv">$HEAT_DIR</span>/bin/heat-manage db_sync
+    create_heat_cache_dir
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create_heat_cache_dir() - Part of the init_heat() process</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>create_heat_cache_dir<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create cache dirs</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkdir -p <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api
+    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api
+    sudo mkdir -p <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api-cfn
+    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api-cfn
+    sudo mkdir -p <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api-cloudwatch
+    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api-cloudwatch
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -552,19 +584,28 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>stop_heat<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Kill the cinder screen windows</p>
+<p>Kill the screen windows</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>serv in h-eng h-api-cfn h-api-cw; <span class="k">do</span>
+    <span class="k">for </span>serv in h-eng h-api h-api-cfn h-api-cw; <span class="k">do</span>
 <span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
 <span class="nb">    </span><span class="k">done</span>
 <span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -362,10 +374,24 @@ to refrain from exercising euca.sh use SKIP_EXERCISES=euca</p>
 <span class="nv">SKIP_EXERCISES</span><span class="o">=</span><span class="k">${</span><span class="nv">SKIP_EXERCISES</span><span class="k">:-</span><span class="s2">&quot;&quot;</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>comma separated list of script basenames to run
+to run only euca.sh use RUN_EXERCISES=euca</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">basenames</span><span class="o">=</span><span class="k">${</span><span class="nv">RUN_EXERCISES</span><span class="k">:-</span><span class="s2">&quot;&quot;</span><span class="k">}</span>
+
+<span class="nv">EXERCISE_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/exercises
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;${basenames}&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
 <p>Locate the scripts we should run</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">EXERCISE_DIR</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/exercises
-<span class="nv">basenames</span><span class="o">=</span><span class="k">$(for </span>b in <span class="sb">`</span>ls <span class="nv">$EXERCISE_DIR</span>/*.sh<span class="sb">`</span>; <span class="k">do </span>basename <span class="nv">$b</span> .sh; <span class="k">done)</span>
+    <span class="nv">basenames</span><span class="o">=</span><span class="k">$(for </span>b in <span class="sb">`</span>ls <span class="nv">$EXERCISE_DIR</span>/*.sh<span class="sb">`</span>; <span class="k">do </span>basename <span class="nv">$b</span> .sh; <span class="k">done)</span>
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If RUN_EXERCISES was specified, ignore SKIP_EXERCISES.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">SKIP_EXERCISES</span><span class="o">=</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Track the state of each script</p>
@@ -378,7 +404,7 @@ to refrain from exercising euca.sh use SKIP_EXERCISES=euca</p>
 <p>Loop over each possible script (by basename)</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">for </span>script in <span class="nv">$basenames</span>; <span class="k">do</span>
-<span class="k">    if</span> <span class="o">[[</span> ,<span class="nv">$SKIP_EXERCISES</span>, <span class="o">=</span>~ ,<span class="nv">$script</span>, <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> ,<span class="nv">$SKIP_EXERCISES</span>, <span class="o">=</span>~ ,<span class="nv">$script</span>, <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">skips</span><span class="o">=</span><span class="s2">&quot;$skips $script&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;=====================================================================&quot;</span>
@@ -388,7 +414,7 @@ to refrain from exercising euca.sh use SKIP_EXERCISES=euca</p>
         <span class="nv">exitcode</span><span class="o">=</span><span class="nv">$?</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="nv">$exitcode</span> <span class="o">==</span> 55 <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">skips</span><span class="o">=</span><span class="s2">&quot;$skips $script&quot;</span>
-        <span class="k">elif</span> <span class="o">[[</span> <span class="nv">$exitcode</span> -ne 0 <span class="o">]]</span> ; <span class="k">then</span>
+        <span class="k">elif</span> <span class="o">[[</span> <span class="nv">$exitcode</span> -ne 0 <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">failures</span><span class="o">=</span><span class="s2">&quot;$failures $script&quot;</span>
         <span class="k">else</span>
 <span class="k">            </span><span class="nv">passes</span><span class="o">=</span><span class="s2">&quot;$passes $script&quot;</span>
@@ -411,11 +437,13 @@ to refrain from exercising euca.sh use SKIP_EXERCISES=euca</p>
 <span class="k">done</span>
 <span class="nb">echo</span> <span class="s2">&quot;=====================================================================&quot;</span>
 
-<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$failures&quot;</span> <span class="o">]</span> ; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$failures&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">exit </span>1
 <span class="k">fi</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

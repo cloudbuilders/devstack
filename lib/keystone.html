@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -372,6 +384,7 @@ cleanup_keystone</p>
 <span class="nv">KEYSTONE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/keystone
 <span class="nv">KEYSTONE_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/keystone</span><span class="k">}</span>
 <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_CONF_DIR</span>/keystone.conf
+<span class="nv">KEYSTONE_PASTE_INI</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_PASTE_INI</span><span class="k">:-</span><span class="nv">$KEYSTONE_CONF_DIR</span><span class="p">/keystone-paste.ini</span><span class="k">}</span>
 <span class="nv">KEYSTONE_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/keystone</span><span class="k">}</span>
 
 <span class="nv">KEYSTONECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-keystoneclient
@@ -409,11 +422,16 @@ Choose from 'UUID' and 'PKI'</p>
 <span class="nv">KEYSTONE_SERVICE_PORT_INT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PORT_INT</span><span class="k">:-</span><span class="nv">5001</span><span class="k">}</span>
 <span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">$SERVICE_PROTOCOL</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Set the tenant for service accounts in Keystone</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TENANT_NAME</span><span class="k">:-</span><span class="nv">service</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="entry-points">
-<h1>Entry Points</h1>
+<div class="section" id="functions">
+<h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -430,18 +448,9 @@ This function intentionally left blank</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>configure_keystoneclient() - Set config files, create data dirs, etc</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_keystoneclient<span class="o">()</span> <span class="o">{</span>
-    setup_develop <span class="nv">$KEYSTONECLIENT_DIR</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>configure_keystone() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_keystone<span class="o">()</span> <span class="o">{</span>
-    setup_develop <span class="nv">$KEYSTONE_DIR</span>
-
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$KEYSTONE_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$KEYSTONE_CONF_DIR</span>
     <span class="k">fi</span>
@@ -450,19 +459,38 @@ This function intentionally left blank</p>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CONF_DIR&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$KEYSTONE_DIR/etc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>cp -p <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf.sample <span class="nv">$KEYSTONE_CONF</span>
         cp -p <span class="nv">$KEYSTONE_DIR</span>/etc/policy.json <span class="nv">$KEYSTONE_CONF_DIR</span>
+        <span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;$KEYSTONE_DIR/etc/keystone-paste.ini&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>cp -p <span class="s2">&quot;$KEYSTONE_DIR/etc/keystone-paste.ini&quot;</span> <span class="s2">&quot;$KEYSTONE_PASTE_INI&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+<span class="k">    if</span> <span class="o">[[</span> -f <span class="s2">&quot;$KEYSTONE_PASTE_INI&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="s2">&quot;$KEYSTONE_CONF&quot;</span> paste_deploy config_file <span class="s2">&quot;$KEYSTONE_PASTE_INI&quot;</span>
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>compatibility with mixed cfg and paste.deploy configuration</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">KEYSTONE_PASTE_INI</span><span class="o">=</span><span class="s2">&quot;$KEYSTONE_CONF&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Rewrite stock <tt class="docutils literal">keystone.conf</tt></p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">local </span>dburl
-    database_connection_url dburl keystone
 
     <span class="k">if </span>is_service_enabled ldap; <span class="k">then</span>
         <span class="c">#Set all needed ldap values</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap password  <span class="nv">$LDAP_PASSWORD</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap user <span class="s2">&quot;dc=Manager,dc=openstack,dc=org&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap suffix <span class="s2">&quot;dc=openstack,dc=org&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap use_dumb_member <span class="s2">&quot;True&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap user_attribute_ignore <span class="s2">&quot;enabled,email,tenants,tenantId&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_attribute_ignore <span class="s2">&quot;enabled&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_domain_id_attribute <span class="s2">&quot;businessCategory&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_desc_attribute <span class="s2">&quot;description&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_tree_dn <span class="s2">&quot;ou=Projects,dc=openstack,dc=org&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap user_domain_id_attribute <span class="s2">&quot;businessCategory&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap user_tree_dn <span class="s2">&quot;ou=Users,dc=openstack,dc=org&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT member_role_id <span class="s2">&quot;9fe2ff9ee4384b1894a90878d3e92bab&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT member_role_name <span class="s2">&quot;_member_&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span>  <span class="s2">&quot;$KEYSTONE_IDENTITY_BACKEND&quot;</span> <span class="o">==</span> <span class="s2">&quot;ldap&quot;</span>  <span class="o">]]</span>; <span class="k">then</span>
@@ -479,16 +507,8 @@ This function intentionally left blank</p>
 
 <span class="k">    </span>iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_token <span class="s2">&quot;$SERVICE_TOKEN&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> signing token_format <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span>
-    iniset <span class="nv">$KEYSTONE_CONF</span> sql connection <span class="nv">$dburl</span>
+    iniset <span class="nv">$KEYSTONE_CONF</span> sql connection <span class="sb">`</span>database_connection_url keystone<span class="sb">`</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> ec2 driver <span class="s2">&quot;keystone.contrib.ec2.backends.sql.Ec2&quot;</span>
-    sed -e <span class="s2">&quot;</span>
-<span class="s2">        /^pipeline.*ec2_extension crud_/s|ec2_extension crud_extension|ec2_extension s3_extension crud_extension|;</span>
-<span class="s2">    &quot;</span> -i <span class="nv">$KEYSTONE_CONF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Append the S3 bits</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$KEYSTONE_CONF</span> filter:s3_extension paste.filter_factory <span class="s2">&quot;keystone.contrib.s3:S3Extension.factory&quot;</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;sql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> token driver keystone.token.backends.sql.Token
@@ -508,7 +528,7 @@ This function intentionally left blank</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Add swift endpoints to service catalog if swift is enabled</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if </span>is_service_enabled swift; <span class="k">then</span>
+        <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.publicURL = http://%SERVICE_HOST%:8080/v1/AUTH_\$(tenant_id)s&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
             <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.adminURL = http://%SERVICE_HOST%:8080/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
             <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.object_store.internalURL = http://%SERVICE_HOST%:8080/v1/AUTH_\$(tenant_id)s&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
@@ -516,13 +536,13 @@ This function intentionally left blank</p>
         <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Add quantum endpoints to service catalog if quantum is enabled</p>
+<p>Add neutron endpoints to service catalog if neutron is enabled</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+        <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.publicURL = http://%SERVICE_HOST%:$Q_PORT/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
             <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.adminURL = http://%SERVICE_HOST%:$Q_PORT/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
             <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.internalURL = http://%SERVICE_HOST%:$Q_PORT/&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
-            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.name = Quantum Service&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
+            <span class="nb">echo</span> <span class="s2">&quot;catalog.RegionOne.network.name = Neutron Service&quot;</span> &gt;&gt; <span class="nv">$KEYSTONE_CATALOG</span>
         <span class="k">fi</span>
 
 <span class="k">        </span>sed -e <span class="s2">&quot;</span>
@@ -548,7 +568,6 @@ This function intentionally left blank</p>
     cp <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf.sample <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf
     iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root level <span class="s2">&quot;DEBUG&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root handlers <span class="s2">&quot;devel,production&quot;</span>
-
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -645,37 +664,6 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
             --adminurl <span class="s2">&quot;$KEYSTONE_AUTH_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span> <span class="se">\</span>
             --internalurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0&quot;</span>
     <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>TODO(dtroyer): This is part of a series of changes...remove these when</dt>
-<dd><blockquote class="first">
-complete if they are really unused</blockquote>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 165)</p>
-Block quote ends without a blank line; unexpected unindent.</div>
-<dl class="last docutils">
-<dt>KEYSTONEADMIN_ROLE=$(keystone role-create </dt>
-<dd>--name KeystoneAdmin | grep &quot; id &quot; | get_field 2)</dd>
-<dt>KEYSTONESERVICE_ROLE=$(keystone role-create </dt>
-<dd>--name KeystoneServiceAdmin | grep &quot; id &quot; | get_field 2)</dd>
-</dl>
-</dd>
-</dl>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>TODO(termie): these two might be dubious</dt>
-<dd><dl class="first last docutils">
-<dt>keystone user-role-add </dt>
-<dd>--user_id $ADMIN_USER --role_id $KEYSTONEADMIN_ROLE --tenant_id $ADMIN_TENANT</dd>
-<dt>keystone user-role-add </dt>
-<dd>--user_id $ADMIN_USER --role_id $KEYSTONESERVICE_ROLE --tenant_id $ADMIN_TENANT</dd>
-</dl>
-</dd>
-</dl>
-</td><td class=code><div class=highlight><pre>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -713,6 +701,7 @@ Block quote ends without a blank line; unexpected unindent.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_keystoneclient<span class="o">()</span> <span class="o">{</span>
     git_clone <span class="nv">$KEYSTONECLIENT_REPO</span> <span class="nv">$KEYSTONECLIENT_DIR</span> <span class="nv">$KEYSTONECLIENT_BRANCH</span>
+    setup_develop <span class="nv">$KEYSTONECLIENT_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -726,6 +715,7 @@ Block quote ends without a blank line; unexpected unindent.</div>
 <span class="k">        </span>install_ldap
     <span class="k">fi</span>
 <span class="k">    </span>git_clone <span class="nv">$KEYSTONE_REPO</span> <span class="nv">$KEYSTONE_DIR</span> <span class="nv">$KEYSTONE_BRANCH</span>
+    setup_develop <span class="nv">$KEYSTONE_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -746,8 +736,7 @@ Block quote ends without a blank line; unexpected unindent.</div>
     screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= curl -s http://$SERVICE_HOST:$service_port/v2.0/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;keystone did not start&quot;</span>
-      <span class="nb">exit </span>1
+<span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;keystone did not start&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -769,12 +758,21 @@ Block quote ends without a blank line; unexpected unindent.</div>
     screen -S <span class="nv">$SCREEN_NAME</span> -p key -X <span class="nb">kill</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

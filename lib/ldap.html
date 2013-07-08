@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -333,7 +345,8 @@ ul.auto-toc {
 
 <p>lib/ldap
 Functions to control the installation and configuration of <strong>ldap</strong>
-<tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
+<tt class="docutils literal">lib/keystone</tt> calls the entry points in this order:
+install_ldap()</p>
 </td><td class=code><div class=highlight><pre>
 
 
@@ -342,6 +355,12 @@ Functions to control the installation and configuration of <strong>ldap</strong>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
+
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="functions">
+<h1>Functions</h1>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install_ldap
@@ -353,14 +372,12 @@ install_ldap() - Collect source and prepare</p>
     <span class="nb">echo</span> <span class="s2">&quot;os_VENDOR is $os_VENDOR&quot;</span>
     <span class="nb">printf</span> <span class="s2">&quot;installing&quot;</span>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;os vendor is Ubuntu&quot;</span>
-        <span class="nv">LDAP_OLCDB_NUMBER</span><span class="o">=</span>1
+<span class="k">        </span><span class="nv">LDAP_OLCDB_NUMBER</span><span class="o">=</span>1
         <span class="nv">LDAP_ROOTPW_COMMAND</span><span class="o">=</span>replace
         sudo <span class="nv">DEBIAN_FRONTEND</span><span class="o">=</span>noninteractive apt-get install slapd ldap-utils
         <span class="c">#automatically starts LDAP on ubuntu so no need to call start_ldap</span>
-    <span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;os vendor is Fedora&quot;</span>
-        <span class="nv">LDAP_OLCDB_NUMBER</span><span class="o">=</span>2
+    <span class="k">elif </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
+<span class="k">        </span><span class="nv">LDAP_OLCDB_NUMBER</span><span class="o">=</span>2
         <span class="nv">LDAP_ROOTPW_COMMAND</span><span class="o">=</span>add
         start_ldap
     <span class="k">fi</span>
@@ -377,9 +394,17 @@ install_ldap() - Collect source and prepare</p>
     sudo ldapmodify -Y EXTERNAL -H ldapi:/// -f <span class="nv">$TMP_MGR_DIFF_FILE</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>On fedora we need to manually add cosine and inetorgperson schemas</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span>sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif
+        sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>add our top level ldap nodes</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>ldapsearch -x -w <span class="nv">$LDAP_PASSWORD</span> -H ldap://localhost -D <span class="nv">dc</span><span class="o">=</span>Manager,dc<span class="o">=</span>openstack,dc<span class="o">=</span>org -x -b <span class="nv">dc</span><span class="o">=</span>openstack,dc<span class="o">=</span>org | grep -q <span class="s2">&quot;Success&quot;</span> ; <span class="k">then</span>
+    <span class="k">if </span>ldapsearch -x -w <span class="nv">$LDAP_PASSWORD</span> -H ldap://localhost -D <span class="nv">dc</span><span class="o">=</span>Manager,dc<span class="o">=</span>openstack,dc<span class="o">=</span>org -x -b <span class="nv">dc</span><span class="o">=</span>openstack,dc<span class="o">=</span>org | grep -q <span class="s2">&quot;Success&quot;</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">printf</span> <span class="s2">&quot;LDAP already configured for OpenStack\n&quot;</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CLEAR_LDAP&quot;</span> <span class="o">==</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -424,11 +449,20 @@ install_ldap() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>

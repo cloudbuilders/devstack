@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -401,13 +413,17 @@ cp_it source destination</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Prints &quot;message&quot; and exits
-die &quot;message&quot;</p>
+<p>Prints line number and &quot;message&quot; then exits
+die $LINENO &quot;message&quot;</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>die<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span><span class="nv">exitcode</span><span class="o">=</span><span class="nv">$?</span>
     <span class="nb">set</span> +o xtrace
-    <span class="nb">echo</span> <span class="nv">$@</span>
+    <span class="nb">local </span><span class="nv">line</span><span class="o">=</span><span class="nv">$1</span>; <span class="nb">shift</span>
+<span class="nb">    </span><span class="k">if</span> <span class="o">[</span> <span class="nv">$exitcode</span> <span class="o">==</span> 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">exitcode</span><span class="o">=</span>1
+    <span class="k">fi</span>
+<span class="k">    </span>err <span class="nv">$line</span> <span class="s2">&quot;$*&quot;</span>
     <span class="nb">exit</span> <span class="nv">$exitcode</span>
 <span class="o">}</span>
 
@@ -416,18 +432,56 @@ die &quot;message&quot;</p>
 <p>Checks an environment variable is not set or has length 0 OR if the
 exit code is non-zero and prints &quot;message&quot; and exits
 NOTE: env-var is the variable name without a '$'
-die_if_not_set env-var &quot;message&quot;</p>
+die_if_not_set $LINENO env-var &quot;message&quot;</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>die_if_not_set<span class="o">()</span> <span class="o">{</span>
-    <span class="o">(</span>
-        <span class="nb">local </span><span class="nv">exitcode</span><span class="o">=</span><span class="nv">$?</span>
-        <span class="nb">set</span> +o xtrace
-        <span class="nb">local </span><span class="nv">evar</span><span class="o">=</span><span class="nv">$1</span>; <span class="nb">shift</span>
-<span class="nb">        </span><span class="k">if</span> ! is_set <span class="nv">$evar</span> <span class="o">||</span> <span class="o">[</span> <span class="nv">$exitcode</span> !<span class="o">=</span> 0 <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="nv">$@</span>
-            <span class="nb">exit</span> -1
-        <span class="k">fi</span>
-    <span class="o">)</span>
+    <span class="nb">local </span><span class="nv">exitcode</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nv">FXTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+    <span class="nb">set</span> +o xtrace
+    <span class="nb">local </span><span class="nv">line</span><span class="o">=</span><span class="nv">$1</span>; <span class="nb">shift</span>
+<span class="nb">    local </span><span class="nv">evar</span><span class="o">=</span><span class="nv">$1</span>; <span class="nb">shift</span>
+<span class="nb">    </span><span class="k">if</span> ! is_set <span class="nv">$evar</span> <span class="o">||</span> <span class="o">[</span> <span class="nv">$exitcode</span> !<span class="o">=</span> 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$line</span> <span class="s2">&quot;$*&quot;</span>
+    <span class="k">fi</span>
+    <span class="nv">$FXTRACE</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Prints line number and &quot;message&quot; in error format
+err $LINENO &quot;message&quot;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>err<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">exitcode</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nv">errXTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+    <span class="nb">set</span> +o xtrace
+    <span class="nb">local </span><span class="nv">msg</span><span class="o">=</span><span class="s2">&quot;[ERROR] $0:$1 $2&quot;</span>
+    <span class="nb">echo</span> <span class="nv">$msg</span> 1&gt;&amp;2;
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="nv">$msg</span> &gt;&gt; <span class="s2">&quot;${SCREEN_LOGDIR}/error.log&quot;</span>
+    <span class="k">fi</span>
+    <span class="nv">$errXTRACE</span>
+    <span class="k">return</span> <span class="nv">$exitcode</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Checks an environment variable is not set or has length 0 OR if the
+exit code is non-zero and prints &quot;message&quot;
+NOTE: env-var is the variable name without a '$'
+err_if_not_set $LINENO env-var &quot;message&quot;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>err_if_not_set<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">exitcode</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nv">errinsXTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+    <span class="nb">set</span> +o xtrace
+    <span class="nb">local </span><span class="nv">line</span><span class="o">=</span><span class="nv">$1</span>; <span class="nb">shift</span>
+<span class="nb">    local </span><span class="nv">evar</span><span class="o">=</span><span class="nv">$1</span>; <span class="nb">shift</span>
+<span class="nb">    </span><span class="k">if</span> ! is_set <span class="nv">$evar</span> <span class="o">||</span> <span class="o">[</span> <span class="nv">$exitcode</span> !<span class="o">=</span> 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>err <span class="nv">$line</span> <span class="s2">&quot;$*&quot;</span>
+    <span class="k">fi</span>
+    <span class="nv">$errinsXTRACE</span>
+    <span class="k">return</span> <span class="nv">$exitcode</span>
 <span class="o">}</span>
 
 
@@ -474,23 +528,76 @@ get_field field-number</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Get the default value for HOST_IP
+get_default_host_ip fixed_range floating_range host_ip_iface host_ip</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>get_default_host_ip<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">fixed_range</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">floating_range</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">host_ip_iface</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">host_ip</span><span class="o">=</span><span class="nv">$4</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Find the interface used for the default route</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">host_ip_iface</span><span class="o">=</span><span class="k">${</span><span class="nv">host_ip_iface</span><span class="k">:-$(</span>ip route | sed -n <span class="s1">&#39;/^default/{ s/.*dev \(\w\+\)\s\+.*/\1/; p; }&#39;</span> | head -1<span class="k">)}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Search for an IP unless an explicit is set by <tt class="docutils literal">HOST_IP</tt> environment variable</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$host_ip&quot;</span> -o <span class="s2">&quot;$host_ip&quot;</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">host_ip</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="nv">host_ips</span><span class="o">=</span><span class="sb">`</span><span class="nv">LC_ALL</span><span class="o">=</span>C ip -f inet addr show <span class="k">${</span><span class="nv">host_ip_iface</span><span class="k">}</span> | awk <span class="s1">&#39;/inet/ {split($2,parts,&quot;/&quot;);  print parts[1]}&#39;</span><span class="sb">`</span>
+        <span class="k">for </span>IP in <span class="nv">$host_ips</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Attempt to filter out IP addresses that are part of the fixed and
+floating range. Note that this method only works if the <tt class="docutils literal">netaddr</tt>
+python library is installed. If it is not installed, an error
+will be printed and the first IP from the interface will be used.
+If that is not correct set <tt class="docutils literal">HOST_IP</tt> in <tt class="docutils literal">localrc</tt> to the correct
+address.</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="k">if</span> ! <span class="o">(</span>address_in_net <span class="nv">$IP</span> <span class="nv">$fixed_range</span> <span class="o">||</span> address_in_net <span class="nv">$IP</span> <span class="nv">$floating_range</span><span class="o">)</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">host_ip</span><span class="o">=</span><span class="nv">$IP</span>
+                <span class="nb">break</span>;
+            <span class="k">fi</span>
+<span class="k">        done</span>
+<span class="k">    fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="nv">$host_ip</span>
+<span class="o">}</span>
+
+
+<span class="k">function </span>_get_package_dir<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span>pkg_dir
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span><span class="nv">pkg_dir</span><span class="o">=</span><span class="nv">$FILES</span>/apts
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span><span class="nv">pkg_dir</span><span class="o">=</span><span class="nv">$FILES</span>/rpms
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        </span><span class="nv">pkg_dir</span><span class="o">=</span><span class="nv">$FILES</span>/rpms-suse
+    <span class="k">else</span>
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;list of packages&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;$pkg_dir&quot;</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 <p>get_packages() collects a list of package names of any type from the
 prerequisite files in <tt class="docutils literal"><span class="pre">files/{apts|rpms}</span></tt>.  The list is intended
 to be passed to a package installer such as apt or yum.</p>
-<p>Only packages required for the services in <tt class="docutils literal">ENABLED_SERVICES</tt> will be
+<p>Only packages required for the services in 1st argument will be
 included.  Two bits of metadata are recognized in the prerequisite files:
 - <tt class="docutils literal"># NOPRIME</tt> defers installation to be performed later in stack.sh
 - <tt class="docutils literal"># dist:DISTRO</tt> or <tt class="docutils literal">dist:DISTRO1,DISTRO2</tt> limits the selection</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 75)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 109)</p>
 Unexpected indentation.</div>
 <blockquote>
 of the package to the distros listed.  The distro names are case insensitive.</blockquote>
-<p>Uses globals <tt class="docutils literal">ENABLED_SERVICES</tt>
-get_packages dir</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>get_packages<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">package_dir</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">services</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">package_dir</span><span class="o">=</span><span class="k">$(</span>_get_package_dir<span class="k">)</span>
     <span class="nb">local </span>file_to_parse
     <span class="nb">local </span>service
 
@@ -501,7 +608,7 @@ get_packages dir</p>
 <span class="k">    if</span> <span class="o">[[</span> -z <span class="s2">&quot;$DISTRO&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>GetDistro
     <span class="k">fi</span>
-<span class="k">    for </span>service in general <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">    for </span>service in general <span class="k">${</span><span class="nv">services</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Allow individual services to specify dependencies</p>
 </td><td class=code><div class=highlight><pre>
@@ -527,6 +634,10 @@ glance client is</p>
 <span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ ceilometer <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} ceilometer&quot;</span>
             <span class="k">fi</span>
+<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> s-* <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ swift <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} swift&quot;</span>
+            <span class="k">fi</span>
 <span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> n-* <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ nova <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} nova&quot;</span>
@@ -540,8 +651,8 @@ glance client is</p>
 <span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} keystone&quot;</span>
             <span class="k">fi</span>
 <span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$service</span> <span class="o">==</span> q-* <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ quantum <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} quantum&quot;</span>
+<span class="k">            if</span> <span class="o">[[</span> ! <span class="nv">$file_to_parse</span> <span class="o">=</span>~ neutron <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">file_to_parse</span><span class="o">=</span><span class="s2">&quot;${file_to_parse} neutron&quot;</span>
             <span class="k">fi</span>
 <span class="k">        fi</span>
 <span class="k">    done</span>
@@ -620,14 +731,16 @@ GetOSVersion<span class="o">()</span> <span class="o">{</span>
         <span class="nv">os_RELEASE</span><span class="o">=</span><span class="k">$(</span>lsb_release -r -s<span class="k">)</span>
         <span class="nv">os_UPDATE</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
         <span class="nv">os_PACKAGE</span><span class="o">=</span><span class="s2">&quot;rpm&quot;</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;Debian,Ubuntu&quot;</span> <span class="o">=</span>~ <span class="nv">$os_VENDOR</span> <span class="o">]]</span>; <span class="k">then</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;Debian,Ubuntu,LinuxMint&quot;</span> <span class="o">=</span>~ <span class="nv">$os_VENDOR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">os_PACKAGE</span><span class="o">=</span><span class="s2">&quot;deb&quot;</span>
         <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;SUSE LINUX&quot;</span> <span class="o">=</span>~ <span class="nv">$os_VENDOR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>lsb_release -d -s | grep -q openSUSE
             <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nv">os_VENDOR</span><span class="o">=</span><span class="s2">&quot;openSUSE&quot;</span>
             <span class="k">fi</span>
-<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$os_VENDOR</span> <span class="o">=</span>~ Red.*Hat <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        elif</span> <span class="o">[[</span> <span class="nv">$os_VENDOR</span> <span class="o">==</span> <span class="s2">&quot;openSUSE project&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">os_VENDOR</span><span class="o">=</span><span class="s2">&quot;openSUSE&quot;</span>
+        <span class="k">elif</span> <span class="o">[[</span> <span class="nv">$os_VENDOR</span> <span class="o">=</span>~ Red.*Hat <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">os_VENDOR</span><span class="o">=</span><span class="s2">&quot;Red Hat&quot;</span>
         <span class="k">fi</span>
 <span class="k">        </span><span class="nv">os_CODENAME</span><span class="o">=</span><span class="k">$(</span>lsb_release -c -s<span class="k">)</span>
@@ -669,54 +782,16 @@ Fedora release 16 (Verne)</p>
 <span class="k">            </span><span class="nv">os_VENDOR</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
         <span class="k">done</span>
 <span class="k">        </span><span class="nv">os_PACKAGE</span><span class="o">=</span><span class="s2">&quot;rpm&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If lsb_release is not installed, we should be able to detect Debian OS</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">elif</span> <span class="o">[[</span> -f /etc/debian_version <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="k">$(</span>cat /proc/version<span class="k">)</span> <span class="o">=</span>~ <span class="s2">&quot;Debian&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">os_VENDOR</span><span class="o">=</span><span class="s2">&quot;Debian&quot;</span>
+        <span class="nv">os_PACKAGE</span><span class="o">=</span><span class="s2">&quot;deb&quot;</span>
+        <span class="nv">os_CODENAME</span><span class="o">=</span><span class="k">$(</span>awk <span class="s1">&#39;/VERSION=/&#39;</span> /etc/os-release | sed <span class="s1">&#39;s/VERSION=//&#39;</span> | sed -r <span class="s1">&#39;s/\&quot;|\(|\)//g&#39;</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>
+        <span class="nv">os_RELEASE</span><span class="o">=</span><span class="k">$(</span>awk <span class="s1">&#39;/VERSION_ID=/&#39;</span> /etc/os-release | sed <span class="s1">&#39;s/VERSION_ID=//&#39;</span> | sed <span class="s1">&#39;s/\&quot;//g&#39;</span><span class="k">)</span>
     <span class="k">fi</span>
 <span class="k">    </span><span class="nb">export </span>os_VENDOR os_RELEASE os_UPDATE os_PACKAGE os_CODENAME
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>git update using reference as a branch.
-git_update_branch ref</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>git_update_branch<span class="o">()</span> <span class="o">{</span>
-
-    <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$1</span>
-
-    git checkout -f origin/<span class="nv">$GIT_BRANCH</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>a local branch might not exist</p>
-</td><td class=code><div class=highlight><pre>
-    git branch -D <span class="nv">$GIT_BRANCH</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>git checkout -b <span class="nv">$GIT_BRANCH</span>
-<span class="o">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>git update using reference as a tag. Be careful editing source at that repo
-as working copy will be in a detached mode
-git_update_tag ref</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>git_update_tag<span class="o">()</span> <span class="o">{</span>
-
-    <span class="nv">GIT_TAG</span><span class="o">=</span><span class="nv">$1</span>
-
-    git tag -d <span class="nv">$GIT_TAG</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>fetching given tag only</p>
-</td><td class=code><div class=highlight><pre>
-    git fetch origin tag <span class="nv">$GIT_TAG</span>
-    git checkout -f <span class="nv">$GIT_TAG</span>
-<span class="o">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>git update using reference as a branch.
-git_update_remote_branch ref</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>git_update_remote_branch<span class="o">()</span> <span class="o">{</span>
-
-    <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$1</span>
-
-    git checkout -b <span class="nv">$GIT_BRANCH</span> -t origin/<span class="nv">$GIT_BRANCH</span>
 <span class="o">}</span>
 
 
@@ -726,9 +801,9 @@ Sets <tt class="docutils literal">DISTRO</tt> from the <tt class="docutils liter
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>GetDistro<span class="o">()</span> <span class="o">{</span>
     GetOSVersion
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>Ubuntu<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>Ubuntu<span class="o">)</span> <span class="o">||</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>Debian<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>'Everyone' refers to Ubuntu releases by the code name adjective</p>
+<p>'Everyone' refers to Ubuntu / Debian releases by the code name adjective</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">DISTRO</span><span class="o">=</span><span class="nv">$os_CODENAME</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>Fedora<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -747,7 +822,12 @@ Sets <tt class="docutils literal">DISTRO</tt> from the <tt class="docutils liter
         <span class="k">else</span>
 <span class="k">            </span><span class="nv">DISTRO</span><span class="o">=</span><span class="s2">&quot;sle${os_RELEASE}sp${os_UPDATE}&quot;</span>
         <span class="k">fi</span>
-<span class="k">    else</span>
+<span class="k">    elif</span> <span class="o">[[</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>Red Hat<span class="o">)</span> <span class="o">||</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>CentOS<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Drop the . release as we assume it's compatible</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">DISTRO</span><span class="o">=</span><span class="s2">&quot;rhel${os_RELEASE::1}&quot;</span>
+    <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Catch-all for now is Vendor + Release + Update</p>
 </td><td class=code><div class=highlight><pre>
@@ -758,23 +838,8 @@ Sets <tt class="docutils literal">DISTRO</tt> from the <tt class="docutils liter
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Determine if current distribution is an Ubuntu-based distribution.
-It will also detect non-Ubuntu but Debian-based distros; this is not an issue
-since Debian and Ubuntu should be compatible.
-is_ubuntu</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>is_ubuntu <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>GetOSVersion
-    <span class="k">fi</span>
-
-    <span class="o">[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]</span>
-<span class="o">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Determine if current distribution is a Fedora-based distribution
-(Fedora, RHEL, CentOS).
+(Fedora, RHEL, CentOS, etc).
 is_fedora</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>is_fedora <span class="o">{</span>
@@ -801,6 +866,19 @@ is_suse</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Determine if current distribution is an Ubuntu-based distribution
+It will also detect non-Ubuntu but Debian-based distros
+is_ubuntu</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_ubuntu <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>GetOSVersion
+    <span class="k">fi</span>
+    <span class="o">[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Exit after outputting a message about the distribution not being supported.
 exit_distro_not_supported [optional-string-telling-what-is-missing]</p>
 </td><td class=code><div class=highlight><pre>
@@ -810,14 +888,21 @@ exit_distro_not_supported [optional-string-telling-what-is-missing]</p>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[</span> <span class="nv">$# </span>-gt 0 <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Support for $DISTRO is incomplete: no support for $@&quot;</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Support for $DISTRO is incomplete: no support for $@&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Support for $DISTRO is incomplete.&quot;</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Support for $DISTRO is incomplete.&quot;</span>
     <span class="k">fi</span>
-
-<span class="k">    </span><span class="nb">exit </span>1
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Utility function for checking machine architecture
+is_arch arch-type</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_arch <span class="o">{</span>
+    <span class="nv">ARCH_TYPE</span><span class="o">=</span><span class="nv">$1</span>
+
+    <span class="o">[</span> <span class="s2">&quot;($uname -m)&quot;</span> <span class="o">=</span> <span class="s2">&quot;$ARCH_TYPE&quot;</span> <span class="o">]</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>git clone only if directory doesn't exist already.  Since <tt class="docutils literal">DEST</tt> might not
@@ -895,6 +980,53 @@ thinks the pyc files are correct using them)</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>git update using reference as a branch.
+git_update_branch ref</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>git_update_branch<span class="o">()</span> <span class="o">{</span>
+
+    <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$1</span>
+
+    git checkout -f origin/<span class="nv">$GIT_BRANCH</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>a local branch might not exist</p>
+</td><td class=code><div class=highlight><pre>
+    git branch -D <span class="nv">$GIT_BRANCH</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>git checkout -b <span class="nv">$GIT_BRANCH</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>git update using reference as a branch.
+git_update_remote_branch ref</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>git_update_remote_branch<span class="o">()</span> <span class="o">{</span>
+
+    <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$1</span>
+
+    git checkout -b <span class="nv">$GIT_BRANCH</span> -t origin/<span class="nv">$GIT_BRANCH</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>git update using reference as a tag. Be careful editing source at that repo
+as working copy will be in a detached mode
+git_update_tag ref</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>git_update_tag<span class="o">()</span> <span class="o">{</span>
+
+    <span class="nv">GIT_TAG</span><span class="o">=</span><span class="nv">$1</span>
+
+    git tag -d <span class="nv">$GIT_TAG</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>fetching given tag only</p>
+</td><td class=code><div class=highlight><pre>
+    git fetch origin tag <span class="nv">$GIT_TAG</span>
+    git checkout -f <span class="nv">$GIT_TAG</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Comment an option in an INI file
 inicomment config-file section option</p>
 </td><td class=code><div class=highlight><pre>
@@ -904,6 +1036,7 @@ inicomment config-file section option</p>
     <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
     sed -i -e <span class="s2">&quot;/^\[$section\]/,/^\[.*\]/ s|^\($option[ \t]*=.*$\)|#\1|&quot;</span> <span class="s2">&quot;$file&quot;</span>
 <span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Uncomment an option in an INI file
@@ -930,6 +1063,7 @@ iniget config-file section option</p>
     <span class="nb">echo</span> <span class="k">${</span><span class="nv">line</span><span class="p">#*=</span><span class="k">}</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Determinate is the given option present in the INI file
 ini_has_option config-file section option</p>
@@ -942,6 +1076,7 @@ ini_has_option config-file section option</p>
     <span class="nv">line</span><span class="o">=</span><span class="k">$(</span>sed -ne <span class="s2">&quot;/^\[$section\]/,/^\[.*\]/ { /^$option[ \t]*=/ p; }&quot;</span> <span class="s2">&quot;$file&quot;</span><span class="k">)</span>
     <span class="o">[</span> -n <span class="s2">&quot;$line&quot;</span> <span class="o">]</span>
 <span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set an option in an INI file
@@ -975,6 +1110,88 @@ iniset config-file section option value</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Get a multiple line option from an INI file
+iniget_multiline config-file section option</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>iniget_multiline<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span>values
+    <span class="nv">values</span><span class="o">=</span><span class="k">$(</span>sed -ne <span class="s2">&quot;/^\[$section\]/,/^\[.*\]/ { s/^$option[ \t]*=[ \t]*//gp; }&quot;</span> <span class="s2">&quot;$file&quot;</span><span class="k">)</span>
+    <span class="nb">echo</span> <span class="k">${</span><span class="nv">values</span><span class="k">}</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set a multiple line option in an INI file
+iniset_multiline config-file section option value1 value2 valu3 ...</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>iniset_multiline<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">shift </span>3
+    <span class="nb">local </span>values
+    <span class="k">for </span>v in <span class="nv">$@</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>The later sed command inserts each new value in the line next to
+the section identifier, which causes the values to be inserted in
+the reverse order. Do a reverse here to keep the original order.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">values</span><span class="o">=</span><span class="s2">&quot;$v ${values}&quot;</span>
+    <span class="k">done</span>
+<span class="k">    if</span> ! grep -q <span class="s2">&quot;^\[$section\]&quot;</span> <span class="s2">&quot;$file&quot;</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Add section at the end</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> -e <span class="s2">&quot;\n[$section]&quot;</span> &gt;&gt;<span class="s2">&quot;$file&quot;</span>
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove old values</p>
+</td><td class=code><div class=highlight><pre>
+        sed -i -e <span class="s2">&quot;/^\[$section\]/,/^\[.*\]/ { /^$option[ \t]*=/ d; }&quot;</span> <span class="s2">&quot;$file&quot;</span>
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Add new ones</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>v in <span class="nv">$values</span>; <span class="k">do</span>
+<span class="k">        </span>sed -i -e <span class="s2">&quot;/^\[$section\]/ a\\</span>
+<span class="s2">$option = $v</span>
+<span class="s2">&quot;</span> <span class="s2">&quot;$file&quot;</span>
+    <span class="k">done</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Append a new option in an ini file without replacing the old value
+iniadd config-file section option value1 value2 value3 ...</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>iniadd<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">shift </span>3
+    <span class="nb">local </span><span class="nv">values</span><span class="o">=</span><span class="s2">&quot;$(iniget_multiline $file $section $option) $@&quot;</span>
+    iniset_multiline <span class="nv">$file</span> <span class="nv">$section</span> <span class="nv">$option</span> <span class="nv">$values</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Find out if a process exists by partial name.
+is_running name</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_running<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">name</span><span class="o">=</span><span class="nv">$1</span>
+    ps auxw | grep -v grep | grep <span class="k">${</span><span class="nv">name</span><span class="k">}</span> &gt; /dev/null
+    <span class="nv">RC</span><span class="o">=</span><span class="nv">$?</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>some times I really hate bash reverse binary logic</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">return</span> <span class="nv">$RC</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 <p>is_service_enabled() checks if the service(s) specified as arguments are
 enabled by the user in <tt class="docutils literal">ENABLED_SERVICES</tt>.</p>
 <p>Multiple services specified as arguments are <tt class="docutils literal">OR</tt>'ed together; the test
@@ -985,7 +1202,10 @@ is a short-circuit boolean, i.e it returns on the first match.</p>
 <strong>cinder</strong> returns true if any service enabled start with <strong>c-</strong>
 <strong>ceilometer</strong> returns true if any service enabled start with <strong>ceilometer</strong>
 <strong>glance</strong> returns true if any service enabled start with <strong>g-</strong>
-<strong>quantum</strong> returns true if any service enabled start with <strong>q-</strong></dd>
+<strong>neutron</strong> returns true if any service enabled start with <strong>q-</strong>
+<strong>swift</strong> returns true if any service enabled start with <strong>s-</strong>
+For backward compatibility if we have <strong>swift</strong> in ENABLED_SERVICES all the
+<strong>s-</strong> services will be enabled. This will be deprecated in the future.</dd>
 </dl>
 <p>Uses global <tt class="docutils literal">ENABLED_SERVICES</tt>
 is_service_enabled service [service ...]</p>
@@ -998,7 +1218,9 @@ is_service_enabled service [service ...]</p>
         <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> <span class="s2">&quot;cinder&quot;</span> <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;c-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
         <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> <span class="s2">&quot;ceilometer&quot;</span> <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;ceilometer-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
         <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> <span class="s2">&quot;glance&quot;</span> <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;g-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
-        <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> <span class="s2">&quot;quantum&quot;</span> <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;q-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+        <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> <span class="s2">&quot;neutron&quot;</span> <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;q-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+        <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> <span class="s2">&quot;swift&quot;</span> <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;s-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+        <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> s-* <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
     <span class="k">done</span>
 <span class="k">    return </span>1
 <span class="o">}</span>
@@ -1025,7 +1247,7 @@ _cleanup_service_list service-list</p>
 <dd>enable_service qpid</dd>
 </dl>
 <p>This function does not know about the special cases
-for nova, glance, and quantum built into is_service_enabled().
+for nova, glance, and neutron built into is_service_enabled().
 Uses global <tt class="docutils literal">ENABLED_SERVICES</tt>
 enable_service service [service ...]</p>
 </td><td class=code><div class=highlight><pre>
@@ -1049,7 +1271,7 @@ enable_service service [service ...]</p>
 <dd>disable_service rabbit</dd>
 </dl>
 <p>This function does not know about the special cases
-for nova, glance, and quantum built into is_service_enabled().
+for nova, glance, and neutron built into is_service_enabled().
 Uses global <tt class="docutils literal">ENABLED_SERVICES</tt>
 disable_service service [service ...]</p>
 </td><td class=code><div class=highlight><pre>
@@ -1117,6 +1339,23 @@ install_package package [package ...]</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Distro-agnostic package uninstaller
+uninstall_package package [package ...]</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>uninstall_package<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>apt_get purge <span class="s2">&quot;$@&quot;</span>
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span>sudo yum remove -y <span class="s2">&quot;$@&quot;</span>
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        </span>sudo rpm -e <span class="s2">&quot;$@&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;uninstalling packages&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Distro-agnostic function to tell if a package is installed
 is_package_installed package [package ...]</p>
 </td><td class=code><div class=highlight><pre>
@@ -1153,19 +1392,19 @@ is_set env-var</p>
 <p>Wrapper for <tt class="docutils literal">pip install</tt> to set cache and proxy environment variables
 Uses globals <tt class="docutils literal">OFFLINE</tt>, <tt class="docutils literal">PIP_DOWNLOAD_CACHE</tt>, <tt class="docutils literal">PIP_USE_MIRRORS</tt>,</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 355)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 448)</p>
 Unexpected indentation.</div>
 <blockquote>
 <p><tt class="docutils literal">TRACK_DEPENDS</tt>, <a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">*</span></a>_proxy`</p>
 <div class="system-message" id="id5">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 355); <em><a href="#id6">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 448); <em><a href="#id6">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id7">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 355); <em><a href="#id8">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 448); <em><a href="#id8">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 356)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 449)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p>pip_install package [package ...]</p>
 </td><td class=code><div class=highlight><pre>
@@ -1174,7 +1413,7 @@ Block quote ends without a blank line; unexpected unindent.</div>
 <span class="k">    if</span> <span class="o">[[</span> -z <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>GetOSVersion
     <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">source</span> <span class="nv">$DEST</span>/.venv/bin/activate
         <span class="nv">CMD_PIP</span><span class="o">=</span><span class="nv">$DEST</span>/.venv/bin/pip
         <span class="nv">SUDO_PIP</span><span class="o">=</span><span class="s2">&quot;env&quot;</span>
@@ -1182,9 +1421,20 @@ Block quote ends without a blank line; unexpected unindent.</div>
 <span class="k">        </span><span class="nv">SUDO_PIP</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
         <span class="nv">CMD_PIP</span><span class="o">=</span><span class="k">$(</span>get_pip_command<span class="k">)</span>
     <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>RHEL6 pip by default doesn't have this (was introduced
+around 0.8.1 or so)</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">PIP_USE_MIRRORS</span><span class="o">=</span><span class="k">${</span><span class="nv">PIP_USE_MIRRORS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">PIP_USE_MIRRORS</span><span class="o">=</span><span class="k">${</span><span class="nv">PIP_USE_MIRRORS</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+    <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$PIP_USE_MIRRORS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">PIP_MIRROR_OPT</span><span class="o">=</span><span class="s2">&quot;--use-mirrors&quot;</span>
     <span class="k">fi</span>
+
     <span class="nv">$SUDO_PIP</span> <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span><span class="k">${</span><span class="nv">PIP_DOWNLOAD_CACHE</span><span class="k">:-</span><span class="p">/var/cache/pip</span><span class="k">}</span> <span class="se">\</span>
         <span class="nv">HTTP_PROXY</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="se">\</span>
         <span class="nv">HTTPS_PROXY</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
@@ -1207,13 +1457,66 @@ restart_service service-name</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>_run_process() is designed to be backgrounded by run_process() to simulate a
+fork.  It includes the dirty work of closing extra filehandles and preparing log
+files to produce the same logs as screen_it().  The log filename is derived
+from the service name and global-and-now-misnamed SCREEN_LOGDIR
+_run_process service &quot;command-line&quot;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_run_process<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">service</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local command</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Undo logging redirections and close the extra descriptors</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>1&gt;&amp;3
+    <span class="nb">exec </span>2&gt;&amp;3
+    <span class="nb">exec </span>3&gt;&amp;-
+    <span class="nb">exec </span>6&gt;&amp;-
+
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">exec </span>1&gt;&amp;<span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log 2&gt;&amp;1
+        ln -sf <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.log
+
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(dtroyer): Hack to get stdout from the Python interpreter for the logs.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">export </span><span class="nv">PYTHONUNBUFFERED</span><span class="o">=</span>1
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nb">exec</span> /bin/bash -c <span class="s2">&quot;$command&quot;</span>
+    die <span class="s2">&quot;$service exec failure: $command&quot;</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>run_process() launches a child process that closes all file descriptors and
+then exec's the passed in command.  This is meant to duplicate the semantics
+of screen_it() without screen.  PIDs are written to
+$SERVICE_DIR/$SCREEN_NAME/$service.pid
+run_process service &quot;command-line&quot;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>run_process<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">service</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local command</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Spawn the child process</p>
+</td><td class=code><div class=highlight><pre>
+    _run_process <span class="s2">&quot;$service&quot;</span> <span class="s2">&quot;$command&quot;</span> &amp;
+    <span class="nb">echo</span> <span class="nv">$!</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Helper to launch a service in a named screen
 screen_it service &quot;command-line&quot;</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>screen_it <span class="o">{</span>
     <span class="nv">SCREEN_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">SCREEN_NAME</span><span class="k">:-</span><span class="nv">stack</span><span class="k">}</span>
     <span class="nv">SERVICE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/status</span><span class="k">}</span>
-    <span class="nv">SCREEN_DEV</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$SCREEN_DEV</span><span class="sb">`</span>
+    <span class="nv">USE_SCREEN</span><span class="o">=</span><span class="k">$(</span>trueorfalse True <span class="nv">$USE_SCREEN</span><span class="k">)</span>
 
     <span class="k">if </span>is_service_enabled <span class="nv">$1</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1221,15 +1524,15 @@ screen_it service &quot;command-line&quot;</p>
 </td><td class=code><div class=highlight><pre>
         screen_rc <span class="s2">&quot;$1&quot;</span> <span class="s2">&quot;$2&quot;</span>
 
-        screen -S <span class="nv">$SCREEN_NAME</span> -X screen -t <span class="nv">$1</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$USE_SCREEN&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>screen -S <span class="nv">$SCREEN_NAME</span> -X screen -t <span class="nv">$1</span>
 
-        <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X logfile <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log
-            screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X log on
-            ln -sf <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.log
-        <span class="k">fi</span>
+            <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X logfile <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log
+                screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X log on
+                ln -sf <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.log <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span>/screen-<span class="k">${</span><span class="nv">1</span><span class="k">}</span>.log
+            <span class="k">fi</span>
 
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$SCREEN_DEV&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>sleep to allow bash to be ready to be send the command - we are
 creating a new window in screen and then sends characters, so if
@@ -1240,7 +1543,10 @@ bash isn't running by the time we send the command, nothing happens</p>
             <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
             screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2 || touch \&quot;$SERVICE_DIR/$SCREEN_NAME/$1.failure\&quot;$NL&quot;</span>
         <span class="k">else</span>
-<span class="k">            </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X <span class="nb">exec</span> /bin/bash -c <span class="s2">&quot;$2 || touch \&quot;$SERVICE_DIR/$SCREEN_NAME/$1.failure\&quot;&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Spawn directly without screen</p>
+</td><td class=code><div class=highlight><pre>
+            run_process <span class="s2">&quot;$1&quot;</span> <span class="s2">&quot;$2&quot;</span> &gt;<span class="nv">$SERVICE_DIR</span>/<span class="nv">$SCREEN_NAME</span>/<span class="nv">$service</span>.pid
         <span class="k">fi</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
@@ -1262,6 +1568,10 @@ screen_rc service &quot;command-line&quot;</p>
 <p>Set a reasonable statusbar</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nb">echo</span> <span class="s2">&quot;hardstatus alwayslastline &#39;$SCREEN_HARDSTATUS&#39;&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Some distributions override PROMPT_COMMAND for the screen terminal type - turn that off</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="s2">&quot;setenv PROMPT_COMMAND /bin/true&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
         <span class="nb">echo</span> <span class="s2">&quot;screen -t shell bash&quot;</span> &gt;&gt; <span class="nv">$SCREENRC</span>
     <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1274,12 +1584,13 @@ screen_rc service &quot;command-line&quot;</p>
     <span class="k">fi</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Helper to remove the <a href="#id9"><span class="problematic" id="id10">*</span></a>.failure files under $SERVICE_DIR/$SCREEN_NAME
 This is used for service_check when all the screen_it are called finished
 init_service_check</p>
 <div class="system-message" id="id9">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 397); <em><a href="#id10">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 531); <em><a href="#id10">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_service_check<span class="o">()</span> <span class="o">{</span>
@@ -1292,6 +1603,7 @@ Inline emphasis start-string without end-string.</div>
 
 <span class="k">    </span>rm -f <span class="s2">&quot;$SERVICE_DIR/$SCREEN_NAME&quot;</span>/*.failure
 <span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Helper to get the status of each running service
@@ -1325,30 +1637,32 @@ service_check</p>
     <span class="k">fi</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">pip install</tt> the dependencies of the package before <tt class="docutils literal">setup.py develop</tt>
 so pip and not distutils processes the dependency chain
 Uses globals <tt class="docutils literal">TRACK_DEPENDES</tt>, <a href="#id11"><span class="problematic" id="id12">``</span></a><a href="#id13"><span class="problematic" id="id14">*</span></a>_proxy`
 setup_develop directory</p>
 <div class="system-message" id="id11">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 412); <em><a href="#id12">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 546); <em><a href="#id12">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id13">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 412); <em><a href="#id14">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 546); <em><a href="#id14">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>setup_develop<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span> ; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">SUDO_CMD</span><span class="o">=</span><span class="s2">&quot;env&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nv">SUDO_CMD</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
     <span class="k">fi</span>
+<span class="k">    for </span>reqs_file in <span class="nv">$1</span>/requirements.txt <span class="nv">$1</span>/tools/pip-requires ; <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[</span> -f <span class="nv">$reqs_file</span> <span class="o">]</span> ; <span class="k">then</span>
+<span class="k">            </span>pip_install -r <span class="nv">$reqs_file</span>
+        <span class="k">fi</span>
+<span class="k">    done</span>
     <span class="o">(</span><span class="nb">cd</span> <span class="nv">$1</span>; <span class="se">\</span>
         python setup.py egg_info; <span class="se">\</span>
-        <span class="nv">raw_links</span><span class="o">=</span><span class="k">$(</span>awk <span class="s1">&#39;/^.+/ {print &quot;-f &quot; $1}&#39;</span> *.egg-info/dependency_links.txt<span class="k">)</span>; <span class="se">\</span>
-        <span class="nv">depend_links</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$raw_links</span> | xargs<span class="k">)</span>; <span class="se">\</span>
-        <span class="nv">require_file</span><span class="o">=</span><span class="k">$(</span><span class="o">[</span> ! -r *-info/requires.txt <span class="o">]</span> <span class="o">||</span> <span class="nb">echo</span> <span class="s2">&quot;-r *-info/requires.txt&quot;</span><span class="k">)</span>; <span class="se">\</span>
-        pip_install <span class="nv">$require_file</span> <span class="nv">$depend_links</span>; <span class="se">\</span>
         <span class="nv">$SUDO_CMD</span> <span class="se">\</span>
             <span class="nv">HTTP_PROXY</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="se">\</span>
             <span class="nv">HTTPS_PROXY</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
@@ -1405,13 +1719,13 @@ VAR=$(trueorfalse default-value test-value)</p>
 <p>Retrieve an image from a URL and upload into Glance
 Uses the following variables:</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 438)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 572)</p>
 Unexpected indentation.</div>
 <blockquote>
 <tt class="docutils literal">FILES</tt> must be set to the cache dir
 <tt class="docutils literal">GLANCE_HOSTPORT</tt></blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 440)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 574)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p>upload_image image-url glance-token</p>
 </td><td class=code><div class=highlight><pre>
@@ -1443,6 +1757,17 @@ Block quote ends without a blank line; unexpected unindent.</div>
 <span class="k">        </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
         <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span>
         glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format ami --disk-format ami &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+        <span class="k">return</span>
+<span class="k">    fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>XenServer-ovf-format images are provided as .vhd.tgz as well
+and should not be decompressed prior to loading</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;.vhd.tgz&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
+        <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.vhd.tgz}&quot;</span>
+        glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format<span class="o">=</span>ovf --disk-format<span class="o">=</span>vhd &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 
@@ -1497,6 +1822,12 @@ Block quote ends without a blank line; unexpected unindent.</div>
             <span class="nv">DISK_FORMAT</span><span class="o">=</span>qcow2
             <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
             ;;
+        *.iso<span class="o">)</span>
+            <span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
+            <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.iso&quot;</span><span class="k">)</span>
+            <span class="nv">DISK_FORMAT</span><span class="o">=</span>iso
+            <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
+            ;;
         *<span class="o">)</span> <span class="nb">echo</span> <span class="s2">&quot;Do not know what to do with $IMAGE_FNAME&quot;</span>; <span class="nb">false</span>;;
     <span class="k">esac</span>
 
@@ -1523,13 +1854,14 @@ kernel for use when uploading the root filesystem.</p>
     <span class="k">fi</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the database backend to use
 When called from stackrc/localrc DATABASE_BACKENDS has not been
 initialized yet, just save the configuration selection and call back later
 to validate it.</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 470)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 609)</p>
 Unexpected indentation.</div>
 <blockquote>
 $1 The name of the database backend to use (mysql, postgresql, ...)</blockquote>
@@ -1537,13 +1869,19 @@ $1 The name of the database backend to use (mysql, postgresql, ...)</blockquote>
 <span class="k">function </span>use_database <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$DATABASE_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>The backends haven't initialized yet, just save the selection for now</p>
+<p>No backends registered means this is likely called from <tt class="docutils literal">localrc</tt>
+This is now deprecated usage</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">DATABASE_TYPE</span><span class="o">=</span><span class="nv">$1</span>
+        <span class="nv">DEPRECATED_TEXT</span><span class="o">=</span><span class="s2">&quot;$DEPRECATED_TEXT\nThe database backend needs to be properly set in ENABLED_SERVICES; use_database is deprecated localrc\n&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span>use_exclusive_service DATABASE_BACKENDS DATABASE_TYPE <span class="nv">$1</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This should no longer get called...here for posterity</p>
+</td><td class=code><div class=highlight><pre>
+        use_exclusive_service DATABASE_BACKENDS DATABASE_TYPE <span class="nv">$1</span>
     <span class="k">fi</span>
 <span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <dl class="docutils">
@@ -1565,6 +1903,7 @@ $3 The name of the service to enable</dd>
     <span class="k">return </span>0
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait for an HTTP server to start answering requests
 wait_for_service timeout url</p>
@@ -1575,15 +1914,16 @@ wait_for_service timeout url</p>
     timeout <span class="nv">$timeout</span> sh -c <span class="s2">&quot;while ! http_proxy= https_proxy= curl -s $url &gt;/dev/null; do sleep 1; done&quot;</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Wrapper for <tt class="docutils literal">yum</tt> to set proxy environment variables
 Uses globals <tt class="docutils literal">OFFLINE</tt>, <a href="#id15"><span class="problematic" id="id16">``</span></a><a href="#id17"><span class="problematic" id="id18">*</span></a>_proxy`
 yum_install package [package ...]</p>
 <div class="system-message" id="id15">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 490); <em><a href="#id16">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 634); <em><a href="#id16">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id17">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 490); <em><a href="#id18">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 634); <em><a href="#id18">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>yum_install<span class="o">()</span> <span class="o">{</span>
@@ -1595,13 +1935,28 @@ Inline emphasis start-string without end-string.</div>
         yum install -y <span class="s2">&quot;$@&quot;</span>
 <span class="o">}</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+<p>zypper wrapper to set arguments correctly
+zypper_install package [package ...]</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>zypper_install<span class="o">()</span> <span class="o">{</span>
+    <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return</span>
+<span class="k">    </span><span class="nb">local </span><span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
+    <span class="o">[[</span> <span class="s2">&quot;$(id -u)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;env&quot;</span>
+    <span class="nv">$sudo</span> <span class="nv">http_proxy</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="nv">https_proxy</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
+        zypper --non-interactive install --auto-agree-with-licenses <span class="s2">&quot;$@&quot;</span>
+<span class="o">}</span>
+
+
 </pre></div></td></tr><tr><td class=docs>
 <p>ping check
-Uses globals <tt class="docutils literal">ENABLED_SERVICES</tt></p>
+Uses globals <tt class="docutils literal">ENABLED_SERVICES</tt>
+ping_check from-net ip boot-timeout expected</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>ping_check<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">        </span>_ping_check_quantum  <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span> <span class="nv">$4</span>
+    <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">        </span>_ping_check_neutron  <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span> <span class="nv">$4</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 <span class="k">    </span>_ping_check_novanet <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span> <span class="nv">$4</span>
@@ -1629,21 +1984,25 @@ Uses globals <tt class="docutils literal">MULTI_HOST</tt>, <tt class="docutils l
     <span class="k">fi</span>
 <span class="k">    if</span> ! timeout <span class="nv">$boot_timeout</span> sh -c <span class="s2">&quot;$check_command&quot;</span>; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$expected&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;[Fail] Couldn&#39;t ping server&quot;</span>
+<span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;[Fail] Couldn&#39;t ping server&quot;</span>
         <span class="k">else</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;[Fail] Could ping server&quot;</span>
+<span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;[Fail] Could ping server&quot;</span>
         <span class="k">fi</span>
 <span class="k">        </span><span class="nb">exit </span>1
     <span class="k">fi</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>ssh check</p>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>ssh_check net-name key-file floating-ip default-user active-timeout</p>
+</td><td class=code><div class=highlight><pre>
 <span class="k">function </span>ssh_check<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">        </span>_ssh_check_quantum  <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span> <span class="nv">$4</span> <span class="nv">$5</span>
+    <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">        </span>_ssh_check_neutron  <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span> <span class="nv">$4</span> <span class="nv">$5</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 <span class="k">    </span>_ssh_check_novanet <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span> <span class="nv">$4</span> <span class="nv">$5</span>
@@ -1656,23 +2015,9 @@ Uses globals <tt class="docutils literal">MULTI_HOST</tt>, <tt class="docutils l
     <span class="nb">local </span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="o">=</span><span class="nv">$4</span>
     <span class="nb">local </span><span class="nv">ACTIVE_TIMEOUT</span><span class="o">=</span><span class="nv">$5</span>
     <span class="nb">local </span><span class="nv">probe_cmd</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ssh -o StrictHostKeyChecking=no -i $KEY_FILE ${DEFAULT_INSTANCE_USER}@$FLOATING_IP echo success ; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;server didn&#39;t become ssh-able!&quot;</span>
-        <span class="nb">exit </span>1
+    <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ssh -o StrictHostKeyChecking=no -i $KEY_FILE ${DEFAULT_INSTANCE_USER}@$FLOATING_IP echo success; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;server didn&#39;t become ssh-able!&quot;</span>
     <span class="k">fi</span>
-<span class="o">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>zypper wrapper to set arguments correctly
-zypper_install package [package ...]</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>zypper_install<span class="o">()</span> <span class="o">{</span>
-    <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return</span>
-<span class="k">    </span><span class="nb">local </span><span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
-    <span class="o">[[</span> <span class="s2">&quot;$(id -u)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nv">sudo</span><span class="o">=</span><span class="s2">&quot;env&quot;</span>
-    <span class="nv">$sudo</span> <span class="nv">http_proxy</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="nv">https_proxy</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
-        zypper --non-interactive install --auto-agree-with-licenses <span class="s2">&quot;$@&quot;</span>
 <span class="o">}</span>
 
 
@@ -1704,12 +2049,13 @@ add_user_to_group user group</p>
 get_python_exec_prefix</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>get_python_exec_prefix<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if </span>is_fedora; <span class="k">then</span>
+    <span class="k">if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;/usr/bin&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;/usr/local/bin&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Get the location of the $module-rootwrap executables, where module is cinder
@@ -1722,6 +2068,7 @@ get_rootwrap_location module</p>
     <span class="nb">echo</span> <span class="s2">&quot;$(get_python_exec_prefix)/$module-rootwrap&quot;</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Get the path to the pip command.
 get_pip_command</p>
@@ -1732,7 +2079,99 @@ get_pip_command</p>
     <span class="k">else</span>
 <span class="k">        </span>which pip
     <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Unable to find pip; cannot continue&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Path permissions sanity check
+check_path_perm_sanity path</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>check_path_perm_sanity<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Ensure no element of the path has 0700 permissions, which is very
+likely to cause issues for daemons.  Inspired by default 0700
+homedir permissions on RHEL and common practice of making DEST in
+the stack user's homedir.</p>
+</td><td class=code><div class=highlight><pre>
+
+    <span class="nb">local </span><span class="nv">real_path</span><span class="o">=</span><span class="k">$(</span>readlink -f <span class="nv">$1</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">rebuilt_path</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">for </span>i in <span class="k">$(</span><span class="nb">echo</span> <span class="k">${</span><span class="nv">real_path</span><span class="k">}</span> | tr <span class="s2">&quot;/&quot;</span> <span class="s2">&quot; &quot;</span><span class="k">)</span>; <span class="k">do</span>
+<span class="k">        </span><span class="nv">rebuilt_path</span><span class="o">=</span><span class="nv">$rebuilt_path</span><span class="s2">&quot;/&quot;</span><span class="nv">$i</span>
+
+        <span class="k">if</span> <span class="o">[[</span> <span class="k">$(</span>stat -c <span class="s1">&#39;%a&#39;</span> <span class="k">${</span><span class="nv">rebuilt_path</span><span class="k">})</span> <span class="o">=</span> 700 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;*** DEST path element&quot;</span>
+            <span class="nb">echo</span> <span class="s2">&quot;***    ${rebuilt_path}&quot;</span>
+            <span class="nb">echo</span> <span class="s2">&quot;*** appears to have 0700 permissions.&quot;</span>
+            <span class="nb">echo</span> <span class="s2">&quot;*** This is very likely to cause fatal issues for devstack daemons.&quot;</span>
+
+            <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SKIP_PATH_SANITY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                return</span>
+<span class="k">            else</span>
+<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;*** Set SKIP_PATH_SANITY to skip this check&quot;</span>
+                die <span class="nv">$LINENO</span> <span class="s2">&quot;Invalid path permissions&quot;</span>
+            <span class="k">fi</span>
+<span class="k">        fi</span>
+<span class="k">    done</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>This function recursively compares versions, and is not meant to be
+called by anything other than vercmp_numbers below. This function does
+not work with alphabetic versions.</p>
+<p>_vercmp_r sep ver1 ver2</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_vercmp_r <span class="o">{</span>
+  <span class="nb">typeset </span>sep
+  <span class="nb">typeset</span> -a <span class="nv">ver1</span><span class="o">=()</span> <span class="nv">ver2</span><span class="o">=()</span>
+  <span class="nv">sep</span><span class="o">=</span><span class="nv">$1</span>; <span class="nb">shift</span>
+<span class="nb">  </span><span class="nv">ver1</span><span class="o">=(</span><span class="s2">&quot;${@:1:sep}&quot;</span><span class="o">)</span>
+  <span class="nv">ver2</span><span class="o">=(</span><span class="s2">&quot;${@:sep+1}&quot;</span><span class="o">)</span>
+
+  <span class="k">if</span> <span class="o">((</span>ver1 &gt; ver2<span class="o">))</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo </span>1; <span class="k">return </span>0
+  <span class="k">elif</span> <span class="o">((</span>ver2 &gt; ver1<span class="o">))</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> -1; <span class="k">return </span>0
+  <span class="k">fi</span>
+
+<span class="k">  if</span> <span class="o">((</span>sep &lt;<span class="o">=</span> 1<span class="o">))</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo </span>0; <span class="k">return </span>0
+  <span class="k">fi</span>
+
+<span class="k">  </span>_vercmp_r <span class="k">$((</span>sep-1<span class="k">))</span> <span class="s2">&quot;${ver1[@]:1}&quot;</span> <span class="s2">&quot;${ver2[@]:1}&quot;</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>This function compares two versions and is meant to be called by
+external callers. Please note the function assumes non-alphabetic
+versions. For example, this will work:</p>
+<blockquote>
+vercmp_numbers 1.10 1.4</blockquote>
+<p>The above will return &quot;1&quot;, as 1.10 is greater than 1.4.</p>
+<blockquote>
+vercmp_numbers 5.2 6.4</blockquote>
+<p>The above will return &quot;-1&quot;, as 5.2 is less than 6.4.</p>
+<blockquote>
+vercmp_numbers 4.0 4.0</blockquote>
+<p>The above will return &quot;0&quot;, as the versions are equal.</p>
+<p>vercmp_numbers ver1 ver2</p>
+</td><td class=code><div class=highlight><pre>
+vercmp_numbers<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">typeset </span><span class="nv">v1</span><span class="o">=</span><span class="nv">$1</span> <span class="nv">v2</span><span class="o">=</span><span class="nv">$2</span> sep
+  <span class="nb">typeset</span> -a ver1 ver2
+
+  <span class="nv">IFS</span><span class="o">=</span>. <span class="nb">read</span> -ra ver1 &lt;&lt;&lt; <span class="s2">&quot;$v1&quot;</span>
+  <span class="nv">IFS</span><span class="o">=</span>. <span class="nb">read</span> -ra ver2 &lt;&lt;&lt; <span class="s2">&quot;$v2&quot;</span>
+
+  _vercmp_r <span class="s2">&quot;${#ver1[@]}&quot;</span> <span class="s2">&quot;${ver1[@]}&quot;</span> <span class="s2">&quot;${ver2[@]}&quot;</span>
+<span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
@@ -1742,11 +2181,13 @@ get_pip_command</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Local variables:
--<em>- mode: Shell-script -</em>-
+mode: shell-script
 End:</p>
 </td><td class=code><div class=highlight><pre>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -347,7 +359,7 @@ library to test ec2 bundle upload compatibility</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This script exits on an error so that errors don't compound and you see
-only the first error that occured.</p>
+only the first error that occurred.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o errexit
 
@@ -405,25 +417,24 @@ nova x509-create-cert <span class="nv">$TOP_DIR</span>/pk.pem <span class="nv">$
 <span class="nv">BUCKET</span><span class="o">=</span>testbucket
 <span class="nv">IMAGE</span><span class="o">=</span>bundle.img
 truncate -s 5M /tmp/<span class="nv">$IMAGE</span>
-euca-bundle-image -i /tmp/<span class="nv">$IMAGE</span> <span class="o">||</span> die <span class="s2">&quot;Failure bundling image $IMAGE&quot;</span>
+euca-bundle-image -i /tmp/<span class="nv">$IMAGE</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure bundling image $IMAGE&quot;</span>
 
-euca-upload-bundle --debug -b <span class="nv">$BUCKET</span> -m /tmp/<span class="nv">$IMAGE</span>.manifest.xml <span class="o">||</span> die <span class="s2">&quot;Failure uploading bundle $IMAGE to $BUCKET&quot;</span>
+euca-upload-bundle --debug -b <span class="nv">$BUCKET</span> -m /tmp/<span class="nv">$IMAGE</span>.manifest.xml <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure uploading bundle $IMAGE to $BUCKET&quot;</span>
 
 <span class="nv">AMI</span><span class="o">=</span><span class="sb">`</span>euca-register <span class="nv">$BUCKET</span>/<span class="nv">$IMAGE</span>.manifest.xml | cut -f2<span class="sb">`</span>
-die_if_not_set AMI <span class="s2">&quot;Failure registering $BUCKET/$IMAGE&quot;</span>
+die_if_not_set <span class="nv">$LINENO</span> AMI <span class="s2">&quot;Failure registering $BUCKET/$IMAGE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait for the image to become available</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> ! timeout <span class="nv">$REGISTER_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-images | grep $AMI | grep -q available; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Image $AMI not available within $REGISTER_TIMEOUT seconds&quot;</span>
-    <span class="nb">exit </span>1
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Image $AMI not available within $REGISTER_TIMEOUT seconds&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean up</p>
 </td><td class=code><div class=highlight><pre>
-euca-deregister <span class="nv">$AMI</span> <span class="o">||</span> die <span class="s2">&quot;Failure deregistering $AMI&quot;</span>
+euca-deregister <span class="nv">$AMI</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deregistering $AMI&quot;</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
@@ -431,6 +442,8 @@ euca-deregister <span class="nv">$AMI</span> <span class="o">||</span> die <span
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

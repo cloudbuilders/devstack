@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -338,13 +350,8 @@ The template does a net install only</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Exit on errors</p>
-</td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o errexit
-</pre></div></td></tr><tr><td class=docs>
-<p>Echo commands</p>
-</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o nounset
 <span class="nb">set</span> -o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
@@ -383,7 +390,7 @@ The template does a net install only</p>
 <span class="nv">builtin_name</span><span class="o">=</span><span class="s2">&quot;Debian Squeeze 6.0 (32-bit)&quot;</span>
 <span class="nv">builtin_uuid</span><span class="o">=</span><span class="k">$(</span>xe template-list name-label<span class="o">=</span><span class="s2">&quot;$builtin_name&quot;</span> --minimal<span class="k">)</span>
 <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$builtin_uuid</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Cant find the Debian Squeeze 32bit template on your XenServer.&quot;</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Can&#39;t find the Debian Squeeze 32bit template on your XenServer.&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
@@ -403,11 +410,11 @@ to get a fully automated install</p>
 <span class="nv">pvargs</span><span class="o">=</span><span class="s2">&quot;-- quiet console=hvc0 partman/default_filesystem=ext3 \</span>
 <span class="s2">console-setup/ask_detect=false locale=${UBUNTU_INST_LOCALE} \</span>
 <span class="s2">keyboard-configuration/layoutcode=${UBUNTU_INST_KEYBOARD} \</span>
-<span class="s2">netcfg/choose_interface=${HOST_IP_IFACE} \</span>
+<span class="s2">netcfg/choose_interface=${UBUNTU_INST_IFACE} \</span>
 <span class="s2">netcfg/get_hostname=os netcfg/get_domain=os auto \</span>
 <span class="s2">url=${preseed_url}&quot;</span>
 
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$NETINSTALLIP&quot;</span> !<span class="o">=</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$UBUNTU_INST_IP&quot;</span> !<span class="o">=</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">netcfgargs</span><span class="o">=</span><span class="s2">&quot;netcfg/disable_autoconfig=true \</span>
 <span class="s2">netcfg/get_nameservers=${UBUNTU_INST_NAMESERVERS} \</span>
 <span class="s2">netcfg/get_ipaddress=${UBUNTU_INST_IP} \</span>
@@ -419,16 +426,23 @@ to get a fully automated install</p>
 
 xe template-param-set <span class="nv">uuid</span><span class="o">=</span><span class="nv">$new_uuid</span> <span class="se">\</span>
     other-config:install-methods<span class="o">=</span>http <span class="se">\</span>
-    other-config:install-repository<span class="o">=</span><span class="s2">&quot;$UBUNTU_INST_REPOSITORY&quot;</span> <span class="se">\</span>
+    other-config:install-repository<span class="o">=</span><span class="s2">&quot;http://${UBUNTU_INST_HTTP_HOSTNAME}${UBUNTU_INST_HTTP_DIRECTORY}&quot;</span> <span class="se">\</span>
     PV-args<span class="o">=</span><span class="s2">&quot;$pvargs&quot;</span> <span class="se">\</span>
     other-config:debian-release<span class="o">=</span><span class="s2">&quot;$UBUNTU_INST_RELEASE&quot;</span> <span class="se">\</span>
     other-config:default_template<span class="o">=</span><span class="nb">true</span> <span class="se">\</span>
     other-config:disks<span class="o">=</span><span class="s1">&#39;&lt;provision&gt;&lt;disk device=&quot;0&quot; size=&quot;&#39;</span><span class="nv">$disk_size</span><span class="s1">&#39;&quot; sr=&quot;&quot; bootable=&quot;true&quot; type=&quot;system&quot;/&gt;&lt;/provision&gt;&#39;</span> <span class="se">\</span>
     other-config:install-arch<span class="o">=</span><span class="s2">&quot;$UBUNTU_INST_ARCH&quot;</span>
 
+<span class="k">if</span> ! <span class="o">[</span> -z <span class="s2">&quot;$UBUNTU_INST_HTTP_PROXY&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>xe template-param-set <span class="nv">uuid</span><span class="o">=</span><span class="nv">$new_uuid</span> <span class="se">\</span>
+        other-config:install-proxy<span class="o">=</span><span class="s2">&quot;$UBUNTU_INST_HTTP_PROXY&quot;</span>
+<span class="k">fi</span>
+
 <span class="nb">echo</span> <span class="s2">&quot;Ubuntu template installed uuid:$new_uuid&quot;</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

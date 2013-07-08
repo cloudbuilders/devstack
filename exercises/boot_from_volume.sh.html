@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -353,7 +365,7 @@ ul.auto-toc {
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This script exits on an error so that errors don't compound and you see
-only the first error that occured.</p>
+only the first error that occurred.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o errexit
 
@@ -386,10 +398,10 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import quantum functions if needed</p>
+<p>Import neutron functions if needed</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
-<span class="k">    </span><span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/quantum
+<span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">    </span><span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -450,7 +462,7 @@ glance image-list
 <p>Grab the id of the image to launch</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span>glance image-list | egrep <span class="s2">&quot; $DEFAULT_IMAGE_NAME &quot;</span> | get_field 1<span class="k">)</span>
-die_if_not_set IMAGE <span class="s2">&quot;Failure getting image $DEFAULT_IMAGE_NAME&quot;</span>
+die_if_not_set <span class="nv">$LINENO</span> IMAGE <span class="s2">&quot;Failure getting image $DEFAULT_IMAGE_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -549,7 +561,7 @@ cinder delete <span class="nv">$VOL_NAME</span> <span class="o">||</span> <span 
 </td><td class=code><div class=highlight><pre>
 <span class="nv">start_time</span><span class="o">=</span><span class="k">$(</span>date +%s<span class="k">)</span>
 cinder create --image-id <span class="nv">$IMAGE</span> --display_name<span class="o">=</span><span class="nv">$VOL_NAME</span> --display_description <span class="s2">&quot;test bootable volume: $VOL_NAME&quot;</span> <span class="nv">$DEFAULT_VOLUME_SIZE</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="s2">&quot;Failure creating volume $VOL_NAME&quot;</span>
+    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure creating volume $VOL_NAME&quot;</span>
 <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! cinder list | grep $VOL_NAME | grep available; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume $VOL_NAME not created&quot;</span>
     <span class="nb">exit </span>1
@@ -561,7 +573,7 @@ cinder create --image-id <span class="nv">$IMAGE</span> --display_name<span clas
 <p>Get volume ID</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VOL_ID</span><span class="o">=</span><span class="k">$(</span>cinder list | grep <span class="nv">$VOL_NAME</span>  | get_field 1<span class="k">)</span>
-die_if_not_set VOL_ID <span class="s2">&quot;Failure retrieving volume ID for $VOL_NAME&quot;</span>
+die_if_not_set <span class="nv">$LINENO</span> VOL_ID <span class="s2">&quot;Failure retrieving volume ID for $VOL_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -575,7 +587,7 @@ die_if_not_set VOL_ID <span class="s2">&quot;Failure retrieving volume ID for $V
 Leaving the middle two fields blank appears to do-the-right-thing</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VM_UUID</span><span class="o">=</span><span class="k">$(</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --block-device-mapping <span class="nv">vda</span><span class="o">=</span><span class="nv">$VOL_ID</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> --key_name <span class="nv">$KEY_NAME</span> <span class="nv">$VM_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-die_if_not_set VM_UUID <span class="s2">&quot;Failure launching $VM_NAME&quot;</span>
+die_if_not_set <span class="nv">$LINENO</span> VM_UUID <span class="s2">&quot;Failure launching $VM_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Check that the status is active within ACTIVE_TIMEOUT seconds</p>
@@ -589,7 +601,7 @@ die_if_not_set VM_UUID <span class="s2">&quot;Failure launching $VM_NAME&quot;</
 <p>Get the instance IP</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IP</span><span class="o">=</span><span class="k">$(</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | get_field 2<span class="k">)</span>
-die_if_not_set IP <span class="s2">&quot;Failure retrieving IP address&quot;</span>
+die_if_not_set <span class="nv">$LINENO</span> IP <span class="s2">&quot;Failure retrieving IP address&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Private IPs can be pinged in single node deployments</p>
@@ -605,7 +617,7 @@ ping_check <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> <span class
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete volume backed instance</p>
 </td><td class=code><div class=highlight><pre>
-nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting instance $VM_NAME&quot;</span>
+nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting instance $VM_NAME&quot;</span>
 <span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova list | grep -q $VM_UUID; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Server $VM_NAME not deleted&quot;</span>
     <span class="nb">exit </span>1
@@ -623,7 +635,7 @@ nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span
 <p>Delete volume</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">start_time</span><span class="o">=</span><span class="k">$(</span>date +%s<span class="k">)</span>
-cinder delete <span class="nv">$VOL_ID</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting volume $VOLUME_NAME&quot;</span>
+cinder delete <span class="nv">$VOL_ID</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting volume $VOLUME_NAME&quot;</span>
 <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while cinder list | grep $VOL_NAME; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume $VOL_NAME not deleted&quot;</span>
     <span class="nb">exit </span>1
@@ -634,7 +646,7 @@ cinder delete <span class="nv">$VOL_ID</span> <span class="o">||</span> die <spa
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete secgroup</p>
 </td><td class=code><div class=highlight><pre>
-nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
@@ -642,6 +654,8 @@ nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span>
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -357,7 +369,6 @@ under the License.</p>
 <span class="nv">DATA_VDI_SIZE</span><span class="o">=</span><span class="s2">&quot;500MiB&quot;</span>
 <span class="nv">BRIDGE_M</span><span class="o">=</span>
 <span class="nv">BRIDGE_P</span><span class="o">=</span>
-<span class="nv">KERNEL_PARAMS</span><span class="o">=</span>
 <span class="nv">VPX_FILE</span><span class="o">=</span>os-vpx.xva
 <span class="nv">AS_TEMPLATE</span><span class="o">=</span>
 <span class="nv">FROM_TEMPLATE</span><span class="o">=</span>
@@ -370,7 +381,7 @@ usage<span class="o">()</span>
 cat <span class="s">&lt;&lt; EOF</span>
 
 <span class="s">  Usage: $0 [-f FILE_PATH] [-d DISK_SIZE] [-v BRIDGE_NAME] [-m BRIDGE_NAME] [-p BRIDGE_NAME]</span>
-<span class="s">            [-k PARAMS] [-r RAM] [-i|-c] [-w] [-b] [-l NAME_LABEL] [-t TEMPLATE_NW_INSTALL]</span>
+<span class="s">            [-r RAM] [-i|-c] [-w] [-b] [-l NAME_LABEL] [-t TEMPLATE_NW_INSTALL]</span>
 
 <span class="s">  Installs XenServer OpenStack VPX.</span>
 
@@ -389,7 +400,6 @@ cat <span class="s">&lt;&lt; EOF</span>
 <span class="s">                  Defaults to xenbr0.</span>
 <span class="s">     -v bridge    Specifies the bridge for the vm network</span>
 <span class="s">     -p bridge    Specifies the bridge for the externally facing network.</span>
-<span class="s">     -k params    Specifies kernel parameters.</span>
 <span class="s">     -r MiB       Specifies RAM used by the VPX, in MiB.</span>
 <span class="s">                  By default it will take the value from the XVA.</span>
 <span class="s">     -l name      Specifies the name label for the VM.</span>
@@ -413,15 +423,12 @@ cat <span class="s">&lt;&lt; EOF</span>
 <span class="s">     using the default for management traffic:</span>
 <span class="s">            install-os-vpx.sh -m xapi4</span>
 
-<span class="s">     Create a VPX that automatically becomes the master:</span>
-<span class="s">            install-os-vpx.sh -k geppetto_master=true</span>
-
 <span class="s">EOF</span>
 <span class="o">}</span>
 
 get_params<span class="o">()</span>
 <span class="o">{</span>
-  <span class="k">while </span><span class="nb">getopts</span> <span class="s2">&quot;hicwbf:d:v:m:p:k:r:l:t:&quot;</span> OPTION;
+  <span class="k">while </span><span class="nb">getopts</span> <span class="s2">&quot;hicwbf:d:v:m:p:r:l:t:&quot;</span> OPTION;
   <span class="k">do</span>
 <span class="k">    case</span> <span class="nv">$OPTION</span> in
       h<span class="o">)</span> usage
@@ -450,9 +457,6 @@ get_params<span class="o">()</span>
          ;;
       p<span class="o">)</span>
          <span class="nv">BRIDGE_P</span><span class="o">=</span><span class="nv">$OPTARG</span>
-         ;;
-      k<span class="o">)</span>
-         <span class="nv">KERNEL_PARAMS</span><span class="o">=</span><span class="nv">$OPTARG</span>
          ;;
       r<span class="o">)</span>
          <span class="nv">RAM</span><span class="o">=</span><span class="nv">$OPTARG</span>
@@ -569,7 +573,7 @@ of gateway.</p>
 create_vm_vif<span class="o">()</span>
 <span class="o">{</span>
   <span class="nb">local </span><span class="nv">v</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
-  <span class="nb">echo</span> <span class="s2">&quot;Installing management interface on $BRIDGE_V.&quot;</span>
+  <span class="nb">echo</span> <span class="s2">&quot;Installing VM interface on $BRIDGE_V.&quot;</span>
   <span class="nb">local </span><span class="nv">out_network_uuid</span><span class="o">=</span><span class="k">$(</span>find_network <span class="s2">&quot;$BRIDGE_V&quot;</span><span class="k">)</span>
   create_vif <span class="s2">&quot;$v&quot;</span> <span class="s2">&quot;$out_network_uuid&quot;</span> <span class="s2">&quot;1&quot;</span> &gt;/dev/null
 <span class="o">}</span>
@@ -664,20 +668,6 @@ create_data_disk<span class="o">()</span>
 <span class="o">}</span>
 
 
-set_kernel_params<span class="o">()</span>
-<span class="o">{</span>
-  <span class="nb">local </span><span class="nv">v</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
-  <span class="nb">local </span><span class="nv">args</span><span class="o">=</span><span class="nv">$KERNEL_PARAMS</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$args&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>
-  <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Passing Geppetto args to VPX: $args.&quot;</span>
-    <span class="nv">pvargs</span><span class="o">=</span><span class="k">$(</span>xe vm-param-get param-name<span class="o">=</span>PV-args <span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$v&quot;</span><span class="k">)</span>
-    <span class="nv">args</span><span class="o">=</span><span class="s2">&quot;$pvargs $args&quot;</span>
-    xe vm-param-set PV-args<span class="o">=</span><span class="s2">&quot;$args&quot;</span> <span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$v&quot;</span>
-  <span class="k">fi</span>
-<span class="o">}</span>
-
-
 set_memory<span class="o">()</span>
 <span class="o">{</span>
   <span class="nb">local </span><span class="nv">v</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
@@ -705,7 +695,6 @@ set_auto_start<span class="o">()</span>
 set_all<span class="o">()</span>
 <span class="o">{</span>
   <span class="nb">local </span><span class="nv">v</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
-  set_kernel_params <span class="s2">&quot;$v&quot;</span>
   set_memory <span class="s2">&quot;$v&quot;</span>
   set_auto_start <span class="s2">&quot;$v&quot;</span>
   label_system_disk <span class="s2">&quot;$v&quot;</span>
@@ -768,7 +757,6 @@ get_params <span class="s2">&quot;$@&quot;</span>
   create_vm_vif <span class="s2">&quot;$vm_uuid&quot;</span>
   create_management_vif <span class="s2">&quot;$vm_uuid&quot;</span>
   create_public_vif <span class="s2">&quot;$vm_uuid&quot;</span>
-  set_kernel_params <span class="s2">&quot;$vm_uuid&quot;</span>
   xe vm-param-set other-config:os-vpx<span class="o">=</span><span class="nb">true </span><span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$vm_uuid&quot;</span>
   xe vm-param-set actions-after-reboot<span class="o">=</span>Destroy <span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$vm_uuid&quot;</span>
   set_memory <span class="s2">&quot;$vm_uuid&quot;</span>
@@ -863,6 +851,8 @@ show_ip<span class="o">()</span>
 <span class="k">fi</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

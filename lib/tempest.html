@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -335,7 +347,7 @@ ul.auto-toc {
 Install and configure Tempest
 Dependencies:
 <tt class="docutils literal">functions</tt> file
-<tt class="docutils literal">lib/nova</tt> service is runing
+<tt class="docutils literal">lib/nova</tt> service is running
 &lt;list other global vars that are assumed to be defined&gt;
 - <tt class="docutils literal">DEST</tt>, <tt class="docutils literal">FILES</tt>
 - <tt class="docutils literal">ADMIN_PASSWORD</tt>
@@ -355,6 +367,7 @@ ALT_* (similar vars exists in keystone_data.sh)
 <tt class="docutils literal">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</tt>
 <tt class="docutils literal">DEFAULT_INSTANCE_TYPE</tt>
 <tt class="docutils literal">DEFAULT_INSTANCE_USER</tt>
+<tt class="docutils literal">CINDER_MULTI_LVM_BACKEND</tt>
 <tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
 <p>install_tempest
 configure_tempest
@@ -383,16 +396,17 @@ init_tempest</p>
 
 <span class="nv">NOVA_SOURCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
 
-<span class="nv">BUILD_INTERVAL</span><span class="o">=</span>3
+<span class="nv">BUILD_INTERVAL</span><span class="o">=</span>1
 <span class="nv">BUILD_TIMEOUT</span><span class="o">=</span>400
 
 
-<span class="nv">BOTO_MATERIALS_PATH</span><span class="o">=</span><span class="s2">&quot;$FILES/images/s3-materials/cirros-0.3.0&quot;</span>
+<span class="nv">BOTO_MATERIALS_PATH</span><span class="o">=</span><span class="s2">&quot;$FILES/images/s3-materials/cirros-0.3.1&quot;</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="entry-points">
-<h1>Entry Points</h1>
+<div class="section" id="functions">
+<h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -423,7 +437,7 @@ sudo python setup.py deploy</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>This function exits on an error so that errors don't compound and you see
-only the first error that occured.</p>
+only the first error that occurred.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">errexit</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep errexit<span class="k">)</span>
     <span class="nb">set</span> -o errexit
@@ -525,9 +539,17 @@ Tempest creates instane types for himself</p>
         <span class="k">fi</span>
 <span class="k">        </span><span class="nv">flavor_ref</span><span class="o">=</span><span class="k">${</span><span class="nv">flavors</span><span class="p">[0]</span><span class="k">}</span>
         <span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="nv">$flavor_ref</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$num_flavors</span> -gt 1 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="k">${</span><span class="nv">flavors</span><span class="p">[1]</span><span class="k">}</span>
-        <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>ensure flavor_ref and flavor_ref_alt have different values
+some resize instance in tempest tests depends on this.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">for </span>f in <span class="k">${</span><span class="nv">flavors</span><span class="p">[@]:</span><span class="nv">1</span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            if</span> <span class="o">[[</span> <span class="nv">$f</span> -ne <span class="nv">$flavor_ref</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">flavor_ref_alt</span><span class="o">=</span><span class="nv">$f</span>
+                <span class="nb">break</span>
+<span class="nb">            </span><span class="k">fi</span>
+<span class="k">        done</span>
 <span class="k">    fi</span>
 
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$Q_USE_NAMESPACE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -537,14 +559,14 @@ Tempest creates instane types for himself</p>
 <span class="nb">    </span><span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled q-l3; <span class="k">then</span>
-<span class="k">        </span><span class="nv">public_network_id</span><span class="o">=</span><span class="k">$(</span>quantum net-list | grep <span class="nv">$PUBLIC_NETWORK_NAME</span> | <span class="se">\</span>
+<span class="k">        </span><span class="nv">public_network_id</span><span class="o">=</span><span class="k">$(</span>neutron net-list | grep <span class="nv">$PUBLIC_NETWORK_NAME</span> | <span class="se">\</span>
             awk <span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>
         <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$Q_USE_NAMESPACE&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>If namespaces are disabled, devstack will create a single
 public router that tempest should be configured to use.</p>
 </td><td class=code><div class=highlight><pre>
-            <span class="nv">public_router_id</span><span class="o">=</span><span class="k">$(</span>quantum router-list | awk <span class="s2">&quot;/ $Q_ROUTER_NAME / \</span>
+            <span class="nv">public_router_id</span><span class="o">=</span><span class="k">$(</span>neutron router-list | awk <span class="s2">&quot;/ $Q_ROUTER_NAME / \</span>
 <span class="s2">               { print \$2 }&quot;</span><span class="k">)</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
@@ -571,6 +593,15 @@ public router that tempest should be configured to use.</p>
     iniset <span class="nv">$TEMPEST_CONF</span> identity admin_password <span class="s2">&quot;$password&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Image
+for the gate we want to be able to override this variable so we aren't
+doing an HTTP fetch over the wide internet for this test</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> ! -z <span class="s2">&quot;$TEMPEST_HTTP_IMAGE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> image http_image <span class="nv">$TEMPEST_HTTP_IMAGE</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Compute</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$TEMPEST_CONF</span> compute change_password_available False
@@ -578,7 +609,7 @@ public router that tempest should be configured to use.</p>
 <p>Note(nati) current tempest don't create network for each tenant
 so reuse same tenant for now</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled quantum; <span class="k">then</span>
+    <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
 <span class="k">        </span><span class="nv">TEMPEST_ALLOW_TENANT_ISOLATION</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_ALLOW_TENANT_ISOLATION</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
     <span class="k">fi</span>
 <span class="k">    </span>iniset <span class="nv">$TEMPEST_CONF</span> compute allow_tenant_isolation <span class="k">${</span><span class="nv">TEMPEST_ALLOW_TENANT_ISOLATION</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
@@ -607,27 +638,53 @@ tests actually use a key.</p>
     iniset <span class="nv">$TEMPEST_CONF</span> whitebox path_to_private_key <span class="nv">$TEMPEST_DIR</span>/id_rsa
     iniset <span class="nv">$TEMPEST_CONF</span> whitebox db_uri <span class="nv">$BASE_SQL_CONN</span>/nova
 
-
 </pre></div></td></tr><tr><td class=docs>
-<p>compute admin</p>
+<p>Compute admin</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>network</p>
+<p>Network</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> network api_version 2.0
+    <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> network neutron_available <span class="s2">&quot;True&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>iniset <span class="nv">$TEMPEST_CONF</span> network api_version 2.0
     iniset <span class="nv">$TEMPEST_CONF</span> network tenant_networks_reachable <span class="s2">&quot;$tenant_networks_reachable&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> network public_network_id <span class="s2">&quot;$public_network_id&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> network public_router_id <span class="s2">&quot;$public_router_id&quot;</span>
 
-    <span class="c">#boto</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>boto</p>
+</td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$TEMPEST_CONF</span> boto ec2_url <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto s3_url <span class="s2">&quot;http://$SERVICE_HOST:${S3_SERVICE_PORT:-3333}&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto s3_materials_path <span class="s2">&quot;$BOTO_MATERIALS_PATH&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto instance_type <span class="s2">&quot;$boto_instance_type&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto http_socket_timeout 30
     iniset <span class="nv">$TEMPEST_CONF</span> boto ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Orchestration</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> orchestration heat_available <span class="s2">&quot;True&quot;</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Volume</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">CINDER_MULTI_LVM_BACKEND</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$CINDER_MULTI_LVM_BACKEND</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$CINDER_MULTI_LVM_BACKEND</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> volume multi_backend_enabled <span class="s2">&quot;True&quot;</span>
+        iniset <span class="nv">$TEMPEST_CONF</span> volume backend1_name <span class="s2">&quot;LVM_iSCSI&quot;</span>
+        iniset <span class="nv">$TEMPEST_CONF</span> volume backend2_name <span class="s2">&quot;LVM_iSCSI_2&quot;</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>cli</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> cli cli_dir <span class="nv">$NOVA_BIN_DIR</span>
 
     <span class="nb">echo</span> <span class="s2">&quot;Created tempest configuration file:&quot;</span>
     cat <span class="nv">$TEMPEST_CONF</span>
@@ -645,21 +702,15 @@ tests actually use a key.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_tempest<span class="o">()</span> <span class="o">{</span>
     git_clone <span class="nv">$TEMPEST_REPO</span> <span class="nv">$TEMPEST_DIR</span> <span class="nv">$TEMPEST_BRANCH</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Tempest doesn't satisfy its dependencies on its own, so
-install them here instead.</p>
-</td><td class=code><div class=highlight><pre>
-    pip_install -r <span class="nv">$TEMPEST_DIR</span>/tools/pip-requires
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>init_tempest() - Initialize ec2 images</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_tempest<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">base_image_name</span><span class="o">=</span>cirros-0.3.0-x86_64
+    <span class="nb">local </span><span class="nv">base_image_name</span><span class="o">=</span>cirros-0.3.1-x86_64
 </pre></div></td></tr><tr><td class=docs>
-<p>/opt/stack/devstack/files/images/cirros-0.3.0-x86_64-uec</p>
+<p>/opt/stack/devstack/files/images/cirros-0.3.1-x86_64-uec</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">local </span><span class="nv">image_dir</span><span class="o">=</span><span class="s2">&quot;$FILES/images/${base_image_name}-uec&quot;</span>
     <span class="nb">local </span><span class="nv">kernel</span><span class="o">=</span><span class="s2">&quot;$image_dir/${base_image_name}-vmlinuz&quot;</span>
@@ -690,7 +741,15 @@ install them here instead.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

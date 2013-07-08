@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title>common functions for ovs based plugin</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -337,52 +349,94 @@ ul.auto-toc {
 <span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
-<span class="k">function </span>is_quantum_ovs_base_plugin<span class="o">()</span> <span class="o">{</span>
+<span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
+<span class="nv">PUBLIC_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-ex</span><span class="k">}</span>
+
+<span class="k">function </span>is_neutron_ovs_base_plugin<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Yes, we use OVS.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">return </span>0
 <span class="o">}</span>
 
-<span class="k">function </span>_quantum_ovs_base_setup_bridge<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_ovs_base_setup_bridge<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span><span class="nv">bridge</span><span class="o">=</span><span class="nv">$1</span>
-    quantum-ovs-cleanup
+    neutron-ovs-cleanup
     sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$bridge</span>
     sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$bridge</span> bridge-id <span class="nv">$bridge</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_quantum_ovs_base_install_agent_packages<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_ovs_base_cleanup<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>remove all OVS ports that look like Neutron created ports</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>port in <span class="k">$(</span>sudo ovs-vsctl list port | grep -o -e tap<span class="o">[</span>0-9a-f<span class="se">\-</span><span class="o">]</span>* -e q<span class="o">[</span>rg<span class="o">]</span>-<span class="o">[</span>0-9a-f<span class="se">\-</span><span class="o">]</span>*<span class="k">)</span>; <span class="k">do</span>
+<span class="k">        </span>sudo ovs-vsctl del-port <span class="k">${</span><span class="nv">port</span><span class="k">}</span>
+    <span class="k">done</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>remove all OVS bridges created by Neutron</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>bridge in <span class="k">$(</span>sudo ovs-vsctl list-br | grep -o -e <span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">}</span> -e <span class="k">${</span><span class="nv">PUBLIC_BRIDGE</span><span class="k">})</span>; <span class="k">do</span>
+<span class="k">        </span>sudo ovs-vsctl del-br <span class="k">${</span><span class="nv">bridge</span><span class="k">}</span>
+    <span class="k">done</span>
+<span class="o">}</span>
+
+<span class="k">function </span>_neutron_ovs_base_install_agent_packages<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span>kernel_version
 </pre></div></td></tr><tr><td class=docs>
 <p>Install deps
-FIXME add to <tt class="docutils literal">files/apts/quantum</tt>, but don't install if not needed!</p>
+FIXME add to <tt class="docutils literal">files/apts/neutron</tt>, but don't install if not needed!</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span><span class="nv">kernel_version</span><span class="o">=</span><span class="sb">`</span>cat /proc/version | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span>
         install_package make fakeroot dkms openvswitch-switch openvswitch-datapath-dkms linux-headers-<span class="nv">$kernel_version</span>
-    <span class="k">else</span>
-        <span class="c">### FIXME(dtroyer): Find RPMs for OpenVSwitch</span>
-        <span class="nb">echo</span> <span class="s2">&quot;OpenVSwitch packages need to be located&quot;</span>
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span>install_package openvswitch
 </pre></div></td></tr><tr><td class=docs>
-<p>Fedora does not started OVS by default</p>
+<p>Ensure that the service is started</p>
 </td><td class=code><div class=highlight><pre>
+        restart_service openvswitch
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+        <span class="c">### FIXME: Find out if package can be pushed to Factory</span>
+        <span class="nb">echo</span> <span class="s2">&quot;OpenVSwitch packages can be installed from Cloud:OpenStack:Master in OBS&quot;</span>
         restart_service openvswitch
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_quantum_ovs_base_configure_debug_command<span class="o">()</span> <span class="o">{</span>
-    iniset <span class="nv">$QUANTUM_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
+<span class="k">function </span>_neutron_ovs_base_configure_debug_command<span class="o">()</span> <span class="o">{</span>
+    iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_quantum_ovs_base_configure_l3_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_ovs_base_configure_firewall_driver<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver
+    <span class="k">else</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.firewall.NoopFirewallDriver
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function </span>_neutron_ovs_base_configure_l3_agent<span class="o">()</span> <span class="o">{</span>
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
 
-    quantum-ovs-cleanup
+    neutron-ovs-cleanup
     sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$PUBLIC_BRIDGE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>ensure no IP is configured on the public bridge</p>
 </td><td class=code><div class=highlight><pre>
     sudo ip addr flush dev <span class="nv">$PUBLIC_BRIDGE</span>
+<span class="o">}</span>
+
+<span class="k">function </span>_neutron_ovs_base_configure_nova_vif_driver<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>The hybrid VIF driver needs to be specified when Neutron Security Group
+is enabled (until vif_security attributes are supported in VIF extension)</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver&quot;</span><span class="k">}</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtGenericVIFDriver&quot;</span><span class="k">}</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -391,6 +445,8 @@ FIXME add to <tt class="docutils literal">files/apts/quantum</tt>, but don't ins
 <span class="nv">$MY_XTRACE</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

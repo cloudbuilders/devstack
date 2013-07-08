@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -400,29 +412,82 @@ cleanup_cinder</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Name of the lvm volume group to use/create for iscsi volumes</p>
+<p>Support for multi lvm backend configuration (default is no support)</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">VOLUME_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">:-</span><span class="nv">stack</span><span class="p">-volumes</span><span class="k">}</span>
-<span class="nv">VOLUME_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">:-</span><span class="nv">volume</span><span class="p">-</span><span class="k">}</span>
+<span class="nv">CINDER_MULTI_LVM_BACKEND</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$CINDER_MULTI_LVM_BACKEND</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>_clean_volume_group removes all cinder volumes from the specified volume group
-_clean_volume_group $VOLUME_GROUP $VOLUME_NAME_PREFIX</p>
+<p>Should cinder perform secure deletion of volumes?
+Defaults to true, can be set to False to avoid this bug when testing:
+<a class="reference external" href="https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1023755">https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1023755</a></p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_clean_volume_group<span class="o">()</span> <span class="o">{</span>
+<span class="nv">CINDER_SECURE_DELETE</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$CINDER_SECURE_DELETE</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Cinder reports allocations back to the scheduler on periodic intervals
+it turns out we can get an &quot;out of space&quot; issue when we run tests too
+quickly just because cinder didn't realize we'd freed up resources.
+Make this configurable so that devstack-gate/tempest can set it to
+less than the 60 second default
+<a class="reference external" href="https://bugs.launchpad.net/cinder/+bug/1180976">https://bugs.launchpad.net/cinder/+bug/1180976</a></p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">CINDER_PERIODIC_INTERVAL</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_PERIODIC_INTERVAL</span><span class="k">:-</span><span class="nv">60</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Name of the lvm volume groups to use/create for iscsi volumes</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">VOLUME_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">:-</span><span class="nv">stack</span><span class="p">-volumes</span><span class="k">}</span>
+<span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
+<span class="nv">VOLUME_BACKING_DEVICE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_DEVICE</span><span class="k">:-}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>VOLUME_GROUP2 is used only if CINDER_MULTI_LVM_BACKEND = True</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">VOLUME_GROUP2</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP2</span><span class="k">:-</span><span class="nv">stack</span><span class="p">-volumes2</span><span class="k">}</span>
+<span class="nv">VOLUME_BACKING_FILE2</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE2</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP2</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
+<span class="nv">VOLUME_BACKING_DEVICE2</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_DEVICE2</span><span class="k">:-}</span>
+
+<span class="nv">VOLUME_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">:-</span><span class="nv">volume</span><span class="p">-</span><span class="k">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="functions">
+<h1>Functions</h1>
+<p>_cleanup_lvm removes all cinder volumes and the backing file of the
+volume group used by cinder
+_cleanup_lvm $VOLUME_GROUP $VOLUME_NAME_PREFIX</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_cleanup_lvm<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span><span class="nv">vg</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">vg_prefix</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">lv_prefix</span><span class="o">=</span><span class="nv">$2</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean out existing volumes</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">for </span>lv in <span class="sb">`</span>sudo lvs --noheadings -o lv_name <span class="nv">$vg</span><span class="sb">`</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>vg_prefix prefixes the LVs we want</p>
+<p>lv_prefix prefixes the LVs we want</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$vg_prefix}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$lv_prefix}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>sudo lvremove -f <span class="nv">$vg</span>/<span class="nv">$lv</span>
         <span class="k">fi</span>
 <span class="k">    done</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>if there is no logical volume left, it's safe to attempt a cleanup
+of the backing file</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;`sudo lvs --noheadings -o lv_name $vg`&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>if the backing physical device is a loop device, it was probably setup by devstack</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">VG_DEV</span><span class="o">=</span><span class="k">$(</span>sudo losetup -j <span class="nv">$DATA_DIR</span>/<span class="k">${</span><span class="nv">vg</span><span class="k">}</span>-backing-file | awk -F<span class="s1">&#39;:&#39;</span> <span class="s1">&#39;/backing-file/ { print $1}&#39;</span><span class="k">)</span>
+        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$VG_DEV&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>sudo losetup -d <span class="nv">$VG_DEV</span>
+            rm -f <span class="nv">$DATA_DIR</span>/<span class="k">${</span><span class="nv">vg</span><span class="k">}</span>-backing-file
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -470,16 +535,17 @@ So check the response and restart if need be</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Campsite rule: leave behind a volume group at least as clean as we found it</p>
 </td><td class=code><div class=highlight><pre>
-    _clean_volume_group <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+    _cleanup_lvm <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>_cleanup_lvm <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_cinder() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_cinder<span class="o">()</span> <span class="o">{</span>
-    setup_develop <span class="nv">$CINDER_DIR</span>
-    setup_develop <span class="nv">$CINDERCLIENT_DIR</span>
-
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$CINDER_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$CINDER_CONF_DIR</span>
     <span class="k">fi</span>
@@ -542,17 +608,27 @@ So check the response and restart if need be</p>
 
     cp <span class="nv">$CINDER_DIR</span>/etc/cinder/cinder.conf.sample <span class="nv">$CINDER_CONF</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT auth_strategy keystone
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT debug True
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT verbose True
-    iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_group <span class="nv">$VOLUME_GROUP</span>
-    iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_name_template <span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">}</span>%s
-    iniset <span class="nv">$CINDER_CONF</span> DEFAULT iscsi_helper tgtadm
-    <span class="nb">local </span>dburl
-    database_connection_url dburl cinder
-    iniset <span class="nv">$CINDER_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT enabled_backends lvmdriver-1,lvmdriver-2
+        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-1 volume_group <span class="nv">$VOLUME_GROUP</span>
+        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-1 volume_driver cinder.volume.drivers.lvm.LVMISCSIDriver
+        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-1 volume_backend_name LVM_iSCSI
+        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-2 volume_group <span class="nv">$VOLUME_GROUP2</span>
+        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-2 volume_driver cinder.volume.drivers.lvm.LVMISCSIDriver
+        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-2 volume_backend_name LVM_iSCSI_2
+    <span class="k">else</span>
+<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_group <span class="nv">$VOLUME_GROUP</span>
+        iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_name_template <span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">}</span>%s
+    <span class="k">fi</span>
+<span class="k">    </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT iscsi_helper tgtadm
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT sql_connection <span class="sb">`</span>database_connection_url cinder<span class="sb">`</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT api_paste_config <span class="nv">$CINDER_API_PASTE_INI</span>
-    iniset <span class="nv">$CINDER_CONF</span> DEFAULT root_helper <span class="s2">&quot;sudo ${CINDER_ROOTWRAP}&quot;</span>
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT rootwrap_config <span class="s2">&quot;$CINDER_CONF_DIR/rootwrap.conf&quot;</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT osapi_volume_extension cinder.api.contrib.standard_extensions
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT state_path <span class="nv">$CINDER_STATE_PATH</span>
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT periodic_interval <span class="nv">$CINDER_PERIODIC_INTERVAL</span>
 
     <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -594,7 +670,37 @@ So check the response and restart if need be</p>
         <span class="o">)</span>
     <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;sheepdog&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_driver <span class="s2">&quot;cinder.volume.drivers.sheepdog.SheepdogDriver&quot;</span>
+    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;glusterfs&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>To use glusterfs, set the following in localrc:
+CINDER_DRIVER=glusterfs
+CINDER_GLUSTERFS_SHARES=&quot;127.0.0.1:/vol1;127.0.0.1:/vol2&quot;
+Shares are &lt;host&gt;:&lt;volume&gt; and separated by semicolons.</p>
+</td><td class=code><div class=highlight><pre>
+
+        iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_driver <span class="s2">&quot;cinder.volume.drivers.glusterfs.GlusterfsDriver&quot;</span>
+        iniset <span class="nv">$CINDER_CONF</span> DEFAULT glusterfs_shares_config <span class="s2">&quot;$CINDER_CONF_DIR/glusterfs_shares&quot;</span>
+        touch <span class="nv">$CINDER_CONF_DIR</span>/glusterfs_shares
+        <span class="k">if</span> <span class="o">[</span> ! -z <span class="s2">&quot;$CINDER_GLUSTERFS_SHARES&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">CINDER_GLUSTERFS_SHARES</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$CINDER_GLUSTERFS_SHARES</span> | tr <span class="s2">&quot;;&quot;</span> <span class="s2">&quot;\n&quot;</span><span class="k">)</span>
+            <span class="nb">echo</span> <span class="s2">&quot;$CINDER_GLUSTERFS_SHARES&quot;</span> &gt; <span class="nv">$CINDER_CONF_DIR</span>/glusterfs_shares
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Cinder clones are slightly larger due to some extra
+metadata.  RHEL6 will not allow auto-extending of LV's
+without this, leading to clones giving hard-to-track disk
+I/O errors.
+see <a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi?id=975052">https://bugzilla.redhat.com/show_bug.cgi?id=975052</a></p>
+</td><td class=code><div class=highlight><pre>
+        sudo sed -i~ <span class="se">\</span>
+            -e <span class="s1">&#39;s/snapshot_autoextend_threshold =.*/snapshot_autoextend_threshold = 80/&#39;</span> <span class="se">\</span>
+            -e <span class="s1">&#39;s/snapshot_autoextend_percent =.*/snapshot_autoextend_percent = 20/&#39;</span> <span class="se">\</span>
+            /etc/lvm/lvm.conf
     <span class="k">fi</span>
+
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -660,29 +766,55 @@ create_cinder_accounts<span class="o">()</span> <span class="o">{</span>
 
 create_cinder_volume_group<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure a default volume group called '<cite>stack-volumes</cite>' for the volume
-service if it does not yet exist.  If you don't wish to use a file backed
-volume group, create your own volume group called <tt class="docutils literal"><span class="pre">stack-volumes</span></tt> before
-invoking <tt class="docutils literal">stack.sh</tt>.</p>
-<p>By default, the backing file is 5G in size, and is stored in <tt class="docutils literal">/opt/stack/data</tt>.</p>
+<p>According to the <tt class="docutils literal">CINDER_MULTI_LVM_BACKEND</tt> value, configure one or two default volumes
+group called <tt class="docutils literal"><span class="pre">stack-volumes</span></tt> (and <tt class="docutils literal"><span class="pre">stack-volumes2</span></tt>) for the volume
+service if it (they) does (do) not yet exist. If you don't wish to use a
+file backed volume group, create your own volume group called <tt class="docutils literal"><span class="pre">stack-volumes</span></tt>
+and <tt class="docutils literal"><span class="pre">stack-volumes2</span></tt> before invoking <tt class="docutils literal">stack.sh</tt>.</p>
+<p>The two backing files are <tt class="docutils literal">VOLUME_BACKING_FILE_SIZE</tt> in size, and they are stored in
+the <tt class="docutils literal">DATA_DIR</tt>.</p>
 </td><td class=code><div class=highlight><pre>
 
     <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
-
+<span class="k">        if</span> <span class="o">[</span> -z <span class="s2">&quot;$VOLUME_BACKING_DEVICE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Only create if the file doesn't already exists</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
-
-        <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
+            <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
+            <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">            </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>
+            <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
+<span class="k">                </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>
+            <span class="k">fi</span>
+<span class="k">        else</span>
+<span class="k">            </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_BACKING_DEVICE</span>
         <span class="k">fi</span>
+<span class="k">    fi</span>
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+        <span class="c">#set up the second volume if CINDER_MULTI_LVM_BACKEND is enabled</span>
+
+        <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP2</span>; <span class="k">then</span>
+<span class="k">            if</span> <span class="o">[</span> -z <span class="s2">&quot;$VOLUME_BACKING_DEVICE2&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Only create if the file doesn't already exists</p>
+</td><td class=code><div class=highlight><pre>
+                <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE2</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE2</span>
+
+                <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE2</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
+</td><td class=code><div class=highlight><pre>
+                <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP2</span>; <span class="k">then</span>
+<span class="k">                    </span>sudo vgcreate <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$DEV</span>
+                <span class="k">fi</span>
+<span class="k">            else</span>
+<span class="k">                </span>sudo vgcreate <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_BACKING_DEVICE2</span>
+            <span class="k">fi</span>
+<span class="k">        fi</span>
 <span class="k">    fi</span>
 
 <span class="k">    </span>mkdir -p <span class="nv">$CINDER_STATE_PATH</span>/volumes
@@ -729,7 +861,10 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 <p>Start with a clean volume group</p>
 </td><td class=code><div class=highlight><pre>
             _clean_volume_group <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
-        <span class="k">fi</span>
+            <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                </span>_clean_volume_group <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+            <span class="k">fi</span>
+<span class="k">        fi</span>
 <span class="k">    fi</span>
 
 <span class="k">    </span>create_cinder_cache_dir
@@ -740,16 +875,24 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_cinder<span class="o">()</span> <span class="o">{</span>
     git_clone <span class="nv">$CINDER_REPO</span> <span class="nv">$CINDER_DIR</span> <span class="nv">$CINDER_BRANCH</span>
-    git_clone <span class="nv">$CINDERCLIENT_REPO</span> <span class="nv">$CINDERCLIENT_DIR</span> <span class="nv">$CINDERCLIENT_BRANCH</span>
+    setup_develop <span class="nv">$CINDER_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>apply config.d approach (e.g. Oneiric does not have this)</p>
+<p>install_cinderclient() - Collect source and prepare</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_cinderclient<span class="o">()</span> <span class="o">{</span>
+    git_clone <span class="nv">$CINDERCLIENT_REPO</span> <span class="nv">$CINDERCLIENT_DIR</span> <span class="nv">$CINDERCLIENT_BRANCH</span>
+    setup_develop <span class="nv">$CINDERCLIENT_DIR</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>apply config.d approach for cinder volumes directory</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>_configure_tgt_for_config_d<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> ! -d /etc/tgt/conf.d/ <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo mkdir -p /etc/tgt/conf.d
-        <span class="nb">echo</span> <span class="s2">&quot;include /etc/tgt/conf.d/*.conf&quot;</span> | sudo tee -a /etc/tgt/targets.conf
+    <span class="k">if</span> <span class="o">[[</span> ! -d /etc/tgt/stack.d/ <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo ln -sf <span class="nv">$CINDER_STATE_PATH</span>/volumes /etc/tgt/stack.d
+        <span class="nb">echo</span> <span class="s2">&quot;include /etc/tgt/stack.d/*&quot;</span> | sudo tee -a /etc/tgt/targets.conf
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -758,11 +901,12 @@ invoking <tt class="docutils literal">stack.sh</tt>.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_cinder<span class="o">()</span> <span class="o">{</span>
     <span class="k">if </span>is_service_enabled c-vol; <span class="k">then</span>
-<span class="k">        </span>_configure_tgt_for_config_d
-        <span class="k">if</span> <span class="o">[[</span> ! -f /etc/tgt/conf.d/stack.conf <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;include $CINDER_STATE_PATH/volumes/*&quot;</span> | sudo tee /etc/tgt/conf.d/stack.conf
-        <span class="k">fi</span>
-<span class="k">        if </span>is_ubuntu; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete any old stack.conf</p>
+</td><td class=code><div class=highlight><pre>
+        sudo rm -f /etc/tgt/conf.d/stack.conf
+        _configure_tgt_for_config_d
+        <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>tgt in oneiric doesn't restart properly if tgtd isn't running
 do it in two steps</p>
@@ -788,6 +932,7 @@ name, and would need to be adjusted too</p>
 <span class="k">    </span>screen_it c-api <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-api --config-file $CINDER_CONF&quot;</span>
     screen_it c-vol <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-volume --config-file $CINDER_CONF&quot;</span>
     screen_it c-sch <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-scheduler --config-file $CINDER_CONF&quot;</span>
+    screen_it c-bak <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-backup --config-file $CINDER_CONF&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Start proxies if enabled</p>
@@ -804,7 +949,7 @@ name, and would need to be adjusted too</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the cinder screen windows</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>serv in c-api c-sch c-vol; <span class="k">do</span>
+    <span class="k">for </span>serv in c-api c-bak c-sch c-vol; <span class="k">do</span>
 <span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
 <span class="nb">    </span><span class="k">done</span>
 
@@ -817,12 +962,21 @@ name, and would need to be adjusted too</p>
 <span class="k">    fi</span>
 <span class="o">}</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

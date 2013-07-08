@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -331,21 +343,15 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>This script is a level script
-It must be run on a XenServer or XCP machine</p>
+<p>This script must be run on a XenServer or XCP machine</p>
 <p>It creates a DomU VM that runs OpenStack services</p>
 <p>For more details see: README.md</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Exit on errors</p>
-</td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o errexit
-</pre></div></td></tr><tr><td class=docs>
-<p>Echo commands</p>
-</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o nounset
 <span class="nb">set</span> -o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
@@ -360,18 +366,22 @@ It must be run on a XenServer or XCP machine</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>This directory</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">THIS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Source lower level functions</p>
 </td><td class=code><div class=highlight><pre>
-. <span class="nv">$TOP_DIR</span>/../../functions
+. <span class="nv">$THIS_DIR</span>/../../functions
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Include onexit commands</p>
 </td><td class=code><div class=highlight><pre>
-. <span class="nv">$TOP_DIR</span>/scripts/on_exit.sh
+. <span class="nv">$THIS_DIR</span>/scripts/on_exit.sh
 
+</pre></div></td></tr><tr><td class=docs>
+<p>xapi functions</p>
+</td><td class=code><div class=highlight><pre>
+. <span class="nv">$THIS_DIR</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Get Settings</p>
@@ -380,7 +390,7 @@ It must be run on a XenServer or XCP machine</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Source params - override xenrc params in your localrc to suit your taste</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source </span>xenrc
+<span class="nb">source</span> <span class="nv">$THIS_DIR</span>/xenrc
 
 xe_min<span class="o">()</span>
 <span class="o">{</span>
@@ -389,169 +399,63 @@ xe_min<span class="o">()</span>
 <span class="nb">  </span>xe <span class="s2">&quot;$cmd&quot;</span> --minimal <span class="s2">&quot;$@&quot;</span>
 <span class="o">}</span>
 
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Prepare Dom0
 including installing XenAPI plugins</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
-<span class="k">if</span> <span class="o">[</span> -f ./master <span class="o">]</span>
-<span class="k">then</span>
-<span class="k">    </span>rm -rf ./master
-    rm -rf ./nova
-<span class="k">fi</span>
+<span class="nb">cd</span> <span class="nv">$THIS_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>get nova</p>
+<p>Install plugins</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">NOVA_ZIPBALL_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_ZIPBALL_URL</span><span class="k">:-$(</span><span class="nb">echo</span> <span class="nv">$NOVA_REPO</span> | sed <span class="s2">&quot;s:\.git$::;s:$:/zipball/$NOVA_BRANCH:g&quot;</span><span class="k">)}</span>
-wget <span class="nv">$NOVA_ZIPBALL_URL</span> -O nova-zipball --no-check-certificate
-unzip -o nova-zipball  -d ./nova
 
-</pre></div></td></tr><tr><td class=docs>
-<p>install xapi plugins</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">XAPI_PLUGIN_DIR</span><span class="o">=</span>/etc/xapi.d/plugins/
-<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$XAPI_PLUGIN_DIR</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>the following is needed when using xcp-xapi</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">XAPI_PLUGIN_DIR</span><span class="o">=</span>/usr/lib/xcp/plugins/
-<span class="k">fi</span>
-cp -pr ./nova/*/plugins/xenserver/xenapi/etc/xapi.d/plugins/* <span class="nv">$XAPI_PLUGIN_DIR</span>
+<span class="c">## Nova plugins</span>
+<span class="nv">NOVA_ZIPBALL_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_ZIPBALL_URL</span><span class="k">:-$(</span>zip_snapshot_location <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_BRANCH</span><span class="k">)}</span>
+install_xapi_plugins_from_zipball <span class="nv">$NOVA_ZIPBALL_URL</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Install the netwrap xapi plugin to support agent control of dom0 networking</p>
-</td><td class=code><div class=highlight><pre>
+<span class="c">## Install the netwrap xapi plugin to support agent control of dom0 networking</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-agt&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    if</span> <span class="o">[</span> -f ./quantum <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>rm -rf ./quantum
-    <span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>get quantum</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">QUANTUM_ZIPBALL_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">QUANTUM_ZIPBALL_URL</span><span class="k">:-$(</span><span class="nb">echo</span> <span class="nv">$QUANTUM_REPO</span> | sed <span class="s2">&quot;s:\.git$::;s:$:/zipball/$QUANTUM_BRANCH:g&quot;</span><span class="k">)}</span>
-    wget <span class="nv">$QUANTUM_ZIPBALL_URL</span> -O quantum-zipball --no-check-certificate
-    unzip -o quantum-zipball  -d ./quantum
-    cp -pr ./quantum/*/quantum/plugins/openvswitch/agent/xenapi/etc/xapi.d/plugins/* <span class="nv">$XAPI_PLUGIN_DIR</span>
+<span class="k">    </span><span class="nv">NEUTRON_ZIPBALL_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NEUTRON_ZIPBALL_URL</span><span class="k">:-$(</span>zip_snapshot_location <span class="nv">$NEUTRON_REPO</span> <span class="nv">$NEUTRON_BRANCH</span><span class="k">)}</span>
+    install_xapi_plugins_from_zipball <span class="nv">$NEUTRON_ZIPBALL_URL</span>
 <span class="k">fi</span>
 
-chmod a+x <span class="k">${</span><span class="nv">XAPI_PLUGIN_DIR</span><span class="k">}</span>*
-
-mkdir -p /boot/guest
-
+create_directory_for_kernels
+create_directory_for_images
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure Networking</p>
 </td><td class=code><div class=highlight><pre>
+setup_network <span class="s2">&quot;$VM_BRIDGE_OR_NET_NAME&quot;</span>
+setup_network <span class="s2">&quot;$MGT_BRIDGE_OR_NET_NAME&quot;</span>
+setup_network <span class="s2">&quot;$PUB_BRIDGE_OR_NET_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Helper to create networks
-Uses echo trickery to return network uuid</p>
+<p>With neutron, one more network is required, which is internal to the
+hypervisor, and used by the VMs</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_network<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">br</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nv">dev</span><span class="o">=</span><span class="nv">$2</span>
-    <span class="nv">vlan</span><span class="o">=</span><span class="nv">$3</span>
-    <span class="nv">netname</span><span class="o">=</span><span class="nv">$4</span>
-    <span class="k">if</span> <span class="o">[</span> -z <span class="nv">$br</span> <span class="o">]</span>
-    <span class="k">then</span>
-<span class="k">        </span><span class="nv">pif</span><span class="o">=</span><span class="k">$(</span>xe_min pif-list <span class="nv">device</span><span class="o">=</span><span class="nv">$dev</span> <span class="nv">VLAN</span><span class="o">=</span><span class="nv">$vlan</span><span class="k">)</span>
-        <span class="k">if</span> <span class="o">[</span> -z <span class="nv">$pif</span> <span class="o">]</span>
-        <span class="k">then</span>
-<span class="k">            </span><span class="nv">net</span><span class="o">=</span><span class="k">$(</span>xe network-create name-label<span class="o">=</span><span class="nv">$netname</span><span class="k">)</span>
-        <span class="k">else</span>
-<span class="k">            </span><span class="nv">net</span><span class="o">=</span><span class="k">$(</span>xe_min network-list  PIF-uuids<span class="o">=</span><span class="nv">$pif</span><span class="k">)</span>
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="nv">$net</span>
-        <span class="k">return </span>0
-    <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[</span> ! <span class="k">$(</span>xe_min network-list  <span class="nv">params</span><span class="o">=</span>bridge | grep -w --only-matching <span class="nv">$br</span><span class="k">)</span> <span class="o">]</span>
-    <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Specified bridge $br does not exist&quot;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;If you wish to use defaults, please keep the bridge name empty&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">else</span>
-<span class="k">        </span><span class="nv">net</span><span class="o">=</span><span class="k">$(</span>xe_min network-list  <span class="nv">bridge</span><span class="o">=</span><span class="nv">$br</span><span class="k">)</span>
-        <span class="nb">echo</span> <span class="nv">$net</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-<span class="k">function </span>errorcheck<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">rc</span><span class="o">=</span><span class="nv">$?</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$rc</span> -ne 0 <span class="o">]</span>
-    <span class="k">then</span>
-<span class="k">        </span><span class="nb">exit</span> <span class="nv">$rc</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create host, vm, mgmt, pub networks on XenServer</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">VM_NET</span><span class="o">=</span><span class="k">$(</span>create_network <span class="s2">&quot;$VM_BR&quot;</span> <span class="s2">&quot;$VM_DEV&quot;</span> <span class="s2">&quot;$VM_VLAN&quot;</span> <span class="s2">&quot;vmbr&quot;</span><span class="k">)</span>
-errorcheck
-<span class="nv">MGT_NET</span><span class="o">=</span><span class="k">$(</span>create_network <span class="s2">&quot;$MGT_BR&quot;</span> <span class="s2">&quot;$MGT_DEV&quot;</span> <span class="s2">&quot;$MGT_VLAN&quot;</span> <span class="s2">&quot;mgtbr&quot;</span><span class="k">)</span>
-errorcheck
-<span class="nv">PUB_NET</span><span class="o">=</span><span class="k">$(</span>create_network <span class="s2">&quot;$PUB_BR&quot;</span> <span class="s2">&quot;$PUB_DEV&quot;</span> <span class="s2">&quot;$PUB_VLAN&quot;</span> <span class="s2">&quot;pubbr&quot;</span><span class="k">)</span>
-errorcheck
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Helper to create vlans</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_vlan<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">dev</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nv">vlan</span><span class="o">=</span><span class="nv">$2</span>
-    <span class="nv">net</span><span class="o">=</span><span class="nv">$3</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>VLAN -1 refers to no VLAN (physical network)</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$vlan</span> -eq -1 <span class="o">]</span>
-    <span class="k">then</span>
-<span class="k">        return</span>
-<span class="k">    fi</span>
-<span class="k">    if</span> <span class="o">[</span> -z <span class="k">$(</span>xe_min vlan-list  <span class="nv">tag</span><span class="o">=</span><span class="nv">$vlan</span><span class="k">)</span> <span class="o">]</span>
-    <span class="k">then</span>
-<span class="k">        </span><span class="nv">pif</span><span class="o">=</span><span class="k">$(</span>xe_min pif-list  network-uuid<span class="o">=</span><span class="nv">$net</span><span class="k">)</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>We created a brand new network this time</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[</span> -z <span class="nv">$pif</span> <span class="o">]</span>
-        <span class="k">then</span>
-<span class="k">            </span><span class="nv">pif</span><span class="o">=</span><span class="k">$(</span>xe_min pif-list  <span class="nv">device</span><span class="o">=</span><span class="nv">$dev</span> <span class="nv">VLAN</span><span class="o">=</span>-1<span class="k">)</span>
-            xe vlan-create pif-uuid<span class="o">=</span><span class="nv">$pif</span> <span class="nv">vlan</span><span class="o">=</span><span class="nv">$vlan</span> network-uuid<span class="o">=</span><span class="nv">$net</span>
-        <span class="k">else</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;VLAN does not exist but PIF attached to this network&quot;</span>
-            <span class="nb">echo</span> <span class="s2">&quot;How did we reach here?&quot;</span>
-            <span class="nb">exit </span>1
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create vlans for vm and management</p>
-</td><td class=code><div class=highlight><pre>
-create_vlan <span class="nv">$PUB_DEV</span> <span class="nv">$PUB_VLAN</span> <span class="nv">$PUB_NET</span>
-create_vlan <span class="nv">$VM_DEV</span> <span class="nv">$VM_VLAN</span> <span class="nv">$VM_NET</span>
-create_vlan <span class="nv">$MGT_DEV</span> <span class="nv">$MGT_VLAN</span> <span class="nv">$MGT_NET</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Get final bridge names</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> -z <span class="nv">$VM_BR</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">VM_BR</span><span class="o">=</span><span class="k">$(</span>xe_min network-list  <span class="nv">uuid</span><span class="o">=</span><span class="nv">$VM_NET</span> <span class="nv">params</span><span class="o">=</span>bridge<span class="k">)</span>
-<span class="k">fi</span>
-<span class="k">if</span> <span class="o">[</span> -z <span class="nv">$MGT_BR</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">MGT_BR</span><span class="o">=</span><span class="k">$(</span>xe_min network-list  <span class="nv">uuid</span><span class="o">=</span><span class="nv">$MGT_NET</span> <span class="nv">params</span><span class="o">=</span>bridge<span class="k">)</span>
-<span class="k">fi</span>
-<span class="k">if</span> <span class="o">[</span> -z <span class="nv">$PUB_BR</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">PUB_BR</span><span class="o">=</span><span class="k">$(</span>xe_min network-list  <span class="nv">uuid</span><span class="o">=</span><span class="nv">$PUB_NET</span> <span class="nv">params</span><span class="o">=</span>bridge<span class="k">)</span>
+<span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">    </span>setup_network <span class="s2">&quot;$XEN_INT_BRIDGE_OR_NET_NAME&quot;</span>
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>dom0 ip, XenAPI is assumed to be listening</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">HOST_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">HOST_IP</span><span class="k">:-</span><span class="sb">`</span>ifconfig xenbr0 | grep <span class="s2">&quot;inet addr&quot;</span> | cut -d <span class="s2">&quot;:&quot;</span> -f2 | sed <span class="s2">&quot;s/ .*//&quot;</span><span class="sb">`</span><span class="k">}</span>
+<span class="k">if </span>parameter_is_specified <span class="s2">&quot;FLAT_NETWORK_BRIDGE&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>cat &gt;&amp;2 <span class="s">&lt;&lt; EOF</span>
+<span class="s">ERROR: FLAT_NETWORK_BRIDGE is specified in localrc file</span>
+<span class="s">This is considered as an error, as its value will be derived from the</span>
+<span class="s">VM_BRIDGE_OR_NET_NAME variable&#39;s value.</span>
+<span class="s">EOF</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="k">if</span> ! xenapi_is_listening_on <span class="s2">&quot;$MGT_BRIDGE_OR_NET_NAME&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>cat &gt;&amp;2 <span class="s">&lt;&lt; EOF</span>
+<span class="s">ERROR: XenAPI does not have an assigned IP address on the management network.</span>
+<span class="s">please review your XenServer network configuration / localrc file.</span>
+<span class="s">EOF</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="nv">HOST_IP</span><span class="o">=</span><span class="k">$(</span>xenapi_ip_on <span class="s2">&quot;$MGT_BRIDGE_OR_NET_NAME&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up ip forwarding, but skip on xcp-xapi</p>
@@ -659,24 +563,31 @@ and/or create VM from template</p>
 <span class="k">            </span><span class="nv">HTTP_SERVER_LOCATION</span><span class="o">=</span><span class="s2">&quot;/var/www/html&quot;</span>
             mkdir -p <span class="nv">$HTTP_SERVER_LOCATION</span>
         <span class="k">fi</span>
-<span class="k">        </span>cp -f <span class="nv">$TOP_DIR</span>/devstackubuntupreseed.cfg <span class="nv">$HTTP_SERVER_LOCATION</span>
-        <span class="nv">MIRROR</span><span class="o">=</span><span class="k">${</span><span class="nv">MIRROR</span><span class="k">:-</span><span class="s2">&quot;&quot;</span><span class="k">}</span>
-        <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$MIRROR&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>sed -e <span class="s2">&quot;s,d-i mirror/http/hostname string .*,d-i mirror/http/hostname string $MIRROR,&quot;</span> <span class="se">\</span>
-                -i <span class="s2">&quot;${HTTP_SERVER_LOCATION}/devstackubuntupreseed.cfg&quot;</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
+<span class="k">        </span>cp -f <span class="nv">$THIS_DIR</span>/devstackubuntupreseed.cfg <span class="nv">$HTTP_SERVER_LOCATION</span>
+
+        sed <span class="se">\</span>
+            -e <span class="s2">&quot;s,\(d-i mirror/http/hostname string\).*,\1 $UBUNTU_INST_HTTP_HOSTNAME,g&quot;</span> <span class="se">\</span>
+            -e <span class="s2">&quot;s,\(d-i mirror/http/directory string\).*,\1 $UBUNTU_INST_HTTP_DIRECTORY,g&quot;</span> <span class="se">\</span>
+            -e <span class="s2">&quot;s,\(d-i mirror/http/proxy string\).*,\1 $UBUNTU_INST_HTTP_PROXY,g&quot;</span> <span class="se">\</span>
+            -i <span class="s2">&quot;${HTTP_SERVER_LOCATION}/devstackubuntupreseed.cfg&quot;</span>
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Update the template</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$TOP_DIR</span>/scripts/install_ubuntu_template.sh <span class="nv">$PRESEED_URL</span>
+    <span class="nv">$THIS_DIR</span>/scripts/install_ubuntu_template.sh <span class="nv">$PRESEED_URL</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create a new VM with the given template
 creating the correct VIFs and metadata</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$TOP_DIR</span>/scripts/install-os-vpx.sh -t <span class="s2">&quot;$UBUNTU_INST_TEMPLATE_NAME&quot;</span> -v <span class="nv">$VM_BR</span> -m <span class="nv">$MGT_BR</span> -p <span class="nv">$PUB_BR</span> -l <span class="nv">$GUEST_NAME</span> -r <span class="nv">$OSDOMU_MEM_MB</span> -k <span class="s2">&quot;flat_network_bridge=${VM_BR}&quot;</span>
+    <span class="nv">$THIS_DIR</span>/scripts/install-os-vpx.sh <span class="se">\</span>
+        -t <span class="s2">&quot;$UBUNTU_INST_TEMPLATE_NAME&quot;</span> <span class="se">\</span>
+        -v <span class="s2">&quot;$VM_BRIDGE_OR_NET_NAME&quot;</span> <span class="se">\</span>
+        -m <span class="s2">&quot;$MGT_BRIDGE_OR_NET_NAME&quot;</span> <span class="se">\</span>
+        -p <span class="s2">&quot;$PUB_BRIDGE_OR_NET_NAME&quot;</span> <span class="se">\</span>
+        -l <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="se">\</span>
+        -r <span class="s2">&quot;$OSDOMU_MEM_MB&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>wait for install to finish</p>
@@ -696,7 +607,7 @@ creating the correct VIFs and metadata</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install XenServer tools, and other such things</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$TOP_DIR</span>/prepare_guest_template.sh <span class="s2">&quot;$GUEST_NAME&quot;</span>
+    <span class="nv">$THIS_DIR</span>/prepare_guest_template.sh <span class="s2">&quot;$GUEST_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>start the VM to run the prepare steps</p>
@@ -720,11 +631,62 @@ creating the correct VIFs and metadata</p>
     <span class="nv">vm_uuid</span><span class="o">=</span><span class="k">$(</span>xe vm-install <span class="nv">template</span><span class="o">=</span><span class="s2">&quot;$TNAME&quot;</span> new-name-label<span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span><span class="k">)</span>
 <span class="k">fi</span>
 
+<span class="c">## Setup network cards</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Wipe out all</p>
+</td><td class=code><div class=highlight><pre>
+destroy_all_vifs_of <span class="s2">&quot;$GUEST_NAME&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Tenant network</p>
+</td><td class=code><div class=highlight><pre>
+add_interface <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;$VM_BRIDGE_OR_NET_NAME&quot;</span> <span class="s2">&quot;$VM_DEV_NR&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Management network</p>
+</td><td class=code><div class=highlight><pre>
+add_interface <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;$MGT_BRIDGE_OR_NET_NAME&quot;</span> <span class="s2">&quot;$MGT_DEV_NR&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Public network</p>
+</td><td class=code><div class=highlight><pre>
+add_interface <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;$PUB_BRIDGE_OR_NET_NAME&quot;</span> <span class="s2">&quot;$PUB_DEV_NR&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Inject DevStack inside VM disk</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$TOP_DIR</span>/build_xva.sh <span class="s2">&quot;$GUEST_NAME&quot;</span>
+<span class="nv">$THIS_DIR</span>/build_xva.sh <span class="s2">&quot;$GUEST_NAME&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Attach a network interface for the integration network (so that the bridge
+is created by XenServer). This is required for Neutron. Also pass that as a
+kernel parameter for DomU</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">    </span>add_interface <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;$XEN_INT_BRIDGE_OR_NET_NAME&quot;</span> <span class="nv">$XEN_INT_DEV_NR</span>
+
+    <span class="nv">XEN_INTEGRATION_BRIDGE</span><span class="o">=</span><span class="k">$(</span>bridge_for <span class="s2">&quot;$XEN_INT_BRIDGE_OR_NET_NAME&quot;</span><span class="k">)</span>
+    append_kernel_cmdline <span class="se">\</span>
+        <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;xen_integration_bridge=${XEN_INTEGRATION_BRIDGE}&quot;</span>
+<span class="k">fi</span>
+
+<span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">$(</span>bridge_for <span class="s2">&quot;$VM_BRIDGE_OR_NET_NAME&quot;</span><span class="k">)</span>
+append_kernel_cmdline <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;flat_network_bridge=${FLAT_NETWORK_BRIDGE}&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Add a separate xvdb, if it was requested</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;0&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$XEN_XVDB_SIZE_GB&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">vm</span><span class="o">=</span><span class="k">$(</span>xe vm-list name-label<span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span> --minimal<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Add a new disk</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">localsr</span><span class="o">=</span><span class="k">$(</span>get_local_sr<span class="k">)</span>
+    <span class="nv">extra_vdi</span><span class="o">=</span><span class="k">$(</span>xe vdi-create <span class="se">\</span>
+        name-label<span class="o">=</span>xvdb-added-by-devstack <span class="se">\</span>
+        virtual-size<span class="o">=</span><span class="s2">&quot;${XEN_XVDB_SIZE_GB}GiB&quot;</span> <span class="se">\</span>
+        sr-uuid<span class="o">=</span><span class="nv">$localsr</span> <span class="nb">type</span><span class="o">=</span>user<span class="k">)</span>
+    xe vbd-create vm-uuid<span class="o">=</span><span class="nv">$vm</span> vdi-uuid<span class="o">=</span><span class="nv">$extra_vdi</span> <span class="nv">device</span><span class="o">=</span>1
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create a snapshot before the first boot
@@ -732,61 +694,35 @@ to allow a quick re-run with the same settings</p>
 </td><td class=code><div class=highlight><pre>
 xe vm-snapshot <span class="nv">vm</span><span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span> new-name-label<span class="o">=</span><span class="s2">&quot;$SNAME_FIRST_BOOT&quot;</span>
 
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Run DevStack VM</p>
 </td><td class=code><div class=highlight><pre>
 xe vm-start <span class="nv">vm</span><span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Find IP and optionally wait for stack.sh to complete</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">function </span>find_ip_by_name<span class="o">()</span> <span class="o">{</span>
-  <span class="nb">local </span><span class="nv">guest_name</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
-  <span class="nb">local </span><span class="nv">interface</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
-  <span class="nb">local </span><span class="nv">period</span><span class="o">=</span>10
-  <span class="nv">max_tries</span><span class="o">=</span>10
-  <span class="nv">i</span><span class="o">=</span>0
-  <span class="k">while </span><span class="nb">true</span>
-<span class="nb">  </span><span class="k">do</span>
-<span class="k">    if</span> <span class="o">[</span> <span class="nv">$i</span> -ge <span class="nv">$max_tries</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">      </span><span class="nb">echo</span> <span class="s2">&quot;Timed out waiting for devstack ip address&quot;</span>
-      <span class="nb">exit </span>11
-    <span class="k">fi</span>
-
-<span class="k">    </span><span class="nv">devstackip</span><span class="o">=</span><span class="k">$(</span>xe vm-list --minimal <span class="se">\</span>
-                 name-label<span class="o">=</span><span class="nv">$guest_name</span> <span class="se">\</span>
-                 <span class="nv">params</span><span class="o">=</span>networks | sed -ne <span class="s2">&quot;s,^.*${interface}/ip: \([0-9.]*\).*\$,\1,p&quot;</span><span class="k">)</span>
-    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$devstackip&quot;</span> <span class="o">]</span>
-    <span class="k">then</span>
-<span class="k">      </span>sleep <span class="nv">$period</span>
-      <span class="o">((</span>i++<span class="o">))</span>
-    <span class="k">else</span>
-<span class="k">      </span><span class="nb">echo</span> <span class="nv">$devstackip</span>
-      <span class="nb">break</span>
-<span class="nb">    </span><span class="k">fi</span>
-<span class="k">  done</span>
-<span class="o">}</span>
 
 <span class="k">function </span>ssh_no_check<span class="o">()</span> <span class="o">{</span>
     ssh -o <span class="nv">UserKnownHostsFile</span><span class="o">=</span>/dev/null -o <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no <span class="s2">&quot;$@&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Note the XenServer needs to be on the chosen
-network, so XenServer can access Glance API</p>
+<p>Get hold of the Management IP of OpenStack VM</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> <span class="nv">$HOST_IP_IFACE</span> <span class="o">==</span> <span class="s2">&quot;eth2&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">DOMU_IP</span><span class="o">=</span><span class="nv">$MGT_IP</span>
+<span class="nv">OS_VM_MANAGEMENT_ADDRESS</span><span class="o">=</span><span class="nv">$MGT_IP</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">OS_VM_MANAGEMENT_ADDRESS</span><span class="o">=</span><span class="k">$(</span>find_ip_by_name <span class="nv">$GUEST_NAME</span> <span class="nv">$MGT_DEV_NR</span><span class="k">)</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Get hold of the Service IP of OpenStack VM</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$HOST_IP_IFACE</span> <span class="o">==</span> <span class="s2">&quot;eth${MGT_DEV_NR}&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">OS_VM_SERVICES_ADDRESS</span><span class="o">=</span><span class="nv">$MGT_IP</span>
     <span class="k">if</span> <span class="o">[</span> <span class="nv">$MGT_IP</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">DOMU_IP</span><span class="o">=</span><span class="k">$(</span>find_ip_by_name <span class="nv">$GUEST_NAME</span> 2<span class="k">)</span>
+<span class="k">        </span><span class="nv">OS_VM_SERVICES_ADDRESS</span><span class="o">=</span><span class="k">$(</span>find_ip_by_name <span class="nv">$GUEST_NAME</span> <span class="nv">$MGT_DEV_NR</span><span class="k">)</span>
     <span class="k">fi</span>
 <span class="k">else</span>
-<span class="k">    </span><span class="nv">DOMU_IP</span><span class="o">=</span><span class="nv">$PUB_IP</span>
+<span class="k">    </span><span class="nv">OS_VM_SERVICES_ADDRESS</span><span class="o">=</span><span class="nv">$PUB_IP</span>
     <span class="k">if</span> <span class="o">[</span> <span class="nv">$PUB_IP</span> <span class="o">==</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">DOMU_IP</span><span class="o">=</span><span class="k">$(</span>find_ip_by_name <span class="nv">$GUEST_NAME</span> 3<span class="k">)</span>
+<span class="k">        </span><span class="nv">OS_VM_SERVICES_ADDRESS</span><span class="o">=</span><span class="k">$(</span>find_ip_by_name <span class="nv">$GUEST_NAME</span> <span class="nv">$PUB_DEV_NR</span><span class="k">)</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -796,21 +732,17 @@ network, so XenServer can access Glance API</p>
 <span class="nv">WAIT_TILL_LAUNCH</span><span class="o">=</span><span class="k">${</span><span class="nv">WAIT_TILL_LAUNCH</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
 <span class="nv">COPYENV</span><span class="o">=</span><span class="k">${</span><span class="nv">COPYENV</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$WAIT_TILL_LAUNCH&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>  <span class="o">&amp;&amp;</span> <span class="o">[</span> -e ~/.ssh/id_rsa.pub  <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$COPYENV&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;We&#39;re done launching the vm, about to start tailing the&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;stack.sh log. It will take a second or two to start.&quot;</span>
-    <span class="nb">echo</span>
-<span class="nb">    echo</span> <span class="s2">&quot;Just CTRL-C at any time to stop tailing.&quot;</span>
+<span class="k">    </span><span class="nb">set</span> +x
 
+    <span class="nb">echo</span> <span class="s2">&quot;VM Launched - Waiting for startup script&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>wait for log to appear</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">while</span> ! ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> <span class="s2">&quot;[ -e run.sh.log ]&quot;</span>; <span class="k">do</span>
+    <span class="k">while</span> ! ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="s2">&quot;[ -e run.sh.log ]&quot;</span>; <span class="k">do</span>
 <span class="k">        </span>sleep 10
     <span class="k">done</span>
-
-<span class="k">    </span><span class="nb">set</span> +x
-    <span class="nb">echo</span> -n <span class="s2">&quot;Waiting for startup script to finish&quot;</span>
-    <span class="k">while</span> <span class="o">[</span> <span class="sb">`</span>ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> pgrep -c run.sh<span class="sb">`</span> -ge 1 <span class="o">]</span>
+<span class="k">    </span><span class="nb">echo</span> -n <span class="s2">&quot;Running&quot;</span>
+    <span class="k">while</span> <span class="o">[</span> <span class="sb">`</span>ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> pgrep -c run.sh<span class="sb">`</span> -ge 1 <span class="o">]</span>
     <span class="k">do</span>
 <span class="k">        </span>sleep 10
         <span class="nb">echo</span> -n <span class="s2">&quot;.&quot;</span>
@@ -821,19 +753,19 @@ network, so XenServer can access Glance API</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>output the run.sh.log</p>
 </td><td class=code><div class=highlight><pre>
-    ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> <span class="s1">&#39;cat run.sh.log&#39;</span>
+    ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="s1">&#39;cat run.sh.log&#39;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Fail if the expected text is not found</p>
 </td><td class=code><div class=highlight><pre>
-    ssh_no_check -q stack@<span class="nv">$DOMU_IP</span> <span class="s1">&#39;cat run.sh.log&#39;</span> | grep -q <span class="s1">&#39;stack.sh completed in&#39;</span>
+    ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="s1">&#39;cat run.sh.log&#39;</span> | grep -q <span class="s1">&#39;stack.sh completed in&#39;</span>
 
     <span class="nb">set</span> +x
     <span class="nb">echo</span> <span class="s2">&quot;################################################################################&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;All Finished!&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;You can visit the OpenStack Dashboard&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;at http://$DOMU_IP, and contact other services at the usual ports.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;at http://$OS_VM_SERVICES_ADDRESS, and contact other services at the usual ports.&quot;</span>
 <span class="k">else</span>
 <span class="k">    </span><span class="nb">set</span> +x
     <span class="nb">echo</span> <span class="s2">&quot;################################################################################&quot;</span>
@@ -842,14 +774,16 @@ network, so XenServer can access Glance API</p>
     <span class="nb">echo</span> <span class="s2">&quot;Now, you can monitor the progress of the stack.sh installation by &quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;tailing /opt/stack/run.sh.log from within your domU.&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;ssh into your domU now: &#39;ssh stack@$DOMU_IP&#39; using your password&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;ssh into your domU now: &#39;ssh stack@$OS_VM_MANAGEMENT_ADDRESS&#39; using your password&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;and then do: &#39;tail -f /opt/stack/run.sh.log&#39;&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;When the script completes, you can then visit the OpenStack Dashboard&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;at http://$DOMU_IP, and contact other services at the usual ports.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;at http://$OS_VM_SERVICES_ADDRESS, and contact other services at the usual ports.&quot;</span>
 <span class="k">fi</span>
 
 
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 

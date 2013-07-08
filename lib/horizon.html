@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -64,6 +64,10 @@ blockquote.epigraph {
 
 dl.docutils dd {
   margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
 
 /* Uncomment (and remove this text!) to get bold-faced definition list terms
 dl.docutils dt {
@@ -203,7 +207,7 @@ img.align-center, .figure.align-center, object.align-center {
 
 /* reset inner alignment in figures */
 div.align-right {
-  text-align: left }
+  text-align: inherit }
 
 /* div.align-center * { */
 /*   text-align: left } */
@@ -263,9 +267,17 @@ pre.address {
   margin-top: 0 ;
   font: inherit }
 
-pre.literal-block, pre.doctest-block {
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
+
+pre.code .ln { /* line numbers */
+  color: grey;
+}
+
+.code {
+  background-color: #eeeeee
+}
 
 span.classifier {
   font-family: sans-serif ;
@@ -373,11 +385,60 @@ cleanup_horizon</p>
 <span class="nv">HORIZON_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/horizon
 
 </pre></div></td></tr><tr><td class=docs>
+<p>local_settings.py is used to customize Dashboard settings.
+The example file in Horizon repo is used by default.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">HORIZON_SETTINGS</span><span class="o">=</span><span class="k">${</span><span class="nv">HORIZON_SETTINGS</span><span class="k">:-</span><span class="nv">$HORIZON_DIR</span><span class="p">/openstack_dashboard/local/local_settings.py.example</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Allow overriding the default Apache user and group, default to
 current user and his default group.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">APACHE_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_USER</span><span class="k">:-</span><span class="nv">$USER</span><span class="k">}</span>
 <span class="nv">APACHE_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_GROUP</span><span class="k">:-$(</span>id -gn <span class="nv">$APACHE_USER</span><span class="k">)}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up service name and configuration path</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">    </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
+    <span class="nv">APACHE_CONF</span><span class="o">=</span>sites-available/horizon
+<span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">    </span><span class="nv">APACHE_NAME</span><span class="o">=</span>httpd
+    <span class="nv">APACHE_CONF</span><span class="o">=</span>conf.d/horizon.conf
+<span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">    </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
+    <span class="nv">APACHE_CONF</span><span class="o">=</span>vhosts.d/horizon.conf
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="functions">
+<h1>Functions</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>utility method of setting python option</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_horizon_config_set<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">value</span><span class="o">=</span><span class="nv">$4</span>
+
+    <span class="k">if </span>grep -q <span class="s2">&quot;^$section&quot;</span> <span class="nv">$file</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">line</span><span class="o">=</span><span class="k">$(</span>sed -ne <span class="s2">&quot;/^$section/,/^}/ { /^ *&#39;$option&#39;:/ p; }&quot;</span> <span class="nv">$file</span><span class="k">)</span>
+        <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$line&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span>sed -i -e <span class="s2">&quot;/^$section/,/^}/ s/^\( *&#39;$option&#39;\) *:.*$/\1: $value,/&quot;</span> <span class="nv">$file</span>
+        <span class="k">else</span>
+<span class="k">            </span>sed -i -e <span class="s2">&quot;/^$section/ a\n    &#39;$option&#39;: $value,\n&quot;</span> <span class="nv">$file</span>
+        <span class="k">fi</span>
+<span class="k">    else</span>
+<span class="k">        </span><span class="nb">echo</span> -e <span class="s2">&quot;\n\n$section = {\n    &#39;$option&#39;: $value,\n}&quot;</span> &gt;&gt; <span class="nv">$file</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -391,12 +452,15 @@ current user and his default group.</p>
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>cleanup_horizon<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>kill instances (nova)
-delete image files (glance)
-This function intentionally left blank</p>
+<p>If <tt class="docutils literal">/usr/bin/node</tt> points into <tt class="docutils literal">$DEST</tt>
+we installed it via <tt class="docutils literal">install_nodejs</tt></p>
 </td><td class=code><div class=highlight><pre>
-    :
+        <span class="k">if</span> <span class="o">[[</span> <span class="k">$(</span>readlink -f /usr/bin/node<span class="k">)</span> <span class="o">=</span>~ <span class="o">(</span><span class="nv">$DEST</span><span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>sudo rm /usr/bin/node
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -419,7 +483,14 @@ This function intentionally left blank</p>
 <p><tt class="docutils literal">local_settings.py</tt> is used to override horizon default settings.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/local_settings.py
-    cp <span class="nv">$FILES</span>/horizon_settings.py <span class="nv">$local_settings</span>
+    cp <span class="nv">$HORIZON_SETTINGS</span> <span class="nv">$local_settings</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>enable loadbalancer dashboard in case service is enabled</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled q-lbaas; <span class="k">then</span>
+<span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> OPENSTACK_QUANTUM_NETWORK enable_lb True
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Initialize the horizon database (it stores sessions and notices shown to
@@ -434,10 +505,8 @@ users).  The user system is external (keystone).</p>
 </td><td class=code><div class=highlight><pre>
     sudo mkdir -p <span class="nv">$HORIZON_DIR</span>/.blackhole
 
-
+    <span class="nv">HORIZON_REQUIRE</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
-        <span class="nv">APACHE_CONF</span><span class="o">=</span>sites-available/horizon
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean up the old config name</p>
 </td><td class=code><div class=highlight><pre>
@@ -452,12 +521,15 @@ users).  The user system is external (keystone).</p>
 </td><td class=code><div class=highlight><pre>
         sudo a2enmod wsgi
     <span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span><span class="nv">APACHE_NAME</span><span class="o">=</span>httpd
-        <span class="nv">APACHE_CONF</span><span class="o">=</span>conf.d/horizon.conf
-        sudo sed <span class="s1">&#39;/^Listen/s/^.*$/Listen 0.0.0.0:80/&#39;</span> -i /etc/httpd/conf/httpd.conf
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$os_RELEASE&quot;</span> -ge <span class="s2">&quot;18&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>fedora 18 has Require all denied  in its httpd.conf
+and requires explicit Require all granted</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="nv">HORIZON_REQUIRE</span><span class="o">=</span><span class="s1">&#39;Require all granted&#39;</span>
+        <span class="k">fi</span>
+<span class="k">        </span>sudo sed <span class="s1">&#39;/^Listen/s/^.*$/Listen 0.0.0.0:80/&#39;</span> -i /etc/httpd/conf/httpd.conf
     <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
-        <span class="nv">APACHE_CONF</span><span class="o">=</span>vhosts.d/horizon.conf
 </pre></div></td></tr><tr><td class=docs>
 <p>WSGI isn't enabled by default, enable it</p>
 </td><td class=code><div class=highlight><pre>
@@ -465,6 +537,12 @@ users).  The user system is external (keystone).</p>
     <span class="k">else</span>
 <span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;apache configuration&quot;</span>
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove old log files that could mess with how devstack detects whether Horizon
+has been successfully started (see start_horizon() and functions::screen_it())</p>
+</td><td class=code><div class=highlight><pre>
+    sudo rm -f /var/log/<span class="nv">$APACHE_NAME</span>/horizon_*
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure apache to run horizon</p>
@@ -475,8 +553,8 @@ users).  The user system is external (keystone).</p>
 <span class="s2">        s,%HORIZON_DIR%,$HORIZON_DIR,g;</span>
 <span class="s2">        s,%APACHE_NAME%,$APACHE_NAME,g;</span>
 <span class="s2">        s,%DEST%,$DEST,g;</span>
+<span class="s2">        s,%HORIZON_REQUIRE%,$HORIZON_REQUIRE,g;</span>
 <span class="s2">    \&quot; $FILES/apache-horizon.template &gt;/etc/$APACHE_NAME/$APACHE_CONF&quot;</span>
-
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -507,7 +585,9 @@ users).  The user system is external (keystone).</p>
 <span class="k">        if</span> <span class="o">[[</span> ! -e <span class="s2">&quot;/usr/bin/node&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>install_package nodejs-legacy
         <span class="k">fi</span>
-<span class="k">    fi</span>
+<span class="k">    elif </span>is_fedora <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">||</span> <span class="s2">&quot;$os_RELEASE&quot;</span> -ge <span class="s2">&quot;18&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>install_package nodejs
+    <span class="k">fi</span>
 
 <span class="k">    </span>git_clone <span class="nv">$HORIZON_REPO</span> <span class="nv">$HORIZON_DIR</span> <span class="nv">$HORIZON_BRANCH</span> <span class="nv">$HORIZON_TAG</span>
 <span class="o">}</span>
@@ -524,23 +604,28 @@ users).  The user system is external (keystone).</p>
 <p>stop_horizon() - Stop running processes (non-screen)</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>stop_horizon<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span>stop_service apache2
-    <span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span>stop_service httpd
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>stop_service apache2
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$APACHE_NAME&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>stop_service <span class="nv">$APACHE_NAME</span>
     <span class="k">else</span>
 <span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;apache configuration&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 
