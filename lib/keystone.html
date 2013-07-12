@@ -347,11 +347,12 @@ ul.auto-toc {
 Functions to control the configuration and operation of <strong>Keystone</strong>
 Dependencies:
 <tt class="docutils literal">functions</tt> file
+<tt class="docutils literal">DEST</tt>, <tt class="docutils literal">STACK_USER</tt>
+<tt class="docutils literal">IDENTITY_API_VERSION</tt>
 <tt class="docutils literal">BASE_SQL_CONN</tt>
 <tt class="docutils literal">SERVICE_HOST</tt>, <tt class="docutils literal">SERVICE_PROTOCOL</tt>
 <tt class="docutils literal">SERVICE_TOKEN</tt>
-<tt class="docutils literal">S3_SERVICE_PORT</tt> (template backend only)
-<tt class="docutils literal">STACK_USER</tt></p>
+<tt class="docutils literal">S3_SERVICE_PORT</tt> (template backend only)</p>
 </td><td class=code><div class=highlight><pre>
 
 
@@ -497,7 +498,13 @@ This function intentionally left blank</p>
 <span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> identity driver <span class="s2">&quot;keystone.identity.backends.ldap.Identity&quot;</span>
     <span class="k">fi</span>
 
-<span class="k">    if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set the URL advertised in the <tt class="docutils literal">versions</tt> structure returned by the '/' route</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT public_endpoint <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:%(public_port)s/&quot;</span>
+    iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_endpoint <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:%(admin_port)s/&quot;</span>
+
+    <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the service ports for a proxy to take the originals</p>
 </td><td class=code><div class=highlight><pre>
@@ -660,9 +667,9 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
         keystone endpoint-create <span class="se">\</span>
             --region RegionOne <span class="se">\</span>
             --service_id <span class="nv">$KEYSTONE_SERVICE</span> <span class="se">\</span>
-            --publicurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;$KEYSTONE_AUTH_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0&quot;</span>
+            --publicurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v$IDENTITY_API_VERSION&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;$KEYSTONE_AUTH_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_AUTH_PORT/v$IDENTITY_API_VERSION&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v$IDENTITY_API_VERSION&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -735,7 +742,7 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 </td><td class=code><div class=highlight><pre>
     screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= curl -s http://$SERVICE_HOST:$service_port/v2.0/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= curl -s http://$SERVICE_HOST:$service_port/v$IDENTITY_API_VERSION/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;keystone did not start&quot;</span>
     <span class="k">fi</span>
 
