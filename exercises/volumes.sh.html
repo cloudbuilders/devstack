@@ -468,15 +468,23 @@ die_if_not_set <span class="nv">$LINENO</span> IMAGE <span class="s2">&quot;Fail
 </td><td class=code><div class=highlight><pre>
 nova secgroup-list
 
+<span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Cells does not support security groups, so force the use of &quot;default&quot;</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">SECGROUP</span><span class="o">=</span><span class="s2">&quot;default&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Using the default security group because of Cells.&quot;</span>
+<span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a secgroup</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! nova secgroup-list | grep -q <span class="nv">$SECGROUP</span>; <span class="k">then</span>
-<span class="k">    </span>nova secgroup-create <span class="nv">$SECGROUP</span> <span class="s2">&quot;$SECGROUP description&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova secgroup-list | grep -q $SECGROUP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Security group not created&quot;</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi</span>
+    <span class="k">if</span> ! nova secgroup-list | grep -q <span class="nv">$SECGROUP</span>; <span class="k">then</span>
+<span class="k">        </span>nova secgroup-create <span class="nv">$SECGROUP</span> <span class="s2">&quot;$SECGROUP description&quot;</span>
+        <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova secgroup-list | grep -q $SECGROUP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;Security group not created&quot;</span>
+            <span class="nb">exit </span>1
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -637,10 +645,14 @@ nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span
 <span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Server $VM_NAME not deleted&quot;</span>
 <span class="k">fi</span>
 
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$SECGROUP</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span> <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Skipping deleting default security group&quot;</span>
+<span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete secgroup</p>
 </td><td class=code><div class=highlight><pre>
-nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+    nova secgroup-delete <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+<span class="k">fi</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>

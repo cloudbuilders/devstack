@@ -866,6 +866,17 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
                 --publicurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --adminurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span>
+            <span class="nv">NOVA_V3_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
+                --name<span class="o">=</span>nova <span class="se">\</span>
+                --type<span class="o">=</span>computev3 <span class="se">\</span>
+                --description<span class="o">=</span><span class="s2">&quot;Nova Compute Service V3&quot;</span> <span class="se">\</span>
+                | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+            keystone endpoint-create <span class="se">\</span>
+                --region RegionOne <span class="se">\</span>
+                --service_id <span class="nv">$NOVA_V3_SERVICE</span> <span class="se">\</span>
+                --publicurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span> <span class="se">\</span>
+                --adminurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span> <span class="se">\</span>
+                --internalurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
@@ -889,7 +900,7 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT allow_resize_to_same_host <span class="s2">&quot;True&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT api_paste_config <span class="s2">&quot;$NOVA_API_PASTE_INI&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT rootwrap_config <span class="s2">&quot;$NOVA_CONF_DIR/rootwrap.conf&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_scheduler_driver <span class="s2">&quot;$SCHEDULER&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_driver <span class="s2">&quot;$SCHEDULER&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT dhcpbridge_flagfile <span class="s2">&quot;$NOVA_CONF&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT force_dhcp_release <span class="s2">&quot;True&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT fixed_range <span class="s2">&quot;&quot;</span>
@@ -964,7 +975,6 @@ install things in /usr/bin</p>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_usage_audit <span class="s2">&quot;True&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_usage_audit_period <span class="s2">&quot;hour&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT notify_on_state_change <span class="s2">&quot;vm_and_task_state&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT notify_on_any_change <span class="s2">&quot;True&quot;</span>
         iniset_multiline <span class="nv">$NOVA_CONF</span> DEFAULT notification_driver <span class="s2">&quot;nova.openstack.common.notifier.rpc_notifier&quot;</span> <span class="s2">&quot;ceilometer.compute.nova_notifier&quot;</span>
     <span class="k">fi</span>
 
@@ -1043,11 +1053,11 @@ For multi-host, this should be the management ip of the compute host.</p>
         iniset <span class="nv">$NOVA_CELLS_CONF</span> DEFAULT rabbit_virtual_host child_cell
         iniset <span class="nv">$NOVA_CELLS_CONF</span> DEFAULT dhcpbridge_flagfile <span class="nv">$NOVA_CELLS_CONF</span>
         iniset <span class="nv">$NOVA_CELLS_CONF</span> cells <span class="nb">enable </span>True
+        iniset <span class="nv">$NOVA_CELLS_CONF</span> cells cell_type compute
         iniset <span class="nv">$NOVA_CELLS_CONF</span> cells name child
 
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_topic cells
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_api_class nova.compute.cells_api.ComputeCellsAPI
         iniset <span class="nv">$NOVA_CONF</span> cells <span class="nb">enable </span>True
+        iniset <span class="nv">$NOVA_CONF</span> cells cell_type api
         iniset <span class="nv">$NOVA_CONF</span> cells name region
 
         <span class="k">if </span>is_service_enabled n-api-meta; <span class="k">then</span>
@@ -1223,8 +1233,8 @@ to simulate multiple systems.</p>
     <span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
 <span class="k">        </span><span class="nv">NOVA_CONF_BOTTOM</span><span class="o">=</span><span class="nv">$NOVA_CELLS_CONF</span>
         screen_it n-cond <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-conductor --config-file $NOVA_CELLS_CONF&quot;</span>
-        screen_it n-cell <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $NOVA_CONF&quot;</span>
-        screen_it n-cell <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $NOVA_CELLS_CONF&quot;</span>
+        screen_it n-cell-region <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $NOVA_CONF&quot;</span>
+        screen_it n-cell-child <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $NOVA_CELLS_CONF&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>

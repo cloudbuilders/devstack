@@ -366,16 +366,43 @@ ul.auto-toc {
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Exit 0 if address is in network or 1 if address is not in
-network or netaddr library is not installed.
+<p>Convert CIDR notation to a IPv4 netmask
+cidr2netmask cidr-bits</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>cidr2netmask<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">maskpat</span><span class="o">=</span><span class="s2">&quot;255 255 255 255&quot;</span>
+    <span class="nb">local </span><span class="nv">maskdgt</span><span class="o">=</span><span class="s2">&quot;254 252 248 240 224 192 128&quot;</span>
+    <span class="nb">set</span> -- <span class="k">${</span><span class="nv">maskpat</span><span class="p">:</span><span class="nv">0</span><span class="p">:</span><span class="k">$((</span> <span class="o">(</span><span class="nv">$1</span> <span class="o">/</span> <span class="m">8</span><span class="o">)</span> <span class="o">*</span> <span class="m">4</span> <span class="k">))}${</span><span class="nv">maskdgt</span><span class="p">:</span><span class="k">$((</span> <span class="o">(</span><span class="m">7</span> <span class="o">-</span> <span class="o">(</span><span class="nv">$1</span> <span class="o">%</span> <span class="m">8</span><span class="k">))</span><span class="p"> * 4 )):</span><span class="nv">3</span><span class="k">}</span>
+    <span class="nb">echo</span> <span class="k">${</span><span class="nv">1</span><span class="p">-0</span><span class="k">}</span>.<span class="k">${</span><span class="nv">2</span><span class="p">-0</span><span class="k">}</span>.<span class="k">${</span><span class="nv">3</span><span class="p">-0</span><span class="k">}</span>.<span class="k">${</span><span class="nv">4</span><span class="p">-0</span><span class="k">}</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Return the network portion of the given IP address using netmask
+netmask is in the traditional dotted-quad format
+maskip ip-address netmask</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>maskip<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">ip</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">mask</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">l</span><span class="o">=</span><span class="s2">&quot;${ip%.*}&quot;</span>; <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="s2">&quot;${ip#*.}&quot;</span>; <span class="nb">local </span><span class="nv">n</span><span class="o">=</span><span class="s2">&quot;${mask%.*}&quot;</span>; <span class="nb">local </span><span class="nv">m</span><span class="o">=</span><span class="s2">&quot;${mask#*.}&quot;</span>
+    <span class="nb">local </span><span class="nv">subnet</span><span class="o">=</span><span class="k">$((${</span><span class="nv">ip</span><span class="p">%%.*</span><span class="k">}</span><span class="o">&amp;</span><span class="k">${</span><span class="nv">mask</span><span class="p">%%.*</span><span class="k">}))</span>.<span class="k">$((${</span><span class="nv">r</span><span class="p">%%.*</span><span class="k">}</span><span class="o">&amp;</span><span class="k">${</span><span class="nv">m</span><span class="p">%%.*</span><span class="k">}))</span>.<span class="k">$((${</span><span class="nv">l</span><span class="p">##*.</span><span class="k">}</span><span class="o">&amp;</span><span class="k">${</span><span class="nv">n</span><span class="p">##*.</span><span class="k">}))</span>.<span class="k">$((${</span><span class="nv">ip</span><span class="p">##*.</span><span class="k">}</span><span class="o">&amp;</span><span class="k">${</span><span class="nv">mask</span><span class="p">##*.</span><span class="k">}))</span>
+    <span class="nb">echo</span> <span class="nv">$subnet</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Exit 0 if address is in network or 1 if address is not in network
+ip-range is in CIDR notation: 1.2.3.4/20
 address_in_net ip-address ip-range</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>address_in_net<span class="o">()</span> <span class="o">{</span>
-    python -c <span class="s2">&quot;</span>
-<span class="s2">import netaddr</span>
-<span class="s2">import sys</span>
-<span class="s2">sys.exit(netaddr.IPAddress(&#39;$1&#39;) not in netaddr.IPNetwork(&#39;$2&#39;))</span>
-<span class="s2">&quot;</span>
+    <span class="nb">local </span><span class="nv">ip</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">range</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">masklen</span><span class="o">=</span><span class="k">${</span><span class="nv">range</span><span class="p">#*/</span><span class="k">}</span>
+    <span class="nb">local </span><span class="nv">network</span><span class="o">=</span><span class="k">$(</span>maskip <span class="k">${</span><span class="nv">range</span><span class="p">%/*</span><span class="k">}</span> <span class="k">$(</span>cidr2netmask <span class="nv">$masklen</span><span class="k">))</span>
+    <span class="nb">local </span><span class="nv">subnet</span><span class="o">=</span><span class="k">$(</span>maskip <span class="nv">$ip</span> <span class="k">$(</span>cidr2netmask <span class="nv">$masklen</span><span class="k">))</span>
+    <span class="o">[[</span> <span class="nv">$network</span> <span class="o">==</span> <span class="nv">$subnet</span> <span class="o">]]</span>
 <span class="o">}</span>
 
 
@@ -384,10 +411,10 @@ address_in_net ip-address ip-range</p>
 Uses globals <tt class="docutils literal">OFFLINE</tt>, <a href="#id1"><span class="problematic" id="id2">``</span></a><a href="#id3"><span class="problematic" id="id4">*</span></a>_proxy`
 apt_get operation package [package ...]</p>
 <div class="system-message" id="id1">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 27); <em><a href="#id2">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 38); <em><a href="#id2">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id3">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 27); <em><a href="#id4">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 38); <em><a href="#id4">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>apt_get<span class="o">()</span> <span class="o">{</span>
@@ -590,7 +617,7 @@ included.  Two bits of metadata are recognized in the prerequisite files:
 - <tt class="docutils literal"># NOPRIME</tt> defers installation to be performed later in stack.sh
 - <tt class="docutils literal"># dist:DISTRO</tt> or <tt class="docutils literal">dist:DISTRO1,DISTRO2</tt> limits the selection</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 109)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 120)</p>
 Unexpected indentation.</div>
 <blockquote>
 of the package to the distros listed.  The distro names are case insensitive.</blockquote>
@@ -1207,6 +1234,9 @@ is a short-circuit boolean, i.e it returns on the first match.</p>
 For backward compatibility if we have <strong>swift</strong> in ENABLED_SERVICES all the
 <strong>s-</strong> services will be enabled. This will be deprecated in the future.</dd>
 </dl>
+<p>Cells within nova is enabled if <strong>n-cell</strong> is in <tt class="docutils literal">ENABLED_SERVICES</tt>.
+We also need to make sure to treat <strong>n-cell-region</strong> and <strong>n-cell-child</strong>
+as enabled in this case.</p>
 <p>Uses global <tt class="docutils literal">ENABLED_SERVICES</tt>
 is_service_enabled service [service ...]</p>
 </td><td class=code><div class=highlight><pre>
@@ -1214,6 +1244,7 @@ is_service_enabled service [service ...]</p>
     <span class="nv">services</span><span class="o">=</span><span class="nv">$@</span>
     <span class="k">for </span>service in <span class="k">${</span><span class="nv">services</span><span class="k">}</span>; <span class="k">do</span>
         <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span>, <span class="o">=</span>~ ,<span class="k">${</span><span class="nv">service</span><span class="k">}</span>, <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+        <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> n-cell-* <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;n-cell&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
         <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> <span class="s2">&quot;nova&quot;</span> <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;n-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
         <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> <span class="s2">&quot;cinder&quot;</span> <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;c-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
         <span class="o">[[</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span> <span class="o">==</span> <span class="s2">&quot;ceilometer&quot;</span> <span class="o">&amp;&amp;</span> <span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ <span class="s2">&quot;ceilometer-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
@@ -1392,19 +1423,19 @@ is_set env-var</p>
 <p>Wrapper for <tt class="docutils literal">pip install</tt> to set cache and proxy environment variables
 Uses globals <tt class="docutils literal">OFFLINE</tt>, <tt class="docutils literal">PIP_DOWNLOAD_CACHE</tt>, <tt class="docutils literal">PIP_USE_MIRRORS</tt>,</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 448)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 463)</p>
 Unexpected indentation.</div>
 <blockquote>
 <p><tt class="docutils literal">TRACK_DEPENDS</tt>, <a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">*</span></a>_proxy`</p>
 <div class="system-message" id="id5">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 448); <em><a href="#id6">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 463); <em><a href="#id6">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id7">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 448); <em><a href="#id8">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 463); <em><a href="#id8">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 449)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 464)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p>pip_install package [package ...]</p>
 </td><td class=code><div class=highlight><pre>
@@ -1435,13 +1466,44 @@ around 0.8.1 or so)</p>
 <span class="k">        </span><span class="nv">PIP_MIRROR_OPT</span><span class="o">=</span><span class="s2">&quot;--use-mirrors&quot;</span>
     <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>pip &lt; 1.4 has a bug where it will use an already existing build
+directory unconditionally.  Say an earlier component installs
+foo v1.1; pip will have built foo's source in
+/tmp/$USER-pip-build.  Even if a later component specifies foo &lt;
+1.1, the existing extracted build will be used and cause
+confusing errors.  By creating unique build directories we avoid
+this problem. See</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 480)</p>
+Unexpected indentation.</div>
+<blockquote>
+<a class="reference external" href="https://github.com/pypa/pip/issues/709">https://github.com/pypa/pip/issues/709</a></blockquote>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">local </span><span class="nv">pip_build_tmp</span><span class="o">=</span><span class="k">$(</span>mktemp --tmpdir -d pip-build.XXXXX<span class="k">)</span>
+
     <span class="nv">$SUDO_PIP</span> <span class="nv">PIP_DOWNLOAD_CACHE</span><span class="o">=</span><span class="k">${</span><span class="nv">PIP_DOWNLOAD_CACHE</span><span class="k">:-</span><span class="p">/var/cache/pip</span><span class="k">}</span> <span class="se">\</span>
         <span class="nv">HTTP_PROXY</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="se">\</span>
         <span class="nv">HTTPS_PROXY</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
         <span class="nv">NO_PROXY</span><span class="o">=</span><span class="nv">$no_proxy</span> <span class="se">\</span>
-        <span class="nv">$CMD_PIP</span> install <span class="nv">$PIP_MIRROR_OPT</span> <span class="nv">$@</span>
+        <span class="nv">$CMD_PIP</span> install --build<span class="o">=</span><span class="k">${</span><span class="nv">pip_build_tmp</span><span class="k">}</span> <span class="se">\</span>
+        <span class="nv">$PIP_MIRROR_OPT</span> <span class="nv">$@</span> <span class="se">\</span>
+        <span class="o">&amp;&amp;</span> <span class="nv">$SUDO_PIP</span> rm -rf <span class="k">${</span><span class="nv">pip_build_tmp</span><span class="k">}</span>
 <span class="o">}</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Cleanup anything from /tmp on unstack
+clean_tmp</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>cleanup_tmp <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">tmp_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">TMPDIR</span><span class="k">:-</span><span class="p">/tmp</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>see comments in pip_install</p>
+</td><td class=code><div class=highlight><pre>
+    sudo rm -rf <span class="k">${</span><span class="nv">tmp_dir</span><span class="k">}</span>/pip-build.*
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Service wrapper to restart services
@@ -1590,7 +1652,7 @@ screen_rc service &quot;command-line&quot;</p>
 This is used for service_check when all the screen_it are called finished
 init_service_check</p>
 <div class="system-message" id="id9">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 531); <em><a href="#id10">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 566); <em><a href="#id10">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_service_check<span class="o">()</span> <span class="o">{</span>
@@ -1644,10 +1706,10 @@ so pip and not distutils processes the dependency chain
 Uses globals <tt class="docutils literal">TRACK_DEPENDES</tt>, <a href="#id11"><span class="problematic" id="id12">``</span></a><a href="#id13"><span class="problematic" id="id14">*</span></a>_proxy`
 setup_develop directory</p>
 <div class="system-message" id="id11">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 546); <em><a href="#id12">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 581); <em><a href="#id12">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id13">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 546); <em><a href="#id14">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 581); <em><a href="#id14">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>setup_develop<span class="o">()</span> <span class="o">{</span>
@@ -1719,13 +1781,13 @@ VAR=$(trueorfalse default-value test-value)</p>
 <p>Retrieve an image from a URL and upload into Glance
 Uses the following variables:</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 572)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 607)</p>
 Unexpected indentation.</div>
 <blockquote>
 <tt class="docutils literal">FILES</tt> must be set to the cache dir
 <tt class="docutils literal">GLANCE_HOSTPORT</tt></blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 574)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 609)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p>upload_image image-url glance-token</p>
 </td><td class=code><div class=highlight><pre>
@@ -1861,7 +1923,7 @@ When called from stackrc/localrc DATABASE_BACKENDS has not been
 initialized yet, just save the configuration selection and call back later
 to validate it.</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 609)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 644)</p>
 Unexpected indentation.</div>
 <blockquote>
 $1 The name of the database backend to use (mysql, postgresql, ...)</blockquote>
@@ -1920,10 +1982,10 @@ wait_for_service timeout url</p>
 Uses globals <tt class="docutils literal">OFFLINE</tt>, <a href="#id15"><span class="problematic" id="id16">``</span></a><a href="#id17"><span class="problematic" id="id18">*</span></a>_proxy`
 yum_install package [package ...]</p>
 <div class="system-message" id="id15">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 634); <em><a href="#id16">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 669); <em><a href="#id16">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id17">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 634); <em><a href="#id18">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 669); <em><a href="#id18">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>yum_install<span class="o">()</span> <span class="o">{</span>

@@ -433,14 +433,22 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>euca-describe-images | grep machine | grep <span class="k">${</span><span class="nv">DEFAULT_IMAGE_NAME</span><span class="k">}</span> | cut -f2 | head -n1<span class="sb">`</span>
 die_if_not_set <span class="nv">$LINENO</span> IMAGE <span class="s2">&quot;Failure getting image $DEFAULT_IMAGE_NAME&quot;</span>
 
+<span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Cells does not support security groups, so force the use of &quot;default&quot;</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">SECGROUP</span><span class="o">=</span><span class="s2">&quot;default&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Using the default security group because of Cells.&quot;</span>
+<span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Add a secgroup</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! euca-describe-groups | grep -q <span class="nv">$SECGROUP</span>; <span class="k">then</span>
-<span class="k">    </span>euca-add-group -d <span class="s2">&quot;$SECGROUP description&quot;</span> <span class="nv">$SECGROUP</span>
-    <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-groups | grep -q $SECGROUP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Security group not created&quot;</span>
-    <span class="k">fi</span>
+    <span class="k">if</span> ! euca-describe-groups | grep -q <span class="nv">$SECGROUP</span>; <span class="k">then</span>
+<span class="k">        </span>euca-add-group -d <span class="s2">&quot;$SECGROUP description&quot;</span> <span class="nv">$SECGROUP</span>
+        <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! euca-describe-groups | grep -q $SECGROUP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Security group not created&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -460,7 +468,7 @@ die_if_not_set <span class="nv">$LINENO</span> INSTANCE <span class="s2">&quot;F
 <div class="section" id="volumes">
 <h2>Volumes</h2>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;c-vol&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled c-vol <span class="o">&amp;&amp;</span> ! is_service_enabled n-cell; <span class="k">then</span>
 <span class="k">   </span><span class="nv">VOLUME_ZONE</span><span class="o">=</span><span class="sb">`</span>euca-describe-availability-zones | head -n1 | cut -f2<span class="sb">`</span>
    die_if_not_set <span class="nv">$LINENO</span> VOLUME_ZONE <span class="s2">&quot;Failure to find zone for volume&quot;</span>
 
@@ -510,59 +518,63 @@ die_if_not_set <span class="nv">$LINENO</span> INSTANCE <span class="s2">&quot;F
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Volume Tests Skipped&quot;</span>
 <span class="k">fi</span>
 
+<span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Floating IP Tests Skipped because of Cells.&quot;</span>
+<span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Allocate floating address</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>euca-allocate-address | cut -f2<span class="sb">`</span>
-die_if_not_set <span class="nv">$LINENO</span> FLOATING_IP <span class="s2">&quot;Failure allocating floating IP&quot;</span>
+    <span class="nv">FLOATING_IP</span><span class="o">=</span><span class="sb">`</span>euca-allocate-address | cut -f2<span class="sb">`</span>
+    die_if_not_set <span class="nv">$LINENO</span> FLOATING_IP <span class="s2">&quot;Failure allocating floating IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Associate floating address</p>
 </td><td class=code><div class=highlight><pre>
-euca-associate-address -i <span class="nv">$INSTANCE</span> <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure associating address $FLOATING_IP to $INSTANCE&quot;</span>
+    euca-associate-address -i <span class="nv">$INSTANCE</span> <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
+        die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure associating address $FLOATING_IP to $INSTANCE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Authorize pinging</p>
 </td><td class=code><div class=highlight><pre>
-euca-authorize -P icmp -s 0.0.0.0/0 -t -1:-1 <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure authorizing rule in $SECGROUP&quot;</span>
+    euca-authorize -P icmp -s 0.0.0.0/0 -t -1:-1 <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
+        die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure authorizing rule in $SECGROUP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>
-ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span>
+    ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class="nv">$FLOATING_IP</span> <span class="nv">$ASSOCIATE_TIMEOUT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Revoke pinging</p>
 </td><td class=code><div class=highlight><pre>
-euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure revoking rule in $SECGROUP&quot;</span>
+    euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 <span class="nv">$SECGROUP</span> <span class="o">||</span> <span class="se">\</span>
+        die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure revoking rule in $SECGROUP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Release floating address</p>
 </td><td class=code><div class=highlight><pre>
-euca-disassociate-address <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure disassociating address $FLOATING_IP&quot;</span>
+    euca-disassociate-address <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
+        die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure disassociating address $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait just a tick for everything above to complete so release doesn't fail</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-addresses | grep $INSTANCE | grep -q $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Floating ip $FLOATING_IP not disassociated within $ASSOCIATE_TIMEOUT seconds&quot;</span>
-<span class="k">fi</span>
+    <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-addresses | grep $INSTANCE | grep -q $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Floating ip $FLOATING_IP not disassociated within $ASSOCIATE_TIMEOUT seconds&quot;</span>
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Release floating address</p>
 </td><td class=code><div class=highlight><pre>
-euca-release-address <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
-    die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure releasing address $FLOATING_IP&quot;</span>
+    euca-release-address <span class="nv">$FLOATING_IP</span> <span class="o">||</span> <span class="se">\</span>
+        die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure releasing address $FLOATING_IP&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Wait just a tick for everything above to complete so terminate doesn't fail</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-addresses | grep -q $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Floating ip $FLOATING_IP not released within $ASSOCIATE_TIMEOUT seconds&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while euca-describe-addresses | grep -q $FLOATING_IP; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Floating ip $FLOATING_IP not released within $ASSOCIATE_TIMEOUT seconds&quot;</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -581,10 +593,14 @@ filter that out.</p>
 <span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;server didn&#39;t terminate within $TERMINATE_TIMEOUT seconds&quot;</span>
 <span class="k">fi</span>
 
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SECGROUP&quot;</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span> <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Skipping deleting default security group&quot;</span>
+<span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete secgroup</p>
 </td><td class=code><div class=highlight><pre>
-euca-delete-group <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+    euca-delete-group <span class="nv">$SECGROUP</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting security group $SECGROUP&quot;</span>
+<span class="k">fi</span>
 
 <span class="nb">set</span> +o xtrace
 <span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>

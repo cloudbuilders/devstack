@@ -1237,11 +1237,14 @@ install_keystoneclient
 install_glanceclient
 install_cinderclient
 install_novaclient
-<span class="k">if </span>is_service_enabled swift glance; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled swift glance horizon; <span class="k">then</span>
 <span class="k">    </span>install_swiftclient
 <span class="k">fi</span>
-<span class="k">if </span>is_service_enabled neutron nova; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled neutron nova horizon; <span class="k">then</span>
 <span class="k">    </span>install_neutronclient
+<span class="k">fi</span>
+<span class="k">if </span>is_service_enabled heat horizon; <span class="k">then</span>
+<span class="k">    </span>install_heatclient
 <span class="k">fi</span>
 
 git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENSTACKCLIENT_DIR</span> <span class="nv">$OPENSTACKCLIENT_BRANCH</span>
@@ -1321,14 +1324,15 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
 <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
 <span class="k">    </span>install_ceilometerclient
     install_ceilometer
+    echo_summary <span class="s2">&quot;Configuring Ceilometer&quot;</span>
+    configure_ceilometer
+    configure_ceilometerclient
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
 <span class="k">    </span>install_heat
-    install_heatclient
     cleanup_heat
     configure_heat
-    configure_heatclient
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
@@ -1445,7 +1449,7 @@ restart_rpc_backend
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SCREENRC</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/<span class="nv">$SCREEN_NAME</span>-screenrc
 <span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$SCREENRC</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> -n &gt; <span class="nv">$SCREENRC</span>
+<span class="k">    </span>rm -f <span class="nv">$SCREENRC</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1505,6 +1509,10 @@ init_service_check
     create_nova_accounts
     create_cinder_accounts
     create_neutron_accounts
+
+    <span class="k">if </span>is_service_enabled swift <span class="o">||</span> is_service_enabled s-proxy; <span class="k">then</span>
+<span class="k">        </span>create_swift_accounts
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">keystone_data.sh</tt> creates services, admin and demo users, and roles.</p>
@@ -1756,11 +1764,13 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Using VMware vCenter driver&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;vmwareapi.VMwareVCDriver&quot;</span>
         <span class="nv">VMWAREAPI_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">VMWAREAPI_USER</span><span class="k">:-</span><span class="s2">&quot;root&quot;</span><span class="k">}</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT vmwareapi_host_ip <span class="s2">&quot;$VMWAREAPI_IP&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT vmwareapi_host_username <span class="s2">&quot;$VMWAREAPI_USER&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT vmwareapi_host_password <span class="s2">&quot;$VMWAREAPI_PASSWORD&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT vmwareapi_cluster_name <span class="s2">&quot;$VMWAREAPI_CLUSTER&quot;</span>
-
+        iniset <span class="nv">$NOVA_CONF</span> vmware host_ip <span class="s2">&quot;$VMWAREAPI_IP&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> vmware host_username <span class="s2">&quot;$VMWAREAPI_USER&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> vmware host_password <span class="s2">&quot;$VMWAREAPI_PASSWORD&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> vmware cluster_name <span class="s2">&quot;$VMWAREAPI_CLUSTER&quot;</span>
+        <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">            </span>iniset <span class="nv">$NOVA_CONF</span> vmware integration_bridge <span class="nv">$OVS_BRIDGE</span>
+        <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1917,10 +1927,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
     start_cinder
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
-<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Ceilometer&quot;</span>
-    configure_ceilometer
-    configure_ceilometerclient
-    echo_summary <span class="s2">&quot;Starting Ceilometer&quot;</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Ceilometer&quot;</span>
     init_ceilometer
     start_ceilometer
 <span class="k">fi</span>

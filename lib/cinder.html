@@ -454,11 +454,10 @@ less than the 60 second default
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
-<p>_cleanup_lvm removes all cinder volumes and the backing file of the
-volume group used by cinder
-_cleanup_lvm $VOLUME_GROUP $VOLUME_NAME_PREFIX</p>
+<p>_clean_lvm_lv removes all cinder LVM volumes
+_clean_lvm_lv $VOLUME_GROUP $VOLUME_NAME_PREFIX</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_cleanup_lvm<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_clean_lvm_lv<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span><span class="nv">vg</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">lv_prefix</span><span class="o">=</span><span class="nv">$2</span>
 
@@ -473,6 +472,15 @@ _cleanup_lvm $VOLUME_GROUP $VOLUME_NAME_PREFIX</p>
 <span class="k">            </span>sudo lvremove -f <span class="nv">$vg</span>/<span class="nv">$lv</span>
         <span class="k">fi</span>
 <span class="k">    done</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>_clean_lvm_backing_file() removes the backing file of the
+volume group used by cinder
+_clean_lvm_backing_file() $VOLUME_GROUP</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_clean_lvm_backing_file<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">vg</span><span class="o">=</span><span class="nv">$1</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>if there is no logical volume left, it's safe to attempt a cleanup
@@ -535,10 +543,12 @@ So check the response and restart if need be</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Campsite rule: leave behind a volume group at least as clean as we found it</p>
 </td><td class=code><div class=highlight><pre>
-    _cleanup_lvm <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+    _clean_lvm_lv <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+    _clean_lvm_backing_file <span class="nv">$VOLUME_GROUP</span>
 
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>_cleanup_lvm <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+<span class="k">        </span>_clean_lvm_lv <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+        _clean_lvm_backing_file <span class="nv">$VOLUME_GROUP2</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -860,9 +870,9 @@ the <tt class="docutils literal">DATA_DIR</tt>.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start with a clean volume group</p>
 </td><td class=code><div class=highlight><pre>
-            _clean_volume_group <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+            _clean_lvm_lv <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
             <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">                </span>_clean_volume_group <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
+<span class="k">                </span>_clean_lvm_lv <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
             <span class="k">fi</span>
 <span class="k">        fi</span>
 <span class="k">    fi</span>
@@ -930,9 +940,15 @@ name, and would need to be adjusted too</p>
 <span class="k">    fi</span>
 
 <span class="k">    </span>screen_it c-api <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-api --config-file $CINDER_CONF&quot;</span>
-    screen_it c-vol <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-volume --config-file $CINDER_CONF&quot;</span>
     screen_it c-sch <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-scheduler --config-file $CINDER_CONF&quot;</span>
     screen_it c-bak <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-backup --config-file $CINDER_CONF&quot;</span>
+    screen_it c-vol <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-volume --config-file $CINDER_CONF&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>NOTE(jdg): For cinder, startup order matters.  To ensure that repor_capabilities is received
+by the scheduler start the cinder-volume service last (or restart it) after the scheduler
+has started.  This is a quick fix for lp bug/1189595</p>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Start proxies if enabled</p>

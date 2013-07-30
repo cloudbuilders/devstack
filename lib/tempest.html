@@ -393,6 +393,7 @@ init_tempest</p>
 <span class="nv">TEMPEST_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/tempest
 <span class="nv">TEMPEST_CONF_DIR</span><span class="o">=</span><span class="nv">$TEMPEST_DIR</span>/etc
 <span class="nv">TEMPEST_CONF</span><span class="o">=</span><span class="nv">$TEMPEST_CONF_DIR</span>/tempest.conf
+<span class="nv">TEMPEST_STATE_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_STATE_PATH</span><span class="p">:=</span><span class="nv">$DATA_DIR</span><span class="p">/tempest</span><span class="k">}</span>
 
 <span class="nv">NOVA_SOURCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
 
@@ -572,6 +573,12 @@ public router that tempest should be configured to use.</p>
 <span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Oslo</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> DEFAULT lock_path <span class="nv">$TEMPEST_STATE_PATH</span>
+    mkdir -p <span class="nv">$TEMPEST_STATE_PATH</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Timeouts</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$TEMPEST_CONF</span> compute build_timeout <span class="nv">$BUILD_TIMEOUT</span>
@@ -643,13 +650,7 @@ tests actually use a key.</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Network</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> network neutron_available <span class="s2">&quot;True&quot;</span>
-    <span class="k">fi</span>
-<span class="k">    </span>iniset <span class="nv">$TEMPEST_CONF</span> network api_version 2.0
+    iniset <span class="nv">$TEMPEST_CONF</span> network api_version 2.0
     iniset <span class="nv">$TEMPEST_CONF</span> network tenant_networks_reachable <span class="s2">&quot;$tenant_networks_reachable&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> network public_network_id <span class="s2">&quot;$public_network_id&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> network public_router_id <span class="s2">&quot;$public_router_id&quot;</span>
@@ -663,13 +664,6 @@ tests actually use a key.</p>
     iniset <span class="nv">$TEMPEST_CONF</span> boto instance_type <span class="s2">&quot;$boto_instance_type&quot;</span>
     iniset <span class="nv">$TEMPEST_CONF</span> boto http_socket_timeout 30
     iniset <span class="nv">$TEMPEST_CONF</span> boto ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Orchestration</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> orchestration heat_available <span class="s2">&quot;True&quot;</span>
-    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Scenario</p>
@@ -687,11 +681,28 @@ tests actually use a key.</p>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Dashboard</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONF</span> dashboard dashboard_url <span class="s2">&quot;http://$SERVICE_HOST/&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONF</span> dashboard login_url <span class="s2">&quot;http://$SERVICE_HOST/auth/login/&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>cli</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$TEMPEST_CONF</span> cli cli_dir <span class="nv">$NOVA_BIN_DIR</span>
 
-    <span class="nb">echo</span> <span class="s2">&quot;Created tempest configuration file:&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>service_available</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>service in nova cinder glance neutron swift heat horizon ; <span class="k">do</span>
+<span class="k">        if </span>is_service_enabled <span class="nv">$service</span> ; <span class="k">then</span>
+<span class="k">            </span>iniset <span class="nv">$TEMPEST_CONF</span> service_available <span class="nv">$service</span> <span class="s2">&quot;True&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span>iniset <span class="nv">$TEMPEST_CONF</span> service_available <span class="nv">$service</span> <span class="s2">&quot;False&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    done</span>
+
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Created tempest configuration file:&quot;</span>
     cat <span class="nv">$TEMPEST_CONF</span>
 
 </pre></div></td></tr><tr><td class=docs>

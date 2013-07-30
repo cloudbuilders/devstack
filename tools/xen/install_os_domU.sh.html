@@ -407,17 +407,41 @@ including installing XenAPI plugins</p>
 <span class="nb">cd</span> <span class="nv">$THIS_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Die if multiple hosts listed</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>have_multiple_hosts; <span class="k">then</span>
+<span class="k">    </span>cat &gt;&amp;2 <span class="s">&lt;&lt; EOF</span>
+<span class="s">ERROR: multiple hosts found. This might mean that the XenServer is a member</span>
+<span class="s">of a pool - Exiting.</span>
+<span class="s">EOF</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Install plugins</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="c">## Nova plugins</span>
 <span class="nv">NOVA_ZIPBALL_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_ZIPBALL_URL</span><span class="k">:-$(</span>zip_snapshot_location <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_BRANCH</span><span class="k">)}</span>
-install_xapi_plugins_from_zipball <span class="nv">$NOVA_ZIPBALL_URL</span>
+<span class="nv">EXTRACTED_NOVA</span><span class="o">=</span><span class="k">$(</span>extract_remote_zipball <span class="s2">&quot;$NOVA_ZIPBALL_URL&quot;</span><span class="k">)</span>
+install_xapi_plugins_from <span class="s2">&quot;$EXTRACTED_NOVA&quot;</span>
+
+<span class="nv">LOGROT_SCRIPT</span><span class="o">=</span><span class="k">$(</span>find <span class="s2">&quot;$EXTRACTED_NOVA&quot;</span> -name <span class="s2">&quot;rotate_xen_guest_logs.sh&quot;</span> -print<span class="k">)</span>
+<span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$LOGROT_SCRIPT&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>mkdir -p <span class="s2">&quot;/var/log/xen/guest&quot;</span>
+    cp <span class="s2">&quot;$LOGROT_SCRIPT&quot;</span> /root/consolelogrotate
+    chmod +x /root/consolelogrotate
+    <span class="nb">echo</span> <span class="s2">&quot;* * * * * /root/consolelogrotate&quot;</span> | crontab
+<span class="k">fi</span>
+
+rm -rf <span class="s2">&quot;$EXTRACTED_NOVA&quot;</span>
 
 <span class="c">## Install the netwrap xapi plugin to support agent control of dom0 networking</span>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-agt&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$Q_PLUGIN&quot;</span> <span class="o">=</span> <span class="s2">&quot;openvswitch&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NEUTRON_ZIPBALL_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">NEUTRON_ZIPBALL_URL</span><span class="k">:-$(</span>zip_snapshot_location <span class="nv">$NEUTRON_REPO</span> <span class="nv">$NEUTRON_BRANCH</span><span class="k">)}</span>
-    install_xapi_plugins_from_zipball <span class="nv">$NEUTRON_ZIPBALL_URL</span>
+    <span class="nv">EXTRACTED_NEUTRON</span><span class="o">=</span><span class="k">$(</span>extract_remote_zipball <span class="s2">&quot;$NEUTRON_ZIPBALL_URL&quot;</span><span class="k">)</span>
+    install_xapi_plugins_from <span class="s2">&quot;$EXTRACTED_NEUTRON&quot;</span>
+    rm -rf <span class="s2">&quot;$EXTRACTED_NEUTRON&quot;</span>
 <span class="k">fi</span>
 
 create_directory_for_kernels
@@ -501,10 +525,8 @@ hypervisor, and used by the VMs</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">for </span>uuid in <span class="sb">`</span>xe vm-list | grep -1 instance | grep uuid | sed <span class="s2">&quot;s/.*\: //g&quot;</span><span class="sb">`</span>; <span class="k">do</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Shutting down nova instance $uuid&quot;</span>
-        xe vm-unpause <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">        </span>xe vm-shutdown <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">        </span>xe vm-destroy <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span>
-    <span class="k">done</span>
+        xe vm-uninstall <span class="nv">uuid</span><span class="o">=</span><span class="nv">$uuid</span> <span class="nv">force</span><span class="o">=</span><span class="nb">true</span>
+<span class="nb">    </span><span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Destroy orphaned vdis</p>
@@ -658,7 +680,7 @@ is created by XenServer). This is required for Neutron. Also pass that as a
 kernel parameter for DomU</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
-<span class="k">    </span>add_interface <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;$XEN_INT_BRIDGE_OR_NET_NAME&quot;</span> <span class="nv">$XEN_INT_DEV_NR</span>
+<span class="k">    </span>attach_network <span class="s2">&quot;$XEN_INT_BRIDGE_OR_NET_NAME&quot;</span>
 
     <span class="nv">XEN_INTEGRATION_BRIDGE</span><span class="o">=</span><span class="k">$(</span>bridge_for <span class="s2">&quot;$XEN_INT_BRIDGE_OR_NET_NAME&quot;</span><span class="k">)</span>
     append_kernel_cmdline <span class="se">\</span>

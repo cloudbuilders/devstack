@@ -612,6 +612,14 @@ provider GRE tunnels when <tt class="docutils literal">ENABLE_TENANT_TUNNELS</tt
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/services/loadbalancer
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="vpn-service-plugin-functions">
+<h1>VPN service plugin functions</h1>
+<p>Hardcoding for 1 service plugin for now</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/services/vpn
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Use security group or not</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>has_neutron_plugin_security_group; <span class="k">then</span>
@@ -640,6 +648,9 @@ Set common config for all neutron server and agents.</p>
     <span class="k">if </span>is_service_enabled q-lbaas; <span class="k">then</span>
 <span class="k">        </span>_configure_neutron_lbaas
     <span class="k">fi</span>
+<span class="k">    if </span>is_service_enabled q-vpn; <span class="k">then</span>
+<span class="k">        </span>_configure_neutron_vpn
+    <span class="k">fi</span>
 <span class="k">    if </span>is_service_enabled q-svc; <span class="k">then</span>
 <span class="k">        </span>_configure_neutron_service
     <span class="k">fi</span>
@@ -666,6 +677,7 @@ Set common config for all neutron server and agents.</p>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_admin_auth_url <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_auth_strategy <span class="s2">&quot;$Q_AUTH_STRATEGY&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_admin_tenant_name <span class="s2">&quot;$SERVICE_TENANT_NAME&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_region_name <span class="s2">&quot;RegionOne&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_url <span class="s2">&quot;http://$Q_HOST:$Q_PORT&quot;</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -867,8 +879,13 @@ Since neutron command is executed in admin context at this point,
 </td><td class=code><div class=highlight><pre>
     screen_it q-agt <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_BINARY --config-file $NEUTRON_CONF --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
     screen_it q-dhcp <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_DHCP_BINARY --config-file $NEUTRON_CONF --config-file=$Q_DHCP_CONF_FILE&quot;</span>
-    screen_it q-l3 <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_L3_BINARY --config-file $NEUTRON_CONF --config-file=$Q_L3_CONF_FILE&quot;</span>
-    screen_it q-meta <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_META_BINARY --config-file $NEUTRON_CONF --config-file=$Q_META_CONF_FILE&quot;</span>
+
+    <span class="k">if </span>is_service_enabled q-vpn; <span class="k">then</span>
+<span class="k">        </span>screen_it q-vpn <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; $AGENT_VPN_BINARY --config-file $NEUTRON_CONF --config-file=$Q_L3_CONF_FILE&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>screen_it q-l3 <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_L3_BINARY --config-file $NEUTRON_CONF --config-file=$Q_L3_CONF_FILE&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>screen_it q-meta <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_META_BINARY --config-file $NEUTRON_CONF --config-file=$Q_META_CONF_FILE&quot;</span>
 
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -935,7 +952,7 @@ For main plugin config file, set <tt class="docutils literal">Q_PLUGIN_CONF_PATH
 For addition plugin config files, set <tt class="docutils literal">Q_PLUGIN_EXTRA_CONF_PATH</tt>,
 <tt class="docutils literal">Q_PLUGIN_EXTRA_CONF_FILES</tt>.  For example:</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 371)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 377)</p>
 Unexpected indentation.</div>
 <blockquote>
 <tt class="docutils literal"><span class="pre">Q_PLUGIN_EXTRA_CONF_FILES=(file1,</span> file2)</tt></blockquote>
@@ -1025,7 +1042,8 @@ be cleaned.</p>
 <p>for l3-agent, only use per tenant router if we have namespaces</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">Q_L3_ROUTER_PER_TENANT</span><span class="o">=</span><span class="nv">$Q_USE_NAMESPACE</span>
-    <span class="nv">AGENT_L3_BINARY</span><span class="o">=</span><span class="s2">&quot;$NEUTRON_BIN_DIR/neutron-l3-agent&quot;</span>
+
+    <span class="nv">AGENT_L3_BINARY</span><span class="o">=</span><span class="k">${</span><span class="nv">AGENT_L3_BINARY</span><span class="k">:-</span><span class="s2">&quot;$NEUTRON_BIN_DIR/neutron-l3-agent&quot;</span><span class="k">}</span>
     <span class="nv">Q_L3_CONF_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/l3_agent.ini
 
     cp <span class="nv">$NEUTRON_DIR</span>/etc/l3_agent.ini <span class="nv">$Q_L3_CONF_FILE</span>
@@ -1058,6 +1076,12 @@ be cleaned.</p>
 <span class="k">function </span>_configure_neutron_lbaas<span class="o">()</span> <span class="o">{</span>
     neutron_agent_lbaas_configure_common
     neutron_agent_lbaas_configure_agent
+<span class="o">}</span>
+
+<span class="k">function </span>_configure_neutron_vpn<span class="o">()</span>
+<span class="o">{</span>
+    neutron_vpn_install_agent_packages
+    neutron_vpn_configure_common
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1112,6 +1136,18 @@ It is called when q-svc is enabled.</p>
 
     iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT auth_strategy <span class="nv">$Q_AUTH_STRATEGY</span>
     _neutron_setup_keystone <span class="nv">$NEUTRON_CONF</span> keystone_authtoken
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Define extra &quot;DEFAULT&quot; configuration options when q-svc is configured by
+defining the array <tt class="docutils literal">Q_SRV_EXTRA_DEFAULT_OPTS</tt>.
+For Example: <tt class="docutils literal"><span class="pre">Q_SRV_EXTRA_DEFAULT_OPTS=(foo=true</span> bar=2)</tt></p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_SRV_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
+    <span class="k">done</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure plugin</p>
