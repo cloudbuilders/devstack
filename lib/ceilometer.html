@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -95,7 +95,7 @@ div.tip p.admonition-title {
 
 div.attention p.admonition-title, div.caution p.admonition-title,
 div.danger p.admonition-title, div.error p.admonition-title,
-div.warning p.admonition-title {
+div.warning p.admonition-title, .code .error {
   color: red ;
   font-weight: bold ;
   font-family: sans-serif }
@@ -271,13 +271,14 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { /* line numbers */
-  color: grey;
-}
-
-.code {
-  background-color: #eeeeee
-}
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
 
 span.classifier {
   font-family: sans-serif ;
@@ -330,6 +331,21 @@ table.docutils th.field-name, table.docinfo th.docinfo-name {
   white-space: nowrap ;
   padding-left: 0 }
 
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
+
 h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
 h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
   font-size: 100% }
@@ -345,8 +361,16 @@ ul.auto-toc {
 
 <p>lib/ceilometer
 Install and start <strong>Ceilometer</strong> service
-To enable Ceilometer services, add the following to localrc
-enable_service ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api</p>
+To enable a minimal set of Ceilometer services, add the following to localrc:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 4)</p>
+Unexpected indentation.</div>
+<blockquote>
+enable_service ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api</blockquote>
+<dl class="docutils">
+<dt>To ensure Ceilometer alarming services are enabled also, further add to the localrc:</dt>
+<dd>enable_service ceilometer-alarm-notify ceilometer-alarm-eval</dd>
+</dl>
 </td><td class=code><div class=highlight><pre>
 
 
@@ -455,7 +479,6 @@ call out to the public nova and glance APIs</p>
     iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT os_username ceilometer
     iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT os_password <span class="nv">$SERVICE_PASSWORD</span>
     iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT os_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT os_auth_url <span class="nv">$OS_AUTH_URL</span>
 
     iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken auth_protocol http
     iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_user ceilometer
@@ -522,6 +545,8 @@ call out to the public nova and glance APIs</p>
     screen_it ceilometer-acentral <span class="s2">&quot;ceilometer-agent-central --config-file $CEILOMETER_CONF&quot;</span>
     screen_it ceilometer-collector <span class="s2">&quot;ceilometer-collector --config-file $CEILOMETER_CONF&quot;</span>
     screen_it ceilometer-api <span class="s2">&quot;ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR --config-file $CEILOMETER_CONF&quot;</span>
+    screen_it ceilometer-alarm-notify <span class="s2">&quot;ceilometer-alarm-notifier --config-file $CEILOMETER_CONF&quot;</span>
+    screen_it ceilometer-alarm-eval <span class="s2">&quot;ceilometer-alarm-singleton --config-file $CEILOMETER_CONF&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -531,7 +556,7 @@ call out to the public nova and glance APIs</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the ceilometer screen windows</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>serv in ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api; <span class="k">do</span>
+    <span class="k">for </span>serv in ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api ceilometer-alarm-notify ceilometer-alarm-eval; <span class="k">do</span>
 <span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
 <span class="nb">    </span><span class="k">done</span>
 <span class="o">}</span>

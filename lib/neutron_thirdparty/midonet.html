@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>openvswitch</title>
+    <title>midonet</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>openvswitch</h1></th>
+        <th class=docs><h1>midonet</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -22,7 +22,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
-<title>Neutron Open vSwitch plugin</title>
+<title>MidoNet</title>
 <style type="text/css">
 
 /*
@@ -356,72 +356,78 @@ ul.auto-toc {
 </style>
 </head>
 <body>
-<div class="document" id="neutron-open-vswitch-plugin">
-<h1 class="title">Neutron Open vSwitch plugin</h1>
+<div class="document" id="midonet">
+<h1 class="title">MidoNet</h1>
 
-<p>Save trace setting</p>
+<p>This file implements functions required to configure MidoNet as the third-party
+system used with devstack's Neutron.  To include this file, specify the following
+variables in localrc:</p>
+<ul class="simple">
+<li>enable_service midonet</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
+
+</pre></div></td></tr><tr><td class=docs>
+<p>MidoNet devstack destination dir</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MIDONET_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/midonet</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>MidoNet client repo</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MIDONET_CLIENT_REPO</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_CLIENT_REPO</span><span class="k">:-</span><span class="nv">https</span><span class="p">://github.com/midokura/python-midonetclient.git</span><span class="k">}</span>
+<span class="nv">MIDONET_CLIENT_BRANCH</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_CLIENT_BRANCH</span><span class="k">:-</span><span class="nv">master</span><span class="k">}</span>
+<span class="nv">MIDONET_CLIENT_DIR</span><span class="o">=</span><span class="nv">$MIDONET_DIR</span>/python-midonetclient
+
+</pre></div></td></tr><tr><td class=docs>
+<p>MidoNet OpenStack repo</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MIDONET_OS_REPO</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_OS_REPO</span><span class="k">:-</span><span class="nv">https</span><span class="p">://github.com/midokura/midonet-openstack.git</span><span class="k">}</span>
+<span class="nv">MIDONET_OS_BRANCH</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_OS_BRANCH</span><span class="k">:-</span><span class="nv">master</span><span class="k">}</span>
+<span class="nv">MIDONET_OS_DIR</span><span class="o">=</span><span class="nv">$MIDONET_DIR</span>/midonet-openstack
+<span class="nv">MIDONET_SETUP_SCRIPT</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_SETUP_SCRIPT</span><span class="k">:-</span><span class="nv">$MIDONET_OS_DIR</span><span class="p">/bin/setup_midonet_topology.py</span><span class="k">}</span>
+
+
+<span class="nv">MIDOLMAN_LOG</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDOLMAN_LOG</span><span class="k">:-</span><span class="p">/var/log/midolman/midolman.log</span><span class="k">}</span>
+<span class="nv">MIDONET_API_LOG</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_API_LOG</span><span class="k">:-</span><span class="p">/var/log/tomcat7/midonet-api.log</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Save trace setting</p>
+</td><td class=code><div class=highlight><pre>
 <span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/openvswitch_agent
-
-<span class="k">function </span>neutron_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/neutron/plugins/openvswitch
-    <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ovs_neutron_plugin.ini
-    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;ovs_neutron&quot;</span>
-    <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.openvswitch.ovs_neutron_plugin.OVSNeutronPluginV2&quot;</span>
+<span class="k">function </span>configure_midonet<span class="o">()</span> <span class="o">{</span>
+    :
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs tenant_network_type gre
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs tunnel_id_ranges <span class="nv">$TENANT_TUNNEL_RANGES</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs tenant_network_type vlan
-    <span class="k">else</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;WARNING - The openvswitch plugin is using local tenant networks, with no connectivity between hosts.&quot;</span>
-    <span class="k">fi</span>
+<span class="k">function </span>init_midonet<span class="o">()</span> <span class="o">{</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Override <tt class="docutils literal">OVS_VLAN_RANGES</tt> and <tt class="docutils literal">OVS_BRIDGE_MAPPINGS</tt> in <tt class="docutils literal">localrc</tt>
-for more complex physical network configurations.</p>
+<p>Initialize DB.  Evaluate the output of setup_midonet_topology.py to set
+env variables for provider router ID and metadata router ID</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_VLAN_RANGES&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">OVS_VLAN_RANGES</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$TENANT_VLAN_RANGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">OVS_VLAN_RANGES</span><span class="o">=</span><span class="nv">$OVS_VLAN_RANGES</span>:<span class="nv">$TENANT_VLAN_RANGE</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_VLAN_RANGES&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs network_vlan_ranges <span class="nv">$OVS_VLAN_RANGES</span>
-    <span class="k">fi</span>
+    <span class="nb">eval</span> <span class="sb">`</span>python <span class="nv">$MIDONET_SETUP_SCRIPT</span> admin <span class="nv">$ADMIN_PASSWORD</span> <span class="nv">$ADMIN_TENANT</span> provider_devices<span class="sb">`</span>
+    die_if_not_set <span class="nv">$LINENO</span> provider_router_id <span class="s2">&quot;Error running midonet setup script, provider_router_id was not set.&quot;</span>
+    die_if_not_set <span class="nv">$LINENO</span> metadata_router_id <span class="s2">&quot;Error running midonet setup script, metadata_router_id was not set.&quot;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Enable tunnel networks if selected</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$OVS_ENABLE_TUNNELING</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs enable_tunneling True
-    <span class="k">fi</span>
-
-<span class="k">    </span>_neutron_ovs_base_configure_firewall_driver
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Define extra &quot;OVS&quot; configuration options when q-svc is configured by defining
-the array <tt class="docutils literal">Q_SRV_EXTRA_OPTS</tt>.
-For Example: <tt class="docutils literal"><span class="pre">Q_SRV_EXTRA_OPTS=(foo=true</span> bar=2)</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>I in <span class="s2">&quot;${Q_SRV_EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Replace the first '=' with ' ' for iniset syntax</p>
-</td><td class=code><div class=highlight><pre>
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
-    <span class="k">done</span>
+    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> MIDONET provider_router_id <span class="nv">$provider_router_id</span>
+    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> MIDONET metadata_router_id <span class="nv">$metadata_router_id</span>
 <span class="o">}</span>
 
-<span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>
-    <span class="k">return </span>0
+<span class="k">function </span>install_midonet<span class="o">()</span> <span class="o">{</span>
+    git_clone <span class="nv">$MIDONET_CLIENT_REPO</span> <span class="nv">$MIDONET_CLIENT_DIR</span> <span class="nv">$MIDONET_CLIENT_BRANCH</span>
+    git_clone <span class="nv">$MIDONET_OS_REPO</span> <span class="nv">$MIDONET_OS_DIR</span> <span class="nv">$MIDONET_OS_BRANCH</span>
+    <span class="nb">export </span><span class="nv">PYTHONPATH</span><span class="o">=</span><span class="nv">$MIDONET_CLIENT_DIR</span>/src:<span class="nv">$MIDONET_OS_DIR</span>/src:<span class="nv">$PYTHONPATH</span>
+<span class="o">}</span>
+
+<span class="k">function </span>start_midonet<span class="o">()</span> <span class="o">{</span>
+    :
+<span class="o">}</span>
+
+<span class="k">function </span>stop_midonet<span class="o">()</span> <span class="o">{</span>
+    :
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

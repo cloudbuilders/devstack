@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>kvm.sh</title>
+    <title>install_pip.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>kvm.sh</h1></th>
+        <th class=docs><h1>install_pip.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,85 +359,159 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>exit on error to stop unexpected errors</p>
+<p><strong>install_pip.sh</strong></p>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/bin/bash</span>
+<span class="c">#!/usr/bin/env bash</span>
 
-<span class="nb">set</span> -o errexit
-<span class="nb">set</span> -o xtrace
 
-<span class="nv">EXECUTOR_NUMBER</span><span class="o">=</span><span class="nv">$1</span>
-<span class="nv">CONFIGURATION</span><span class="o">=</span><span class="nv">$2</span>
-<span class="nv">ADAPTER</span><span class="o">=</span><span class="nv">$3</span>
-<span class="nv">RC</span><span class="o">=</span><span class="nv">$4</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>install_pip.sh [--pip-version &lt;version&gt;] [--use-get-pip] [--setuptools] [--force]</p>
+<p>Update pip and friends to a known common version</p>
+</td><td class=code><div class=highlight><pre>
 
-<span class="k">function </span>usage<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Usage: $0 - Build a test configuration&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$0 [EXECUTOR_NUMBER] [CONFIGURATION] [ADAPTER] [RC (optional)]&quot;</span>
-    <span class="nb">exit </span>1
+</pre></div></td></tr><tr><td class=docs>
+<p>Assumptions:
+- currently we try to leave the system setuptools alone, install</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 13)</p>
+Unexpected indentation.</div>
+<blockquote>
+the system package if it is not already present</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 14)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<ul class="simple">
+<li>update pip to $INSTALL_PIP_VERSION</li>
+</ul>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Keep track of the current directory</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Change dir to top of devstack</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import common functions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
+
+<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Handle arguments</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nv">INSTALL_PIP_VERSION</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTALL_PIP_VERSION</span><span class="k">:-</span><span class="s2">&quot;1.4&quot;</span><span class="k">}</span>
+<span class="k">while</span> <span class="o">[[</span> -n <span class="s2">&quot;$1&quot;</span> <span class="o">]]</span>; <span class="k">do</span>
+<span class="k">    case</span> <span class="nv">$1</span> in
+        --force<span class="o">)</span>
+            <span class="nv">FORCE</span><span class="o">=</span>1
+            ;;
+        --pip-version<span class="o">)</span>
+            <span class="nv">INSTALL_PIP_VERSION</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
+            <span class="nb">shift</span>
+            ;;
+        --setuptools<span class="o">)</span>
+            <span class="nv">SETUPTOOLS</span><span class="o">=</span>1
+            ;;
+        --use-get-pip<span class="o">)</span>
+            <span class="nv">USE_GET_PIP</span><span class="o">=</span>1;
+            ;;
+    <span class="k">esac</span>
+<span class="k">    </span><span class="nb">shift</span>
+<span class="k">done</span>
+
+<span class="nv">SETUPTOOLS_EZ_SETUP_URL</span><span class="o">=</span>https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py
+<span class="nv">PIP_GET_PIP_URL</span><span class="o">=</span>https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+<span class="nv">PIP_TAR_URL</span><span class="o">=</span>https://pypi.python.org/packages/source/p/pip/pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz
+
+GetDistro
+<span class="nb">echo</span> <span class="s2">&quot;Distro: $DISTRO&quot;</span>
+
+<span class="k">function </span>get_versions<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">PIP</span><span class="o">=</span><span class="k">$(</span>which pip 2&gt;/dev/null <span class="o">||</span> which pip-python 2&gt;/dev/null<span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$PIP</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">DISTRIBUTE_VERSION</span><span class="o">=</span><span class="k">$(</span><span class="nv">$PIP</span> freeze | grep <span class="s1">&#39;distribute==&#39;</span><span class="k">)</span>
+        <span class="nv">SETUPTOOLS_VERSION</span><span class="o">=</span><span class="k">$(</span><span class="nv">$PIP</span> freeze | grep <span class="s1">&#39;setuptools==&#39;</span><span class="k">)</span>
+        <span class="nv">PIP_VERSION</span><span class="o">=</span><span class="k">$(</span><span class="nv">$PIP</span> --version | awk <span class="s1">&#39;{ print $2}&#39;</span><span class="k">)</span>
+        <span class="nb">echo</span> <span class="s2">&quot;pip: $PIP_VERSION  setuptools: $SETUPTOOLS_VERSION  distribute: $DISTRIBUTE_VERSION&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function </span>setuptools_ez_setup<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/ez_setup.py <span class="o">]]</span>; <span class="k">then</span>
+        <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
+         curl -OR <span class="nv">$SETUPTOOLS_EZ_SETUP_URL</span>; <span class="se">\</span>
+        <span class="o">)</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo python <span class="nv">$FILES</span>/ez_setup.py
+<span class="o">}</span>
+
+<span class="k">function </span>install_get_pip<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/get-pip.py <span class="o">]]</span>; <span class="k">then</span>
+        <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
+            curl <span class="nv">$PIP_GET_PIP_URL</span>; <span class="se">\</span>
+        <span class="o">)</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo python <span class="nv">$FILES</span>/get-pip.py
+<span class="o">}</span>
+
+<span class="k">function </span>install_pip_tarball<span class="o">()</span> <span class="o">{</span>
+    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
+        curl -O <span class="nv">$PIP_TAR_URL</span>; <span class="se">\</span>
+        tar xvfz pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz; <span class="se">\</span>
+        <span class="nb">cd </span>pip-<span class="nv">$INSTALL_PIP_VERSION</span>; <span class="se">\</span>
+        sudo python setup.py install; <span class="se">\</span>
+    <span class="o">)</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Validate inputs</p>
+<p>Show starting versions</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$EXECUTOR_NUMBER&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">||</span> <span class="s2">&quot;$CONFIGURATION&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>  <span class="o">||</span> <span class="s2">&quot;$ADAPTER&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>usage
+get_versions
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Do setuptools</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SETUPTOOLS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>We want it from source</p>
+</td><td class=code><div class=highlight><pre>
+    uninstall_package python-setuptools
+    setuptools_ez_setup
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>See about installing the distro setuptools</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> ! python -c <span class="s2">&quot;import setuptools&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>install_package python-setuptools
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This directory</p>
+<p>Do pip</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">CUR_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$PIP</span> <span class="o">||</span> <span class="s2">&quot;$PIP_VERSION&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$INSTALL_PIP_VERSION&quot;</span> <span class="o">||</span> -n <span class="nv">$FORCE</span> <span class="o">]]</span>; <span class="k">then</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>devstack directory</p>
+<p>Eradicate any and all system packages</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">cd</span> ../../..
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>
+    uninstall_package python-pip
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Deps</p>
-</td><td class=code><div class=highlight><pre>
-apt-get install -y --force-yes libvirt-bin <span class="o">||</span> <span class="nb">true</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$USE_GET_PIP&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>install_get_pip
+    <span class="k">else</span>
+<span class="k">        </span>install_pip_tarball
+    <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Name test instance based on executor</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">BASE_NAME</span><span class="o">=</span>executor-<span class="sb">`</span><span class="nb">printf</span> <span class="s2">&quot;%02d&quot;</span> <span class="nv">$EXECUTOR_NUMBER</span><span class="sb">`</span>
-<span class="nv">GUEST_NAME</span><span class="o">=</span><span class="nv">$BASE_NAME</span>.<span class="nv">$ADAPTER</span>
-virsh list | grep <span class="nv">$BASE_NAME</span> | cut -d <span class="s2">&quot; &quot;</span> -f1 | xargs -n 1 virsh destroy <span class="o">||</span> <span class="nb">true</span>
-virsh net-list | grep <span class="nv">$BASE_NAME</span> | cut -d <span class="s2">&quot; &quot;</span> -f1 | xargs -n 1 virsh net-destroy <span class="o">||</span> <span class="nb">true</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure localrc</p>
-</td><td class=code><div class=highlight><pre>
-cat <span class="s">&lt;&lt;EOF &gt;localrc</span>
-<span class="s">RECLONE=yes</span>
-<span class="s">GUEST_NETWORK=$EXECUTOR_NUMBER</span>
-<span class="s">GUEST_NAME=$GUEST_NAME</span>
-<span class="s">FLOATING_RANGE=192.168.$EXECUTOR_NUMBER.128/27</span>
-<span class="s">GUEST_CORES=1</span>
-<span class="s">GUEST_RAM=12574720</span>
-<span class="s">MYSQL_PASSWORD=chicken</span>
-<span class="s">RABBIT_PASSWORD=chicken</span>
-<span class="s">SERVICE_TOKEN=chicken</span>
-<span class="s">SERVICE_PASSWORD=chicken</span>
-<span class="s">ADMIN_PASSWORD=chicken</span>
-<span class="s">USERNAME=admin</span>
-<span class="s">TENANT=admin</span>
-<span class="s">NET_NAME=$BASE_NAME</span>
-<span class="s">ACTIVE_TIMEOUT=45</span>
-<span class="s">BOOT_TIMEOUT=45</span>
-<span class="s">$RC</span>
-<span class="s">EOF</span>
-<span class="nb">cd </span>tools
-sudo ./build_uec.sh
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Make the address of the instances available to test runners</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">echo </span><span class="nv">HEAD</span><span class="o">=</span><span class="sb">`</span>cat /var/lib/libvirt/dnsmasq/<span class="nv">$BASE_NAME</span>.leases | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span> &gt; <span class="nv">$TOP_DIR</span>/addresses
+<span class="k">    </span>get_versions
+<span class="k">fi</span>
 
 
 </td><td class=code><div class=highlight><pre>

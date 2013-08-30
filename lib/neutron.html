@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -95,7 +95,7 @@ div.tip p.admonition-title {
 
 div.attention p.admonition-title, div.caution p.admonition-title,
 div.danger p.admonition-title, div.error p.admonition-title,
-div.warning p.admonition-title {
+div.warning p.admonition-title, .code .error {
   color: red ;
   font-weight: bold ;
   font-family: sans-serif }
@@ -271,13 +271,14 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { /* line numbers */
-  color: grey;
-}
-
-.code {
-  background-color: #eeeeee
-}
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
 
 span.classifier {
   font-family: sans-serif ;
@@ -329,6 +330,21 @@ table.docutils th.field-name, table.docinfo th.docinfo-name {
   text-align: left ;
   white-space: nowrap ;
   padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
 
 h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
 h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
@@ -620,6 +636,21 @@ provider GRE tunnels when <tt class="docutils literal">ENABLE_TENANT_TUNNELS</tt
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/services/vpn
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="firewall-service-plugin-functions">
+<h1>Firewall Service Plugin functions</h1>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 241)</p>
+<p>Title underline too short.</p>
+<pre class="literal-block">
+Firewall Service Plugin functions
+--------------------------------
+</pre>
+</div>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/services/firewall
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Use security group or not</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>has_neutron_plugin_security_group; <span class="k">then</span>
@@ -651,6 +682,9 @@ Set common config for all neutron server and agents.</p>
 <span class="k">    if </span>is_service_enabled q-vpn; <span class="k">then</span>
 <span class="k">        </span>_configure_neutron_vpn
     <span class="k">fi</span>
+<span class="k">    if </span>is_service_enabled q-fwaas; <span class="k">then</span>
+<span class="k">        </span>_configure_neutron_fwaas
+    <span class="k">fi</span>
 <span class="k">    if </span>is_service_enabled q-svc; <span class="k">then</span>
 <span class="k">        </span>_configure_neutron_service
     <span class="k">fi</span>
@@ -671,18 +705,18 @@ Set common config for all neutron server and agents.</p>
 <span class="o">}</span>
 
 <span class="k">function </span>create_nova_conf_neutron<span class="o">()</span> <span class="o">{</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT network_api_class <span class="s2">&quot;nova.network.quantumv2.api.API&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_admin_username <span class="s2">&quot;$Q_ADMIN_USERNAME&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_admin_password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_admin_auth_url <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_auth_strategy <span class="s2">&quot;$Q_AUTH_STRATEGY&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_admin_tenant_name <span class="s2">&quot;$SERVICE_TENANT_NAME&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_region_name <span class="s2">&quot;RegionOne&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quantum_url <span class="s2">&quot;http://$Q_HOST:$Q_PORT&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT network_api_class <span class="s2">&quot;nova.network.neutronv2.api.API&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_admin_username <span class="s2">&quot;$Q_ADMIN_USERNAME&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_admin_password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_admin_auth_url <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_auth_strategy <span class="s2">&quot;$Q_AUTH_STRATEGY&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_admin_tenant_name <span class="s2">&quot;$SERVICE_TENANT_NAME&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_region_name <span class="s2">&quot;RegionOne&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_url <span class="s2">&quot;http://$Q_HOST:$Q_PORT&quot;</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span>nova.virt.firewall.NoopFirewallDriver
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT security_group_api quantum
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT security_group_api neutron
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -693,7 +727,7 @@ Set common config for all neutron server and agents.</p>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_vif_driver <span class="s2">&quot;$NOVA_VIF_DRIVER&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT linuxnet_interface_driver <span class="s2">&quot;$LINUXNET_VIF_DRIVER&quot;</span>
     <span class="k">if </span>is_service_enabled q-meta; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT service_quantum_metadata_proxy <span class="s2">&quot;True&quot;</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT service_neutron_metadata_proxy <span class="s2">&quot;True&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -813,7 +847,11 @@ Since neutron command is executed in admin context at this point,
 <p>init_neutron() - Initialize databases, etc.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_neutron<span class="o">()</span> <span class="o">{</span>
-    :
+    recreate_database <span class="nv">$Q_DB_NAME</span> utf8
+</pre></div></td></tr><tr><td class=docs>
+<p>Run Neutron db migrations</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$NEUTRON_BIN_DIR</span>/neutron-db-manage --config-file <span class="nv">$NEUTRON_CONF</span> --config-file /<span class="nv">$Q_PLUGIN_CONF_FILE</span> upgrade head
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -830,6 +868,7 @@ Since neutron command is executed in admin context at this point,
 <span class="k">function </span>install_neutronclient<span class="o">()</span> <span class="o">{</span>
     git_clone <span class="nv">$NEUTRONCLIENT_REPO</span> <span class="nv">$NEUTRONCLIENT_DIR</span> <span class="nv">$NEUTRONCLIENT_BRANCH</span>
     setup_develop <span class="nv">$NEUTRONCLIENT_DIR</span>
+    sudo install -D -m 0644 -o <span class="nv">$STACK_USER</span> <span class="o">{</span><span class="nv">$NEUTRONCLIENT_DIR</span>/tools/,/etc/bash_completion.d/<span class="o">}</span>neutron.bash_completion
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -880,11 +919,17 @@ Since neutron command is executed in admin context at this point,
     screen_it q-agt <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_BINARY --config-file $NEUTRON_CONF --config-file /$Q_PLUGIN_CONF_FILE&quot;</span>
     screen_it q-dhcp <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_DHCP_BINARY --config-file $NEUTRON_CONF --config-file=$Q_DHCP_CONF_FILE&quot;</span>
 
-    <span class="k">if </span>is_service_enabled q-vpn; <span class="k">then</span>
-<span class="k">        </span>screen_it q-vpn <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; $AGENT_VPN_BINARY --config-file $NEUTRON_CONF --config-file=$Q_L3_CONF_FILE&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span>screen_it q-l3 <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_L3_BINARY --config-file $NEUTRON_CONF --config-file=$Q_L3_CONF_FILE&quot;</span>
+    <span class="nv">L3_CONF_FILES</span><span class="o">=</span><span class="s2">&quot;--config-file $NEUTRON_CONF --config-file=$Q_L3_CONF_FILE&quot;</span>
+
+    <span class="k">if </span>is_service_enabled q-fwaas; <span class="k">then</span>
+<span class="k">        </span><span class="nv">L3_CONF_FILES</span><span class="o">=</span><span class="s2">&quot;$L3_CONF_FILES --config-file $Q_FWAAS_CONF_FILE&quot;</span>
     <span class="k">fi</span>
+<span class="k">    if </span>is_service_enabled q-vpn; <span class="k">then</span>
+<span class="k">        </span>screen_it q-vpn <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; $AGENT_VPN_BINARY $L3_CONF_FILES&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>screen_it q-l3 <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_L3_BINARY $L3_CONF_FILES&quot;</span>
+    <span class="k">fi</span>
+
 <span class="k">    </span>screen_it q-meta <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_META_BINARY --config-file $NEUTRON_CONF --config-file=$Q_META_CONF_FILE&quot;</span>
 
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -952,7 +997,7 @@ For main plugin config file, set <tt class="docutils literal">Q_PLUGIN_CONF_PATH
 For addition plugin config files, set <tt class="docutils literal">Q_PLUGIN_EXTRA_CONF_PATH</tt>,
 <tt class="docutils literal">Q_PLUGIN_EXTRA_CONF_FILES</tt>.  For example:</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 377)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 386)</p>
 Unexpected indentation.</div>
 <blockquote>
 <tt class="docutils literal"><span class="pre">Q_PLUGIN_EXTRA_CONF_FILES=(file1,</span> file2)</tt></blockquote>
@@ -1013,7 +1058,6 @@ be cleaned.</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> agent root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
 
-    _neutron_setup_keystone <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> DEFAULT set_auth_url
     _neutron_setup_interface_driver <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span>
 
     neutron_plugin_configure_debug_command
@@ -1026,12 +1070,23 @@ be cleaned.</p>
     cp <span class="nv">$NEUTRON_DIR</span>/etc/dhcp_agent.ini <span class="nv">$Q_DHCP_CONF_FILE</span>
 
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT verbose True
-    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT debug True
+    iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
 
-    _neutron_setup_keystone <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT set_auth_url
-    _neutron_setup_interface_driver <span class="nv">$Q_DHCP_CONF_FILE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Define extra &quot;DEFAULT&quot; configuration options when q-dhcp is configured by
+defining the array <tt class="docutils literal">Q_DHCP_EXTRA_DEFAULT_OPTS</tt>.
+For Example: <tt class="docutils literal"><span class="pre">Q_DHCP_EXTRA_DEFAULT_OPTS=(foo=true</span> bar=2)</tt></p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_DHCP_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
+    <span class="k">done</span>
+
+<span class="k">    </span>_neutron_setup_interface_driver <span class="nv">$Q_DHCP_CONF_FILE</span>
 
     neutron_plugin_configure_dhcp_agent
 <span class="o">}</span>
@@ -1046,14 +1101,17 @@ be cleaned.</p>
     <span class="nv">AGENT_L3_BINARY</span><span class="o">=</span><span class="k">${</span><span class="nv">AGENT_L3_BINARY</span><span class="k">:-</span><span class="s2">&quot;$NEUTRON_BIN_DIR/neutron-l3-agent&quot;</span><span class="k">}</span>
     <span class="nv">Q_L3_CONF_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/l3_agent.ini
 
-    cp <span class="nv">$NEUTRON_DIR</span>/etc/l3_agent.ini <span class="nv">$Q_L3_CONF_FILE</span>
+    <span class="k">if </span>is_service_enabled q-fwaas; <span class="k">then</span>
+<span class="k">        </span><span class="nv">Q_FWAAS_CONF_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/fwaas_driver.ini
+    <span class="k">fi</span>
+
+<span class="k">    </span>cp <span class="nv">$NEUTRON_DIR</span>/etc/l3_agent.ini <span class="nv">$Q_L3_CONF_FILE</span>
 
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT verbose True
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT debug True
+    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
 
-    _neutron_setup_keystone <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT set_auth_url
     _neutron_setup_interface_driver <span class="nv">$Q_L3_CONF_FILE</span>
 
     neutron_plugin_configure_l3_agent
@@ -1066,16 +1124,22 @@ be cleaned.</p>
     cp <span class="nv">$NEUTRON_DIR</span>/etc/metadata_agent.ini <span class="nv">$Q_META_CONF_FILE</span>
 
     iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT verbose True
-    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT debug True
+    iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT nova_metadata_ip <span class="nv">$Q_META_DATA_IP</span>
     iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
 
-    _neutron_setup_keystone <span class="nv">$Q_META_CONF_FILE</span> DEFAULT set_auth_url
+    _neutron_setup_keystone <span class="nv">$Q_META_CONF_FILE</span> DEFAULT True True True
+
 <span class="o">}</span>
 
 <span class="k">function </span>_configure_neutron_lbaas<span class="o">()</span> <span class="o">{</span>
     neutron_agent_lbaas_configure_common
     neutron_agent_lbaas_configure_agent
+<span class="o">}</span>
+
+<span class="k">function </span>_configure_neutron_fwaas<span class="o">()</span> <span class="o">{</span>
+    neutron_fwaas_configure_common
+    neutron_fwaas_configure_driver
 <span class="o">}</span>
 
 <span class="k">function </span>_configure_neutron_vpn<span class="o">()</span>
@@ -1095,7 +1159,7 @@ ensure that an agent's configuration can override the default</p>
 </td><td class=code><div class=highlight><pre>
     iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> agent root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
     iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT verbose True
-    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT debug True
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure agent for plugin</p>
@@ -1114,12 +1178,6 @@ It is called when q-svc is enabled.</p>
     cp <span class="nv">$NEUTRON_DIR</span>/etc/api-paste.ini <span class="nv">$Q_API_PASTE_FILE</span>
     cp <span class="nv">$NEUTRON_DIR</span>/etc/policy.json <span class="nv">$Q_POLICY_FILE</span>
 
-    <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
-<span class="k">        </span>recreate_database <span class="nv">$Q_DB_NAME</span> utf8
-    <span class="k">else</span>
-<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;A database must be enabled in order to use the $Q_PLUGIN Neutron plugin.&quot;</span>
-    <span class="k">fi</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Update either configuration file with plugin</p>
 </td><td class=code><div class=highlight><pre>
@@ -1130,7 +1188,7 @@ It is called when q-svc is enabled.</p>
     <span class="k">fi</span>
 
 <span class="k">    </span>iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT verbose True
-    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT debug True
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT policy_file <span class="nv">$Q_POLICY_FILE</span>
     iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT allow_overlapping_ips <span class="nv">$Q_ALLOW_OVERLAPPING_IP</span>
 
@@ -1221,23 +1279,31 @@ location moved in newer versions, prefer new location</p>
     <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">use_auth_url</span><span class="o">=</span><span class="nv">$3</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$use_auth_url</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_url <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
+    <span class="nb">local </span><span class="nv">skip_auth_cache</span><span class="o">=</span><span class="nv">$4</span>
+    <span class="nb">local </span><span class="nv">use_service_port</span><span class="o">=</span><span class="nv">$5</span>
+    <span class="nb">local </span><span class="nv">keystone_port</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PORT</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$use_service_port</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">keystone_port</span><span class="o">=</span><span class="nv">$KEYSTONE_SERVICE_PORT</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[[</span> -n <span class="nv">$use_auth_url</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_url <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_AUTH_HOST:$keystone_port/v2.0&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span>iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_host <span class="nv">$KEYSTONE_SERVICE_HOST</span>
-        iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+        iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_port <span class="nv">$keystone_port</span>
         iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_protocol <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>
     <span class="k">fi</span>
 <span class="k">    </span>iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> admin_user <span class="nv">$Q_ADMIN_USERNAME</span>
     iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> signing_dir <span class="nv">$NEUTRON_AUTH_CACHE_DIR</span>
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$skip_auth_cache</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> signing_dir <span class="nv">$NEUTRON_AUTH_CACHE_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create cache dir</p>
 </td><td class=code><div class=highlight><pre>
-    sudo mkdir -p <span class="nv">$NEUTRON_AUTH_CACHE_DIR</span>
-    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$NEUTRON_AUTH_CACHE_DIR</span>
-    rm -f <span class="nv">$NEUTRON_AUTH_CACHE_DIR</span>/*
+        sudo mkdir -p <span class="nv">$NEUTRON_AUTH_CACHE_DIR</span>
+        sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$NEUTRON_AUTH_CACHE_DIR</span>
+        rm -f <span class="nv">$NEUTRON_AUTH_CACHE_DIR</span>/*
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 <span class="k">function </span>_neutron_setup_interface_driver<span class="o">()</span> <span class="o">{</span>

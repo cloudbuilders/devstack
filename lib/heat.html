@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -95,7 +95,7 @@ div.tip p.admonition-title {
 
 div.attention p.admonition-title, div.caution p.admonition-title,
 div.danger p.admonition-title, div.error p.admonition-title,
-div.warning p.admonition-title {
+div.warning p.admonition-title, .code .error {
   color: red ;
   font-weight: bold ;
   font-family: sans-serif }
@@ -271,13 +271,14 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { /* line numbers */
-  color: grey;
-}
-
-.code {
-  background-color: #eeeeee
-}
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
 
 span.classifier {
   font-family: sans-serif ;
@@ -329,6 +330,21 @@ table.docutils th.field-name, table.docinfo th.docinfo-name {
   text-align: left ;
   white-space: nowrap ;
   padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
 
 h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
 h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
@@ -387,7 +403,10 @@ cleanup_heat</p>
 <span class="nv">HEAT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/heat
 <span class="nv">HEATCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-heatclient
 <span class="nv">HEAT_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/heat</span><span class="k">}</span>
-
+<span class="nv">HEAT_STANDALONE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$HEAT_STANDALONE</span><span class="sb">`</span>
+<span class="nv">HEAT_CONF_DIR</span><span class="o">=</span>/etc/heat
+<span class="nv">HEAT_ENV_DIR</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/environment.d
+<span class="nv">HEAT_TEMPLATES_DIR</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/templates
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -401,6 +420,8 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>cleanup_heat<span class="o">()</span> <span class="o">{</span>
     sudo rm -rf <span class="nv">$HEAT_AUTH_CACHE_DIR</span>
+    sudo rm -rf <span class="nv">$HEAT_ENV_DIR</span>
+    sudo rm -rf <span class="nv">$HEAT_TEMPLATES_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -409,7 +430,6 @@ runs that a clean run would need to clean up</p>
 <span class="k">function </span>configure_heat<span class="o">()</span> <span class="o">{</span>
     setup_develop <span class="nv">$HEAT_DIR</span>
 
-    <span class="nv">HEAT_CONF_DIR</span><span class="o">=</span>/etc/heat
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$HEAT_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$HEAT_CONF_DIR</span>
     <span class="k">fi</span>
@@ -434,7 +454,7 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">HEAT_API_CFN_CONF</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-api-cfn.conf
     cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-api-cfn.conf <span class="nv">$HEAT_API_CFN_CONF</span>
-    iniset <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT debug True
+    iniset <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     inicomment <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT log_file
     iniset <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_API_CFN_HOST</span>
@@ -449,6 +469,7 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_API_CFN_CONF</span> keystone_authtoken signing_dir <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api-cfn
     iniset <span class="nv">$HEAT_API_CFN_CONF</span> ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
     iniset <span class="nv">$HEAT_API_CFN_CONF</span> ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
+    <span class="o">[[</span> <span class="s2">&quot;$HEAT_STANDALONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> iniset <span class="nv">$HEAT_API_CFN_CONF</span> paste_deploy flavor standalone
 
     iniset_rpc_backend heat <span class="nv">$HEAT_API_CFN_CONF</span> DEFAULT
 
@@ -457,7 +478,7 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">HEAT_API_CONF</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-api.conf
     cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-api.conf <span class="nv">$HEAT_API_CONF</span>
-    iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT debug True
+    iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     inicomment <span class="nv">$HEAT_API_CONF</span> DEFAULT log_file
     iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$HEAT_API_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_API_HOST</span>
@@ -472,7 +493,7 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_API_CONF</span> keystone_authtoken signing_dir <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api
     iniset <span class="nv">$HEAT_API_CONF</span> ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
     iniset <span class="nv">$HEAT_API_CONF</span> ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
-
+    <span class="o">[[</span> <span class="s2">&quot;$HEAT_STANDALONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> iniset <span class="nv">$HEAT_API_CONF</span> paste_deploy flavor standalone
     iniset_rpc_backend heat <span class="nv">$HEAT_API_CONF</span> DEFAULT
 
 
@@ -481,7 +502,7 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">HEAT_ENGINE_CONF</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-engine.conf
     cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-engine.conf <span class="nv">$HEAT_ENGINE_CONF</span>
-    iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT debug True
+    iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     inicomment <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT log_file
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_ENGINE_HOST</span>
@@ -494,12 +515,22 @@ runs that a clean run would need to clean up</p>
 
     iniset_rpc_backend heat <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT
 
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Add color to logging output</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT logging_context_format_string <span class="s2">&quot;%(asctime)s.%(msecs)03d %(color)s%(levelname)s %(name)s [[01;36m%(request_id)s [00;36m%(user_name)s %(project_name)s%(color)s] [01;35m%(instance)s%(color)s%(message)s[00m&quot;</span>
+        iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT logging_default_format_string <span class="s2">&quot;%(asctime)s.%(msecs)03d %(color)s%(levelname)s %(name)s [[00;36m-%(color)s] [01;35m%(instance)s%(color)s%(message)s[00m&quot;</span>
+        iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT logging_debug_format_suffix <span class="s2">&quot;[00;33mfrom (pid=%(process)d) %(funcName)s %(pathname)s:%(lineno)d[00m&quot;</span>
+        iniset <span class="nv">$HEAT_ENGINE_CONF</span> DEFAULT logging_exception_prefix <span class="s2">&quot;%(color)s%(asctime)s.%(msecs)03d TRACE %(name)s [01;35m%(instance)s[00m&quot;</span>
+    <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Cloudwatch API</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">HEAT_API_CW_CONF</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/heat-api-cloudwatch.conf
     cp <span class="nv">$HEAT_DIR</span>/etc/heat/heat-api-cloudwatch.conf <span class="nv">$HEAT_API_CW_CONF</span>
-    iniset <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT debug True
+    iniset <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     inicomment <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT log_file
     iniset <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT bind_host <span class="nv">$HEAT_API_CW_HOST</span>
@@ -514,8 +545,29 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_API_CW_CONF</span> keystone_authtoken signing_dir <span class="nv">$HEAT_AUTH_CACHE_DIR</span>/api-cloudwatch
     iniset <span class="nv">$HEAT_API_CW_CONF</span> ec2authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0
     iniset <span class="nv">$HEAT_API_CW_CONF</span> ec2authtoken keystone_ec2_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
+    <span class="o">[[</span> <span class="s2">&quot;$HEAT_STANDALONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> iniset <span class="nv">$HEAT_API_CW_CONF</span> paste_deploy flavor standalone
 
     iniset_rpc_backend heat <span class="nv">$HEAT_API_CW_CONF</span> DEFAULT
+
+</pre></div></td></tr><tr><td class=docs>
+<p>heat environment</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkdir -p <span class="nv">$HEAT_ENV_DIR</span>
+    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$HEAT_ENV_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>copy the default environment</p>
+</td><td class=code><div class=highlight><pre>
+    cp <span class="nv">$HEAT_DIR</span>/etc/heat/environment.d/* <span class="nv">$HEAT_ENV_DIR</span>/
+
+</pre></div></td></tr><tr><td class=docs>
+<p>heat template resources.</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkdir -p <span class="nv">$HEAT_TEMPLATES_DIR</span>
+    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$HEAT_TEMPLATES_DIR</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>copy the default templates</p>
+</td><td class=code><div class=highlight><pre>
+    cp <span class="nv">$HEAT_DIR</span>/etc/heat/templates/* <span class="nv">$HEAT_TEMPLATES_DIR</span>/
 
 <span class="o">}</span>
 
@@ -585,6 +637,23 @@ runs that a clean run would need to clean up</p>
 <span class="nb">    </span><span class="k">done</span>
 <span class="o">}</span>
 
+<span class="k">function </span>disk_image_create <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">elements_path</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">elements</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">arch</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">output</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files/<span class="nv">$4</span>
+    <span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;$output.qcow2&quot;</span> <span class="o">]]</span>;
+    <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Image file already exists: $output_file&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">ELEMENTS_PATH</span><span class="o">=</span><span class="nv">$elements_path</span> disk-image-create <span class="se">\</span>
+            <span class="nv">$elements</span> -a <span class="nv">$arch</span> -o <span class="nv">$output</span>
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>upload with fake URL so that image in $TOP_DIR/files is used</p>
+</td><td class=code><div class=highlight><pre>
+    upload_image <span class="s2">&quot;http://localhost/$output.qcow2&quot;</span> <span class="nv">$TOKEN</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>

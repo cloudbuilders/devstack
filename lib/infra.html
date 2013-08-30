@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>openvswitch</title>
+    <title>infra</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>openvswitch</h1></th>
+        <th class=docs><h1>infra</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -22,7 +22,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
-<title>Neutron Open vSwitch plugin</title>
+<title></title>
 <style type="text/css">
 
 /*
@@ -356,78 +356,87 @@ ul.auto-toc {
 </style>
 </head>
 <body>
-<div class="document" id="neutron-open-vswitch-plugin">
-<h1 class="title">Neutron Open vSwitch plugin</h1>
+<div class="document">
 
+
+<p>lib/infra</p>
+<p>Functions to install infrastructure projects needed by other projects
+early in the cycle. We need this so we can do things like gate on
+requirements as a global list
+Dependencies:
+<tt class="docutils literal">functions</tt> file</p>
+</td><td class=code><div class=highlight><pre>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
+<p>unfubar_setuptools
+install_infra</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
-
-<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/openvswitch_agent
 
-<span class="k">function </span>neutron_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/neutron/plugins/openvswitch
-    <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ovs_neutron_plugin.ini
-    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;ovs_neutron&quot;</span>
-    <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.openvswitch.ovs_neutron_plugin.OVSNeutronPluginV2&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="defaults">
+<h1>Defaults</h1>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">PBR_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/pbr
+<span class="nv">REQUIREMENTS_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/requirements
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="entry-points">
+<h1>Entry Points</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>unfubar_setuptools() - Unbreak the giant mess that is the current state of setuptools</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>unfubar_setuptools<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>this is a giant game of who's on first, but it does consistently work
+there is hope that upstream python packaging fixes this in the future</p>
+</td><td class=code><div class=highlight><pre>
+    echo_summary <span class="s2">&quot;Unbreaking setuptools&quot;</span>
+    pip_install -U setuptools
+    pip_install -U pip
+    uninstall_package python-setuptools
+    pip_install -U setuptools
+    pip_install -U pip
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs tenant_network_type gre
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs tunnel_id_ranges <span class="nv">$TENANT_TUNNEL_RANGES</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs tenant_network_type vlan
-    <span class="k">else</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;WARNING - The openvswitch plugin is using local tenant networks, with no connectivity between hosts.&quot;</span>
-    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Override <tt class="docutils literal">OVS_VLAN_RANGES</tt> and <tt class="docutils literal">OVS_BRIDGE_MAPPINGS</tt> in <tt class="docutils literal">localrc</tt>
-for more complex physical network configurations.</p>
+<p>install_infra() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_VLAN_RANGES&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">OVS_VLAN_RANGES</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$TENANT_VLAN_RANGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">OVS_VLAN_RANGES</span><span class="o">=</span><span class="nv">$OVS_VLAN_RANGES</span>:<span class="nv">$TENANT_VLAN_RANGE</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_VLAN_RANGES&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs network_vlan_ranges <span class="nv">$OVS_VLAN_RANGES</span>
-    <span class="k">fi</span>
+<span class="k">function </span>install_infra<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>bring down global requirements</p>
+</td><td class=code><div class=highlight><pre>
+    git_clone <span class="nv">$REQUIREMENTS_REPO</span> <span class="nv">$REQUIREMENTS_DIR</span> <span class="nv">$REQUIREMENTS_BRANCH</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Enable tunnel networks if selected</p>
+<p>Install pbr</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$OVS_ENABLE_TUNNELING</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs enable_tunneling True
-    <span class="k">fi</span>
-
-<span class="k">    </span>_neutron_ovs_base_configure_firewall_driver
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Define extra &quot;OVS&quot; configuration options when q-svc is configured by defining
-the array <tt class="docutils literal">Q_SRV_EXTRA_OPTS</tt>.
-For Example: <tt class="docutils literal"><span class="pre">Q_SRV_EXTRA_OPTS=(foo=true</span> bar=2)</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>I in <span class="s2">&quot;${Q_SRV_EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Replace the first '=' with ' ' for iniset syntax</p>
-</td><td class=code><div class=highlight><pre>
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
-    <span class="k">done</span>
-<span class="o">}</span>
-
-<span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>
-    <span class="k">return </span>0
+    git_clone <span class="nv">$PBR_REPO</span> <span class="nv">$PBR_DIR</span> <span class="nv">$PBR_BRANCH</span>
+    setup_develop <span class="nv">$PBR_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$MY_XTRACE</span>
+<span class="nv">$XTRACE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
 
 </td><td class=code><div class=highlight><pre>
@@ -436,6 +445,7 @@ For Example: <tt class="docutils literal"><span class="pre">Q_SRV_EXTRA_OPTS=(fo
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>

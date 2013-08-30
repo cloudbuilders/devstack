@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -95,7 +95,7 @@ div.tip p.admonition-title {
 
 div.attention p.admonition-title, div.caution p.admonition-title,
 div.danger p.admonition-title, div.error p.admonition-title,
-div.warning p.admonition-title {
+div.warning p.admonition-title, .code .error {
   color: red ;
   font-weight: bold ;
   font-family: sans-serif }
@@ -271,13 +271,14 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { /* line numbers */
-  color: grey;
-}
-
-.code {
-  background-color: #eeeeee
-}
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
 
 span.classifier {
   font-family: sans-serif ;
@@ -329,6 +330,21 @@ table.docutils th.field-name, table.docinfo th.docinfo-name {
   text-align: left ;
   white-space: nowrap ;
   padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
 
 h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
 h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
@@ -382,6 +398,12 @@ ul.auto-toc {
 <p>xapi functions</p>
 </td><td class=code><div class=highlight><pre>
 . <span class="nv">$THIS_DIR</span>/functions
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Determine what system we are running on.
+Might not be XenServer if we're using xenserver-core</p>
+</td><td class=code><div class=highlight><pre>
+GetDistro
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Get Settings</p>
@@ -543,8 +565,8 @@ and/or create VM from template</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">GUEST_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">GUEST_NAME</span><span class="k">:-</span><span class="s2">&quot;DevStackOSDomU&quot;</span><span class="k">}</span>
-<span class="nv">TNAME</span><span class="o">=</span><span class="s2">&quot;devstack_template&quot;</span>
-<span class="nv">SNAME_PREPARED</span><span class="o">=</span><span class="s2">&quot;template_prepared&quot;</span>
+<span class="nv">TNAME</span><span class="o">=</span><span class="s2">&quot;jeos_template_for_devstack&quot;</span>
+<span class="nv">SNAME_TEMPLATE</span><span class="o">=</span><span class="s2">&quot;jeos_snapshot_for_devstack&quot;</span>
 <span class="nv">SNAME_FIRST_BOOT</span><span class="o">=</span><span class="s2">&quot;before_first_boot&quot;</span>
 
 <span class="k">function </span>wait_for_VM_to_halt<span class="o">()</span> <span class="o">{</span>
@@ -621,28 +643,9 @@ network</p>
     xe vm-param-set actions-after-reboot<span class="o">=</span>Restart <span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$vm_uuid&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Prepare VM for DevStack</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Install XenServer tools, and other such things</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">$THIS_DIR</span>/prepare_guest_template.sh <span class="s2">&quot;$GUEST_NAME&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>start the VM to run the prepare steps</p>
-</td><td class=code><div class=highlight><pre>
-    xe vm-start <span class="nv">vm</span><span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Wait for prep script to finish and shutdown system</p>
-</td><td class=code><div class=highlight><pre>
-    wait_for_VM_to_halt
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Make template from VM</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">snuuid</span><span class="o">=</span><span class="k">$(</span>xe vm-snapshot <span class="nv">vm</span><span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span> new-name-label<span class="o">=</span><span class="s2">&quot;$SNAME_PREPARED&quot;</span><span class="k">)</span>
+    <span class="nv">snuuid</span><span class="o">=</span><span class="k">$(</span>xe vm-snapshot <span class="nv">vm</span><span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span> new-name-label<span class="o">=</span><span class="s2">&quot;$SNAME_TEMPLATE&quot;</span><span class="k">)</span>
     xe snapshot-clone <span class="nv">uuid</span><span class="o">=</span><span class="nv">$snuuid</span> new-name-label<span class="o">=</span><span class="s2">&quot;$TNAME&quot;</span>
 <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -650,6 +653,25 @@ network</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">vm_uuid</span><span class="o">=</span><span class="k">$(</span>xe vm-install <span class="nv">template</span><span class="o">=</span><span class="s2">&quot;$TNAME&quot;</span> new-name-label<span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span><span class="k">)</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Prepare VM for DevStack</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Install XenServer tools, and other such things</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">$THIS_DIR</span>/prepare_guest_template.sh <span class="s2">&quot;$GUEST_NAME&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>start the VM to run the prepare steps</p>
+</td><td class=code><div class=highlight><pre>
+xe vm-start <span class="nv">vm</span><span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Wait for prep script to finish and shutdown system</p>
+</td><td class=code><div class=highlight><pre>
+wait_for_VM_to_halt
 
 <span class="c">## Setup network cards</span>
 </pre></div></td></tr><tr><td class=docs>

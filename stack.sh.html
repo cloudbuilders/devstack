@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -95,7 +95,7 @@ div.tip p.admonition-title {
 
 div.attention p.admonition-title, div.caution p.admonition-title,
 div.danger p.admonition-title, div.error p.admonition-title,
-div.warning p.admonition-title {
+div.warning p.admonition-title, .code .error {
   color: red ;
   font-weight: bold ;
   font-family: sans-serif }
@@ -271,13 +271,14 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { /* line numbers */
-  color: grey;
-}
-
-.code {
-  background-color: #eeeeee
-}
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
 
 span.classifier {
   font-family: sans-serif ;
@@ -329,6 +330,21 @@ table.docutils th.field-name, table.docinfo th.docinfo-name {
   text-align: left ;
   white-space: nowrap ;
   padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
 
 h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
 h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
@@ -654,10 +670,12 @@ see them by forcing PATH</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Create the destination directory and ensure it is writable by the user</p>
+<p>Create the destination directory and ensure it is writable by the user
+and read/executable by everybody for daemons (e.g. apache run for horizon)</p>
 </td><td class=code><div class=highlight><pre>
 sudo mkdir -p <span class="nv">$DEST</span>
 sudo chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DEST</span>
+chmod 0755 <span class="nv">$DEST</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>a basic test for $DEST path permissions (fatal on error unless skipped)</p>
@@ -677,6 +695,11 @@ the destination git repository does not exist during the <tt class="docutils lit
 operation.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">ERROR_ON_CLONE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$ERROR_ON_CLONE</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Whether to enable the debug log level in OpenStack services</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ENABLE_DEBUG_LOG_LEVEL</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Destination path for service data</p>
@@ -751,7 +774,10 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Source project function libraries</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/apache
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tls
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/infra
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/oslo
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
@@ -768,8 +794,6 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 <p>Set the destination directories for other OpenStack projects</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">OPENSTACKCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-openstackclient
-<span class="nv">PBR_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/pbr
-
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="interactive-configuration">
@@ -1123,15 +1147,15 @@ Source it so the entire environment is available</p>
 echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/tools/install_prereqs.sh
 
-install_rpc_backend
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure an appropriate python environment</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">$TOP_DIR</span>/tools/install_pip.sh
 
-<span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
-<span class="k">    </span>install_database
-<span class="k">fi</span>
-
-<span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
-<span class="k">    </span>install_neutron_agent_packages
-<span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Do the ugly hacks for borken packages and distros</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">$TOP_DIR</span>/tools/fixup_stuff.sh
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1150,26 +1174,41 @@ to Horizon files or run nodejs (LP#1175444)</p>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>The following workarounds break xenserver</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
 <p>An old version of <tt class="docutils literal"><span class="pre">python-crypto</span></tt> (2.0.1) may be installed on a
 fresh system via Anaconda and the dependency chain
 <tt class="docutils literal">cas</tt> -&gt; <tt class="docutils literal"><span class="pre">python-paramiko</span></tt> -&gt; <tt class="docutils literal"><span class="pre">python-crypto</span></tt>.
-<tt class="docutils literal">pip uninstall pycrypto</tt> will remove the packaged <tt class="docutils literal"><span class="pre">.egg-info</span></tt> file
-but leave most of the actual library files behind in <tt class="docutils literal">/usr/lib64/python2.6/Crypto</tt>.
-Later <tt class="docutils literal">pip install pycrypto</tt> will install over the packaged files resulting
+<tt class="docutils literal">pip uninstall pycrypto</tt> will remove the packaged <tt class="docutils literal"><span class="pre">.egg-info</span></tt></p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 517)</p>
+Unexpected indentation.</div>
+<blockquote>
+file but leave most of the actual library files behind in</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 518)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<p><tt class="docutils literal">/usr/lib64/python2.6/Crypto</tt>. Later <tt class="docutils literal">pip install pycrypto</tt>
+will install over the packaged files resulting
 in a useless mess of old, rpm-packaged files and pip-installed files.
-Remove the package so that <tt class="docutils literal">pip install <span class="pre">python-crypto</span></tt> installs cleanly.
-Note: other RPM packages may require <tt class="docutils literal"><span class="pre">python-crypto</span></tt> as well.  For example,
-RHEL6 does not install <tt class="docutils literal"><span class="pre">python-paramiko</span> packages</tt>.</p>
+Remove the package so that <tt class="docutils literal">pip install <span class="pre">python-crypto</span></tt> installs
+cleanly.
+Note: other RPM packages may require <tt class="docutils literal"><span class="pre">python-crypto</span></tt> as well.
+For example, RHEL6 does not install <tt class="docutils literal"><span class="pre">python-paramiko</span> packages</tt>.</p>
 </td><td class=code><div class=highlight><pre>
-    uninstall_package python-crypto
+        uninstall_package python-crypto
 
 </pre></div></td></tr><tr><td class=docs>
 <p>A similar situation occurs with <tt class="docutils literal"><span class="pre">python-lxml</span></tt>, which is required by
 <tt class="docutils literal"><span class="pre">ipa-client</span></tt>, an auditing package we don't care about.  The
 build-dependencies needed for <tt class="docutils literal">pip install lxml</tt> (<tt class="docutils literal">gcc</tt>,
-<tt class="docutils literal"><span class="pre">libxml2-dev</span></tt> and <tt class="docutils literal"><span class="pre">libxslt-dev</span></tt>) are present in <tt class="docutils literal">files/rpms/general</tt>.</p>
+<tt class="docutils literal"><span class="pre">libxml2-dev</span></tt> and <tt class="docutils literal"><span class="pre">libxslt-dev</span></tt>) are present in
+<tt class="docutils literal">files/rpms/general</tt>.</p>
 </td><td class=code><div class=highlight><pre>
-    uninstall_package python-lxml
+        uninstall_package python-lxml
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If the <tt class="docutils literal">dbus</tt> package was installed by DevStack dependencies the
@@ -1202,6 +1241,16 @@ work unmolested.</p>
     sudo ln -sf /usr/bin/nosetests1.1 /usr/local/bin/nosetests
 <span class="k">fi</span>
 
+install_rpc_backend
+
+<span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
+<span class="k">    </span>install_database
+<span class="k">fi</span>
+
+<span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">    </span>install_neutron_agent_packages
+<span class="k">fi</span>
+
 <span class="nv">TRACK_DEPENDS</span><span class="o">=</span><span class="k">${</span><span class="nv">TRACK_DEPENDS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1209,7 +1258,7 @@ work unmolested.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Installing Python packages into a virtualenv $DEST/.venv&quot;</span>
-    install_package python-virtualenv
+    pip_install -U virtualenv
 
     rm -rf <span class="nv">$DEST</span>/.venv
     virtualenv --system-site-packages <span class="nv">$DEST</span>/.venv
@@ -1225,10 +1274,14 @@ work unmolested.</p>
 echo_summary <span class="s2">&quot;Installing OpenStack project source&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install pbr</p>
+<p>Install required infra support libraries</p>
 </td><td class=code><div class=highlight><pre>
-git_clone <span class="nv">$PBR_REPO</span> <span class="nv">$PBR_DIR</span> <span class="nv">$PBR_BRANCH</span>
-setup_develop <span class="nv">$PBR_DIR</span>
+install_infra
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Install oslo libraries that have graduated</p>
+</td><td class=code><div class=highlight><pre>
+install_oslo
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Install clients libraries</p>
@@ -1574,7 +1627,12 @@ init_service_check
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Neutron&quot;</span>
 
     configure_neutron
-    init_neutron
+</pre></div></td></tr><tr><td class=docs>
+<p>Run init_neutron only on the node hosting the neutron API server</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span> <span class="o">&amp;&amp;</span> is_service_enabled q-svc; <span class="k">then</span>
+<span class="k">        </span>init_neutron
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1719,6 +1777,11 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
         iniset <span class="nv">$NOVA_CONF</span> baremetal driver <span class="nv">$BM_DRIVER</span>
         iniset <span class="nv">$NOVA_CONF</span> baremetal power_manager <span class="nv">$BM_POWER_MANAGER</span>
         iniset <span class="nv">$NOVA_CONF</span> baremetal tftp_root /tftpboot
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$BM_DNSMASQ_FROM_NOVA_NETWORK&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">BM_DNSMASQ_CONF</span><span class="o">=</span><span class="nv">$NOVA_CONF_DIR</span>/dnsmasq-for-baremetal-from-nova-network.conf
+            sudo cp <span class="s2">&quot;$FILES/dnsmasq-for-baremetal-from-nova-network.conf&quot;</span> <span class="s2">&quot;$BM_DNSMASQ_CONF&quot;</span>
+            iniset <span class="nv">$NOVA_CONF</span> DEFAULT dnsmasq_config_file <span class="s2">&quot;$BM_DNSMASQ_CONF&quot;</span>
+        <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Define extra baremetal nova conf flags by defining the array <tt class="docutils literal">EXTRA_BAREMETAL_OPTS</tt>.</p>
@@ -2033,19 +2096,20 @@ are loaded into glance, though just knowing the IDs is sufficient here</p>
        create_baremetal_flavor <span class="nv">$BM_DEPLOY_KERNEL_ID</span> <span class="nv">$BM_DEPLOY_RAMDISK_ID</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>otherwise user can manually add it later by calling nova-baremetal-manage
-otherwise user can manually add it later by calling nova-baremetal-manage</p>
+<p>otherwise user can manually add it later by calling nova-baremetal-manage</p>
 </td><td class=code><div class=highlight><pre>
     <span class="o">[[</span> -n <span class="s2">&quot;$BM_FIRST_MAC&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> add_baremetal_node
 
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$BM_DNSMASQ_FROM_NOVA_NETWORK&quot;</span> <span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>NOTE: we do this here to ensure that our copy of dnsmasq is running</p>
 </td><td class=code><div class=highlight><pre>
-    sudo pkill dnsmasq <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>sudo dnsmasq --conf-file<span class="o">=</span> --port<span class="o">=</span>0 --enable-tftp --tftp-root<span class="o">=</span>/tftpboot <span class="se">\</span>
-        --dhcp-boot<span class="o">=</span>pxelinux.0 --bind-interfaces --pid-file<span class="o">=</span>/var/run/dnsmasq.pid <span class="se">\</span>
-        --interface<span class="o">=</span><span class="nv">$BM_DNSMASQ_IFACE</span> --dhcp-range<span class="o">=</span><span class="nv">$BM_DNSMASQ_RANGE</span> <span class="se">\</span>
-        <span class="k">${</span><span class="nv">BM_DNSMASQ_DNS</span><span class="p">:+--dhcp-option=option:</span><span class="nv">dns</span><span class="p">-server,</span><span class="nv">$BM_DNSMASQ_DNS</span><span class="k">}</span>
+        sudo pkill dnsmasq <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">        </span>sudo dnsmasq --conf-file<span class="o">=</span> --port<span class="o">=</span>0 --enable-tftp --tftp-root<span class="o">=</span>/tftpboot <span class="se">\</span>
+            --dhcp-boot<span class="o">=</span>pxelinux.0 --bind-interfaces --pid-file<span class="o">=</span>/var/run/dnsmasq.pid <span class="se">\</span>
+            --interface<span class="o">=</span><span class="nv">$BM_DNSMASQ_IFACE</span> --dhcp-range<span class="o">=</span><span class="nv">$BM_DNSMASQ_RANGE</span> <span class="se">\</span>
+            <span class="k">${</span><span class="nv">BM_DNSMASQ_DNS</span><span class="p">:+--dhcp-option=option:</span><span class="nv">dns</span><span class="p">-server,</span><span class="nv">$BM_DNSMASQ_DNS</span><span class="k">}</span>
+    <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>ensure callback daemon is running</p>
 </td><td class=code><div class=highlight><pre>

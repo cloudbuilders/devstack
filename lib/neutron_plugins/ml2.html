@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
 <title>Neutron Modular Layer 2 plugin</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -95,7 +95,7 @@ div.tip p.admonition-title {
 
 div.attention p.admonition-title, div.caution p.admonition-title,
 div.danger p.admonition-title, div.error p.admonition-title,
-div.warning p.admonition-title {
+div.warning p.admonition-title, .code .error {
   color: red ;
   font-weight: bold ;
   font-family: sans-serif }
@@ -271,13 +271,14 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { /* line numbers */
-  color: grey;
-}
-
-.code {
-  background-color: #eeeeee
-}
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
 
 span.classifier {
   font-family: sans-serif ;
@@ -330,6 +331,21 @@ table.docutils th.field-name, table.docinfo th.docinfo-name {
   white-space: nowrap ;
   padding-left: 0 }
 
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
+
 h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
 h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
   font-size: 100% }
@@ -350,10 +366,58 @@ ul.auto-toc {
 <span class="nb">set</span> +o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Enable this to simply and quickly enable tunneling with ML2.
+Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_TENANT_NETWORK_TYPE</span><span class="k">:-}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This has to be set here since the agent will set this in the config file</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">Q_AGENT_EXTRA_AGENT_OPTS</span><span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
+<span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">Q_AGENT_EXTRA_AGENT_OPTS</span><span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span>gre<span class="o">)</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Default openvswitch L2 agent</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_AGENT</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_AGENT</span><span class="k">:-</span><span class="nv">openvswitch</span><span class="k">}</span>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/<span class="k">${</span><span class="nv">Q_AGENT</span><span class="k">}</span>_agent
+
+</pre></div></td></tr><tr><td class=docs>
+<p>List of MechanismDrivers to load</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_ML2_PLUGIN_MECHANISM_DRIVERS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_PLUGIN_MECHANISM_DRIVERS</span><span class="k">:-}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>List of Type Drivers to load</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_ML2_PLUGIN_TYPE_DRIVERS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_PLUGIN_TYPE_DRIVERS</span><span class="k">:-</span><span class="nv">local</span><span class="p">,flat,vlan,gre,vxlan</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Default GRE TypeDriver options</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_ML2_PLUGIN_GRE_TYPE_OPTIONS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_PLUGIN_GRE_TYPE_OPTIONS</span><span class="k">:-</span><span class="nv">tunnel_id_ranges</span><span class="p">=</span><span class="nv">$TENANT_TUNNEL_RANGES</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Default VXLAN TypeDriver options</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_ML2_PLUGIN_VXLAN_TYPE_OPTIONS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_PLUGIN_VXLAN_TYPE_OPTIONS</span><span class="k">:-</span><span class="nv">vni_ranges</span><span class="p">=1001:</span><span class="nv">2000</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Default VLAN TypeDriver options</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS</span><span class="k">:-}</span>
+
+<span class="k">function </span>populate_ml2_config<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">OPTS</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nv">CONF</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nv">SECTION</span><span class="o">=</span><span class="nv">$3</span>
+
+    <span class="k">for </span>I in <span class="s2">&quot;${OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$CONF</span> <span class="nv">$SECTION</span> <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
+    <span class="k">done</span>
+<span class="o">}</span>
 
 <span class="k">function </span>neutron_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
     <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/neutron/plugins/ml2
@@ -363,29 +427,36 @@ ul.auto-toc {
 <span class="o">}</span>
 
 <span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2 tenant_network_types gre
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_gre tunnel_id_ranges <span class="nv">$TENANT_TUNNEL_RANGES</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">Q_SRV_EXTRA_OPTS</span><span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This assumes you want a simple configuration, and will overwrite
+Q_SRV_EXTRA_OPTS if set in addition to ENABLE_TENANT_TUNNELS.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">Q_SRV_EXTRA_OPTS</span><span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span>gre<span class="o">)</span>
+        <span class="nv">Q_ML2_PLUGIN_GRE_TYPE_OPTIONS</span><span class="o">=(</span><span class="nv">tunnel_id_ranges</span><span class="o">=</span><span class="nv">$TENANT_TUNNEL_RANGES</span><span class="o">)</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2 tenant_network_types vlan
+<span class="k">        </span><span class="nv">Q_SRV_EXTRA_OPTS</span><span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span>vlan<span class="o">)</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;WARNING - The ml2 plugin is using local tenant networks, with no connectivity between hosts.&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Override <tt class="docutils literal">ML2_VLAN_RANGES</tt> and any needed agent configuration
-variables in <tt class="docutils literal">localrc</tt> for more complex physical network
-configurations.</p>
+<p>Allow for overrding VLAN configuration (for example, to configure provider
+VLANs) by first checking if Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS is set.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ML2_VLAN_RANGES&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">ML2_VLAN_RANGES</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$TENANT_VLAN_RANGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">ML2_VLAN_RANGES</span><span class="o">=</span><span class="nv">$ML2_VLAN_RANGES</span>:<span class="nv">$TENANT_VLAN_RANGE</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS&quot;</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$ML2_VLAN_RANGES&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">ML2_VLAN_RANGES</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>
+            <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$TENANT_VLAN_RANGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">ML2_VLAN_RANGES</span><span class="o">=</span><span class="nv">$ML2_VLAN_RANGES</span>:<span class="nv">$TENANT_VLAN_RANGE</span>
+            <span class="k">fi</span>
+<span class="k">        fi</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$ML2_VLAN_RANGES&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS</span><span class="o">=(</span><span class="nv">network_vlan_ranges</span><span class="o">=</span><span class="nv">$ML2_VLAN_RANGES</span><span class="o">)</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$ML2_VLAN_RANGES&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_vlan network_vlan_ranges <span class="nv">$ML2_VLAN_RANGES</span>
-    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>REVISIT(rkukura): Setting firewall_driver here for
@@ -402,6 +473,24 @@ groups is enabled, and that will need to be set here instead.</p>
 <span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> SECURITYGROUP firewall_driver neutron.agent.firewall.NoopFirewallDriver
     <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Since we enable the tunnel TypeDrivers, also enable a local_ip</p>
+</td><td class=code><div class=highlight><pre>
+    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs local_ip <span class="nv">$HOST_IP</span>
+
+    populate_ml2_config <span class="nv">mechanism_drivers</span><span class="o">=</span><span class="nv">$Q_ML2_PLUGIN_MECHANISM_DRIVERS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2
+
+    populate_ml2_config <span class="nv">type_drivers</span><span class="o">=</span><span class="nv">$Q_ML2_PLUGIN_TYPE_DRIVERS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2
+
+    populate_ml2_config <span class="nv">$Q_SRV_EXTRA_OPTS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2
+
+    populate_ml2_config <span class="nv">$Q_ML2_PLUGIN_GRE_TYPE_OPTIONS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_gre
+
+    populate_ml2_config <span class="nv">$Q_ML2_PLUGIN_VXLAN_TYPE_OPTIONS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_vxlan
+
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>populate_ml2_config <span class="nv">$Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_vlan
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 <span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>

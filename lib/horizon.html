@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -95,7 +95,7 @@ div.tip p.admonition-title {
 
 div.attention p.admonition-title, div.caution p.admonition-title,
 div.danger p.admonition-title, div.error p.admonition-title,
-div.warning p.admonition-title {
+div.warning p.admonition-title, .code .error {
   color: red ;
   font-weight: bold ;
   font-family: sans-serif }
@@ -271,13 +271,14 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { /* line numbers */
-  color: grey;
-}
-
-.code {
-  background-color: #eeeeee
-}
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
 
 span.classifier {
   font-family: sans-serif ;
@@ -330,6 +331,21 @@ table.docutils th.field-name, table.docinfo th.docinfo-name {
   white-space: nowrap ;
   padding-left: 0 }
 
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
+
 h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
 h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
   font-size: 100% }
@@ -348,6 +364,7 @@ Functions to control the configuration and operation of the horizon service
 &lt;do not include this template file in <tt class="docutils literal">stack.sh</tt>!&gt;
 Dependencies:
 <tt class="docutils literal">functions</tt> file
+<tt class="docutils literal">apache</tt> file
 <tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined
 &lt;list other global vars that are assumed to be defined&gt;</p>
 </td><td class=code><div class=highlight><pre>
@@ -390,27 +407,6 @@ The example file in Horizon repo is used by default.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">HORIZON_SETTINGS</span><span class="o">=</span><span class="k">${</span><span class="nv">HORIZON_SETTINGS</span><span class="k">:-</span><span class="nv">$HORIZON_DIR</span><span class="p">/openstack_dashboard/local/local_settings.py.example</span><span class="k">}</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Allow overriding the default Apache user and group, default to
-current user and his default group.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">APACHE_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_USER</span><span class="k">:-</span><span class="nv">$USER</span><span class="k">}</span>
-<span class="nv">APACHE_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_GROUP</span><span class="k">:-$(</span>id -gn <span class="nv">$APACHE_USER</span><span class="k">)}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up service name and configuration path</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">    </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
-    <span class="nv">APACHE_CONF</span><span class="o">=</span>sites-available/horizon
-<span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">    </span><span class="nv">APACHE_NAME</span><span class="o">=</span>httpd
-    <span class="nv">APACHE_CONF</span><span class="o">=</span>conf.d/horizon.conf
-<span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">    </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
-    <span class="nv">APACHE_CONF</span><span class="o">=</span>vhosts.d/horizon.conf
-<span class="k">fi</span>
-
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -432,7 +428,7 @@ current user and his default group.</p>
         <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$line&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">            </span>sed -i -e <span class="s2">&quot;/^$section/,/^}/ s/^\( *&#39;$option&#39;\) *:.*$/\1: $value,/&quot;</span> <span class="nv">$file</span>
         <span class="k">else</span>
-<span class="k">            </span>sed -i -e <span class="s2">&quot;/^$section/ a\n    &#39;$option&#39;: $value,\n&quot;</span> <span class="nv">$file</span>
+<span class="k">            </span>sed -i -e <span class="s2">&quot;/^$section/a\    &#39;$option&#39;: $value,&quot;</span> <span class="nv">$file</span>
         <span class="k">fi</span>
 <span class="k">    else</span>
 <span class="k">        </span><span class="nb">echo</span> -e <span class="s2">&quot;\n\n$section = {\n    &#39;$option&#39;: $value,\n}&quot;</span> &gt;&gt; <span class="nv">$file</span>
@@ -485,11 +481,21 @@ we installed it via <tt class="docutils literal">install_nodejs</tt></p>
     <span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/local_settings.py
     cp <span class="nv">$HORIZON_SETTINGS</span> <span class="nv">$local_settings</span>
 
+    <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
+<span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> OPENSTACK_NEUTRON_NETWORK enable_security_group <span class="nv">$Q_USE_SECGROUP</span>
+    <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>enable loadbalancer dashboard in case service is enabled</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled q-lbaas; <span class="k">then</span>
 <span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> OPENSTACK_NEUTRON_NETWORK enable_lb True
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>enable firewall dashboard in case service is enabled</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled q-fwaas; <span class="k">then</span>
+<span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> OPENSTACK_NEUTRON_NETWORK enable_firewall True
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -506,6 +512,7 @@ users).  The user system is external (keystone).</p>
     sudo mkdir -p <span class="nv">$HORIZON_DIR</span>/.blackhole
 
     <span class="nv">HORIZON_REQUIRE</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
+    <span class="nb">local </span><span class="nv">horizon_conf</span><span class="o">=</span>/etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/horizon.conf
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean up the old config name</p>
@@ -514,8 +521,8 @@ users).  The user system is external (keystone).</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Be a good citizen and use the distro tools here</p>
 </td><td class=code><div class=highlight><pre>
-        sudo touch /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF</span>
-        sudo a2ensite horizon
+        sudo touch <span class="nv">$horizon_conf</span>
+        sudo a2ensite horizon.conf
 </pre></div></td></tr><tr><td class=docs>
 <p>WSGI isn't enabled by default, enable it</p>
 </td><td class=code><div class=highlight><pre>
@@ -554,7 +561,7 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 <span class="s2">        s,%APACHE_NAME%,$APACHE_NAME,g;</span>
 <span class="s2">        s,%DEST%,$DEST,g;</span>
 <span class="s2">        s,%HORIZON_REQUIRE%,$HORIZON_REQUIRE,g;</span>
-<span class="s2">    \&quot; $FILES/apache-horizon.template &gt;/etc/$APACHE_NAME/$APACHE_CONF&quot;</span>
+<span class="s2">    \&quot; $FILES/apache-horizon.template &gt;$horizon_conf&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -564,19 +571,7 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 </pre></div></td></tr><tr><td class=docs>
 <p>Apache installation, because we mark it NOPRIME</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install apache2, which is NOPRIME'd</p>
-</td><td class=code><div class=highlight><pre>
-        install_package apache2 libapache2-mod-wsgi
-    <span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span>sudo rm -f /etc/httpd/conf.d/000-*
-        install_package httpd mod_wsgi
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>install_package apache2 apache2-mod_wsgi
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;apache installation&quot;</span>
-    <span class="k">fi</span>
+    install_apache_wsgi
 
 </pre></div></td></tr><tr><td class=docs>
 <p>NOTE(sdague) quantal changed the name of the node binary</p>
@@ -596,7 +591,7 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 <p>start_horizon() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_horizon<span class="o">()</span> <span class="o">{</span>
-    restart_service <span class="nv">$APACHE_NAME</span>
+    restart_apache_server
     screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
 <span class="o">}</span>
 
@@ -604,11 +599,7 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 <p>stop_horizon() - Stop running processes (non-screen)</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>stop_horizon<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$APACHE_NAME&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>stop_service <span class="nv">$APACHE_NAME</span>
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;apache configuration&quot;</span>
-    <span class="k">fi</span>
+    stop_apache_server
 <span class="o">}</span>
 
 

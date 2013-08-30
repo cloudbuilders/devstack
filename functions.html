@@ -21,13 +21,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.9.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7434 2012-05-11 21:06:27Z milde $
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -95,7 +95,7 @@ div.tip p.admonition-title {
 
 div.attention p.admonition-title, div.caution p.admonition-title,
 div.danger p.admonition-title, div.error p.admonition-title,
-div.warning p.admonition-title {
+div.warning p.admonition-title, .code .error {
   color: red ;
   font-weight: bold ;
   font-family: sans-serif }
@@ -271,13 +271,14 @@ pre.literal-block, pre.doctest-block, pre.math, pre.code {
   margin-left: 2em ;
   margin-right: 2em }
 
-pre.code .ln { /* line numbers */
-  color: grey;
-}
-
-.code {
-  background-color: #eeeeee
-}
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
 
 span.classifier {
   font-family: sans-serif ;
@@ -329,6 +330,21 @@ table.docutils th.field-name, table.docinfo th.docinfo-name {
   text-align: left ;
   white-space: nowrap ;
   padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
 
 h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
 h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
@@ -440,6 +456,21 @@ cp_it source destination</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Prints backtrace info
+filename:lineno:function</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>backtrace <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">level</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">deep</span><span class="o">=</span><span class="k">$((${#</span><span class="nv">BASH_SOURCE</span><span class="p">[@]</span><span class="k">}</span> <span class="o">-</span> <span class="m">1</span><span class="k">))</span>
+    <span class="nb">echo</span> <span class="s2">&quot;[Call Trace]&quot;</span>
+    <span class="k">while</span> <span class="o">[</span> <span class="nv">$level</span> -le <span class="nv">$deep</span> <span class="o">]</span>; <span class="k">do</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;${BASH_SOURCE[$deep]}:${BASH_LINENO[$deep-1]}:${FUNCNAME[$deep-1]}&quot;</span>
+        <span class="nv">deep</span><span class="o">=</span><span class="k">$((</span>deep <span class="o">-</span> <span class="m">1</span><span class="k">))</span>
+    <span class="k">done</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Prints line number and &quot;message&quot; then exits
 die $LINENO &quot;message&quot;</p>
 </td><td class=code><div class=highlight><pre>
@@ -450,7 +481,8 @@ die $LINENO &quot;message&quot;</p>
 <span class="nb">    </span><span class="k">if</span> <span class="o">[</span> <span class="nv">$exitcode</span> <span class="o">==</span> 0 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">exitcode</span><span class="o">=</span>1
     <span class="k">fi</span>
-<span class="k">    </span>err <span class="nv">$line</span> <span class="s2">&quot;$*&quot;</span>
+<span class="k">    </span>backtrace 2
+    err <span class="nv">$line</span> <span class="s2">&quot;$*&quot;</span>
     <span class="nb">exit</span> <span class="nv">$exitcode</span>
 <span class="o">}</span>
 
@@ -482,7 +514,7 @@ err $LINENO &quot;message&quot;</p>
     <span class="nb">local </span><span class="nv">exitcode</span><span class="o">=</span><span class="nv">$?</span>
     <span class="nv">errXTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
     <span class="nb">set</span> +o xtrace
-    <span class="nb">local </span><span class="nv">msg</span><span class="o">=</span><span class="s2">&quot;[ERROR] $0:$1 $2&quot;</span>
+    <span class="nb">local </span><span class="nv">msg</span><span class="o">=</span><span class="s2">&quot;[ERROR] ${BASH_SOURCE[2]}:$1 $2&quot;</span>
     <span class="nb">echo</span> <span class="nv">$msg</span> 1&gt;&amp;2;
     <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="nv">$msg</span> &gt;&gt; <span class="s2">&quot;${SCREEN_LOGDIR}/error.log&quot;</span>
@@ -617,7 +649,7 @@ included.  Two bits of metadata are recognized in the prerequisite files:
 - <tt class="docutils literal"># NOPRIME</tt> defers installation to be performed later in stack.sh
 - <tt class="docutils literal"># dist:DISTRO</tt> or <tt class="docutils literal">dist:DISTRO1,DISTRO2</tt> limits the selection</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 120)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 125)</p>
 Unexpected indentation.</div>
 <blockquote>
 of the package to the distros listed.  The distro names are case insensitive.</blockquote>
@@ -696,21 +728,53 @@ glance client is</p>
 <span class="k">                continue</span>
 <span class="k">            fi</span>
 
-<span class="k">            if</span> <span class="o">[[</span> <span class="nv">$line</span> <span class="o">=</span>~ <span class="o">(</span>.*<span class="o">)</span><span class="c">#.*dist:([^ ]*) ]]; then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Assume we want this package</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="nv">package</span><span class="o">=</span><span class="k">${</span><span class="nv">line</span><span class="p">%#*</span><span class="k">}</span>
+            <span class="nv">inst_pkg</span><span class="o">=</span>1
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Look for # dist:xxx in comment</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="k">if</span> <span class="o">[[</span> <span class="nv">$line</span> <span class="o">=</span>~ <span class="o">(</span>.*<span class="o">)</span><span class="c">#.*dist:([^ ]*) ]]; then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>We are using BASH regexp matching feature.</p>
 </td><td class=code><div class=highlight><pre>
                 <span class="nv">package</span><span class="o">=</span><span class="k">${</span><span class="nv">BASH_REMATCH</span><span class="p">[1]</span><span class="k">}</span>
                 <span class="nv">distros</span><span class="o">=</span><span class="k">${</span><span class="nv">BASH_REMATCH</span><span class="p">[2]</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>In bash ${VAR,,} will lowecase VAR</p>
+<p>In bash ${VAR,,} will lowecase VAR
+Look for a match in the distro list</p>
 </td><td class=code><div class=highlight><pre>
-                <span class="o">[[</span> <span class="k">${</span><span class="nv">distros</span><span class="p">,,</span><span class="k">}</span> <span class="o">=</span>~ <span class="k">${</span><span class="nv">DISTRO</span><span class="p">,,</span><span class="k">}</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="nv">$package</span>
-                <span class="k">continue</span>
+                <span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">distros</span><span class="p">,,</span><span class="k">}</span> <span class="o">=</span>~ <span class="k">${</span><span class="nv">DISTRO</span><span class="p">,,</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If no match then skip this package</p>
+</td><td class=code><div class=highlight><pre>
+                    <span class="nv">inst_pkg</span><span class="o">=</span>0
+                <span class="k">fi</span>
 <span class="k">            fi</span>
 
-<span class="k">            </span><span class="nb">echo</span> <span class="k">${</span><span class="nv">line</span><span class="p">%#*</span><span class="k">}</span>
-        <span class="k">done</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Look for # testonly in comment</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="k">if</span> <span class="o">[[</span> <span class="nv">$line</span> <span class="o">=</span>~ <span class="o">(</span>.*<span class="o">)</span><span class="c">#.*testonly.* ]]; then</span>
+                <span class="nv">package</span><span class="o">=</span><span class="k">${</span><span class="nv">BASH_REMATCH</span><span class="p">[1]</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Are we installing test packages? (test for the default value)</p>
+</td><td class=code><div class=highlight><pre>
+                <span class="k">if</span> <span class="o">[[</span> <span class="nv">$INSTALL_TESTONLY_PACKAGES</span> <span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If not installing test packages the skip this package</p>
+</td><td class=code><div class=highlight><pre>
+                    <span class="nv">inst_pkg</span><span class="o">=</span>0
+                <span class="k">fi</span>
+<span class="k">            fi</span>
+
+<span class="k">            if</span> <span class="o">[[</span> <span class="nv">$inst_pkg</span> <span class="o">=</span> 1 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nb">echo</span> <span class="nv">$package</span>
+            <span class="k">fi</span>
+<span class="k">        done</span>
 <span class="k">        </span><span class="nv">IFS</span><span class="o">=</span><span class="nv">$OIFS</span>
     <span class="k">done</span>
 <span class="o">}</span>
@@ -776,10 +840,11 @@ GetOSVersion<span class="o">()</span> <span class="o">{</span>
 <p>Red Hat Enterprise Linux Server release 5.5 (Tikanga)
 CentOS release 5.5 (Final)
 CentOS Linux release 6.0 (Final)
-Fedora release 16 (Verne)</p>
+Fedora release 16 (Verne)
+XenServer release 6.2.0-70446c (xenenterprise)</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">os_CODENAME</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="k">for </span>r in <span class="s2">&quot;Red Hat&quot;</span> CentOS Fedora; <span class="k">do</span>
+        <span class="k">for </span>r in <span class="s2">&quot;Red Hat&quot;</span> CentOS Fedora XenServer; <span class="k">do</span>
 <span class="k">            </span><span class="nv">os_VENDOR</span><span class="o">=</span><span class="nv">$r</span>
             <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;`grep \&quot;$r\&quot; /etc/redhat-release`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nv">ver</span><span class="o">=</span><span class="sb">`</span>sed -e <span class="s1">&#39;s/^.* \(.*\) (\(.*\)).*$/\1\|\2/&#39;</span> /etc/redhat-release<span class="sb">`</span>
@@ -854,6 +919,8 @@ Sets <tt class="docutils literal">DISTRO</tt> from the <tt class="docutils liter
 <p>Drop the . release as we assume it's compatible</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">DISTRO</span><span class="o">=</span><span class="s2">&quot;rhel${os_RELEASE::1}&quot;</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>XenServer<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">DISTRO</span><span class="o">=</span><span class="s2">&quot;xs$os_RELEASE&quot;</span>
     <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Catch-all for now is Vendor + Release + Update</p>
@@ -1400,7 +1467,7 @@ is_package_installed package [package ...]</p>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;deb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>dpkg -l <span class="s2">&quot;$@&quot;</span> &gt; /dev/null
+<span class="k">        </span>dpkg -s <span class="s2">&quot;$@&quot;</span> &gt; /dev/null 2&gt; /dev/null
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$os_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;rpm&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>rpm --quiet -q <span class="s2">&quot;$@&quot;</span>
     <span class="k">else</span>
@@ -1423,19 +1490,19 @@ is_set env-var</p>
 <p>Wrapper for <tt class="docutils literal">pip install</tt> to set cache and proxy environment variables
 Uses globals <tt class="docutils literal">OFFLINE</tt>, <tt class="docutils literal">PIP_DOWNLOAD_CACHE</tt>, <tt class="docutils literal">PIP_USE_MIRRORS</tt>,</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 463)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 494)</p>
 Unexpected indentation.</div>
 <blockquote>
 <p><tt class="docutils literal">TRACK_DEPENDS</tt>, <a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">*</span></a>_proxy`</p>
 <div class="system-message" id="id5">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 463); <em><a href="#id6">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 494); <em><a href="#id6">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
 <div class="system-message" id="id7">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 463); <em><a href="#id8">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 494); <em><a href="#id8">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 464)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 495)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p>pip_install package [package ...]</p>
 </td><td class=code><div class=highlight><pre>
@@ -1453,16 +1520,12 @@ Block quote ends without a blank line; unexpected unindent.</div>
         <span class="nv">CMD_PIP</span><span class="o">=</span><span class="k">$(</span>get_pip_command<span class="k">)</span>
     <span class="k">fi</span>
 
-<span class="k">    if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>RHEL6 pip by default doesn't have this (was introduced
-around 0.8.1 or so)</p>
+<p>Mirror option not needed anymore because pypi has CDN available,
+but it's useful in certain circumstances</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">PIP_USE_MIRRORS</span><span class="o">=</span><span class="k">${</span><span class="nv">PIP_USE_MIRRORS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nv">PIP_USE_MIRRORS</span><span class="o">=</span><span class="k">${</span><span class="nv">PIP_USE_MIRRORS</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
-    <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$PIP_USE_MIRRORS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="nv">PIP_USE_MIRRORS</span><span class="o">=</span><span class="k">${</span><span class="nv">PIP_USE_MIRRORS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$PIP_USE_MIRRORS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">PIP_MIRROR_OPT</span><span class="o">=</span><span class="s2">&quot;--use-mirrors&quot;</span>
     <span class="k">fi</span>
 
@@ -1475,7 +1538,7 @@ foo v1.1; pip will have built foo's source in
 confusing errors.  By creating unique build directories we avoid
 this problem. See</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 480)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 511)</p>
 Unexpected indentation.</div>
 <blockquote>
 <a class="reference external" href="https://github.com/pypa/pip/issues/709">https://github.com/pypa/pip/issues/709</a></blockquote>
@@ -1603,7 +1666,7 @@ bash isn't running by the time we send the command, nothing happens</p>
             sleep 1.5
 
             <span class="nv">NL</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> -ne <span class="s1">&#39;\015&#39;</span><span class="sb">`</span>
-            screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2 || touch \&quot;$SERVICE_DIR/$SCREEN_NAME/$1.failure\&quot;$NL&quot;</span>
+            screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$1</span> -X stuff <span class="s2">&quot;$2 || echo \&quot;$1 failed to start\&quot; | tee \&quot;$SERVICE_DIR/$SCREEN_NAME/$1.failure\&quot;$NL&quot;</span>
         <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Spawn directly without screen</p>
@@ -1652,7 +1715,7 @@ screen_rc service &quot;command-line&quot;</p>
 This is used for service_check when all the screen_it are called finished
 init_service_check</p>
 <div class="system-message" id="id9">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 566); <em><a href="#id10">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 597); <em><a href="#id10">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_service_check<span class="o">()</span> <span class="o">{</span>
@@ -1690,7 +1753,7 @@ service_check</p>
 
     <span class="k">for </span>service in <span class="nv">$failures</span>; <span class="k">do</span>
 <span class="k">        </span><span class="nv">service</span><span class="o">=</span><span class="sb">`</span>basename <span class="nv">$service</span><span class="sb">`</span>
-        <span class="nv">service</span><span class="o">=</span><span class="k">${</span><span class="nv">service</span><span class="p">:</span><span class="k">:-</span><span class="nv">8</span><span class="k">}</span>
+        <span class="nv">service</span><span class="o">=</span><span class="k">${</span><span class="nv">service</span><span class="p">%.failure</span><span class="k">}</span>
         <span class="nb">echo</span> <span class="s2">&quot;Error: Service $service is not running&quot;</span>
     <span class="k">done</span>
 
@@ -1701,36 +1764,34 @@ service_check</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">pip install</tt> the dependencies of the package before <tt class="docutils literal">setup.py develop</tt>
-so pip and not distutils processes the dependency chain
-Uses globals <tt class="docutils literal">TRACK_DEPENDES</tt>, <a href="#id11"><span class="problematic" id="id12">``</span></a><a href="#id13"><span class="problematic" id="id14">*</span></a>_proxy`
+<p><tt class="docutils literal">pip install <span class="pre">-e</span></tt> the package, which processes the dependencies
+using pip before running <cite>setup.py develop</cite>
+Uses globals <tt class="docutils literal">STACK_USER</tt>, <tt class="docutils literal">TRACK_DEPENDS</tt>, <tt class="docutils literal">REQUIREMENTS_DIR</tt>
 setup_develop directory</p>
-<div class="system-message" id="id11">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 581); <em><a href="#id12">backlink</a></em></p>
-Inline literal start-string without end-string.</div>
-<div class="system-message" id="id13">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 581); <em><a href="#id14">backlink</a></em></p>
-Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>setup_develop<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">project_dir</span><span class="o">=</span><span class="nv">$1</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">SUDO_CMD</span><span class="o">=</span><span class="s2">&quot;env&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nv">SUDO_CMD</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
     <span class="k">fi</span>
-<span class="k">    for </span>reqs_file in <span class="nv">$1</span>/requirements.txt <span class="nv">$1</span>/tools/pip-requires ; <span class="k">do</span>
-<span class="k">        if</span> <span class="o">[</span> -f <span class="nv">$reqs_file</span> <span class="o">]</span> ; <span class="k">then</span>
-<span class="k">            </span>pip_install -r <span class="nv">$reqs_file</span>
-        <span class="k">fi</span>
-<span class="k">    done</span>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$1</span>; <span class="se">\</span>
-        python setup.py egg_info; <span class="se">\</span>
-        <span class="nv">$SUDO_CMD</span> <span class="se">\</span>
-            <span class="nv">HTTP_PROXY</span><span class="o">=</span><span class="nv">$http_proxy</span> <span class="se">\</span>
-            <span class="nv">HTTPS_PROXY</span><span class="o">=</span><span class="nv">$https_proxy</span> <span class="se">\</span>
-            <span class="nv">NO_PROXY</span><span class="o">=</span><span class="nv">$no_proxy</span> <span class="se">\</span>
-            python setup.py develop <span class="se">\</span>
-    <span class="o">)</span>
+
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;cd $REQUIREMENTS_DIR; $SUDO_CMD python update.py $project_dir&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Don't update repo if local changes exist</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">(</span><span class="nb">cd</span> <span class="nv">$project_dir</span> <span class="o">&amp;&amp;</span> git diff --quiet<span class="o">)</span>; <span class="k">then</span>
+        <span class="o">(</span><span class="nb">cd</span> <span class="nv">$REQUIREMENTS_DIR</span>; <span class="se">\</span>
+            <span class="nv">$SUDO_CMD</span> python update.py <span class="nv">$project_dir</span><span class="o">)</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>pip_install -e <span class="nv">$project_dir</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>ensure that further actions can do things like setup.py sdist</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$SUDO_CMD</span> chown -R <span class="nv">$STACK_USER</span> <span class="nv">$1</span>/*.egg-info
 <span class="o">}</span>
 
 
@@ -1781,13 +1842,13 @@ VAR=$(trueorfalse default-value test-value)</p>
 <p>Retrieve an image from a URL and upload into Glance
 Uses the following variables:</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 607)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 646)</p>
 Unexpected indentation.</div>
 <blockquote>
 <tt class="docutils literal">FILES</tt> must be set to the cache dir
 <tt class="docutils literal">GLANCE_HOSTPORT</tt></blockquote>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 609)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 648)</p>
 Block quote ends without a blank line; unexpected unindent.</div>
 <p>upload_image image-url glance-token</p>
 </td><td class=code><div class=highlight><pre>
@@ -1823,13 +1884,41 @@ Block quote ends without a blank line; unexpected unindent.</div>
 <span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>XenServer-ovf-format images are provided as .vhd.tgz as well
+<p>vmdk format images</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;.vmdk&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
+        <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.vmdk}&quot;</span>
+        glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format bare --disk-format vmdk --property vmware-disktype<span class="o">=</span><span class="s2">&quot;preallocated&quot;</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+        <span class="k">return</span>
+<span class="k">    fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>XenServer-vhd-ovf-format images are provided as .vhd.tgz
 and should not be decompressed prior to loading</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;.vhd.tgz&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
         <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.vhd.tgz}&quot;</span>
         glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format<span class="o">=</span>ovf --disk-format<span class="o">=</span>vhd &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+        <span class="k">return</span>
+<span class="k">    fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>.xen-raw.tgz suggests a Xen capable raw image inside a tgz.
+and should not be decompressed prior to loading.
+Setting metadata, so PV mode is used.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;.xen-raw.tgz&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
+        <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.xen-raw.tgz}&quot;</span>
+        glance <span class="se">\</span>
+          --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
+          --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+          image-create <span class="se">\</span>
+            --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True <span class="se">\</span>
+            --container-format<span class="o">=</span>tgz --disk-format<span class="o">=</span>raw <span class="se">\</span>
+            --property <span class="nv">vm_mode</span><span class="o">=</span>xen &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 
@@ -1895,9 +1984,9 @@ and should not be decompressed prior to loading</p>
 
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CONTAINER_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;bare&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[</span> <span class="s2">&quot;$UNPACK&quot;</span> <span class="o">=</span> <span class="s2">&quot;zcat&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --public --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
+<span class="k">            </span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public True --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
         <span class="k">else</span>
-<span class="k">            </span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --public --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+<span class="k">            </span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public True --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
         <span class="k">fi</span>
 <span class="k">    else</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1907,12 +1996,12 @@ kernel for use when uploading the root filesystem.</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>; <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
         <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> --public --container-format aki --disk-format aki &lt; <span class="s2">&quot;$KERNEL&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+<span class="k">            </span><span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> --is-public True --container-format aki --disk-format aki &lt; <span class="s2">&quot;$KERNEL&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
         <span class="k">fi</span>
 <span class="k">        if</span> <span class="o">[</span> -n <span class="s2">&quot;$RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> --public --container-format ari --disk-format ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+<span class="k">            </span><span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> --is-public True --container-format ari --disk-format ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
         <span class="k">fi</span>
-<span class="k">        </span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> --public --container-format ami --disk-format ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+--property kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+--property ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+<span class="k">        </span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> --is-public True --container-format ami --disk-format ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+--property kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+--property ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -1923,7 +2012,7 @@ When called from stackrc/localrc DATABASE_BACKENDS has not been
 initialized yet, just save the configuration selection and call back later
 to validate it.</p>
 <div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 644)</p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 693)</p>
 Unexpected indentation.</div>
 <blockquote>
 $1 The name of the database backend to use (mysql, postgresql, ...)</blockquote>
@@ -1979,13 +2068,13 @@ wait_for_service timeout url</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Wrapper for <tt class="docutils literal">yum</tt> to set proxy environment variables
-Uses globals <tt class="docutils literal">OFFLINE</tt>, <a href="#id15"><span class="problematic" id="id16">``</span></a><a href="#id17"><span class="problematic" id="id18">*</span></a>_proxy`
+Uses globals <tt class="docutils literal">OFFLINE</tt>, <a href="#id11"><span class="problematic" id="id12">``</span></a><a href="#id13"><span class="problematic" id="id14">*</span></a>_proxy`
 yum_install package [package ...]</p>
-<div class="system-message" id="id15">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 669); <em><a href="#id16">backlink</a></em></p>
+<div class="system-message" id="id11">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 718); <em><a href="#id12">backlink</a></em></p>
 Inline literal start-string without end-string.</div>
-<div class="system-message" id="id17">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 669); <em><a href="#id18">backlink</a></em></p>
+<div class="system-message" id="id13">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 718); <em><a href="#id14">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>yum_install<span class="o">()</span> <span class="o">{</span>
@@ -2054,6 +2143,21 @@ Uses globals <tt class="docutils literal">MULTI_HOST</tt>, <tt class="docutils l
     <span class="k">fi</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Get ip of instance</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>get_instance_ip<span class="o">(){</span>
+    <span class="nb">local </span><span class="nv">vm_id</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">network_name</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">nova_result</span><span class="o">=</span><span class="s2">&quot;$(nova show $vm_id)&quot;</span>
+    <span class="nb">local </span><span class="nv">ip</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$nova_result&quot;</span> | grep <span class="s2">&quot;$network_name&quot;</span> | get_field 2<span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$ip</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>;<span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;$nova_result&quot;</span>
+        die <span class="nv">$LINENO</span> <span class="s2">&quot;[Fail] Coudn&#39;t get ipaddress of VM&quot;</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="nv">$ip</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>ssh check</p>
@@ -2136,13 +2240,9 @@ get_rootwrap_location module</p>
 get_pip_command</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>get_pip_command<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span>which pip-python
-    <span class="k">else</span>
-<span class="k">        </span>which pip
-    <span class="k">fi</span>
+    which pip <span class="o">||</span> which pip-python
 
-<span class="k">    if</span> <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Unable to find pip; cannot continue&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
@@ -2228,8 +2328,8 @@ vercmp_numbers<span class="o">()</span> <span class="o">{</span>
   <span class="nb">typeset </span><span class="nv">v1</span><span class="o">=</span><span class="nv">$1</span> <span class="nv">v2</span><span class="o">=</span><span class="nv">$2</span> sep
   <span class="nb">typeset</span> -a ver1 ver2
 
-  <span class="nv">IFS</span><span class="o">=</span>. <span class="nb">read</span> -ra ver1 &lt;&lt;&lt; <span class="s2">&quot;$v1&quot;</span>
-  <span class="nv">IFS</span><span class="o">=</span>. <span class="nb">read</span> -ra ver2 &lt;&lt;&lt; <span class="s2">&quot;$v2&quot;</span>
+  <span class="nv">IFS</span><span class="o">=</span>. <span class="nb">read</span> -ra ver1 <span class="o">&lt;&lt;&lt;</span> <span class="s2">&quot;$v1&quot;</span>
+  <span class="nv">IFS</span><span class="o">=</span>. <span class="nb">read</span> -ra ver2 <span class="o">&lt;&lt;&lt;</span> <span class="s2">&quot;$v2&quot;</span>
 
   _vercmp_r <span class="s2">&quot;${#ver1[@]}&quot;</span> <span class="s2">&quot;${ver1[@]}&quot;</span> <span class="s2">&quot;${ver2[@]}&quot;</span>
 <span class="o">}</span>
