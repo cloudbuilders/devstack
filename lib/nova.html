@@ -584,6 +584,20 @@ runs that a clean run would need to clean up</p>
     <span class="k">fi</span>
 
 <span class="k">    </span>sudo rm -rf <span class="nv">$NOVA_STATE_PATH</span> <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<dl class="docutils">
+<dt>NOTE(dtroyer): This really should be called from here but due to the way</dt>
+<dd>nova abuses the _cleanup() function we're moving it
+directly into cleanup.sh until this can be fixed.</dd>
+</dl>
+</td><td class=code><div class=highlight><pre>
+    <span class="c">#if is_service_enabled n-cpu &amp;&amp; [[ -r $NOVA_PLUGINS/hypervisor-$VIRT_DRIVER ]]; then</span>
+</pre></div></td></tr><tr><td class=docs>
+<blockquote>
+cleanup_nova_hypervisor</blockquote>
+</td><td class=code><div class=highlight><pre>
+    <span class="c">#fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -867,9 +881,9 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
             --email<span class="o">=</span>nova@example.com <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
         keystone user-role-add <span class="se">\</span>
-            --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user_id <span class="nv">$NOVA_USER</span> <span class="se">\</span>
-            --role_id <span class="nv">$ADMIN_ROLE</span>
+            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --user-id <span class="nv">$NOVA_USER</span> <span class="se">\</span>
+            --role-id <span class="nv">$ADMIN_ROLE</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">NOVA_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
                 --name<span class="o">=</span>nova <span class="se">\</span>
@@ -925,6 +939,9 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_port <span class="s2">&quot;$S3_SERVICE_PORT&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT osapi_compute_extension <span class="s2">&quot;nova.api.openstack.compute.contrib.standard_extensions&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT my_ip <span class="s2">&quot;$HOST_IP&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT osapi_compute_workers <span class="s2">&quot;4&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_workers <span class="s2">&quot;4&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT metadata_workers <span class="s2">&quot;4&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT sql_connection <span class="sb">`</span>database_connection_url nova<span class="sb">`</span>
     <span class="k">if </span>is_baremetal; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> baremetal sql_connection <span class="sb">`</span>database_connection_url nova_bm<span class="sb">`</span>
@@ -992,7 +1009,6 @@ install things in /usr/bin</p>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_usage_audit <span class="s2">&quot;True&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_usage_audit_period <span class="s2">&quot;hour&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT notify_on_state_change <span class="s2">&quot;vm_and_task_state&quot;</span>
-        iniset_multiline <span class="nv">$NOVA_CONF</span> DEFAULT notification_driver <span class="s2">&quot;nova.openstack.common.notifier.rpc_notifier&quot;</span> <span class="s2">&quot;ceilometer.compute.nova_notifier&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1175,7 +1191,9 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_nova<span class="o">()</span> <span class="o">{</span>
     <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>install_nova_hypervisor
+        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">                </span>install_package kvm
                 install_package libvirt-bin
@@ -1268,6 +1286,9 @@ Use 'sg' to execute nova-compute as a member of the <strong>$LIBVIRT_GROUP</stro
 <span class="k">           </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $NOVA_CONF_BOTTOM&quot;</span>
        <span class="k">done</span>
 <span class="k">    else</span>
+<span class="k">        if </span>is_service_enabled n-cpu <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>start_nova_hypervisor
+        <span class="k">fi</span>
 <span class="k">        </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $NOVA_CONF_BOTTOM&quot;</span>
     <span class="k">fi</span>
 <span class="k">    </span>screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cert&quot;</span>
@@ -1300,6 +1321,9 @@ of a service may be running in certain configs.</p>
     <span class="k">for </span>serv in n-api n-cpu n-crt n-net n-sch n-novnc n-xvnc n-cauth n-spice n-cond n-cond n-cell n-cell n-api-meta; <span class="k">do</span>
 <span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
 <span class="nb">    </span><span class="k">done</span>
+<span class="k">    if </span>is_service_enabled n-cpu <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>stop_nova_hypervisor
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 

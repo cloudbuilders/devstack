@@ -418,6 +418,16 @@ cleanup_keystone</p>
 <span class="nv">KEYSTONE_TOKEN_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_TOKEN_BACKEND</span><span class="k">:-</span><span class="nv">sql</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Select the backend for Identity</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_IDENTITY_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_IDENTITY_BACKEND</span><span class="k">:-</span><span class="nv">sql</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Select the backend for Assignment</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_ASSIGNMENT_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_ASSIGNMENT_BACKEND</span><span class="k">:-</span><span class="nv">sql</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Select Keystone's token format
 Choose from 'UUID' and 'PKI'</p>
 </td><td class=code><div class=highlight><pre>
@@ -444,14 +454,20 @@ Choose from 'UUID' and 'PKI'</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TENANT_NAME</span><span class="k">:-</span><span class="nv">service</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>valid identity backends as per dir keystone/identity/backends</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_VALID_IDENTITY_BACKENDS</span><span class="o">=</span>kvs,ldap,pam,sql
+
+</pre></div></td></tr><tr><td class=docs>
+<p>valid assignment backends as per dir keystone/identity/backends</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_VALID_ASSIGNMENT_BACKENDS</span><span class="o">=</span>kvs,ldap,sql
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>cleanup_keystone() - Remove residual data files, anything left over from previous
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
@@ -510,8 +526,18 @@ This function intentionally left blank</p>
         iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT member_role_name <span class="s2">&quot;_member_&quot;</span>
     <span class="k">fi</span>
 
-<span class="k">    if</span> <span class="o">[[</span>  <span class="s2">&quot;$KEYSTONE_IDENTITY_BACKEND&quot;</span> <span class="o">==</span> <span class="s2">&quot;ldap&quot;</span>  <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> identity driver <span class="s2">&quot;keystone.identity.backends.ldap.Identity&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>check if identity backend is valid</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_VALID_IDENTITY_BACKENDS&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;$KEYSTONE_IDENTITY_BACKEND&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> identity driver <span class="s2">&quot;keystone.identity.backends.$KEYSTONE_IDENTITY_BACKEND.Identity&quot;</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>check if assignment backend is valid</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_VALID_ASSIGNMENT_BACKENDS&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;$KEYSTONE_ASSIGNMENT_BACKEND&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> assignment driver <span class="s2">&quot;keystone.assignment.backends.$KEYSTONE_ASSIGNMENT_BACKEND.Assignment&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -634,9 +660,9 @@ create_keystone_accounts<span class="o">()</span> <span class="o">{</span>
         --name admin <span class="se">\</span>
         | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
     keystone user-role-add <span class="se">\</span>
-        --user_id <span class="nv">$ADMIN_USER</span> <span class="se">\</span>
-        --role_id <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
-        --tenant_id <span class="nv">$ADMIN_TENANT</span>
+        --user-id <span class="nv">$ADMIN_USER</span> <span class="se">\</span>
+        --role-id <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
+        --tenant-id <span class="nv">$ADMIN_TENANT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>service</p>
@@ -671,10 +697,10 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
         --pass <span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
         --email demo@example.com <span class="se">\</span>
         | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <span class="nv">$MEMBER_ROLE</span> --tenant_id <span class="nv">$DEMO_TENANT</span>
-    keystone user-role-add --user_id <span class="nv">$ADMIN_USER</span> --role_id <span class="nv">$ADMIN_ROLE</span> --tenant_id <span class="nv">$DEMO_TENANT</span>
-    keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <span class="nv">$ANOTHER_ROLE</span> --tenant_id <span class="nv">$DEMO_TENANT</span>
-    keystone user-role-add --user_id <span class="nv">$DEMO_USER</span> --role_id <span class="nv">$MEMBER_ROLE</span> --tenant_id <span class="nv">$INVIS_TENANT</span>
+    keystone user-role-add --user-id <span class="nv">$DEMO_USER</span> --role-id <span class="nv">$MEMBER_ROLE</span> --tenant-id <span class="nv">$DEMO_TENANT</span>
+    keystone user-role-add --user-id <span class="nv">$ADMIN_USER</span> --role-id <span class="nv">$ADMIN_ROLE</span> --tenant-id <span class="nv">$DEMO_TENANT</span>
+    keystone user-role-add --user-id <span class="nv">$DEMO_USER</span> --role-id <span class="nv">$ANOTHER_ROLE</span> --tenant-id <span class="nv">$DEMO_TENANT</span>
+    keystone user-role-add --user-id <span class="nv">$DEMO_USER</span> --role-id <span class="nv">$MEMBER_ROLE</span> --tenant-id <span class="nv">$INVIS_TENANT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keystone</p>

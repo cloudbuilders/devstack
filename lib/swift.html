@@ -432,7 +432,15 @@ swift data. Set <tt class="docutils literal">SWIFT_LOOPBACK_DISK_SIZE</tt> to th
 kilobytes.
 Default is 1 gigabyte.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">1000000</span><span class="k">}</span>
+<span class="nv">SWIFT_LOOPBACK_DISK_SIZE_DEFAULT</span><span class="o">=</span>1048576
+</pre></div></td></tr><tr><td class=docs>
+<p>if tempest enabled the default size is 4 Gigabyte.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled tempest; <span class="k">then</span>
+<span class="k">    </span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE_DEFAULT</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">4194304</span><span class="k">}</span>
+<span class="k">fi</span>
+
+<span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">$SWIFT_LOOPBACK_DISK_SIZE_DEFAULT</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set <tt class="docutils literal">SWIFT_EXTRAS_MIDDLEWARE</tt> to extras middlewares.
@@ -528,6 +536,7 @@ base_port + node_num * 10</p>
 <span class="s2">        s/%PORT%/$proxy_port/g;</span>
 <span class="s2">        s/%SERVICENAME%/proxy-server/g;</span>
 <span class="s2">        s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
+<span class="s2">        s/%USER%/${STACK_USER}/g;</span>
 <span class="s2">    &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/proxy-server
 
     sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/wsgi/proxy-server.wsgi.template <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/proxy-server.wsgi
@@ -550,6 +559,7 @@ base_port + node_num * 10</p>
 <span class="s2">            s/%PORT%/$object_port/g;</span>
 <span class="s2">            s/%SERVICENAME%/object-server-${node_number}/g;</span>
 <span class="s2">            s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
+<span class="s2">            s/%USER%/${STACK_USER}/g;</span>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
         ! is_fedora <span class="o">&amp;&amp;</span> sudo a2ensite object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
 
@@ -565,6 +575,7 @@ base_port + node_num * 10</p>
 <span class="s2">            s/%PORT%/$container_port/g;</span>
 <span class="s2">            s/%SERVICENAME%/container-server-${node_number}/g;</span>
 <span class="s2">            s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
+<span class="s2">            s/%USER%/${STACK_USER}/g;</span>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
         ! is_fedora <span class="o">&amp;&amp;</span> sudo a2ensite container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
 
@@ -580,6 +591,7 @@ base_port + node_num * 10</p>
 <span class="s2">            s/%PORT%/$account_port/g;</span>
 <span class="s2">            s/%SERVICENAME%/account-server-${node_number}/g;</span>
 <span class="s2">            s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
+<span class="s2">            s/%USER%/${STACK_USER}/g;</span>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
         ! is_fedora <span class="o">&amp;&amp;</span> sudo a2ensite account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
 
@@ -590,11 +602,6 @@ base_port + node_num * 10</p>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
 
     <span class="k">done</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>run apache server as stack user</p>
-</td><td class=code><div class=highlight><pre>
-    change_apache_user_group <span class="k">${</span><span class="nv">STACK_USER</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>WSGI isn't enabled by default, enable it</p>
@@ -899,7 +906,7 @@ underscores for separators.</p>
 
     <span class="nv">SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create --name<span class="o">=</span>swift --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
         --tenant_id <span class="nv">$SERVICE_TENANT</span> --email<span class="o">=</span>swift@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    keystone user-role-add --tenant_id <span class="nv">$SERVICE_TENANT</span> --user_id <span class="nv">$SWIFT_USER</span> --role_id <span class="nv">$ADMIN_ROLE</span>
+    keystone user-role-add --tenant-id <span class="nv">$SERVICE_TENANT</span> --user-id <span class="nv">$SWIFT_USER</span> --role-id <span class="nv">$ADMIN_ROLE</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">SWIFT_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create --name<span class="o">=</span>swift --type<span class="o">=</span><span class="s2">&quot;object-store&quot;</span> <span class="se">\</span>
@@ -914,14 +921,14 @@ underscores for separators.</p>
 
 <span class="k">    </span><span class="nv">SWIFT_TENANT_TEST1</span><span class="o">=</span><span class="k">$(</span>keystone tenant-create --name<span class="o">=</span>swifttenanttest1 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
     <span class="nv">SWIFT_USER_TEST1</span><span class="o">=</span><span class="k">$(</span>keystone user-create --name<span class="o">=</span>swiftusertest1 --pass<span class="o">=</span>testing --email<span class="o">=</span><span class="nb">test</span>@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    keystone user-role-add --user_id <span class="nv">$SWIFT_USER_TEST1</span> --role_id <span class="nv">$ADMIN_ROLE</span> --tenant_id <span class="nv">$SWIFT_TENANT_TEST1</span>
+    keystone user-role-add --user-id <span class="nv">$SWIFT_USER_TEST1</span> --role-id <span class="nv">$ADMIN_ROLE</span> --tenant-id <span class="nv">$SWIFT_TENANT_TEST1</span>
 
     <span class="nv">SWIFT_USER_TEST3</span><span class="o">=</span><span class="k">$(</span>keystone user-create --name<span class="o">=</span>swiftusertest3 --pass<span class="o">=</span>testing3 --email<span class="o">=</span>test3@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    keystone user-role-add --user_id <span class="nv">$SWIFT_USER_TEST3</span> --role_id <span class="nv">$ANOTHER_ROLE</span> --tenant_id <span class="nv">$SWIFT_TENANT_TEST1</span>
+    keystone user-role-add --user-id <span class="nv">$SWIFT_USER_TEST3</span> --role-id <span class="nv">$ANOTHER_ROLE</span> --tenant-id <span class="nv">$SWIFT_TENANT_TEST1</span>
 
     <span class="nv">SWIFT_TENANT_TEST2</span><span class="o">=</span><span class="k">$(</span>keystone tenant-create --name<span class="o">=</span>swifttenanttest2 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
     <span class="nv">SWIFT_USER_TEST2</span><span class="o">=</span><span class="k">$(</span>keystone user-create --name<span class="o">=</span>swiftusertest2 --pass<span class="o">=</span>testing2 --email<span class="o">=</span>test2@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    keystone user-role-add --user_id <span class="nv">$SWIFT_USER_TEST2</span> --role_id <span class="nv">$ADMIN_ROLE</span> --tenant_id <span class="nv">$SWIFT_TENANT_TEST2</span>
+    keystone user-role-add --user-id <span class="nv">$SWIFT_USER_TEST2</span> --role-id <span class="nv">$ADMIN_ROLE</span> --tenant-id <span class="nv">$SWIFT_TENANT_TEST2</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1011,11 +1018,7 @@ different object servers binding on different ports.</p>
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_apache_enabled_service swift; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Start rsync</p>
-</td><td class=code><div class=highlight><pre>
-        sudo chown -R <span class="nv">$STACK_USER</span> /var/run/lock/<span class="nv">$APACHE_NAME</span>
-        restart_apache_server
+<span class="k">        </span>restart_apache_server
         swift-init --run-dir<span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/run rest start
         screen_it s-proxy <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/proxy-server&quot;</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> <span class="o">==</span> 1 <span class="o">]]</span>; <span class="k">then</span>
@@ -1027,9 +1030,7 @@ different object servers binding on different ports.</p>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Make sure the apache lock dir is owned by $STACK_USER
-for running apache server to avoid failure of restarting
-apache server due to permission problem.</p>
+<p>Start rsync</p>
 </td><td class=code><div class=highlight><pre>
    swift-init --run-dir<span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/run all restart <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">   </span><span class="k">if</span> <span class="o">[[</span> <span class="k">${</span><span class="nv">SWIFT_REPLICAS</span><span class="k">}</span> <span class="o">==</span> 1 <span class="o">]]</span>; <span class="k">then</span>

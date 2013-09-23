@@ -372,25 +372,23 @@ variables in localrc:</p>
 <p>MidoNet devstack destination dir</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">MIDONET_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/midonet</span><span class="k">}</span>
+<span class="nv">MIDONET_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_API_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
+<span class="nv">MIDONET_API_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_API_URL</span><span class="k">:-</span><span class="nv">http</span><span class="p">://localhost:</span><span class="nv">$MIDONET_API_PORT</span><span class="p">/midonet-api</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>MidoNet client repo</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">MIDONET_CLIENT_REPO</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_CLIENT_REPO</span><span class="k">:-</span><span class="nv">https</span><span class="p">://github.com/midokura/python-midonetclient.git</span><span class="k">}</span>
 <span class="nv">MIDONET_CLIENT_BRANCH</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_CLIENT_BRANCH</span><span class="k">:-</span><span class="nv">master</span><span class="k">}</span>
-<span class="nv">MIDONET_CLIENT_DIR</span><span class="o">=</span><span class="nv">$MIDONET_DIR</span>/python-midonetclient
+<span class="nv">MIDONET_CLIENT_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_CLIENT_DIR</span><span class="k">:-</span><span class="nv">$MIDONET_DIR</span><span class="p">/python-midonetclient</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>MidoNet OpenStack repo</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">MIDONET_OS_REPO</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_OS_REPO</span><span class="k">:-</span><span class="nv">https</span><span class="p">://github.com/midokura/midonet-openstack.git</span><span class="k">}</span>
 <span class="nv">MIDONET_OS_BRANCH</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_OS_BRANCH</span><span class="k">:-</span><span class="nv">master</span><span class="k">}</span>
-<span class="nv">MIDONET_OS_DIR</span><span class="o">=</span><span class="nv">$MIDONET_DIR</span>/midonet-openstack
+<span class="nv">MIDONET_OS_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_OS_DIR</span><span class="k">:-</span><span class="nv">$MIDONET_DIR</span><span class="p">/midonet-openstack</span><span class="k">}</span>
 <span class="nv">MIDONET_SETUP_SCRIPT</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_SETUP_SCRIPT</span><span class="k">:-</span><span class="nv">$MIDONET_OS_DIR</span><span class="p">/bin/setup_midonet_topology.py</span><span class="k">}</span>
-
-
-<span class="nv">MIDOLMAN_LOG</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDOLMAN_LOG</span><span class="k">:-</span><span class="p">/var/log/midolman/midolman.log</span><span class="k">}</span>
-<span class="nv">MIDONET_API_LOG</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_API_LOG</span><span class="k">:-</span><span class="p">/var/log/tomcat7/midonet-api.log</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Save trace setting</p>
@@ -406,14 +404,12 @@ variables in localrc:</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Initialize DB.  Evaluate the output of setup_midonet_topology.py to set
-env variables for provider router ID and metadata router ID</p>
+env variables for provider router ID.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">eval</span> <span class="sb">`</span>python <span class="nv">$MIDONET_SETUP_SCRIPT</span> admin <span class="nv">$ADMIN_PASSWORD</span> <span class="nv">$ADMIN_TENANT</span> provider_devices<span class="sb">`</span>
+    <span class="nb">eval</span> <span class="sb">`</span>python <span class="nv">$MIDONET_SETUP_SCRIPT</span> <span class="nv">$MIDONET_API_URL</span> admin <span class="nv">$ADMIN_PASSWORD</span> admin provider_devices<span class="sb">`</span>
     die_if_not_set <span class="nv">$LINENO</span> provider_router_id <span class="s2">&quot;Error running midonet setup script, provider_router_id was not set.&quot;</span>
-    die_if_not_set <span class="nv">$LINENO</span> metadata_router_id <span class="s2">&quot;Error running midonet setup script, metadata_router_id was not set.&quot;</span>
 
     iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> MIDONET provider_router_id <span class="nv">$provider_router_id</span>
-    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> MIDONET metadata_router_id <span class="nv">$metadata_router_id</span>
 <span class="o">}</span>
 
 <span class="k">function </span>install_midonet<span class="o">()</span> <span class="o">{</span>

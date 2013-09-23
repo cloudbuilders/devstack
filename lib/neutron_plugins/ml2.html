@@ -374,9 +374,9 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
 <p>This has to be set here since the agent will set this in the config file</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">Q_AGENT_EXTRA_AGENT_OPTS</span><span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
+<span class="k">    </span>Q_AGENT_EXTRA_AGENT_OPTS+<span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
 <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">Q_AGENT_EXTRA_AGENT_OPTS</span><span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span>gre<span class="o">)</span>
+<span class="k">    </span>Q_AGENT_EXTRA_AGENT_OPTS+<span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span>gre<span class="o">)</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -388,7 +388,7 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>List of MechanismDrivers to load</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">Q_ML2_PLUGIN_MECHANISM_DRIVERS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_PLUGIN_MECHANISM_DRIVERS</span><span class="k">:-}</span>
+<span class="nv">Q_ML2_PLUGIN_MECHANISM_DRIVERS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_PLUGIN_MECHANISM_DRIVERS</span><span class="k">:-</span><span class="nv">openvswitch</span><span class="p">,linuxbridge</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>List of Type Drivers to load</p>
 </td><td class=code><div class=highlight><pre>
@@ -424,20 +424,31 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
     <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ml2_conf.ini
     <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;neutron_ml2&quot;</span>
     <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.ml2.plugin.Ml2Plugin&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>The ML2 plugin delegates L3 routing/NAT functionality to
+the L3 service plugin which must therefore be specified.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">Q_L3_PLUGIN_CLASS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_L3_PLUGIN_CLASS</span><span class="k">:-</span><span class="s2">&quot;neutron.services.l3_router.l3_router_plugin.L3RouterPlugin&quot;</span><span class="k">}</span>
+    <span class="k">if  </span>ini_has_option <span class="nv">$NEUTRON_CONF</span> DEFAULT service_plugins ; <span class="k">then</span>
+<span class="k">        </span><span class="nv">srv_plugins</span><span class="o">=</span><span class="k">$(</span>iniget <span class="nv">$NEUTRON_CONF</span> DEFAULT service_plugins<span class="k">)</span><span class="s2">&quot;,&quot;</span><span class="nv">$Q_L3_PLUGIN_CLASS</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">srv_plugins</span><span class="o">=</span><span class="nv">$Q_L3_PLUGIN_CLASS</span>
+    <span class="k">fi</span>
+<span class="k">    </span>iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT service_plugins <span class="nv">$srv_plugins</span>
 <span class="o">}</span>
 
 <span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">Q_SRV_EXTRA_OPTS</span><span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
+<span class="k">        </span>Q_SRV_EXTRA_OPTS+<span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>This assumes you want a simple configuration, and will overwrite
 Q_SRV_EXTRA_OPTS if set in addition to ENABLE_TENANT_TUNNELS.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">Q_SRV_EXTRA_OPTS</span><span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span>gre<span class="o">)</span>
+        Q_SRV_EXTRA_OPTS+<span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span>gre<span class="o">)</span>
         <span class="nv">Q_ML2_PLUGIN_GRE_TYPE_OPTIONS</span><span class="o">=(</span><span class="nv">tunnel_id_ranges</span><span class="o">=</span><span class="nv">$TENANT_TUNNEL_RANGES</span><span class="o">)</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">Q_SRV_EXTRA_OPTS</span><span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span>vlan<span class="o">)</span>
+<span class="k">        </span>Q_SRV_EXTRA_OPTS+<span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span>vlan<span class="o">)</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;WARNING - The ml2 plugin is using local tenant networks, with no connectivity between hosts.&quot;</span>
     <span class="k">fi</span>

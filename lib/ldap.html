@@ -372,6 +372,7 @@ install_ldap()</p>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
+<span class="nv">LDAP_SERVICE_NAME</span><span class="o">=</span>slapd
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="functions">
@@ -392,9 +393,20 @@ install_ldap() - Collect source and prepare</p>
         <span class="nv">LDAP_ROOTPW_COMMAND</span><span class="o">=</span>replace
         sudo <span class="nv">DEBIAN_FRONTEND</span><span class="o">=</span>noninteractive apt-get install slapd ldap-utils
         <span class="c">#automatically starts LDAP on ubuntu so no need to call start_ldap</span>
-    <span class="k">elif </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
 <span class="k">        </span><span class="nv">LDAP_OLCDB_NUMBER</span><span class="o">=</span>2
         <span class="nv">LDAP_ROOTPW_COMMAND</span><span class="o">=</span>add
+        start_ldap
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        </span><span class="nv">LDAP_OLCDB_NUMBER</span><span class="o">=</span>1
+        <span class="nv">LDAP_ROOTPW_COMMAND</span><span class="o">=</span>add
+        <span class="nv">LDAP_SERVICE_NAME</span><span class="o">=</span>ldap
+</pre></div></td></tr><tr><td class=docs>
+<p>SUSE has slappasswd in /usr/sbin/</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:/usr/sbin/
+        sudo slapadd -F /etc/openldap/slapd.d/ -bcn<span class="o">=</span>config -l <span class="nv">$FILES</span>/ldap/base-config.ldif
+        sudo sed -i <span class="s1">&#39;/^OPENLDAP_START_LDAPI=/s/&quot;no&quot;/&quot;yes&quot;/g&#39;</span> /etc/sysconfig/openldap
         start_ldap
     <span class="k">fi</span>
 
@@ -412,7 +424,7 @@ install_ldap() - Collect source and prepare</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>On fedora we need to manually add cosine and inetorgperson schemas</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_fedora; <span class="k">then</span>
+    <span class="k">if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
 <span class="k">        </span>sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif
         sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
     <span class="k">fi</span>
@@ -442,7 +454,7 @@ install_ldap() - Collect source and prepare</p>
 <p>start_ldap() - Start LDAP</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_ldap<span class="o">()</span> <span class="o">{</span>
-    sudo service slapd restart
+    sudo service <span class="nv">$LDAP_SERVICE_NAME</span> restart
 <span class="o">}</span>
 
 
@@ -450,7 +462,7 @@ install_ldap() - Collect source and prepare</p>
 <p>stop_ldap() - Stop LDAP</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>stop_ldap<span class="o">()</span> <span class="o">{</span>
-    sudo service slapd stop
+    sudo service <span class="nv">$LDAP_SERVICE_NAME</span> stop
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

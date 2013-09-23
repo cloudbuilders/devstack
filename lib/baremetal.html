@@ -662,7 +662,16 @@ Definition list ends without a blank line; unexpected unindent.</div>
 </td><td class=code><div class=highlight><pre>
     sudo mkdir -p /tftpboot
     sudo mkdir -p /tftpboot/pxelinux.cfg
-    sudo cp /usr/lib/syslinux/pxelinux.0 /tftpboot/
+
+    <span class="nv">PXEBIN</span><span class="o">=</span>/usr/share/syslinux/pxelinux.0
+    <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$PXEBIN</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">PXEBIN</span><span class="o">=</span>/usr/lib/syslinux/pxelinux.0
+        <span class="k">if</span> <span class="o">[</span> ! -f <span class="nv">$PXEBIN</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;pxelinux.0 (from SYSLINUX) not found.&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+<span class="k">    </span>sudo cp <span class="nv">$PXEBIN</span> /tftpboot/
     sudo chown -R <span class="nv">$STACK_USER</span>:<span class="nv">$LIBVIRT_GROUP</span> /tftpboot
 
 </pre></div></td></tr><tr><td class=docs>
@@ -750,7 +759,7 @@ Sets KERNEL_ID and RAMDISK_ID</p>
     <span class="nv">out</span><span class="o">=</span><span class="k">$(</span><span class="nv">$BM_IMAGE_BUILD_DIR</span>/bin/disk-image-get-kernel <span class="se">\</span>
             -x -d <span class="nv">$TOP_DIR</span>/files -o bm-deploy -i <span class="nv">$file</span><span class="k">)</span>
     <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>die <span class="s2">&quot;Failed to get kernel and ramdisk from $file&quot;</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Failed to get kernel and ramdisk from $file&quot;</span>
     <span class="k">fi</span>
 <span class="k">    </span><span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
     <span class="nb">set</span> +o xtrace
@@ -912,9 +921,9 @@ Defaults to using BM_FIRST_MAC and BM_SECOND_MAC if parameters not specified</p>
        <span class="s2">&quot;$BM_FLAVOR_ROOT_DISK&quot;</span> <span class="se">\</span>
        <span class="s2">&quot;$mac_1&quot;</span> <span class="se">\</span>
        | grep <span class="s1">&#39; id &#39;</span> | get_field 2 <span class="k">)</span>
-    <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$id&quot;</span> <span class="o">]</span> <span class="o">||</span> die <span class="s2">&quot;Error adding baremetal node&quot;</span>
+    <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$id&quot;</span> <span class="o">]</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Error adding baremetal node&quot;</span>
     <span class="nv">id2</span><span class="o">=</span><span class="k">$(</span>nova baremetal-interface-add <span class="s2">&quot;$id&quot;</span> <span class="s2">&quot;$mac_2&quot;</span> <span class="k">)</span>
-    <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$id2&quot;</span> <span class="o">]</span> <span class="o">||</span> die <span class="s2">&quot;Error adding interface to barmetal node $id&quot;</span>
+    <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$id2&quot;</span> <span class="o">]</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Error adding interface to barmetal node $id&quot;</span>
 <span class="o">}</span>
 
 

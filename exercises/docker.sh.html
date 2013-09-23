@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>install_pip.sh</title>
+    <title>docker.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>install_pip.sh</h1></th>
+        <th class=docs><h1>docker.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,114 +359,164 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>install_pip.sh</strong></p>
+<p><strong>docker</strong></p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>install_pip.sh [--pip-version &lt;version&gt;] [--use-get-pip] [--force]</p>
-<p>Update pip and friends to a known common version</p>
+<p>Test Docker hypervisor</p>
 </td><td class=code><div class=highlight><pre>
 
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;Begin DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Assumptions:
-- update pip to $INSTALL_PIP_VERSION</p>
+<p>This script exits on an error so that errors don't compound and you see
+only the first error that occurred.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Print the commands being run so that we can see the command that triggers
+an error.  It is also useful for following allowing as the install occurs.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o xtrace
+
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="settings">
+<h1>Settings</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Change dir to top of devstack</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+<span class="nv">EXERCISE_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$EXERCISE_DIR</span>/..; <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
-<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
-
 </pre></div></td></tr><tr><td class=docs>
-<p>Handle arguments</p>
+<p>Import configuration</p>
 </td><td class=code><div class=highlight><pre>
-
-<span class="nv">INSTALL_PIP_VERSION</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTALL_PIP_VERSION</span><span class="k">:-</span><span class="s2">&quot;1.4.1&quot;</span><span class="k">}</span>
-<span class="k">while</span> <span class="o">[[</span> -n <span class="s2">&quot;$1&quot;</span> <span class="o">]]</span>; <span class="k">do</span>
-<span class="k">    case</span> <span class="nv">$1</span> in
-        --force<span class="o">)</span>
-            <span class="nv">FORCE</span><span class="o">=</span>1
-            ;;
-        --pip-version<span class="o">)</span>
-            <span class="nv">INSTALL_PIP_VERSION</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
-            <span class="nb">shift</span>
-            ;;
-        --use-get-pip<span class="o">)</span>
-            <span class="nv">USE_GET_PIP</span><span class="o">=</span>1;
-            ;;
-    <span class="k">esac</span>
-<span class="k">    </span><span class="nb">shift</span>
-<span class="k">done</span>
-
-<span class="nv">PIP_GET_PIP_URL</span><span class="o">=</span>https://raw.github.com/pypa/pip/master/contrib/get-pip.py
-<span class="nv">PIP_TAR_URL</span><span class="o">=</span>https://pypi.python.org/packages/source/p/pip/pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz
-
-GetDistro
-<span class="nb">echo</span> <span class="s2">&quot;Distro: $DISTRO&quot;</span>
-
-<span class="k">function </span>get_versions<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">PIP</span><span class="o">=</span><span class="k">$(</span>which pip 2&gt;/dev/null <span class="o">||</span> which pip-python 2&gt;/dev/null<span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$PIP</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">PIP_VERSION</span><span class="o">=</span><span class="k">$(</span><span class="nv">$PIP</span> --version | awk <span class="s1">&#39;{ print $2}&#39;</span><span class="k">)</span>
-        <span class="nb">echo</span> <span class="s2">&quot;pip: $PIP_VERSION&quot;</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-
-<span class="k">function </span>install_get_pip<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/get-pip.py <span class="o">]]</span>; <span class="k">then</span>
-        <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
-            curl <span class="nv">$PIP_GET_PIP_URL</span>; <span class="se">\</span>
-        <span class="o">)</span>
-    <span class="k">fi</span>
-<span class="k">    </span>sudo python <span class="nv">$FILES</span>/get-pip.py
-<span class="o">}</span>
-
-<span class="k">function </span>install_pip_tarball<span class="o">()</span> <span class="o">{</span>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
-        curl -O <span class="nv">$PIP_TAR_URL</span>; <span class="se">\</span>
-        tar xvfz pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz; <span class="se">\</span>
-        <span class="nb">cd </span>pip-<span class="nv">$INSTALL_PIP_VERSION</span>; <span class="se">\</span>
-        sudo python setup.py install; <span class="se">\</span>
-    <span class="o">)</span>
-<span class="o">}</span>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Show starting versions</p>
+<p>Import exercise configuration</p>
 </td><td class=code><div class=highlight><pre>
-get_versions
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/exerciserc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Do pip</p>
+<p>Skip if the hypervisor is not Docker</p>
+</td><td class=code><div class=highlight><pre>
+<span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;docker&quot;</span> <span class="o">]]</span> <span class="o">||</span> <span class="nb">exit </span>55
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import docker functions and declarations</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/nova_plugins/hypervisor-docker
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Image and flavor are ignored but the CLI requires them...</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Eradicate any and all system packages</p>
+<p>Instance type to create</p>
 </td><td class=code><div class=highlight><pre>
-uninstall_package python-pip
+<span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_INSTANCE_TYPE</span><span class="k">:-</span><span class="nv">m1</span><span class="p">.tiny</span><span class="k">}</span>
 
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$USE_GET_PIP&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>install_get_pip
-<span class="k">else</span>
-<span class="k">    </span>install_pip_tarball
+</pre></div></td></tr><tr><td class=docs>
+<p>Boot this image, use first AMI image if unset</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DEFAULT_IMAGE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">DEFAULT_IMAGE_NAME</span><span class="k">:-</span><span class="nv">ami</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Instance name</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">VM_NAME</span><span class="o">=</span>ex-docker
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="launching-a-server">
+<h1>Launching a server</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Grab the id of the image to launch</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span>glance image-list | egrep <span class="s2">&quot; $DOCKER_IMAGE_NAME:latest &quot;</span> | get_field 1<span class="k">)</span>
+die_if_not_set <span class="nv">$LINENO</span> IMAGE <span class="s2">&quot;Failure getting image $DOCKER_IMAGE_NAME&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Select a flavor</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="k">$(</span>nova flavor-list | grep <span class="nv">$DEFAULT_INSTANCE_TYPE</span> | get_field 1<span class="k">)</span>
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$INSTANCE_TYPE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>grab the first flavor in the list to launch if default doesn't exist</p>
+</td><td class=code><div class=highlight><pre>
+   <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="k">$(</span>nova flavor-list | head -n 4 | tail -n 1 | get_field 1<span class="k">)</span>
 <span class="k">fi</span>
 
-get_versions
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean-up from previous runs</p>
+</td><td class=code><div class=highlight><pre>
+nova delete <span class="nv">$VM_NAME</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova show $VM_NAME; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;server didn&#39;t terminate!&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="boot-instance">
+<h2>Boot instance</h2>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nv">VM_UUID</span><span class="o">=</span><span class="k">$(</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> <span class="nv">$VM_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+die_if_not_set <span class="nv">$LINENO</span> VM_UUID <span class="s2">&quot;Failure launching $VM_NAME&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Check that the status is active within ACTIVE_TIMEOUT seconds</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! nova show $VM_UUID | grep status | grep -q ACTIVE; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;server didn&#39;t become active!&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Get the instance IP</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">IP</span><span class="o">=</span><span class="k">$(</span>nova show <span class="nv">$VM_UUID</span> | grep <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | get_field 2<span class="k">)</span>
+die_if_not_set <span class="nv">$LINENO</span> IP <span class="s2">&quot;Failure retrieving IP address&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Private IPs can be pinged in single node deployments</p>
+</td><td class=code><div class=highlight><pre>
+ping_check <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> <span class="nv">$IP</span> <span class="nv">$BOOT_TIMEOUT</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="clean-up">
+<h2>Clean up</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Delete instance</p>
+</td><td class=code><div class=highlight><pre>
+nova delete <span class="nv">$VM_UUID</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting instance $VM_NAME&quot;</span>
+<span class="k">if</span> ! timeout <span class="nv">$TERMINATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova list | grep -q $VM_UUID; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Server $VM_NAME not deleted&quot;</span>
+<span class="k">fi</span>
+
+<span class="nb">set</span> +o xtrace
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;SUCCESS: End DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+
 
 
 </td><td class=code><div class=highlight><pre>
@@ -475,6 +525,8 @@ get_versions
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>

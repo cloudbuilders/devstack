@@ -361,8 +361,8 @@ ul.auto-toc {
 
 <p><tt class="docutils literal">stack.sh</tt> is an opinionated OpenStack developer installation.  It
 installs and configures various combinations of <strong>Ceilometer</strong>, <strong>Cinder</strong>,
-<strong>Glance</strong>, <strong>Heat</strong>, <strong>Horizon</strong>, <strong>Keystone</strong>, <strong>Nova</strong>, <strong>Neutron</strong>
-and <strong>Swift</strong>.</p>
+<strong>Glance</strong>, <strong>Heat</strong>, <strong>Horizon</strong>, <strong>Keystone</strong>, <strong>Nova</strong>, <strong>Neutron</strong>,
+<strong>Swift</strong>, and <strong>Trove</strong></p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
@@ -629,7 +629,7 @@ sudo privileges and runs as that user.</p>
     <span class="nb">echo</span> <span class="s2">&quot;Copying files to $STACK_USER user&quot;</span>
     <span class="nv">STACK_DIR</span><span class="o">=</span><span class="s2">&quot;$DEST/${TOP_DIR##*/}&quot;</span>
     cp -r -f -T <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
-    chown -R <span class="nv">$STACK_USER</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
+    safe_chown -R <span class="nv">$STACK_USER</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
     <span class="nb">cd</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SHELL_AFTER_RUN&quot;</span> !<span class="o">=</span> <span class="s2">&quot;no&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">exec </span>sudo -u <span class="nv">$STACK_USER</span>  bash -l -c <span class="s2">&quot;set -e; bash stack.sh; bash&quot;</span>
@@ -674,8 +674,8 @@ see them by forcing PATH</p>
 and read/executable by everybody for daemons (e.g. apache run for horizon)</p>
 </td><td class=code><div class=highlight><pre>
 sudo mkdir -p <span class="nv">$DEST</span>
-sudo chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DEST</span>
-chmod 0755 <span class="nv">$DEST</span>
+safe_chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DEST</span>
+safe_chmod 0755 <span class="nv">$DEST</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>a basic test for $DEST path permissions (fatal on error unless skipped)</p>
@@ -706,7 +706,7 @@ operation.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
 sudo mkdir -p <span class="nv">$DATA_DIR</span>
-sudo chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DATA_DIR</span>
+safe_chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DATA_DIR</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -789,6 +789,19 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/baremetal
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ldap
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ironic
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/trove
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Look for Nova hypervisor plugin</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">NOVA_PLUGINS</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/lib/nova_plugins
+<span class="k">if </span>is_service_enabled nova <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Load plugin</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">source</span> <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the destination directories for other OpenStack projects</p>
@@ -1157,90 +1170,6 @@ echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$TOP_DIR</span>/tools/fixup_stuff.sh
 
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="system-specific-preconfigure">
-<h1>System-specific preconfigure</h1>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Disable selinux to avoid configuring to allow Apache access
-to Horizon files or run nodejs (LP#1175444)</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>selinuxenabled; <span class="k">then</span>
-<span class="k">        </span>sudo setenforce 0
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>The following workarounds break xenserver</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>An old version of <tt class="docutils literal"><span class="pre">python-crypto</span></tt> (2.0.1) may be installed on a
-fresh system via Anaconda and the dependency chain
-<tt class="docutils literal">cas</tt> -&gt; <tt class="docutils literal"><span class="pre">python-paramiko</span></tt> -&gt; <tt class="docutils literal"><span class="pre">python-crypto</span></tt>.
-<tt class="docutils literal">pip uninstall pycrypto</tt> will remove the packaged <tt class="docutils literal"><span class="pre">.egg-info</span></tt></p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 517)</p>
-Unexpected indentation.</div>
-<blockquote>
-file but leave most of the actual library files behind in</blockquote>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 518)</p>
-Block quote ends without a blank line; unexpected unindent.</div>
-<p><tt class="docutils literal">/usr/lib64/python2.6/Crypto</tt>. Later <tt class="docutils literal">pip install pycrypto</tt>
-will install over the packaged files resulting
-in a useless mess of old, rpm-packaged files and pip-installed files.
-Remove the package so that <tt class="docutils literal">pip install <span class="pre">python-crypto</span></tt> installs
-cleanly.
-Note: other RPM packages may require <tt class="docutils literal"><span class="pre">python-crypto</span></tt> as well.
-For example, RHEL6 does not install <tt class="docutils literal"><span class="pre">python-paramiko</span> packages</tt>.</p>
-</td><td class=code><div class=highlight><pre>
-        uninstall_package python-crypto
-
-</pre></div></td></tr><tr><td class=docs>
-<p>A similar situation occurs with <tt class="docutils literal"><span class="pre">python-lxml</span></tt>, which is required by
-<tt class="docutils literal"><span class="pre">ipa-client</span></tt>, an auditing package we don't care about.  The
-build-dependencies needed for <tt class="docutils literal">pip install lxml</tt> (<tt class="docutils literal">gcc</tt>,
-<tt class="docutils literal"><span class="pre">libxml2-dev</span></tt> and <tt class="docutils literal"><span class="pre">libxslt-dev</span></tt>) are present in
-<tt class="docutils literal">files/rpms/general</tt>.</p>
-</td><td class=code><div class=highlight><pre>
-        uninstall_package python-lxml
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>If the <tt class="docutils literal">dbus</tt> package was installed by DevStack dependencies the
-uuid may not be generated because the service was never started (PR#598200),
-causing Nova to stop later on complaining that <tt class="docutils literal"><span class="pre">/var/lib/dbus/machine-id</span></tt>
-does not exist.</p>
-</td><td class=code><div class=highlight><pre>
-    sudo service messagebus restart
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">setup.py</tt> contains a <tt class="docutils literal">setup_requires</tt> package that is supposed
-to be transient.  However, RHEL6 distribute has a bug where
-<tt class="docutils literal">setup_requires</tt> registers entry points that are not cleaned
-out properly after the setup-phase resulting in installation failures
-(bz#924038).  Pre-install the problem package so the <tt class="docutils literal">setup_requires</tt>
-dependency is satisfied and it will not be installed transiently.
-Note we do this before the track-depends below.</p>
-</td><td class=code><div class=highlight><pre>
-    pip_install hgtools
-
-</pre></div></td></tr><tr><td class=docs>
-<p>RHEL6's version of <tt class="docutils literal"><span class="pre">python-nose</span></tt> is incompatible with Tempest.
-Install nose 1.1 (Tempest-compatible) from EPEL</p>
-</td><td class=code><div class=highlight><pre>
-    install_package python-nose1.1
-</pre></div></td></tr><tr><td class=docs>
-<p>Add a symlink for the new nosetests to allow tox for Tempest to
-work unmolested.</p>
-</td><td class=code><div class=highlight><pre>
-    sudo ln -sf /usr/bin/nosetests1.1 /usr/local/bin/nosetests
-<span class="k">fi</span>
-
 install_rpc_backend
 
 <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
@@ -1388,6 +1317,12 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
     configure_heat
 <span class="k">fi</span>
 
+<span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
+<span class="k">    </span>install_trove
+    install_troveclient
+    cleanup_trove
+<span class="k">fi</span>
+
 <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 <span class="k">    </span>configure_CA
     init_CA
@@ -1396,6 +1331,11 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
 <p>Add name to /etc/hosts
 don't be naive and add to existing line!</p>
 </td><td class=code><div class=highlight><pre>
+<span class="k">fi</span>
+
+<span class="k">if </span>is_service_enabled ir-api ir-cond; <span class="k">then</span>
+<span class="k">    </span>install_ironic
+    configure_ironic
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span>; <span class="k">then</span>
@@ -1563,7 +1503,11 @@ init_service_check
     create_cinder_accounts
     create_neutron_accounts
 
-    <span class="k">if </span>is_service_enabled swift <span class="o">||</span> is_service_enabled s-proxy; <span class="k">then</span>
+    <span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
+<span class="k">        </span>create_trove_accounts
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled swift <span class="o">||</span> is_service_enabled s-proxy; <span class="k">then</span>
 <span class="k">        </span>create_swift_accounts
     <span class="k">fi</span>
 
@@ -1615,6 +1559,18 @@ init_service_check
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Glance&quot;</span>
     init_glance
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="ironic">
+<h2>Ironic</h2>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if </span>is_service_enabled ir-api ir-cond; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Ironic&quot;</span>
+    init_ironic
+<span class="k">fi</span>
+
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1672,7 +1628,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 <span class="k">    </span>clean_iptables
     rm -rf <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
     sudo mkdir -p <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
-    sudo chown -R <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
+    safe_chown -R <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
 </pre></div></td></tr><tr><td class=docs>
 <p>Force IP forwarding on, just in case</p>
 </td><td class=code><div class=highlight><pre>
@@ -1703,6 +1659,13 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
     init_cinder
 <span class="k">fi</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="compute-service">
+<h2>Compute Service</h2>
+</td><td class=code><div class=highlight><pre>
+
 <span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Nova&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1721,13 +1684,20 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
     <span class="k">fi</span>
 
 
+<span class="k">    if</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure hypervisor plugin</p>
+</td><td class=code><div class=highlight><pre>
+        configure_nova_hypervisor
+
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="xenserver">
 <h2>XenServer</h2>
 </td><td class=code><div class=highlight><pre>
 
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Using XenServer virtualization driver&quot;</span>
         <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$XENAPI_CONNECTION_URL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;XENAPI_CONNECTION_URL is not specified&quot;</span>
@@ -1924,6 +1894,14 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Launch the Ironic services</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled ir-api ir-cond; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Ironic&quot;</span>
+    start_ironic
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Create an access key and secret key for nova ec2 register image</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key <span class="o">&amp;&amp;</span> is_service_enabled swift3 <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
@@ -2008,6 +1986,24 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
     start_heat
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure and launch the trove service api, and taskmanager</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Initialize trove</p>
+</td><td class=code><div class=highlight><pre>
+    echo_summary <span class="s2">&quot;Configuring Trove&quot;</span>
+    configure_troveclient
+    configure_trove
+    init_trove
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Start the trove API and trove taskmgr components</p>
+</td><td class=code><div class=highlight><pre>
+    echo_summary <span class="s2">&quot;Starting Trove&quot;</span>
+    start_trove
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
