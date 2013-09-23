@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>ceilometer</title>
+    <title>hypervisor-docker</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>ceilometer</h1></th>
+        <th class=docs><h1>hypervisor-docker</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,50 +359,35 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>lib/ceilometer
-Install and start <strong>Ceilometer</strong> service
-To enable a minimal set of Ceilometer services, add the following to localrc:</p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 4)</p>
-Unexpected indentation.</div>
-<blockquote>
-enable_service ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api</blockquote>
-<dl class="docutils">
-<dt>To ensure Ceilometer alarming services are enabled also, further add to the localrc:</dt>
-<dd>enable_service ceilometer-alarm-notifier ceilometer-alarm-singleton</dd>
-</dl>
+<p>lib/nova_plugins/docker
+Configure the Docker hypervisor
+Enable with:
+VIRT_DRIVER=docker</p>
 </td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Dependencies:
-- functions
-- OS_AUTH_URL for auth in api
-- DEST set to the destination directory
-- SERVICE_PASSWORD, SERVICE_TENANT_NAME for auth in api
-- STACK_USER service user</p>
+<tt class="docutils literal">functions</tt> file
+<tt class="docutils literal">nova</tt> and <tt class="docutils literal">glance</tt> configurations</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="stack-sh">
-<h1>stack.sh</h1>
-<p>install_ceilometer
-configure_ceilometer
-init_ceilometer
-start_ceilometer
-stop_ceilometer
-cleanup_ceilometer</p>
+<p>install_nova_hypervisor - install any external requirements
+configure_nova_hypervisor - make configuration changes, including those to other services
+start_nova_hypervisor - start any external services
+stop_nova_hypervisor - stop any external services
+cleanup_nova_hypervisor - remove transient data and cache</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
 <div class="section" id="defaults">
 <h1>Defaults</h1>
 </td><td class=code><div class=highlight><pre>
@@ -410,162 +395,138 @@ cleanup_ceilometer</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up default directories</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">CEILOMETER_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/ceilometer
-<span class="nv">CEILOMETERCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-ceilometerclient
-<span class="nv">CEILOMETER_CONF_DIR</span><span class="o">=</span>/etc/ceilometer
-<span class="nv">CEILOMETER_CONF</span><span class="o">=</span><span class="nv">$CEILOMETER_CONF_DIR</span>/ceilometer.conf
-<span class="nv">CEILOMETER_API_LOG_DIR</span><span class="o">=</span>/var/log/ceilometer-api
-<span class="nv">CEILOMETER_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">CEILOMETER_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/ceilometer</span><span class="k">}</span>
+<span class="nv">DOCKER_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/docker
+<span class="nv">DOCKER_REPO</span><span class="o">=</span><span class="k">${</span><span class="nv">DOCKER_REPO</span><span class="k">:-</span><span class="nv">https</span><span class="p">://github.com/dotcloud/openstack-docker.git</span><span class="k">}</span>
+<span class="nv">DOCKER_BRANCH</span><span class="o">=</span><span class="k">${</span><span class="nv">DOCKER_BRANCH</span><span class="k">:-</span><span class="nv">master</span><span class="k">}</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Support potential entry-points console scripts</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">CEILOMETER_BIN_DIR</span><span class="o">=</span><span class="k">$(</span>get_python_exec_prefix<span class="k">)</span>
+<span class="nv">DOCKER_UNIX_SOCKET</span><span class="o">=</span>/var/run/docker.sock
+<span class="nv">DOCKER_PID_FILE</span><span class="o">=</span>/var/run/docker.pid
+<span class="nv">DOCKER_REGISTRY_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">DOCKER_REGISTRY_PORT</span><span class="k">:-</span><span class="nv">5042</span><span class="k">}</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up database backend</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">CEILOMETER_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">CEILOMETER_BACKEND</span><span class="k">:-</span><span class="nv">mysql</span><span class="k">}</span>
+<span class="nv">DOCKER_IMAGE</span><span class="o">=</span><span class="k">${</span><span class="nv">DOCKER_IMAGE</span><span class="k">:-</span><span class="nv">http</span><span class="p">://get.docker.io/images/openstack/docker-ut.tar.gz</span><span class="k">}</span>
+<span class="nv">DOCKER_IMAGE_NAME</span><span class="o">=</span>docker-busybox
+<span class="nv">DOCKER_REGISTRY_IMAGE</span><span class="o">=</span><span class="k">${</span><span class="nv">DOCKER_REGISTRY_IMAGE</span><span class="k">:-</span><span class="nv">http</span><span class="p">://get.docker.io/images/openstack/docker-registry.tar.gz</span><span class="k">}</span>
+<span class="nv">DOCKER_REGISTRY_IMAGE_NAME</span><span class="o">=</span>docker-registry
+<span class="nv">DOCKER_REPOSITORY_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_HOST</span><span class="k">}</span>:<span class="k">${</span><span class="nv">DOCKER_REGISTRY_PORT</span><span class="k">}</span>/<span class="k">${</span><span class="nv">DOCKER_IMAGE_NAME</span><span class="k">}</span>
+
+<span class="nv">DOCKER_PACKAGE_VERSION</span><span class="o">=</span><span class="k">${</span><span class="nv">DOCKER_PACKAGE_VERSION</span><span class="k">:-</span><span class="nv">0</span><span class="p">.6.1</span><span class="k">}</span>
+<span class="nv">DOCKER_APT_REPO</span><span class="o">=</span><span class="k">${</span><span class="nv">DOCKER_APT_REPO</span><span class="k">:-</span><span class="nv">https</span><span class="p">://get.docker.io/ubuntu</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="functions">
-<h1>Functions</h1>
+<div class="section" id="entry-points">
+<h1>Entry Points</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>cleanup_ceilometer() - Remove residual data files, anything left over from previous
-runs that a clean run would need to clean up</p>
+<p>clean_nova_hypervisor - Clean up an installation</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_ceilometer<span class="o">()</span> <span class="o">{</span>
-    mongo ceilometer --eval <span class="s2">&quot;db.dropDatabase();&quot;</span>
+<span class="k">function </span>cleanup_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+    stop_service docker
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean out work area</p>
+</td><td class=code><div class=highlight><pre>
+    sudo rm -rf /var/lib/docker
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>configure_ceilometerclient() - Set config files, create data dirs, etc</p>
+<p>configure_nova_hypervisor - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_ceilometerclient<span class="o">()</span> <span class="o">{</span>
-    setup_develop <span class="nv">$CEILOMETERCLIENT_DIR</span>
+<span class="k">function </span>configure_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+    git_clone <span class="nv">$DOCKER_REPO</span> <span class="nv">$DOCKER_DIR</span> <span class="nv">$DOCKER_BRANCH</span>
+
+    ln -snf <span class="k">${</span><span class="nv">DOCKER_DIR</span><span class="k">}</span>/nova-driver <span class="nv">$NOVA_DIR</span>/nova/virt/docker
+
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver docker.DockerDriver
+    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT container_formats ami,ari,aki,bare,ovf,docker
+
+    sudo cp -p <span class="k">${</span><span class="nv">DOCKER_DIR</span><span class="k">}</span>/nova-driver/docker.filters <span class="nv">$NOVA_CONF_DIR</span>/rootwrap.d
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>configure_ceilometer() - Set config files, create data dirs, etc</p>
+<p>install_nova_hypervisor() - Install external components</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_ceilometer<span class="o">()</span> <span class="o">{</span>
-    setup_develop <span class="nv">$CEILOMETER_DIR</span>
-
-    <span class="o">[</span> ! -d <span class="nv">$CEILOMETER_CONF_DIR</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> sudo mkdir -m 755 -p <span class="nv">$CEILOMETER_CONF_DIR</span>
-    sudo chown <span class="nv">$USER</span> <span class="nv">$CEILOMETER_CONF_DIR</span>
-
-    <span class="o">[</span> ! -d <span class="nv">$CEILOMETER_API_LOG_DIR</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  sudo mkdir -m 755 -p <span class="nv">$CEILOMETER_API_LOG_DIR</span>
-    sudo chown <span class="nv">$USER</span> <span class="nv">$CEILOMETER_API_LOG_DIR</span>
-
-    iniset_rpc_backend ceilometer <span class="nv">$CEILOMETER_CONF</span> DEFAULT
-
-    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT notification_topics <span class="s1">&#39;notifications&#39;</span>
-    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT verbose True
-
+<span class="k">function </span>install_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Install the policy file for the API server</p>
+<p>So far this is Ubuntu only</p>
 </td><td class=code><div class=highlight><pre>
-    cp <span class="nv">$CEILOMETER_DIR</span>/etc/ceilometer/policy.json <span class="nv">$CEILOMETER_CONF_DIR</span>
-    cp <span class="nv">$CEILOMETER_DIR</span>/etc/ceilometer/pipeline.yaml <span class="nv">$CEILOMETER_CONF_DIR</span>
-    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT policy_file <span class="nv">$CEILOMETER_CONF_DIR</span>/policy.json
-
-</pre></div></td></tr><tr><td class=docs>
-<p>the compute and central agents need these credentials in order to
-call out to the public nova and glance APIs</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT os_username ceilometer
-    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT os_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT os_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken auth_protocol http
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_user ceilometer
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken signing_dir <span class="nv">$CEILOMETER_AUTH_CACHE_DIR</span>
-
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mysql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$CEILOMETER_CONF</span> database connection <span class="sb">`</span>database_connection_url ceilometer<span class="sb">`</span>
-    <span class="k">else</span>
-<span class="k">        </span>iniset <span class="nv">$CEILOMETER_CONF</span> database connection mongodb://localhost:27017/ceilometer
-        configure_mongodb
-        cleanup_ceilometer
+    <span class="k">if</span> ! is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Docker is only supported on Ubuntu at this time&quot;</span>
     <span class="k">fi</span>
-<span class="o">}</span>
 
-<span class="k">function </span>configure_mongodb<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if </span>is_fedora; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>ensure smallfiles selected to minimize freespace requirements</p>
+<p>Make sure Docker is installed</p>
 </td><td class=code><div class=highlight><pre>
-        sudo sed -i <span class="s1">&#39;/--smallfiles/!s/OPTIONS=\&quot;/OPTIONS=\&quot;--smallfiles /&#39;</span> /etc/sysconfig/mongod
+    <span class="k">if</span> ! is_package_installed lxc-docker; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Docker is not installed.  Please run tools/docker/install_docker.sh&quot;</span>
+    <span class="k">fi</span>
 
-        restart_service mongod
+<span class="k">    </span><span class="nb">local </span>docker_pid
+    <span class="nb">read </span>docker_pid &lt;<span class="nv">$DOCKER_PID_FILE</span>
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$docker_pid</span> <span class="o">]]</span> <span class="o">||</span> ! ps -p <span class="nv">$docker_pid</span> | grep <span class="o">[</span>d<span class="o">]</span>ocker; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Docker not running&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>init_ceilometer() - Initialize etc.</p>
+<p>start_nova_hypervisor - Start any required external services</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_ceilometer<span class="o">()</span> <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Create cache dir</p>
-</td><td class=code><div class=highlight><pre>
-    sudo mkdir -p <span class="nv">$CEILOMETER_AUTH_CACHE_DIR</span>
-    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$CEILOMETER_AUTH_CACHE_DIR</span>
-    rm -f <span class="nv">$CEILOMETER_AUTH_CACHE_DIR</span>/*
+<span class="k">function </span>start_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span>docker_pid
+    <span class="nb">read </span>docker_pid &lt;<span class="nv">$DOCKER_PID_FILE</span>
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$docker_pid</span> <span class="o">]]</span> <span class="o">||</span> ! ps -p <span class="nv">$docker_pid</span> | grep <span class="o">[</span>d<span class="o">]</span>ocker; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Docker not running, start the daemon&quot;</span>
+    <span class="k">fi</span>
 
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mysql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>recreate_database ceilometer utf8
-        <span class="nv">$CEILOMETER_BIN_DIR</span>/ceilometer-dbsync
+</pre></div></td></tr><tr><td class=docs>
+<p>Start the Docker registry container</p>
+</td><td class=code><div class=highlight><pre>
+    docker run -d -p <span class="k">${</span><span class="nv">DOCKER_REGISTRY_PORT</span><span class="k">}</span>:5000 <span class="se">\</span>
+        -e <span class="nv">SETTINGS_FLAVOR</span><span class="o">=</span>openstack -e <span class="nv">OS_USERNAME</span><span class="o">=</span><span class="k">${</span><span class="nv">OS_USERNAME</span><span class="k">}</span> <span class="se">\</span>
+        -e <span class="nv">OS_PASSWORD</span><span class="o">=</span><span class="k">${</span><span class="nv">OS_PASSWORD</span><span class="k">}</span> -e <span class="nv">OS_TENANT_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">OS_TENANT_NAME</span><span class="k">}</span> <span class="se">\</span>
+        -e <span class="nv">OS_GLANCE_URL</span><span class="o">=</span><span class="s2">&quot;${SERVICE_PROTOCOL}://${GLANCE_HOSTPORT}&quot;</span> <span class="se">\</span>
+        -e <span class="nv">OS_AUTH_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">OS_AUTH_URL</span><span class="k">}</span> <span class="se">\</span>
+        <span class="nv">$DOCKER_REGISTRY_IMAGE_NAME</span> ./docker-registry/run.sh
+
+    <span class="nb">echo</span> <span class="s2">&quot;Waiting for docker registry to start...&quot;</span>
+    <span class="nv">DOCKER_REGISTRY</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_HOST</span><span class="k">}</span>:<span class="k">${</span><span class="nv">DOCKER_REGISTRY_PORT</span><span class="k">}</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! curl -s $DOCKER_REGISTRY; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;docker-registry did not start&quot;</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Tag image if not already tagged</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> ! docker images | grep <span class="nv">$DOCKER_REPOSITORY_NAME</span>; <span class="k">then</span>
+<span class="k">        </span>docker tag <span class="nv">$DOCKER_IMAGE_NAME</span> <span class="nv">$DOCKER_REPOSITORY_NAME</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure we copied the image in Glance</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">DOCKER_IMAGE</span><span class="o">=</span><span class="k">$(</span>glance image-list | egrep <span class="s2">&quot; $DOCKER_IMAGE_NAME &quot;</span><span class="k">)</span>
+    <span class="k">if</span> ! is_set DOCKER_IMAGE ; <span class="k">then</span>
+<span class="k">        </span>docker push <span class="nv">$DOCKER_REPOSITORY_NAME</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>install_ceilometer() - Collect source and prepare</p>
+<p>stop_nova_hypervisor - Stop any external services</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_ceilometer<span class="o">()</span> <span class="o">{</span>
-    git_clone <span class="nv">$CEILOMETER_REPO</span> <span class="nv">$CEILOMETER_DIR</span> <span class="nv">$CEILOMETER_BRANCH</span>
-<span class="o">}</span>
-
+<span class="k">function </span>stop_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>install_ceilometerclient() - Collect source and prepare</p>
+<p>Stop the docker registry container</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_ceilometerclient<span class="o">()</span> <span class="o">{</span>
-    git_clone <span class="nv">$CEILOMETERCLIENT_REPO</span> <span class="nv">$CEILOMETERCLIENT_DIR</span> <span class="nv">$CEILOMETERCLIENT_BRANCH</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>start_ceilometer() - Start running processes, including screen</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_ceilometer<span class="o">()</span> <span class="o">{</span>
-    screen_it ceilometer-acompute <span class="s2">&quot;sg $LIBVIRT_GROUP \&quot;ceilometer-agent-compute --config-file $CEILOMETER_CONF\&quot;&quot;</span>
-    screen_it ceilometer-acentral <span class="s2">&quot;ceilometer-agent-central --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-collector <span class="s2">&quot;ceilometer-collector --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-api <span class="s2">&quot;ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-alarm-notifier <span class="s2">&quot;ceilometer-alarm-notifier --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-alarm-singleton <span class="s2">&quot;ceilometer-alarm-singleton --config-file $CEILOMETER_CONF&quot;</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>stop_ceilometer() - Stop running processes</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_ceilometer<span class="o">()</span> <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Kill the ceilometer screen windows</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>serv in ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api ceilometer-alarm-notifier ceilometer-alarm-singleton; <span class="k">do</span>
-<span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
-<span class="nb">    </span><span class="k">done</span>
+    docker <span class="nb">kill</span> <span class="k">$(</span>docker ps | grep docker-registry | cut -d<span class="s1">&#39; &#39;</span> -f1<span class="k">)</span>
 <span class="o">}</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$XTRACE</span>
+<span class="nv">$MY_XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Local variables:

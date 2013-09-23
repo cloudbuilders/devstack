@@ -410,6 +410,8 @@ on the command line</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/swift
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ironic
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/trove
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
@@ -449,11 +451,31 @@ GetOSVersion
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Shut down Nova hypervisor plugins after Nova</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">NOVA_PLUGINS</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/lib/nova_plugins
+<span class="k">if </span>is_service_enabled nova <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Load plugin</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">source</span> <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span>
+    stop_nova_hypervisor
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Swift runs daemons</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
 <span class="k">    </span>stop_swift
     cleanup_swift
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Ironic runs daemons</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled ir-api ir-cond; <span class="k">then</span>
+<span class="k">    </span>stop_ironic
+    cleanup_ironic
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -510,6 +532,10 @@ GetOSVersion
 <span class="k">    </span>stop_neutron
     stop_neutron_third_party
     cleanup_neutron
+<span class="k">fi</span>
+
+<span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
+<span class="k">    </span>cleanup_trove
 <span class="k">fi</span>
 
 cleanup_tmp

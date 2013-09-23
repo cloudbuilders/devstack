@@ -380,8 +380,6 @@ under the License.</p>
 <span class="nb">set</span> -eux
 
 <span class="nv">BRIDGE</span><span class="o">=</span>
-<span class="nv">RAM</span><span class="o">=</span>
-<span class="nv">BALLOONING</span><span class="o">=</span>
 <span class="nv">NAME_LABEL</span><span class="o">=</span>
 <span class="nv">TEMPLATE_NAME</span><span class="o">=</span>
 
@@ -389,7 +387,7 @@ usage<span class="o">()</span>
 <span class="o">{</span>
 cat <span class="s">&lt;&lt; EOF</span>
 
-<span class="s">  Usage: $0 -t TEMPLATE_NW_INSTALL -l NAME_LABEL [-n BRIDGE] [-r RAM] [-b] </span>
+<span class="s">  Usage: $0 -t TEMPLATE_NW_INSTALL -l NAME_LABEL [-n BRIDGE]</span>
 
 <span class="s">  Install a VM from a template</span>
 
@@ -397,9 +395,6 @@ cat <span class="s">&lt;&lt; EOF</span>
 
 <span class="s">     -h           Shows this message.</span>
 <span class="s">     -t template  VM template to use</span>
-<span class="s">     -b           Enable memory ballooning. When set min_RAM=RAM/2 max_RAM=RAM.</span>
-<span class="s">     -r MiB       Specifies RAM used by the VPX, in MiB.</span>
-<span class="s">                  By default it will take the value from the XVA.</span>
 <span class="s">     -l name      Specifies the name label for the VM.</span>
 <span class="s">     -n bridge    The bridge/network to use for eth0. Defaults to xenbr0</span>
 <span class="s">EOF</span>
@@ -412,12 +407,6 @@ get_params<span class="o">()</span>
 <span class="k">    case</span> <span class="nv">$OPTION</span> in
       h<span class="o">)</span> usage
          <span class="nb">exit </span>1
-         ;;
-      b<span class="o">)</span>
-         <span class="nv">BALLOONING</span><span class="o">=</span>1
-         ;;
-      r<span class="o">)</span>
-         <span class="nv">RAM</span><span class="o">=</span><span class="nv">$OPTARG</span>
          ;;
       n<span class="o">)</span>
          <span class="nv">BRIDGE</span><span class="o">=</span><span class="nv">$OPTARG</span>
@@ -479,19 +468,6 @@ create_vif<span class="o">()</span>
 <span class="o">}</span>
 
 
-set_memory<span class="o">()</span>
-<span class="o">{</span>
-  <span class="nb">local </span><span class="nv">v</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$RAM&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>
-  <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Setting RAM to $RAM MiB.&quot;</span>
-    <span class="o">[</span> <span class="s2">&quot;$BALLOONING&quot;</span> <span class="o">==</span> 1 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">RAM_MIN</span><span class="o">=</span><span class="k">$((</span><span class="nv">$RAM</span> <span class="o">/</span> <span class="m">2</span><span class="k">))</span> <span class="o">||</span> <span class="nv">RAM_MIN</span><span class="o">=</span><span class="nv">$RAM</span>
-    xe vm-memory-limits-set static-min<span class="o">=</span>16MiB static-max<span class="o">=</span><span class="k">${</span><span class="nv">RAM</span><span class="k">}</span>MiB <span class="se">\</span>
-                            dynamic-min<span class="o">=</span><span class="k">${</span><span class="nv">RAM_MIN</span><span class="k">}</span>MiB dynamic-max<span class="o">=</span><span class="k">${</span><span class="nv">RAM</span><span class="k">}</span>MiB <span class="se">\</span>
-                            <span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$v&quot;</span>
-  <span class="k">fi</span>
-<span class="o">}</span>
-
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make the VM auto-start on server boot.</p>
@@ -523,8 +499,6 @@ set_auto_start <span class="s2">&quot;$vm_uuid&quot;</span>
 create_vif <span class="s2">&quot;$vm_uuid&quot;</span>
 xe vm-param-set other-config:os-vpx<span class="o">=</span><span class="nb">true </span><span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$vm_uuid&quot;</span>
 xe vm-param-set actions-after-reboot<span class="o">=</span>Destroy <span class="nv">uuid</span><span class="o">=</span><span class="s2">&quot;$vm_uuid&quot;</span>
-set_memory <span class="s2">&quot;$vm_uuid&quot;</span>
-xe vm-start <span class="nv">uuid</span><span class="o">=</span><span class="nv">$vm_uuid</span>
 
 
 </td><td class=code><div class=highlight><pre>

@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>install_pip.sh</title>
+    <title>trove.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>install_pip.sh</h1></th>
+        <th class=docs><h1>trove.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,114 +359,70 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>install_pip.sh</strong></p>
+<p><strong>trove.sh</strong></p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>install_pip.sh [--pip-version &lt;version&gt;] [--use-get-pip] [--force]</p>
-<p>Update pip and friends to a known common version</p>
+<p>Sanity check that trove started if enabled</p>
 </td><td class=code><div class=highlight><pre>
 
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;Begin DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Assumptions:
-- update pip to $INSTALL_PIP_VERSION</p>
+<p>This script exits on an error so that errors don't compound and you see
+only the first error that occurred.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Print the commands being run so that we can see the command that triggers
+an error.  It is also useful for following allowing as the install occurs.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o xtrace
+
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="settings">
+<h1>Settings</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Change dir to top of devstack</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+<span class="nv">EXERCISE_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$EXERCISE_DIR</span>/..; <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
-<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+</pre></div></td></tr><tr><td class=docs>
+<p>Import configuration</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Handle arguments</p>
+<p>Import exercise configuration</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/exerciserc
 
-<span class="nv">INSTALL_PIP_VERSION</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTALL_PIP_VERSION</span><span class="k">:-</span><span class="s2">&quot;1.4.1&quot;</span><span class="k">}</span>
-<span class="k">while</span> <span class="o">[[</span> -n <span class="s2">&quot;$1&quot;</span> <span class="o">]]</span>; <span class="k">do</span>
-<span class="k">    case</span> <span class="nv">$1</span> in
-        --force<span class="o">)</span>
-            <span class="nv">FORCE</span><span class="o">=</span>1
-            ;;
-        --pip-version<span class="o">)</span>
-            <span class="nv">INSTALL_PIP_VERSION</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
-            <span class="nb">shift</span>
-            ;;
-        --use-get-pip<span class="o">)</span>
-            <span class="nv">USE_GET_PIP</span><span class="o">=</span>1;
-            ;;
-    <span class="k">esac</span>
-<span class="k">    </span><span class="nb">shift</span>
-<span class="k">done</span>
-
-<span class="nv">PIP_GET_PIP_URL</span><span class="o">=</span>https://raw.github.com/pypa/pip/master/contrib/get-pip.py
-<span class="nv">PIP_TAR_URL</span><span class="o">=</span>https://pypi.python.org/packages/source/p/pip/pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz
-
-GetDistro
-<span class="nb">echo</span> <span class="s2">&quot;Distro: $DISTRO&quot;</span>
-
-<span class="k">function </span>get_versions<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">PIP</span><span class="o">=</span><span class="k">$(</span>which pip 2&gt;/dev/null <span class="o">||</span> which pip-python 2&gt;/dev/null<span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$PIP</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">PIP_VERSION</span><span class="o">=</span><span class="k">$(</span><span class="nv">$PIP</span> --version | awk <span class="s1">&#39;{ print $2}&#39;</span><span class="k">)</span>
-        <span class="nb">echo</span> <span class="s2">&quot;pip: $PIP_VERSION&quot;</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-
-<span class="k">function </span>install_get_pip<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/get-pip.py <span class="o">]]</span>; <span class="k">then</span>
-        <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
-            curl <span class="nv">$PIP_GET_PIP_URL</span>; <span class="se">\</span>
-        <span class="o">)</span>
-    <span class="k">fi</span>
-<span class="k">    </span>sudo python <span class="nv">$FILES</span>/get-pip.py
-<span class="o">}</span>
-
-<span class="k">function </span>install_pip_tarball<span class="o">()</span> <span class="o">{</span>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
-        curl -O <span class="nv">$PIP_TAR_URL</span>; <span class="se">\</span>
-        tar xvfz pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz; <span class="se">\</span>
-        <span class="nb">cd </span>pip-<span class="nv">$INSTALL_PIP_VERSION</span>; <span class="se">\</span>
-        sudo python setup.py install; <span class="se">\</span>
-    <span class="o">)</span>
-<span class="o">}</span>
+is_service_enabled trove <span class="o">||</span> <span class="nb">exit </span>55
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Show starting versions</p>
+<p>can we get a list versions</p>
 </td><td class=code><div class=highlight><pre>
-get_versions
+curl http://<span class="nv">$SERVICE_HOST</span>:8779/ 2&gt;/dev/null | grep -q <span class="s1">&#39;versions&#39;</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Trove API not functioning!&quot;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Do pip</p>
-</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> +o xtrace
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;SUCCESS: End DevStack Exercise: $0&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;*********************************************************************&quot;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Eradicate any and all system packages</p>
-</td><td class=code><div class=highlight><pre>
-uninstall_package python-pip
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$USE_GET_PIP&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>install_get_pip
-<span class="k">else</span>
-<span class="k">    </span>install_pip_tarball
-<span class="k">fi</span>
-
-get_versions
 
 
 </td><td class=code><div class=highlight><pre>
@@ -475,6 +431,7 @@ get_versions
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>

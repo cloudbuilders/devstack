@@ -370,6 +370,8 @@ ul.auto-toc {
 <span class="nb">set</span> -o nounset
 <span class="nb">set</span> -o xtrace
 
+<span class="nb">export </span><span class="nv">LC_ALL</span><span class="o">=</span>C
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Abort if localrc is not set</p>
 </td><td class=code><div class=highlight><pre>
@@ -575,7 +577,7 @@ and/or create VM from template</p>
     <span class="nv">mgmt_ip</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$XENAPI_CONNECTION_URL</span> | tr -d -c <span class="s1">&#39;1234567890.&#39;</span><span class="k">)</span>
     <span class="nv">domid</span><span class="o">=</span><span class="k">$(</span>xe vm-list name-label<span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="nv">params</span><span class="o">=</span>dom-id <span class="nv">minimal</span><span class="o">=</span><span class="nb">true</span><span class="k">)</span>
     <span class="nv">port</span><span class="o">=</span><span class="k">$(</span>xenstore-read /local/domain/<span class="nv">$domid</span>/console/vnc-port<span class="k">)</span>
-    <span class="nb">echo</span> <span class="s2">&quot;vncviewer -via $mgmt_ip localhost:${port:2}&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;vncviewer -via root@$mgmt_ip localhost:${port:2}&quot;</span>
     <span class="k">while </span><span class="nb">true</span>
 <span class="nb">    </span><span class="k">do</span>
 <span class="k">        </span><span class="nv">state</span><span class="o">=</span><span class="k">$(</span>xe_min vm-list name-label<span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span> power-state<span class="o">=</span>halted<span class="k">)</span>
@@ -628,8 +630,11 @@ network</p>
     <span class="nv">$THIS_DIR</span>/scripts/install-os-vpx.sh <span class="se">\</span>
         -t <span class="s2">&quot;$UBUNTU_INST_TEMPLATE_NAME&quot;</span> <span class="se">\</span>
         -n <span class="s2">&quot;$UBUNTU_INST_BRIDGE_OR_NET_NAME&quot;</span> <span class="se">\</span>
-        -l <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="se">\</span>
-        -r <span class="s2">&quot;$OSDOMU_MEM_MB&quot;</span>
+        -l <span class="s2">&quot;$GUEST_NAME&quot;</span>
+
+    set_vm_memory <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;$OSDOMU_MEM_MB&quot;</span>
+
+    xe vm-start <span class="nv">vm</span><span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>wait for install to finish</p>
@@ -662,6 +667,11 @@ network</p>
 <p>Install XenServer tools, and other such things</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$THIS_DIR</span>/prepare_guest_template.sh <span class="s2">&quot;$GUEST_NAME&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set virtual machine parameters</p>
+</td><td class=code><div class=highlight><pre>
+set_vm_memory <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;$OSDOMU_MEM_MB&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>start the VM to run the prepare steps</p>

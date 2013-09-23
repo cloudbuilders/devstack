@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>install_pip.sh</title>
+    <title>install_docker.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>install_pip.sh</h1></th>
+        <th class=docs><h1>install_docker.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,122 +359,114 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>install_pip.sh</strong></p>
+<p><strong>install_docker.sh</strong> - Do the initial Docker installation and configuration</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>install_pip.sh [--pip-version &lt;version&gt;] [--use-get-pip] [--force]</p>
-<p>Update pip and friends to a known common version</p>
+<p>install_docker.sh</p>
+<p>Install docker package and images
+* downloads a base busybox image and a glance registry image if necessary
+* install the images in Docker's image cache</p>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Assumptions:
-- update pip to $INSTALL_PIP_VERSION</p>
-</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Change dir to top of devstack</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+<span class="nv">SCRIPT_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$SCRIPT_DIR</span>/../..; <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Load local configuration</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
+
 <span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Handle arguments</p>
+<p>Get our defaults</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/nova_plugins/hypervisor-docker
 
-<span class="nv">INSTALL_PIP_VERSION</span><span class="o">=</span><span class="k">${</span><span class="nv">INSTALL_PIP_VERSION</span><span class="k">:-</span><span class="s2">&quot;1.4.1&quot;</span><span class="k">}</span>
-<span class="k">while</span> <span class="o">[[</span> -n <span class="s2">&quot;$1&quot;</span> <span class="o">]]</span>; <span class="k">do</span>
-<span class="k">    case</span> <span class="nv">$1</span> in
-        --force<span class="o">)</span>
-            <span class="nv">FORCE</span><span class="o">=</span>1
-            ;;
-        --pip-version<span class="o">)</span>
-            <span class="nv">INSTALL_PIP_VERSION</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
-            <span class="nb">shift</span>
-            ;;
-        --use-get-pip<span class="o">)</span>
-            <span class="nv">USE_GET_PIP</span><span class="o">=</span>1;
-            ;;
-    <span class="k">esac</span>
-<span class="k">    </span><span class="nb">shift</span>
-<span class="k">done</span>
+<span class="nv">SERVICE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TIMEOUT</span><span class="k">:-</span><span class="nv">60</span><span class="k">}</span>
 
-<span class="nv">PIP_GET_PIP_URL</span><span class="o">=</span>https://raw.github.com/pypa/pip/master/contrib/get-pip.py
-<span class="nv">PIP_TAR_URL</span><span class="o">=</span>https://pypi.python.org/packages/source/p/pip/pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz
-
-GetDistro
-<span class="nb">echo</span> <span class="s2">&quot;Distro: $DISTRO&quot;</span>
-
-<span class="k">function </span>get_versions<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">PIP</span><span class="o">=</span><span class="k">$(</span>which pip 2&gt;/dev/null <span class="o">||</span> which pip-python 2&gt;/dev/null<span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$PIP</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">PIP_VERSION</span><span class="o">=</span><span class="k">$(</span><span class="nv">$PIP</span> --version | awk <span class="s1">&#39;{ print $2}&#39;</span><span class="k">)</span>
-        <span class="nb">echo</span> <span class="s2">&quot;pip: $PIP_VERSION&quot;</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-
-<span class="k">function </span>install_get_pip<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/get-pip.py <span class="o">]]</span>; <span class="k">then</span>
-        <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
-            curl <span class="nv">$PIP_GET_PIP_URL</span>; <span class="se">\</span>
-        <span class="o">)</span>
-    <span class="k">fi</span>
-<span class="k">    </span>sudo python <span class="nv">$FILES</span>/get-pip.py
-<span class="o">}</span>
-
-<span class="k">function </span>install_pip_tarball<span class="o">()</span> <span class="o">{</span>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
-        curl -O <span class="nv">$PIP_TAR_URL</span>; <span class="se">\</span>
-        tar xvfz pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz; <span class="se">\</span>
-        <span class="nb">cd </span>pip-<span class="nv">$INSTALL_PIP_VERSION</span>; <span class="se">\</span>
-        sudo python setup.py install; <span class="se">\</span>
-    <span class="o">)</span>
-<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Show starting versions</p>
-</td><td class=code><div class=highlight><pre>
-get_versions
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Do pip</p>
+<div class="section" id="install-docker-service">
+<h1>Install Docker Service</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Eradicate any and all system packages</p>
+<p>Stop the auto-repo updates and do it when required here</p>
 </td><td class=code><div class=highlight><pre>
-uninstall_package python-pip
+<span class="nv">NO_UPDATE_REPOS</span><span class="o">=</span>True
 
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$USE_GET_PIP&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>install_get_pip
-<span class="k">else</span>
-<span class="k">    </span>install_pip_tarball
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up home repo</p>
+</td><td class=code><div class=highlight><pre>
+curl https://get.docker.io/gpg | sudo apt-key add -
+install_package python-software-properties <span class="o">&amp;&amp;</span> <span class="se">\</span>
+    sudo sh -c <span class="s2">&quot;echo deb $DOCKER_APT_REPO docker main &gt; /etc/apt/sources.list.d/docker.list&quot;</span>
+apt_get update
+install_package --force-yes lxc-docker<span class="o">=</span><span class="k">${</span><span class="nv">DOCKER_PACKAGE_VERSION</span><span class="k">}</span> socat
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Start the daemon - restart just in case the package ever auto-starts...</p>
+</td><td class=code><div class=highlight><pre>
+restart_service docker
+
+<span class="nb">echo</span> <span class="s2">&quot;Waiting for docker daemon to start...&quot;</span>
+<span class="nv">DOCKER_GROUP</span><span class="o">=</span><span class="k">$(</span>groups | cut -d<span class="s1">&#39; &#39;</span> -f1<span class="k">)</span>
+<span class="nv">CONFIGURE_CMD</span><span class="o">=</span><span class="s2">&quot;while ! /bin/echo -e &#39;GET /v1.3/version HTTP/1.0\n\n&#39; | socat - unix-connect:$DOCKER_UNIX_SOCKET | grep -q &#39;200 OK&#39;; do</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">    sudo chgrp $DOCKER_GROUP $DOCKER_UNIX_SOCKET</span>
+<span class="s2">    sudo chmod g+rw $DOCKER_UNIX_SOCKET</span>
+<span class="s2">    sleep 1</span>
+<span class="s2">done&quot;</span>
+<span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;$CONFIGURE_CMD&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;docker did not start&quot;</span>
 <span class="k">fi</span>
 
-get_versions
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set the right group on docker unix socket before retrying</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/docker-ut.tar.gz <span class="o">]]</span>; <span class="k">then</span>
+    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; curl -OR <span class="nv">$DOCKER_IMAGE</span><span class="o">)</span>
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/docker-ut.tar.gz <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Docker image unavailable&quot;</span>
+<span class="k">fi</span>
+docker import - <span class="nv">$DOCKER_IMAGE_NAME</span> &lt;<span class="nv">$FILES</span>/docker-ut.tar.gz
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Get Docker image</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/docker-registry.tar.gz <span class="o">]]</span>; <span class="k">then</span>
+    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; curl -OR <span class="nv">$DOCKER_REGISTRY_IMAGE</span><span class="o">)</span>
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/docker-registry.tar.gz <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Docker registry image unavailable&quot;</span>
+<span class="k">fi</span>
+docker import - <span class="nv">$DOCKER_REGISTRY_IMAGE_NAME</span> &lt;<span class="nv">$FILES</span>/docker-registry.tar.gz
 
 
 </td><td class=code><div class=highlight><pre>
 </pre></div></td></tr><tr><td class=docs>
-</pre></div></td></tr><tr><td class=docs>
+<p>Get Docker registry image</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</pre></div></td></tr><tr><td class=docs>
+</pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>
