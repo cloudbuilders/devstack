@@ -46,7 +46,8 @@
       <section id="faq" class="span12">
 
         <div class='row pull-left'>
-          <h2>FAQ <small>Why did you do it this way?!</small></h2>
+          <h2>FAQ: Using DevStack <small>Making to behave</small></h2>
+
           <dl class='pull-left'>
             <dt>Q: Can I use DevStack for production?</dt>
             <dd>A: No.  We mean it.  Really.  DevStack makes some implementation choices that are not appropriate for production deployments.  We warned you!</dd>
@@ -82,13 +83,13 @@
             <dd>A: RHEL 6 has Python 2.6 and many old modules packaged and is a challenge to support.  There are a number of specific RHEL6 work-arounds in <code>stack.sh</code> to handle this.  But the testing on py26 is valuable so we do it...</dd>
 
             <dt>Q: Can DevStack handle a multi-node installation?</dt>
-            <dd>A: Indirectly, yes.  You run DevStack on each node with the appropriate configuration in <code>localrc</code>.  The primary considerations are turning off the services not required on the secondary nodes, making sure the passwords match and setting the various API URLs to the right place.</dd>
+            <dd>A: Indirectly, yes.  You run DevStack on each node with the appropriate configuration in <code>local.conf</code>.  The primary considerations are turning off the services not required on the secondary nodes, making sure the passwords match and setting the various API URLs to the right place.</dd>
     
             <dt>Q: How can I document the environment that DevStack is using?</dt>
             <dd>A: DevStack includes a script (<code>tools/info.sh</code>) that gathers the versions of the relevant installed apt packages, pip packages and git repos.  This is a good way to verify what Python modules are installed.</dd>
 
             <dt>Q: How do I turn off a service that is enabled by default?</dt>
-            <dd>A: Services can be turned off by adding <code>disable_service xxx</code> to <code>localrc</code> (using <code>n-vol</code> in this example):
+            <dd>A: Services can be turned off by adding <code>disable_service xxx</code> to <code>local.conf</code> (using <code>n-vol</code> in this example):
               <pre>disable_service n-vol</pre>
             </dd>
 
@@ -98,14 +99,15 @@
             </dd>
 
             <dt>Q: How do I run a specific OpenStack milestone?</dt>
-            <dd>A: OpenStack milestones have tags set in the git repo.  Set the appropriate tag in the <code>*_BRANCH</code> variables in <code>localrc</code>.  Swift is on its own release schedule so pick a tag in the Swift repo that is just before the milestone release.  For example:
-              <pre>GLANCE_BRANCH=stable/essex
-HORIZON_BRANCH=stable/essex
-KEYSTONE_BRANCH=stable/essex
-NOVA_BRANCH=stable/essex
-GLANCE_BRANCH=stable/essex
-NEUTRON_BRANCH=stable/essex
-SWIFT_BRANCH=1.4.8</pre>
+            <dd>A: OpenStack milestones have tags set in the git repo.  Set the appropriate tag in the <code>*_BRANCH</code> variables in <code>local.conf</code>.  Swift is on its own release schedule so pick a tag in the Swift repo that is just before the milestone release.  For example:
+              <pre>[[local|localrc]]
+GLANCE_BRANCH=stable/grizzly
+HORIZON_BRANCH=stable/grizzly
+KEYSTONE_BRANCH=stable/grizzly
+NOVA_BRANCH=stable/grizzly
+GLANCE_BRANCH=stable/grizzly
+NEUTRON_BRANCH=stable/grizzly
+SWIFT_BRANCH=1.10.0</pre>
             </dd>
 <!---  this is incomplete, remove it until populating the sql catalog is complete
             <dt>Q: How do I use the SQL catalog backend in Keystone?</dt>
@@ -123,14 +125,27 @@ driver = keystone.catalog.backends.sql.Catalog</pre>
             <dd>A: This is often caused by <code>erlang</code> not being happy with the hostname resolving to a reachable IP address.  Make sure your hostname resolves to a working IP address; setting it to 127.0.0.1 in <code>/etc/hosts</code> is often good enough for a single-node installation.  And in an extreme case, use <code>clean.sh</code> to eradicate it and try again.</dd>
 
             <dt>Q: How can I set up Heat in stand-alone configuration?</dt>
-            <dd>A: Configure <code>localrc</code> thusly:
-              <pre>HEAT_STANDALONE=True
+            <dd>A: Configure <code>local.conf</code> thusly:
+              <pre>[[local|localrc]]
+HEAT_STANDALONE=True
 ENABLED_SERVICES=rabbit,mysql,heat,h-api,h-api-cfn,h-api-cw,h-eng
 KEYSTONE_SERVICE_HOST=&lt;keystone-host&gt;
 KEYSTONE_AUTH_HOST=&lt;keystone-host&gt;</pre>
             </dd>
           </dl>
         </div>        
+
+      </section>
+
+      <section id="faq" class="span12">
+
+        <div class='row pull-left'>
+          <h2>FAQ: DevStack Internals <small>Why did you do it this way?!</small></h2>
+          <dl class='pull-left'>
+            <dt>Q: <code>tools/fixup_stuff.sh</code> is broken and shouldn't 'fix' just one version of packages.</dt>
+            <dd>A: [Another not-a-question]  No it isn't.  Stuff in there is to correct problems in an environment that need to be fixed elsewhere or may/will be fixed in a future release.  In the case of <code>httplib2</code> and <code>prettytable</code> specific problems with specific versions are being worked around.  If later releases have those problems than we'll add them to the script.  Knowing about the broken future releases is valuable rather than polling to see if it has been fixed.</dd>
+          </dl>
+        </div>
 
       </section>
 
