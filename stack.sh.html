@@ -404,6 +404,11 @@ files in this repo.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Import config functions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/config
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
 <tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt>
 and <tt class="docutils literal">DISTRO</tt></p>
@@ -415,6 +420,29 @@ GetDistro
 <div class="section" id="global-settings">
 <h1>Global Settings</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Check for a <tt class="docutils literal">localrc</tt> section embedded in <tt class="docutils literal">local.conf</tt> and extract if
+<tt class="docutils literal">localrc</tt> does not already exist</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Phase: local</p>
+</td><td class=code><div class=highlight><pre>
+rm -f <span class="nv">$TOP_DIR</span>/.localrc.auto
+<span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$TOP_DIR</span>/local.conf <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">LRC</span><span class="o">=</span><span class="k">$(</span>get_meta_section_files <span class="nv">$TOP_DIR</span>/local.conf <span class="nb">local</span><span class="k">)</span>
+    <span class="k">for </span>lfile in <span class="nv">$LRC</span>; <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$lfile&quot;</span> <span class="o">==</span> <span class="s2">&quot;localrc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            if</span> <span class="o">[[</span> -r <span class="nv">$TOP_DIR</span>/localrc <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>warn <span class="nv">$LINENO</span> <span class="s2">&quot;localrc and local.conf:[[local]] both exist, using localrc&quot;</span>
+            <span class="k">else</span>
+<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;# Generated file, do not exit&quot;</span> &gt;<span class="nv">$TOP_DIR</span>/.localrc.auto
+                get_meta_section <span class="nv">$TOP_DIR</span>/local.conf <span class="nb">local</span> <span class="nv">$lfile</span> &gt;&gt;<span class="nv">$TOP_DIR</span>/.localrc.auto
+            <span class="k">fi</span>
+<span class="k">        fi</span>
+<span class="k">    done</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> is customizable by setting environment variables.  Override a
@@ -566,8 +594,8 @@ add gplhost repository.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Installing Open vSwitch on RHEL6 requires enabling the RDO repo.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">RHEL6_RDO_REPO_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_RDO_REPO_RPM</span><span class="k">:-</span><span class="s2">&quot;http://rdo.fedorapeople.org/openstack/openstack-grizzly/rdo-release-grizzly-3.noarch.rpm&quot;</span><span class="k">}</span>
-    <span class="nv">RHEL6_RDO_REPO_ID</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_RDO_REPO_ID</span><span class="k">:-</span><span class="s2">&quot;openstack-grizzly&quot;</span><span class="k">}</span>
+    <span class="nv">RHEL6_RDO_REPO_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_RDO_REPO_RPM</span><span class="k">:-</span><span class="s2">&quot;http://rdo.fedorapeople.org/openstack-havana/rdo-release-havana.rpm&quot;</span><span class="k">}</span>
+    <span class="nv">RHEL6_RDO_REPO_ID</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_RDO_REPO_ID</span><span class="k">:-</span><span class="s2">&quot;openstack-havana&quot;</span><span class="k">}</span>
     <span class="k">if</span> ! yum repolist enabled <span class="nv">$RHEL6_RDO_REPO_ID</span> | grep -q <span class="nv">$RHEL6_RDO_REPO_ID</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;RDO repo not detected; installing&quot;</span>
         yum_install <span class="nv">$RHEL6_RDO_REPO_RPM</span> <span class="o">||</span> <span class="se">\</span>
@@ -593,81 +621,45 @@ add gplhost repository.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>OpenStack is designed to be run as a non-root user; Horizon will fail to run
-as <strong>root</strong> since Apache will not serve content from <strong>root</strong> user).  If
-<tt class="docutils literal">stack.sh</tt> is run as <strong>root</strong>, it automatically creates a <strong>stack</strong> user with
-sudo privileges and runs as that user.</p>
+as <strong>root</strong> since Apache will not serve content from <strong>root</strong> user).
+<tt class="docutils literal">stack.sh</tt> must not be run as <strong>root</strong>.  It aborts and suggests one course of
+action to create a suitable user account.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$EUID</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">ROOTSLEEP</span><span class="o">=</span><span class="k">${</span><span class="nv">ROOTSLEEP</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You are running this script as root.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;In $ROOTSLEEP seconds, we will create a user &#39;$STACK_USER&#39; and run as that user&quot;</span>
-    sleep <span class="nv">$ROOTSLEEP</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are running this script as root.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Cut it out.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Really.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;If you need an account to run DevStack, do this (as root, heh) to create $STACK_USER:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$TOP_DIR/tools/create-stack-user.sh&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Give the non-root user the ability to run as <strong>root</strong> via <tt class="docutils literal">sudo</tt></p>
-</td><td class=code><div class=highlight><pre>
-    is_package_installed sudo <span class="o">||</span> install_package sudo
-    <span class="k">if</span> ! getent group <span class="nv">$STACK_USER</span> &gt;/dev/null; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Creating a group called $STACK_USER&quot;</span>
-        groupadd <span class="nv">$STACK_USER</span>
-    <span class="k">fi</span>
-<span class="k">    if</span> ! getent passwd <span class="nv">$STACK_USER</span> &gt;/dev/null; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Creating a user called $STACK_USER&quot;</span>
-        useradd -g <span class="nv">$STACK_USER</span> -s /bin/bash -d <span class="nv">$DEST</span> -m <span class="nv">$STACK_USER</span>
-    <span class="k">fi</span>
-
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Giving stack user passwordless sudo privileges&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>UEC images <tt class="docutils literal">/etc/sudoers</tt> does not have a <tt class="docutils literal">#includedir</tt>, add one</p>
-</td><td class=code><div class=highlight><pre>
-    grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
-        <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> &gt;&gt; /etc/sudoers
-    <span class="o">(</span> <span class="nb">umask </span>226 <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(ALL) NOPASSWD:ALL&quot;</span> <span class="se">\</span>
-        &gt; /etc/sudoers.d/50_stack_sh <span class="o">)</span>
-
-    <span class="nb">echo</span> <span class="s2">&quot;Copying files to $STACK_USER user&quot;</span>
-    <span class="nv">STACK_DIR</span><span class="o">=</span><span class="s2">&quot;$DEST/${TOP_DIR##*/}&quot;</span>
-    cp -r -f -T <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
-    safe_chown -R <span class="nv">$STACK_USER</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
-    <span class="nb">cd</span> <span class="s2">&quot;$STACK_DIR&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SHELL_AFTER_RUN&quot;</span> !<span class="o">=</span> <span class="s2">&quot;no&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">exec </span>sudo -u <span class="nv">$STACK_USER</span>  bash -l -c <span class="s2">&quot;set -e; bash stack.sh; bash&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nb">exec </span>sudo -u <span class="nv">$STACK_USER</span> bash -l -c <span class="s2">&quot;set -e; source stack.sh&quot;</span>
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nb">exit </span>1
-<span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>We're not <strong>root</strong>, make sure <tt class="docutils literal">sudo</tt> is available</p>
 </td><td class=code><div class=highlight><pre>
-    is_package_installed sudo <span class="o">||</span> die <span class="s2">&quot;Sudo is required.  Re-run stack.sh as root ONE TIME ONLY to set up sudo.&quot;</span>
+is_package_installed sudo <span class="o">||</span> install_package sudo
 
 </pre></div></td></tr><tr><td class=docs>
 <p>UEC images <tt class="docutils literal">/etc/sudoers</tt> does not have a <tt class="docutils literal">#includedir</tt>, add one</p>
 </td><td class=code><div class=highlight><pre>
-    sudo grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
-        <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> | sudo tee -a /etc/sudoers
+sudo grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
+    <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> | sudo tee -a /etc/sudoers
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up devstack sudoers</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD:ALL&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+<span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
+<span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD:ALL&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Some binaries might be under /sbin or /usr/sbin, so make sure sudo will
 see them by forcing PATH</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">echo</span> <span class="s2">&quot;Defaults:$STACK_USER secure_path=/sbin:/usr/sbin:/usr/bin:/bin:/usr/local/sbin:/usr/local/bin&quot;</span> &gt;&gt; <span class="nv">$TEMPFILE</span>
-    chmod 0440 <span class="nv">$TEMPFILE</span>
-    sudo chown root:root <span class="nv">$TEMPFILE</span>
-    sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/50_stack_sh
+<span class="nb">echo</span> <span class="s2">&quot;Defaults:$STACK_USER secure_path=/sbin:/usr/sbin:/usr/bin:/bin:/usr/local/sbin:/usr/local/bin&quot;</span> &gt;&gt; <span class="nv">$TEMPFILE</span>
+chmod 0440 <span class="nv">$TEMPFILE</span>
+sudo chown root:root <span class="nv">$TEMPFILE</span>
+sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/50_stack_sh
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Remove old file</p>
-</td><td class=code><div class=highlight><pre>
-    sudo rm -f /etc/sudoers.d/stack_sh_nova
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create the destination directory and ensure it is writable by the user
@@ -793,14 +785,17 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/trove
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Look for Nova hypervisor plugin</p>
+<div class="section" id="extras-source">
+<h2>Extras Source</h2>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">NOVA_PLUGINS</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/lib/nova_plugins
-<span class="k">if </span>is_service_enabled nova <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Load plugin</p>
+<p>Phase: source</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span>
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
+        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> <span class="nb">source</span>
+<span class="nb">    </span><span class="k">done</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -809,6 +804,7 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 <span class="nv">OPENSTACKCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-openstackclient
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="interactive-configuration">
 <h2>Interactive Configuration</h2>
 </td><td class=code><div class=highlight><pre>
@@ -1055,7 +1051,7 @@ we added on earlier runs.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set fd 6 to summary logfile and stdout</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${SUMFILE}&quot;</span> /dev/fd/3 <span class="o">)</span>
+        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${SUMFILE}&quot;</span> &gt;&amp;3 <span class="o">)</span>
     <span class="k">fi</span>
 
 <span class="k">    </span>echo_summary <span class="s2">&quot;stack.sh log $LOGFILE&quot;</span>
@@ -1338,6 +1334,21 @@ don't be naive and add to existing line!</p>
     configure_ironic
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="extras-install">
+<h2>Extras Install</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Phase: install</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
+        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> stack install
+    <span class="k">done</span>
+<span class="k">fi</span>
+
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span>; <span class="k">then</span>
     <span class="nv">$DEST</span>/.venv/bin/pip freeze &gt; <span class="nv">$DEST</span>/requires-post-pip
     <span class="k">if</span> ! diff -Nru <span class="nv">$DEST</span>/requires-pre-pip <span class="nv">$DEST</span>/requires-post-pip &gt; <span class="nv">$DEST</span>/requires.diff; <span class="k">then</span>
@@ -1471,6 +1482,12 @@ init_service_check
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
+</div>
+<div class="section" id="start-services">
+<h1>Start Services</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 <div class="section" id="keystone">
 <h2>Keystone</h2>
 </td><td class=code><div class=highlight><pre>
@@ -1560,6 +1577,7 @@ init_service_check
     init_glance
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="ironic">
@@ -1570,7 +1588,6 @@ init_service_check
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Ironic&quot;</span>
     init_ironic
 <span class="k">fi</span>
-
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1607,11 +1624,6 @@ a part of the OpenStack project. Configure and start them.</p>
 <div class="section" id="nova">
 <h2>Nova</h2>
 </td><td class=code><div class=highlight><pre>
-
-<span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
-<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Nova&quot;</span>
-    configure_nova
-<span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled n-net q-dhcp; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1668,10 +1680,6 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 
 <span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Nova&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Rebuild the config file from scratch</p>
-</td><td class=code><div class=highlight><pre>
-    create_nova_conf
     init_nova
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1682,173 +1690,6 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
     <span class="k">elif </span>is_service_enabled n-net; <span class="k">then</span>
 <span class="k">        </span>create_nova_conf_nova_network
     <span class="k">fi</span>
-
-
-<span class="k">    if</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure hypervisor plugin</p>
-</td><td class=code><div class=highlight><pre>
-        configure_nova_hypervisor
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="xenserver">
-<h2>XenServer</h2>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Using XenServer virtualization driver&quot;</span>
-        <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$XENAPI_CONNECTION_URL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;XENAPI_CONNECTION_URL is not specified&quot;</span>
-        <span class="k">fi</span>
-<span class="k">        </span>read_password XENAPI_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR XEN.&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;xenapi.XenAPIDriver&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_connection_url <span class="s2">&quot;$XENAPI_CONNECTION_URL&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_connection_username <span class="s2">&quot;$XENAPI_USER&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_connection_password <span class="s2">&quot;$XENAPI_PASSWORD&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT flat_injected <span class="s2">&quot;False&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Need to avoid crash due to new firewall support</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="s2">&quot;$XEN_FIREWALL_DRIVER&quot;</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="openvz">
-<h2>OpenVZ</h2>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;openvz&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Using OpenVZ virtualization driver&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;openvz.OpenVzDriver&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT connection_type <span class="s2">&quot;openvz&quot;</span>
-        <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="s2">&quot;$LIBVIRT_FIREWALL_DRIVER&quot;</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="bare-metal">
-<h2>Bare Metal</h2>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;baremetal&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Using BareMetal driver&quot;</span>
-        <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.NoopFirewallDriver&quot;</span><span class="k">}</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver nova.virt.baremetal.driver.BareMetalDriver
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="nv">$LIBVIRT_FIREWALL_DRIVER</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_host_manager nova.scheduler.baremetal_host_manager.BaremetalHostManager
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT ram_allocation_ratio 1.0
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT reserved_host_memory_mb 0
-        iniset <span class="nv">$NOVA_CONF</span> baremetal instance_type_extra_specs cpu_arch:<span class="nv">$BM_CPU_ARCH</span>
-        iniset <span class="nv">$NOVA_CONF</span> baremetal driver <span class="nv">$BM_DRIVER</span>
-        iniset <span class="nv">$NOVA_CONF</span> baremetal power_manager <span class="nv">$BM_POWER_MANAGER</span>
-        iniset <span class="nv">$NOVA_CONF</span> baremetal tftp_root /tftpboot
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$BM_DNSMASQ_FROM_NOVA_NETWORK&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">BM_DNSMASQ_CONF</span><span class="o">=</span><span class="nv">$NOVA_CONF_DIR</span>/dnsmasq-for-baremetal-from-nova-network.conf
-            sudo cp <span class="s2">&quot;$FILES/dnsmasq-for-baremetal-from-nova-network.conf&quot;</span> <span class="s2">&quot;$BM_DNSMASQ_CONF&quot;</span>
-            iniset <span class="nv">$NOVA_CONF</span> DEFAULT dnsmasq_config_file <span class="s2">&quot;$BM_DNSMASQ_CONF&quot;</span>
-        <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Define extra baremetal nova conf flags by defining the array <tt class="docutils literal">EXTRA_BAREMETAL_OPTS</tt>.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">for </span>I in <span class="s2">&quot;${EXTRA_BAREMETAL_OPTS[@]}&quot;</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Attempt to convert flags to options</p>
-</td><td class=code><div class=highlight><pre>
-           iniset <span class="nv">$NOVA_CONF</span> baremetal <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
-        <span class="k">done</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="powervm">
-<h2>PowerVM</h2>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;powervm&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Using PowerVM driver&quot;</span>
-        <span class="nv">POWERVM_MGR_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">POWERVM_MGR_TYPE</span><span class="k">:-</span><span class="s2">&quot;ivm&quot;</span><span class="k">}</span>
-        <span class="nv">POWERVM_MGR_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">POWERVM_MGR_HOST</span><span class="k">:-</span><span class="s2">&quot;powervm.host&quot;</span><span class="k">}</span>
-        <span class="nv">POWERVM_MGR_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">POWERVM_MGR_USER</span><span class="k">:-</span><span class="s2">&quot;padmin&quot;</span><span class="k">}</span>
-        <span class="nv">POWERVM_MGR_PASSWD</span><span class="o">=</span><span class="k">${</span><span class="nv">POWERVM_MGR_PASSWD</span><span class="k">:-</span><span class="s2">&quot;password&quot;</span><span class="k">}</span>
-        <span class="nv">POWERVM_IMG_REMOTE_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">POWERVM_IMG_REMOTE_PATH</span><span class="k">:-</span><span class="s2">&quot;/tmp&quot;</span><span class="k">}</span>
-        <span class="nv">POWERVM_IMG_LOCAL_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">POWERVM_IMG_LOCAL_PATH</span><span class="k">:-</span><span class="s2">&quot;/tmp&quot;</span><span class="k">}</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver nova.virt.powervm.PowerVMDriver
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT powervm_mgr_type <span class="nv">$POWERVM_MGR_TYPE</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT powervm_mgr <span class="nv">$POWERVM_MGR_HOST</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT powervm_mgr_user <span class="nv">$POWERVM_MGR_USER</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT powervm_mgr_passwd <span class="nv">$POWERVM_MGR_PASSWD</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT powervm_img_remote_path <span class="nv">$POWERVM_IMG_REMOTE_PATH</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT powervm_img_local_path <span class="nv">$POWERVM_IMG_LOCAL_PATH</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="vsphere-api">
-<h2>vSphere API</h2>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;vsphere&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Using VMware vCenter driver&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;vmwareapi.VMwareVCDriver&quot;</span>
-        <span class="nv">VMWAREAPI_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">VMWAREAPI_USER</span><span class="k">:-</span><span class="s2">&quot;root&quot;</span><span class="k">}</span>
-        iniset <span class="nv">$NOVA_CONF</span> vmware host_ip <span class="s2">&quot;$VMWAREAPI_IP&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> vmware host_username <span class="s2">&quot;$VMWAREAPI_USER&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> vmware host_password <span class="s2">&quot;$VMWAREAPI_PASSWORD&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> vmware cluster_name <span class="s2">&quot;$VMWAREAPI_CLUSTER&quot;</span>
-        <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
-<span class="k">            </span>iniset <span class="nv">$NOVA_CONF</span> vmware integration_bridge <span class="nv">$OVS_BRIDGE</span>
-        <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="fake">
-<h2>fake</h2>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;fake&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Using fake Virt driver&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;nova.virt.fake.FakeDriver&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Disable arbitrary limits</p>
-</td><td class=code><div class=highlight><pre>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_instances -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_cores -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_ram -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_floating_ips -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_fixed_ips -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_metadata_items -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_injected_files -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_injected_file_path_bytes -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_security_groups -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_security_group_rules -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_key_pairs -1
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_default_filters <span class="s2">&quot;RetryFilter,AvailabilityZoneFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter&quot;</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="default-libvirt">
-<h2>Default libvirt</h2>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="k">else</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Using libvirt virtualization driver&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;libvirt.LibvirtDriver&quot;</span>
-        <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="s2">&quot;$LIBVIRT_FIREWALL_DRIVER&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Power architecture currently does not support graphical consoles.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if </span>is_arch <span class="s2">&quot;ppc64&quot;</span>; <span class="k">then</span>
-<span class="k">            </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="s2">&quot;false&quot;</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
 
 <span class="k">    </span>init_nova_cells
 <span class="k">fi</span>
@@ -1868,6 +1709,35 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
+</div>
+<div class="section" id="extras-configuration">
+<h1>Extras Configuration</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Phase: post-config</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
+        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> stack post-config
+    <span class="k">done</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="local-configuration">
+<h1>Local Configuration</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Apply configuration from local.conf if it exists for layer 2 services
+Phase: post-config</p>
+</td><td class=code><div class=highlight><pre>
+merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
+
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="launch-services">
 <h1>Launch Services</h1>
@@ -2126,13 +1996,29 @@ are loaded into glance, though just knowing the IDs is sufficient here</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
+<div class="section" id="id1">
+<h1>Local Configuration</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Apply configuration from local.conf if it exists for layer 2 services
+Phase: extra</p>
+</td><td class=code><div class=highlight><pre>
+merge_config_group <span class="nv">$TOP_DIR</span>/local.conf extra
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="run-extras">
 <h1>Run extras</h1>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Phase: extra</p>
+</td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
-        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> stack
+        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> stack extra
     <span class="k">done</span>
 <span class="k">fi</span>
 
@@ -2223,6 +2109,77 @@ to access the site using your browser.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$DEPRECATED_TEXT&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;WARNING: $DEPRECATED_TEXT&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Specific warning for deprecated configs</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: EXTRA_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using EXTRA_OPTS to pass configuration into nova.conf.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a nova.conf section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;</span>
+<span class="s2">[[post-config|\$NOVA_CONF]]</span>
+<span class="s2">[DEFAULT]</span>
+<span class="s2">&quot;</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+    <span class="k">done</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_BAREMETAL_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: EXTRA_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using EXTRA_OPTS to pass configuration into nova.conf.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a nova.conf section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;</span>
+<span class="s2">[[post-config|\$NOVA_CONF]]</span>
+<span class="s2">[baremetal]</span>
+<span class="s2">&quot;</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${EXTRA_BAREMETAL_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+    <span class="k">done</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_DHCP_EXTRA_DEFAULT_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: Q_DHCP_EXTRA_DEFAULT_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_DHCP_EXTRA_DEFAULT_OPTS to pass configuration into $Q_DHCP_CONF_FILE.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $Q_DHCP_CONF_FILE section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;</span>
+<span class="s2">[[post-config|\$Q_DHCP_CONF_FILE]]</span>
+<span class="s2">[DEFAULT]</span>
+<span class="s2">&quot;</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_DHCP_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+    <span class="k">done</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_SRV_EXTRA_DEFAULT_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: Q_SRV_EXTRA_DEFAULT_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_SRV_EXTRA_DEFAULT_OPTS to pass configuration into $NEUTRON_CONF.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $NEUTRON_CONF section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;</span>
+<span class="s2">[[post-config|\$NEUTRON_CONF]]</span>
+<span class="s2">[DEFAULT]</span>
+<span class="s2">&quot;</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_SRV_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+    <span class="k">done</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>

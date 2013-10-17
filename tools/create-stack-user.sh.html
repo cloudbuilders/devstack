@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>install_prereqs.sh</title>
+    <title>create-stack-user.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>install_prereqs.sh</h1></th>
+        <th class=docs><h1>create-stack-user.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,112 +359,84 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>install_prereqs.sh</strong></p>
+<p><strong>create-stack-user.sh</strong></p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install system package prerequisites</p>
-<p>install_prereqs.sh [-f]</p>
-<table class="docutils option-list" frame="void" rules="none">
-<col class="option" />
-<col class="description" />
-<tbody valign="top">
-<tr><td class="option-group">
-<kbd><span class="option">-f</span></kbd></td>
-<td>Force an install run now</td></tr>
-</tbody>
-</table>
+<p>Create a user account suitable for running DevStack
+- create a group named $STACK_USER if it does not exist
+- create a user named $STACK_USER if it does not exist</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 8)</p>
+Unexpected indentation.</div>
+<blockquote>
+<ul class="simple">
+<li>home is $DEST</li>
+</ul>
+</blockquote>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 9)</p>
+Block quote ends without a blank line; unexpected unindent.</div>
+<ul class="simple">
+<li>configure sudo for $STACK_USER</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$1&quot;</span> <span class="o">&amp;&amp;</span>  <span class="s2">&quot;$1&quot;</span> <span class="o">=</span> <span class="s2">&quot;-f&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">FORCE_PREREQ</span><span class="o">=</span>1
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If TOP_DIR is set we're being sourced rather than running stand-alone
-or in a sub-shell</p>
+<p><tt class="docutils literal">stack.sh</tt> was never intended to run as root.  It had a hack to do what is
+now in this script and re-launch itself, but that hack was less than perfect
+and it was time for this nonsense to stop.  Run this script as root to create
+the user and configure sudo.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the devstack directory</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
 <tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt>
 and <tt class="docutils literal">DISTRO</tt></p>
 </td><td class=code><div class=highlight><pre>
-    GetDistro
+GetDistro
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Needed to get <tt class="docutils literal">ENABLED_SERVICES</tt></p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Prereq dirs are here</p>
+<p>Give the non-root user the ability to run as <strong>root</strong> via <tt class="docutils literal">sudo</tt></p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+is_package_installed sudo <span class="o">||</span> install_package sudo
+
+<span class="k">if</span> ! getent group <span class="nv">$STACK_USER</span> &gt;/dev/null; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Creating a group called $STACK_USER&quot;</span>
+    groupadd <span class="nv">$STACK_USER</span>
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Minimum wait time</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">PREREQ_RERUN_MARKER</span><span class="o">=</span><span class="k">${</span><span class="nv">PREREQ_RERUN_MARKER</span><span class="k">:-</span><span class="nv">$TOP_DIR</span><span class="p">/.prereqs</span><span class="k">}</span>
-<span class="nv">PREREQ_RERUN_HOURS</span><span class="o">=</span><span class="k">${</span><span class="nv">PREREQ_RERUN_HOURS</span><span class="k">:-</span><span class="nv">2</span><span class="k">}</span>
-<span class="nv">PREREQ_RERUN_SECONDS</span><span class="o">=</span><span class="k">$((</span><span class="m">60</span><span class="o">*</span><span class="m">60</span><span class="o">*</span><span class="nv">$PREREQ_RERUN_HOURS</span><span class="k">))</span>
-
-<span class="nv">NOW</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+%s&quot;</span><span class="k">)</span>
-<span class="nv">LAST_RUN</span><span class="o">=</span><span class="k">$(</span>head -1 <span class="nv">$PREREQ_RERUN_MARKER</span> 2&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> <span class="s2">&quot;0&quot;</span><span class="k">)</span>
-<span class="nv">DELTA</span><span class="o">=</span><span class="k">$((</span><span class="nv">$NOW</span> <span class="o">-</span> <span class="nv">$LAST_RUN</span><span class="k">))</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$DELTA</span> -lt <span class="nv">$PREREQ_RERUN_SECONDS</span> <span class="o">&amp;&amp;</span> -z <span class="s2">&quot;$FORCE_PREREQ&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Re-run time has not expired ($(($PREREQ_RERUN_SECONDS - $DELTA)) seconds remaining) &quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;and FORCE_PREREQ not set; exiting...&quot;</span>
-    <span class="k">return </span>0
+<span class="k">if</span> ! getent passwd <span class="nv">$STACK_USER</span> &gt;/dev/null; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Creating a user called $STACK_USER&quot;</span>
+    useradd -g <span class="nv">$STACK_USER</span> -s /bin/bash -d <span class="nv">$DEST</span> -m <span class="nv">$STACK_USER</span>
 <span class="k">fi</span>
 
+<span class="nb">echo</span> <span class="s2">&quot;Giving stack user passwordless sudo privileges&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Make sure the proxy config is visible to sub-processes</p>
+<p>UEC images <tt class="docutils literal">/etc/sudoers</tt> does not have a <tt class="docutils literal">#includedir</tt>, add one</p>
 </td><td class=code><div class=highlight><pre>
-export_proxy_variables
-
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="install-packages">
-<h1>Install Packages</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Install package requirements</p>
-</td><td class=code><div class=highlight><pre>
-install_package <span class="k">$(</span>get_packages general <span class="nv">$ENABLED_SERVICES</span><span class="k">)</span>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    if </span>is_ubuntu <span class="o">||</span> is_fedora; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-relp
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-module-relp
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;rsyslog-relp installation&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="mark-end-of-run">
-<h2>Mark end of run</h2>
-</td><td class=code><div class=highlight><pre>
-
-date <span class="s2">&quot;+%s&quot;</span> &gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
-date &gt;&gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
+grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /etc/sudoers <span class="o">||</span>
+    <span class="nb">echo</span> <span class="s2">&quot;#includedir /etc/sudoers.d&quot;</span> &gt;&gt; /etc/sudoers
+<span class="o">(</span> <span class="nb">umask </span>226 <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(ALL) NOPASSWD:ALL&quot;</span> <span class="se">\</span>
+    &gt; /etc/sudoers.d/50_stack_sh <span class="o">)</span>
 
 
 </td><td class=code><div class=highlight><pre>
@@ -473,8 +445,6 @@ date &gt;&gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>

@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>database</title>
+    <title>hypervisor-libvirt</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>database</h1></th>
+        <th class=docs><h1>hypervisor-libvirt</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,183 +359,211 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>lib/database
-Interface for interacting with different database backends
-Dependencies:
-<tt class="docutils literal">ENABLED_SERVICES</tt> must be defined</p>
+<p>lib/nova_plugins/hypervisor-libvirt
+Configure the libvirt hypervisor
+Enable with:
+VIRT_DRIVER=libvirt</p>
 </td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">DATABASE_BACKENDS</tt> will contain a list of available database backends
-after sourcing this file.</p>
+<p>Dependencies:
+<tt class="docutils literal">functions</tt> file
+<tt class="docutils literal">nova</tt> configuration</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This is a wrapper for the specific database backends available.
-Each database must implement four functions:</p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 15)</p>
-Unexpected indentation.</div>
-<blockquote>
-recreate_database_$DATABASE_TYPE
-install_database_$DATABASE_TYPE
-configure_database_$DATABASE_TYPE
-database_connection_url_$DATABASE_TYPE</blockquote>
-<p>and call register_database $DATABASE_TYPE</p>
+<p>install_nova_hypervisor - install any external requirements
+configure_nova_hypervisor - make configuration changes, including those to other services
+start_nova_hypervisor - start any external services
+stop_nova_hypervisor - stop any external services
+cleanup_nova_hypervisor - remove transient data and cache</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
 
 </pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>Register a database backend</dt>
-<dd>$1 The name of the database backend</dd>
-</dl>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 30)</p>
-Definition list ends without a blank line; unexpected unindent.</div>
-<p>This is required to be defined before the specific database scripts are sourced</p>
+<div class="section" id="defaults">
+<h1>Defaults</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>register_database <span class="o">{</span>
-    <span class="o">[</span> -z <span class="s2">&quot;$DATABASE_BACKENDS&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">DATABASE_BACKENDS</span><span class="o">=</span><span class="nv">$1</span> <span class="o">||</span> DATABASE_BACKENDS+<span class="o">=</span><span class="s2">&quot; $1&quot;</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="entry-points">
+<h1>Entry Points</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>clean_nova_hypervisor - Clean up an installation</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>cleanup_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This function intentionally left blank</p>
+</td><td class=code><div class=highlight><pre>
+    :
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Sourcing the database libs sets DATABASE_BACKENDS with the available list</p>
+<p>configure_nova_hypervisor - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">for </span>f in <span class="nv">$TOP_DIR</span>/lib/databases/*; <span class="k">do</span>
-<span class="k">    </span><span class="nb">source</span> <span class="nv">$f</span>;
-<span class="k">done</span>
-
+<span class="k">function </span>configure_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if </span>is_service_enabled neutron <span class="o">&amp;&amp;</span> is_neutron_ovs_base_plugin <span class="o">&amp;&amp;</span> ! sudo grep -q <span class="s1">&#39;^cgroup_device_acl&#39;</span> <span class="nv">$QEMU_CONF</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">DATABASE_BACKENDS</tt> now contains a list of the supported databases
-Look in <tt class="docutils literal">ENABLED_SERVICES</tt> to see if one has been selected</p>
+<p>Add /dev/net/tun to cgroup_device_acls, needed for type=ethernet interfaces</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">for </span>db in <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set the type for the rest of the backend to use</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled <span class="nv">$db</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set this now for the rest of the database functions</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nv">DATABASE_TYPE</span><span class="o">=</span><span class="nv">$db</span>
+        cat <span class="s">&lt;&lt;EOF | sudo tee -a $QEMU_CONF</span>
+<span class="s">cgroup_device_acl = [</span>
+<span class="s">    &quot;/dev/null&quot;, &quot;/dev/full&quot;, &quot;/dev/zero&quot;,</span>
+<span class="s">    &quot;/dev/random&quot;, &quot;/dev/urandom&quot;,</span>
+<span class="s">    &quot;/dev/ptmx&quot;, &quot;/dev/kvm&quot;, &quot;/dev/kqemu&quot;,</span>
+<span class="s">    &quot;/dev/rtc&quot;, &quot;/dev/hpet&quot;,&quot;/dev/net/tun&quot;,</span>
+<span class="s">]</span>
+<span class="s">EOF</span>
     <span class="k">fi</span>
-<span class="k">done</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>If <tt class="docutils literal">DATABASE_TYPE</tt> is unset here no database was selected
-This is not an error as multi-node installs will do this on the compute nodes</p>
-</td><td class=code><div class=highlight><pre>
 
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="functions">
-<h1>Functions</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Get rid of everything enough to cleanly change database backends</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_database <span class="o">{</span>
-    cleanup_database_<span class="nv">$DATABASE_TYPE</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set the database type based on the configuration</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>initialize_database_backends <span class="o">{</span>
-    <span class="k">for </span>backend in <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">do</span>
-<span class="k">        </span>is_service_enabled <span class="nv">$backend</span> <span class="o">&amp;&amp;</span> <span class="nv">DATABASE_TYPE</span><span class="o">=</span><span class="nv">$backend</span>
-    <span class="k">done</span>
-
-    <span class="o">[</span> -z <span class="s2">&quot;$DATABASE_TYPE&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>1
-
-</pre></div></td></tr><tr><td class=docs>
-<p>For backward-compatibility, read in the MYSQL_HOST/USER variables and use
-them as the default values for the DATABASE_HOST/USER variables.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">MYSQL_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
-    <span class="nv">MYSQL_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">MYSQL_USER</span><span class="k">:-</span><span class="nv">root</span><span class="k">}</span>
-
-    <span class="nv">DATABASE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">DATABASE_HOST</span><span class="k">:-${</span><span class="nv">MYSQL_HOST</span><span class="k">}}</span>
-    <span class="nv">DATABASE_USER</span><span class="o">=</span><span class="k">${</span><span class="nv">DATABASE_USER</span><span class="k">:-${</span><span class="nv">MYSQL_USER</span><span class="k">}}</span>
-
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$MYSQL_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">DATABASE_PASSWORD</span><span class="o">=</span><span class="nv">$MYSQL_PASSWORD</span>
+<span class="k">    if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirt-bin
     <span class="k">else</span>
-<span class="k">        </span>read_password DATABASE_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR THE DATABASE.&quot;</span>
+<span class="k">        </span><span class="nv">LIBVIRT_DAEMON</span><span class="o">=</span>libvirtd
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
+<span class="k">        if </span>is_fedora <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">||</span> <span class="s2">&quot;$os_RELEASE&quot;</span> -le <span class="s2">&quot;17&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
+<span class="s2">[libvirt Management Access]</span>
+<span class="s2">Identity=unix-group:$LIBVIRT_GROUP</span>
+<span class="s2">Action=org.libvirt.unix.manage</span>
+<span class="s2">ResultAny=yes</span>
+<span class="s2">ResultInactive=yes</span>
+<span class="s2">ResultActive=yes</span>
+<span class="s2">EOF&quot;</span>
+        <span class="k">elif </span>is_suse <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="nv">$os_RELEASE</span> <span class="o">=</span> 12.2 <span class="o">||</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span> <span class="s2">&quot;SUSE LINUX&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>openSUSE &lt; 12.3 or SLE
+Work around the fact that polkit-default-privs overrules pklas
+with 'unix-group:$group'.</p>
+</td><td class=code><div class=highlight><pre>
+            sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt;/etc/polkit-1/localauthority/50-local.d/50-libvirt-remote-access.pkla</span>
+<span class="s2">[libvirt Management Access]</span>
+<span class="s2">Identity=unix-user:$USER</span>
+<span class="s2">Action=org.libvirt.unix.manage</span>
+<span class="s2">ResultAny=yes</span>
+<span class="s2">ResultInactive=yes</span>
+<span class="s2">ResultActive=yes</span>
+<span class="s2">EOF&quot;</span>
+        <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Starting with fedora 18 and opensuse-12.3 enable stack-user to
+virsh -c qemu:///system by creating a policy-kit rule for
+stack-user using the new Javascript syntax</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="nv">rules_dir</span><span class="o">=</span>/etc/polkit-1/rules.d
+            sudo mkdir -p <span class="nv">$rules_dir</span>
+            sudo bash -c <span class="s2">&quot;cat &lt;&lt;EOF &gt; $rules_dir/50-libvirt-$STACK_USER.rules</span>
+<span class="s2">polkit.addRule(function(action, subject) {</span>
+<span class="s2">     if (action.id == &#39;org.libvirt.unix.manage&#39; &amp;&amp;</span>
+<span class="s2">         subject.user == &#39;&quot;</span><span class="nv">$STACK_USER</span><span class="s2">&quot;&#39;) {</span>
+<span class="s2">         return polkit.Result.YES;</span>
+<span class="s2">     }</span>
+<span class="s2">});</span>
+<span class="s2">EOF&quot;</span>
+            <span class="nb">unset </span>rules_dir
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>The user that nova runs as needs to be member of <strong>libvirtd</strong> group otherwise
+nova-compute will be unable to use libvirt.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> ! getent group <span class="nv">$LIBVIRT_GROUP</span> &gt;/dev/null; <span class="k">then</span>
+<span class="k">        </span>sudo groupadd <span class="nv">$LIBVIRT_GROUP</span>
+    <span class="k">fi</span>
+<span class="k">    </span>add_user_to_group <span class="nv">$STACK_USER</span> <span class="nv">$LIBVIRT_GROUP</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>libvirt detects various settings on startup, as we potentially changed
+the system configuration (modules, filesystems), we need to restart
+libvirt to detect those changes.</p>
+</td><td class=code><div class=highlight><pre>
+    restart_service <span class="nv">$LIBVIRT_DAEMON</span>
+
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_type <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_cpu_mode <span class="s2">&quot;none&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT use_usb_tablet <span class="s2">&quot;False&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;libvirt.LibvirtDriver&quot;</span>
+    <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="s2">&quot;$LIBVIRT_FIREWALL_DRIVER&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Power architecture currently does not support graphical consoles.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_arch <span class="s2">&quot;ppc64&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="s2">&quot;false&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>install_nova_hypervisor() - Install external components</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>install_package kvm
+        install_package libvirt-bin
+        install_package python-libvirt
+    <span class="k">elif </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
+<span class="k">        </span>install_package kvm
+        install_package libvirt
+        install_package libvirt-python
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>We configure Nova, Horizon, Glance and Keystone to use MySQL as their
-database server.  While they share a single server, each has their own
-database and tables.</p>
+<p>Install and configure <strong>LXC</strong> if specified.  LXC is another approach to
+splitting a system into many smaller parts.  LXC uses cgroups and chroot
+to simulate multiple systems.</p>
 </td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>By default this script will install and configure MySQL.  If you want to
-use an existing server, you can pass in the user/password/host parameters.
-You will need to send the same <tt class="docutils literal">DATABASE_PASSWORD</tt> to every host if you are doing
-a multi-node DevStack installation.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>NOTE: Don't specify <tt class="docutils literal">/db</tt> in this string so we can use it for multiple services</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">BASE_SQL_CONN</span><span class="o">=</span><span class="k">${</span><span class="nv">BASE_SQL_CONN</span><span class="k">:-${</span><span class="nv">DATABASE_TYPE</span><span class="k">}</span><span class="p">://</span><span class="nv">$DATABASE_USER</span><span class="p">:</span><span class="nv">$DATABASE_PASSWORD</span><span class="p">@</span><span class="nv">$DATABASE_HOST</span><span class="k">}</span>
-
-    <span class="k">return </span>0
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">            if</span> <span class="o">[[</span> <span class="s2">&quot;$DISTRO&quot;</span> &gt; natty <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>install_package cgroup-lite
+            <span class="k">fi</span>
+<span class="k">        else</span>
+            <span class="c">### FIXME(dtroyer): figure this out</span>
+            <span class="nb">echo</span> <span class="s2">&quot;RPM-based cgroup not implemented yet&quot;</span>
+            yum_install libcgroup-tools
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>Recreate a given database</dt>
-<dd>$1 The name of the database
-$2 The character set/encoding of the database</dd>
-</dl>
+<p>start_nova_hypervisor - Start any required external services</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>recreate_database <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">db</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">charset</span><span class="o">=</span><span class="nv">$2</span>
-    recreate_database_<span class="nv">$DATABASE_TYPE</span> <span class="nv">$db</span> <span class="nv">$charset</span>
+<span class="k">function </span>start_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This function intentionally left blank</p>
+</td><td class=code><div class=highlight><pre>
+    :
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install the database</p>
+<p>stop_nova_hypervisor - Stop any external services</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_database <span class="o">{</span>
-    install_database_<span class="nv">$DATABASE_TYPE</span>
-<span class="o">}</span>
-
+<span class="k">function </span>stop_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure and start the database</p>
+<p>This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_database <span class="o">{</span>
-    configure_database_<span class="nv">$DATABASE_TYPE</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>Generate an SQLAlchemy connection URL and output it using echo</dt>
-<dd>$1 The name of the database</dd>
-</dl>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>database_connection_url <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">db</span><span class="o">=</span><span class="nv">$1</span>
-    database_connection_url_<span class="nv">$DATABASE_TYPE</span> <span class="nv">$db</span>
+    :
 <span class="o">}</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$XTRACE</span>
+<span class="nv">$MY_XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Local variables:

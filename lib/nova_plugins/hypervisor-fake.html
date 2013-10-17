@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>install_prereqs.sh</title>
+    <title>hypervisor-fake</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>install_prereqs.sh</h1></th>
+        <th class=docs><h1>hypervisor-fake</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,121 +359,127 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>install_prereqs.sh</strong></p>
+<p>lib/nova_plugins/hypervisor-fake
+Configure the fake hypervisor
+Enable with:
+VIRT_DRIVER=fake</p>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install system package prerequisites</p>
-<p>install_prereqs.sh [-f]</p>
-<table class="docutils option-list" frame="void" rules="none">
-<col class="option" />
-<col class="description" />
-<tbody valign="top">
-<tr><td class="option-group">
-<kbd><span class="option">-f</span></kbd></td>
-<td>Force an install run now</td></tr>
-</tbody>
-</table>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$1&quot;</span> <span class="o">&amp;&amp;</span>  <span class="s2">&quot;$1&quot;</span> <span class="o">=</span> <span class="s2">&quot;-f&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">FORCE_PREREQ</span><span class="o">=</span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>If TOP_DIR is set we're being sourced rather than running stand-alone
-or in a sub-shell</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Keep track of the devstack directory</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Import common functions</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
-<tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt>
-and <tt class="docutils literal">DISTRO</tt></p>
-</td><td class=code><div class=highlight><pre>
-    GetDistro
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Needed to get <tt class="docutils literal">ENABLED_SERVICES</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Prereq dirs are here</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Minimum wait time</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">PREREQ_RERUN_MARKER</span><span class="o">=</span><span class="k">${</span><span class="nv">PREREQ_RERUN_MARKER</span><span class="k">:-</span><span class="nv">$TOP_DIR</span><span class="p">/.prereqs</span><span class="k">}</span>
-<span class="nv">PREREQ_RERUN_HOURS</span><span class="o">=</span><span class="k">${</span><span class="nv">PREREQ_RERUN_HOURS</span><span class="k">:-</span><span class="nv">2</span><span class="k">}</span>
-<span class="nv">PREREQ_RERUN_SECONDS</span><span class="o">=</span><span class="k">$((</span><span class="m">60</span><span class="o">*</span><span class="m">60</span><span class="o">*</span><span class="nv">$PREREQ_RERUN_HOURS</span><span class="k">))</span>
-
-<span class="nv">NOW</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+%s&quot;</span><span class="k">)</span>
-<span class="nv">LAST_RUN</span><span class="o">=</span><span class="k">$(</span>head -1 <span class="nv">$PREREQ_RERUN_MARKER</span> 2&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> <span class="s2">&quot;0&quot;</span><span class="k">)</span>
-<span class="nv">DELTA</span><span class="o">=</span><span class="k">$((</span><span class="nv">$NOW</span> <span class="o">-</span> <span class="nv">$LAST_RUN</span><span class="k">))</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$DELTA</span> -lt <span class="nv">$PREREQ_RERUN_SECONDS</span> <span class="o">&amp;&amp;</span> -z <span class="s2">&quot;$FORCE_PREREQ&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Re-run time has not expired ($(($PREREQ_RERUN_SECONDS - $DELTA)) seconds remaining) &quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;and FORCE_PREREQ not set; exiting...&quot;</span>
-    <span class="k">return </span>0
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Make sure the proxy config is visible to sub-processes</p>
-</td><td class=code><div class=highlight><pre>
-export_proxy_variables
-
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="install-packages">
-<h1>Install Packages</h1>
+<p>Dependencies:
+<tt class="docutils literal">functions</tt> file
+<tt class="docutils literal">nova</tt> configuration</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install package requirements</p>
+<p>install_nova_hypervisor - install any external requirements
+configure_nova_hypervisor - make configuration changes, including those to other services
+start_nova_hypervisor - start any external services
+stop_nova_hypervisor - stop any external services
+cleanup_nova_hypervisor - remove transient data and cache</p>
 </td><td class=code><div class=highlight><pre>
-install_package <span class="k">$(</span>get_packages general <span class="nv">$ENABLED_SERVICES</span><span class="k">)</span>
 
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    if </span>is_ubuntu <span class="o">||</span> is_fedora; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-relp
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-module-relp
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;rsyslog-relp installation&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Save trace setting</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nb">set</span> +o xtrace
 
 
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="mark-end-of-run">
-<h2>Mark end of run</h2>
+<div class="section" id="defaults">
+<h1>Defaults</h1>
 </td><td class=code><div class=highlight><pre>
 
-date <span class="s2">&quot;+%s&quot;</span> &gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
-date &gt;&gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
-
-
-</td><td class=code><div class=highlight><pre>
-</pre></div></td></tr><tr><td class=docs>
-</pre></div></td></tr><tr><td class=docs>
-</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
+<div class="section" id="entry-points">
+<h1>Entry Points</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>clean_nova_hypervisor - Clean up an installation</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>cleanup_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This function intentionally left blank</p>
+</td><td class=code><div class=highlight><pre>
+    :
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>configure_nova_hypervisor - Set config files, create data dirs, etc</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>configure_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;nova.virt.fake.FakeDriver&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Disable arbitrary limits</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_instances -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_cores -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_ram -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_floating_ips -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_fixed_ips -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_metadata_items -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_injected_files -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_injected_file_path_bytes -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_security_groups -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_security_group_rules -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT quota_key_pairs -1
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_default_filters <span class="s2">&quot;RetryFilter,AvailabilityZoneFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter&quot;</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>install_nova_hypervisor() - Install external components</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This function intentionally left blank</p>
+</td><td class=code><div class=highlight><pre>
+    :
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>start_nova_hypervisor - Start any required external services</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>start_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This function intentionally left blank</p>
+</td><td class=code><div class=highlight><pre>
+    :
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>stop_nova_hypervisor - Stop any external services</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>stop_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>This function intentionally left blank</p>
+</td><td class=code><div class=highlight><pre>
+    :
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Restore xtrace</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">$MY_XTRACE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 </div>
 </body>

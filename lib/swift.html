@@ -410,6 +410,7 @@ _cleanup_swift_apache_wsgi</p>
 Default is the common DevStack data directory.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SWIFT_DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">:-${</span><span class="nv">DATA_DIR</span><span class="k">}</span><span class="p">/swift</span><span class="k">}</span>
+<span class="nv">SWIFT_DISK_IMAGE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set <tt class="docutils literal">SWIFT_CONF_DIR</tt> to the location of the configuration files.
@@ -432,12 +433,12 @@ swift data. Set <tt class="docutils literal">SWIFT_LOOPBACK_DISK_SIZE</tt> to th
 kilobytes.
 Default is 1 gigabyte.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SWIFT_LOOPBACK_DISK_SIZE_DEFAULT</span><span class="o">=</span>1048576
+<span class="nv">SWIFT_LOOPBACK_DISK_SIZE_DEFAULT</span><span class="o">=</span>1G
 </pre></div></td></tr><tr><td class=docs>
 <p>if tempest enabled the default size is 4 Gigabyte.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled tempest; <span class="k">then</span>
-<span class="k">    </span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE_DEFAULT</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">4194304</span><span class="k">}</span>
+<span class="k">    </span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE_DEFAULT</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">4G</span><span class="k">}</span>
 <span class="k">fi</span>
 
 <span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">:-</span><span class="nv">$SWIFT_LOOPBACK_DISK_SIZE_DEFAULT</span><span class="k">}</span>
@@ -447,6 +448,12 @@ Default is 1 gigabyte.</p>
 Default is <tt class="docutils literal">staticweb, tempurl, formpost</tt></p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SWIFT_EXTRAS_MIDDLEWARE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_EXTRAS_MIDDLEWARE</span><span class="k">:-</span><span class="nv">tempurl</span><span class="p"> formpost staticweb</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set <tt class="docutils literal">SWIFT_EXTRAS_MIDDLEWARE_LAST</tt> to extras middlewares that need to be at
+the end of the pipeline.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SWIFT_EXTRAS_MIDDLEWARE_LAST</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_EXTRAS_MIDDLEWARE_LAST</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The ring uses a configurable number of bits from a path’s MD5 hash as
@@ -495,8 +502,8 @@ base_port + node_num * 10</p>
    <span class="k">if </span>egrep -q <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1 /proc/mounts; <span class="k">then</span>
 <span class="k">      </span>sudo umount <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
    <span class="k">fi</span>
-<span class="k">   if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">      </span>rm <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
+<span class="k">   if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">      </span>rm <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span>
    <span class="k">fi</span>
 <span class="k">   </span>rm -rf <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/run/
    <span class="k">if </span>is_apache_enabled_service swift; <span class="k">then</span>
@@ -509,11 +516,11 @@ base_port + node_num * 10</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>_cleanup_swift_apache_wsgi<span class="o">()</span> <span class="o">{</span>
     sudo rm -f <span class="nv">$SWIFT_APACHE_WSGI_DIR</span>/*.wsgi
-    ! is_fedora <span class="o">&amp;&amp;</span> sudo a2dissite proxy-server
+    disable_apache_site proxy-server
     <span class="k">for </span>node_number in <span class="k">${</span><span class="nv">SWIFT_REPLICAS_SEQ</span><span class="k">}</span>; <span class="k">do</span>
 <span class="k">        for </span><span class="nb">type </span>in object container account; <span class="k">do</span>
 <span class="k">            </span><span class="nv">site_name</span><span class="o">=</span><span class="k">${</span><span class="nv">type</span><span class="k">}</span>-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
-            ! is_fedora <span class="o">&amp;&amp;</span> sudo a2dissite <span class="k">${</span><span class="nv">site_name</span><span class="k">}</span>
+            disable_apache_site <span class="k">${</span><span class="nv">site_name</span><span class="k">}</span>
             sudo rm -f /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/<span class="k">${</span><span class="nv">site_name</span><span class="k">}</span>
         <span class="k">done</span>
 <span class="k">    done</span>
@@ -538,13 +545,13 @@ base_port + node_num * 10</p>
 <span class="s2">        s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
 <span class="s2">        s/%USER%/${STACK_USER}/g;</span>
 <span class="s2">    &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/proxy-server
+    enable_apache_site proxy-server
 
     sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/wsgi/proxy-server.wsgi.template <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/proxy-server.wsgi
     sudo sed -e <span class="s2">&quot;</span>
 <span class="s2">        /^#/d;/^$/d;</span>
 <span class="s2">        s/%SERVICECONF%/proxy-server.conf/g;</span>
 <span class="s2">    &quot;</span> -i <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/proxy-server.wsgi
-    ! is_fedora <span class="o">&amp;&amp;</span> sudo a2ensite proxy-server
 
 </pre></div></td></tr><tr><td class=docs>
 <p>copy apache vhost file and set name and port</p>
@@ -561,7 +568,7 @@ base_port + node_num * 10</p>
 <span class="s2">            s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
 <span class="s2">            s/%USER%/${STACK_USER}/g;</span>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
-        ! is_fedora <span class="o">&amp;&amp;</span> sudo a2ensite object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+        enable_apache_site object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
 
         sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/wsgi/object-server.wsgi.template <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
         sudo sed -e <span class="s2">&quot;</span>
@@ -577,7 +584,7 @@ base_port + node_num * 10</p>
 <span class="s2">            s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
 <span class="s2">            s/%USER%/${STACK_USER}/g;</span>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
-        ! is_fedora <span class="o">&amp;&amp;</span> sudo a2ensite container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+        enable_apache_site container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
 
         sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/wsgi/container-server.wsgi.template <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
         sudo sed -e <span class="s2">&quot;</span>
@@ -593,20 +600,14 @@ base_port + node_num * 10</p>
 <span class="s2">            s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
 <span class="s2">            s/%USER%/${STACK_USER}/g;</span>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
-        ! is_fedora <span class="o">&amp;&amp;</span> sudo a2ensite account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+        enable_apache_site account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
 
         sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/wsgi/account-server.wsgi.template <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
         sudo sed -e <span class="s2">&quot;</span>
 <span class="s2">             /^#/d;/^$/d;</span>
 <span class="s2">            s/%SERVICECONF%/account-server\/${node_number}.conf/g;</span>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
-
     <span class="k">done</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>WSGI isn't enabled by default, enable it</p>
-</td><td class=code><div class=highlight><pre>
-    ! is_fedora <span class="o">&amp;&amp;</span> sudo a2enmod wsgi
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -672,6 +673,14 @@ setup) we configure it with our version of rsync.</p>
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT bind_port <span class="k">${</span><span class="nv">SWIFT_DEFAULT_BIND_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Configure Ceilometer</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:ceilometer use <span class="s2">&quot;egg:ceilometer#swift&quot;</span>
+        <span class="nv">SWIFT_EXTRAS_MIDDLEWARE_LAST</span><span class="o">=</span><span class="s2">&quot;${SWIFT_EXTRAS_MIDDLEWARE_LAST} ceilometer&quot;</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>By default Swift will be installed with keystone and tempauth middleware
 and add the swift3 middleware if its configured for it. The token for
 tempauth would be prefixed with the reseller_prefix setting <a href="#id1"><span class="problematic" id="id2">TEMPAUTH_</span></a> the
@@ -682,6 +691,7 @@ token for keystoneauth would have the standard reseller_prefix <a href="#id3"><s
     <span class="k">fi</span>
 <span class="k">    </span>swift_pipeline+<span class="o">=</span><span class="s2">&quot; authtoken keystoneauth tempauth &quot;</span>
     sed -i <span class="s2">&quot;/^pipeline/ { s/tempauth/${swift_pipeline} ${SWIFT_EXTRAS_MIDDLEWARE}/ ;}&quot;</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
+    sed -i <span class="s2">&quot;/^pipeline/ { s/proxy-server/${SWIFT_EXTRAS_MIDDLEWARE_LAST} proxy-server/ ; }&quot;</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
 
     iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:tempauth account_autocreate
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> app:proxy-server account_autocreate <span class="nb">true</span>
@@ -843,24 +853,23 @@ modification and make sure it works for new sections.</p>
 <p>First do a bit of setup by creating the directories and
 changing the permissions so we can run it as our user.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        if </span>egrep -q <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1 /proc/mounts; <span class="k">then</span>
 <span class="k">            </span>sudo umount <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
-            sudo rm -f <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
+            sudo rm -f <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
 <span class="k">    </span>mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images
-    sudo touch <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
-    sudo chown <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
+    sudo touch <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span>
+    sudo chown <span class="nv">$USER</span>: <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span>
 
-    dd <span class="k">if</span><span class="o">=</span>/dev/zero <span class="nv">of</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="se">\</span>
-        <span class="nv">bs</span><span class="o">=</span>1024 <span class="nv">count</span><span class="o">=</span>0 <span class="nv">seek</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">}</span>
+    truncate -s <span class="k">${</span><span class="nv">SWIFT_LOOPBACK_DISK_SIZE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a loopback disk and format it to XFS.</p>
 </td><td class=code><div class=highlight><pre>
-    mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img
+    mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make a fresh XFS filesystem</p>
@@ -868,7 +877,7 @@ changing the permissions so we can run it as our user.</p>
     mkdir -p <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
     <span class="k">if</span> ! egrep -q <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1 /proc/mounts; <span class="k">then</span>
 <span class="k">        </span>sudo mount -t xfs -o loop,noatime,nodiratime,nobarrier,logbufs<span class="o">=</span>8  <span class="se">\</span>
-            <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/images/swift.img <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
+            <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span> <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1098,10 +1107,10 @@ End:</p>
 <div class="system-messages section">
 <h1>Docutils System Messages</h1>
 <div class="system-message" id="id1">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 150); <em><a href="#id2">backlink</a></em></p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 155); <em><a href="#id2">backlink</a></em></p>
 Unknown target name: &quot;tempauth&quot;.</div>
 <div class="system-message" id="id3">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 150); <em><a href="#id4">backlink</a></em></p>
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 155); <em><a href="#id4">backlink</a></em></p>
 Unknown target name: &quot;auth&quot;.</div>
 </div>
 </div>

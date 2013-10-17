@@ -406,6 +406,11 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS</span><span class="k">:-}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>L3 Plugin to load for ML2</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ML2_L3_PLUGIN</span><span class="o">=</span><span class="k">${</span><span class="nv">ML2_L3_PLUGIN</span><span class="k">:-</span><span class="nv">neutron</span><span class="p">.services.l3_router.l3_router_plugin.L3RouterPlugin</span><span class="k">}</span>
+
 <span class="k">function </span>populate_ml2_config<span class="o">()</span> <span class="o">{</span>
     <span class="nv">OPTS</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nv">CONF</span><span class="o">=</span><span class="nv">$2</span>
@@ -428,13 +433,11 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
 <p>The ML2 plugin delegates L3 routing/NAT functionality to
 the L3 service plugin which must therefore be specified.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">Q_L3_PLUGIN_CLASS</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_L3_PLUGIN_CLASS</span><span class="k">:-</span><span class="s2">&quot;neutron.services.l3_router.l3_router_plugin.L3RouterPlugin&quot;</span><span class="k">}</span>
-    <span class="k">if  </span>ini_has_option <span class="nv">$NEUTRON_CONF</span> DEFAULT service_plugins ; <span class="k">then</span>
-<span class="k">        </span><span class="nv">srv_plugins</span><span class="o">=</span><span class="k">$(</span>iniget <span class="nv">$NEUTRON_CONF</span> DEFAULT service_plugins<span class="k">)</span><span class="s2">&quot;,&quot;</span><span class="nv">$Q_L3_PLUGIN_CLASS</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$Q_SERVICE_PLUGIN_CLASSES</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">Q_SERVICE_PLUGIN_CLASSES</span><span class="o">=</span><span class="nv">$ML2_L3_PLUGIN</span>
     <span class="k">else</span>
-<span class="k">        </span><span class="nv">srv_plugins</span><span class="o">=</span><span class="nv">$Q_L3_PLUGIN_CLASS</span>
+<span class="k">        </span><span class="nv">Q_SERVICE_PLUGIN_CLASSES</span><span class="o">=</span><span class="s2">&quot;$Q_SERVICE_PLUGIN_CLASSES,$ML2_L3_PLUGIN&quot;</span>
     <span class="k">fi</span>
-<span class="k">    </span>iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT service_plugins <span class="nv">$srv_plugins</span>
 <span class="o">}</span>
 
 <span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
