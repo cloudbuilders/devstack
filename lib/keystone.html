@@ -376,11 +376,13 @@ Dependencies:
 <p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
 <p>install_keystone
 configure_keystone
+_config_keystone_apache_wsgi
 init_keystone
 start_keystone
 create_keystone_accounts
 stop_keystone
-cleanup_keystone</p>
+cleanup_keystone
+_cleanup_keystone_apache_wsgi</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -403,6 +405,7 @@ cleanup_keystone</p>
 <span class="nv">KEYSTONE_CONF</span><span class="o">=</span><span class="nv">$KEYSTONE_CONF_DIR</span>/keystone.conf
 <span class="nv">KEYSTONE_PASTE_INI</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_PASTE_INI</span><span class="k">:-</span><span class="nv">$KEYSTONE_CONF_DIR</span><span class="p">/keystone-paste.ini</span><span class="k">}</span>
 <span class="nv">KEYSTONE_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/keystone</span><span class="k">}</span>
+<span class="nv">KEYSTONE_WSGI_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_WSGI_DIR</span><span class="k">:-</span><span class="p">/var/www/keystone</span><span class="k">}</span>
 
 <span class="nv">KEYSTONECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-keystoneclient
 
@@ -481,6 +484,39 @@ This function intentionally left blank</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>_cleanup_keystone_apache_wsgi() - Remove wsgi files, disable and remove apache vhost file</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_cleanup_keystone_apache_wsgi<span class="o">()</span> <span class="o">{</span>
+    sudo rm -f <span class="nv">$KEYSTONE_WSGI_DIR</span>/*.wsgi
+    disable_apache_site keystone
+    sudo rm -f /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/keystone
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>_config_keystone_apache_wsgi() - Set WSGI config files of Keystone</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_config_keystone_apache_wsgi<span class="o">()</span> <span class="o">{</span>
+    sudo mkdir -p <span class="nv">$KEYSTONE_WSGI_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>copy proxy vhost and wsgi file</p>
+</td><td class=code><div class=highlight><pre>
+    sudo cp <span class="nv">$KEYSTONE_DIR</span>/httpd/keystone.py <span class="nv">$KEYSTONE_WSGI_DIR</span>/main
+    sudo cp <span class="nv">$KEYSTONE_DIR</span>/httpd/keystone.py <span class="nv">$KEYSTONE_WSGI_DIR</span>/admin
+
+    sudo cp <span class="nv">$FILES</span>/apache-keystone.template /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/keystone
+    sudo sed -e <span class="s2">&quot;</span>
+<span class="s2">        s|%PUBLICPORT%|$KEYSTONE_SERVICE_PORT|g;</span>
+<span class="s2">        s|%ADMINPORT%|$KEYSTONE_AUTH_PORT|g;</span>
+<span class="s2">        s|%APACHE_NAME%|$APACHE_NAME|g;</span>
+<span class="s2">        s|%PUBLICWSGI%|$KEYSTONE_WSGI_DIR/main|g;</span>
+<span class="s2">        s|%ADMINWSGI%|$KEYSTONE_WSGI_DIR/admin|g;</span>
+<span class="s2">        s|%USER%|$STACK_USER|g</span>
+<span class="s2">    &quot;</span> -i /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/keystone
+    enable_apache_site keystone
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>configure_keystone() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_keystone<span class="o">()</span> <span class="o">{</span>
@@ -515,7 +551,7 @@ This function intentionally left blank</p>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap user <span class="s2">&quot;dc=Manager,dc=openstack,dc=org&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap suffix <span class="s2">&quot;dc=openstack,dc=org&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap use_dumb_member <span class="s2">&quot;True&quot;</span>
-        iniset <span class="nv">$KEYSTONE_CONF</span> ldap user_attribute_ignore <span class="s2">&quot;enabled,email,tenants,tenantId&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap user_attribute_ignore <span class="s2">&quot;enabled,email,tenants,default_project_id&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_attribute_ignore <span class="s2">&quot;enabled&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_domain_id_attribute <span class="s2">&quot;businessCategory&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_desc_attribute <span class="s2">&quot;description&quot;</span>
@@ -622,6 +658,10 @@ This function intentionally left blank</p>
     cp <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf.sample <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf
     iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root level <span class="s2">&quot;DEBUG&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root handlers <span class="s2">&quot;devel,production&quot;</span>
+
+    <span class="k">if </span>is_apache_enabled_service key; <span class="k">then</span>
+<span class="k">        </span>_config_keystone_apache_wsgi
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -771,6 +811,9 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
     <span class="k">fi</span>
 <span class="k">    </span>git_clone <span class="nv">$KEYSTONE_REPO</span> <span class="nv">$KEYSTONE_DIR</span> <span class="nv">$KEYSTONE_BRANCH</span>
     setup_develop <span class="nv">$KEYSTONE_DIR</span>
+    <span class="k">if </span>is_apache_enabled_service key; <span class="k">then</span>
+<span class="k">        </span>install_apache_wsgi
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -785,12 +828,18 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 <span class="k">        </span><span class="nv">service_port</span><span class="o">=</span><span class="nv">$KEYSTONE_SERVICE_PORT_INT</span>
     <span class="k">fi</span>
 
+<span class="k">    if </span>is_apache_enabled_service key; <span class="k">then</span>
+<span class="k">        </span>restart_apache_server
+        screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/keystone&quot;</span>
+    <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start Keystone in a screen window</p>
 </td><td class=code><div class=highlight><pre>
-    screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= curl -s http://$SERVICE_HOST:$service_port/v$IDENTITY_API_VERSION/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
+        screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! curl --noproxy &#39;*&#39; -s http://$SERVICE_HOST:$service_port/v$IDENTITY_API_VERSION/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;keystone did not start&quot;</span>
     <span class="k">fi</span>
 

@@ -372,6 +372,9 @@ ul.auto-toc {
 <p>Warning: This script just for development purposes</p>
 </td><td class=code><div class=highlight><pre>
 
+<span class="nb">set</span> -o errexit
+<span class="nb">set</span> -o xtrace
+
 <span class="nv">ACCOUNT_DIR</span><span class="o">=</span>./accrc
 
 display_help<span class="o">()</span>
@@ -506,10 +509,14 @@ Supporting different tanent for services is out of scope.</p>
 mkdir -p <span class="s2">&quot;$ACCOUNT_DIR&quot;</span>
 <span class="nv">ACCOUNT_DIR</span><span class="o">=</span><span class="sb">`</span>readlink -f <span class="s2">&quot;$ACCOUNT_DIR&quot;</span><span class="sb">`</span>
 <span class="nv">EUCALYPTUS_CERT</span><span class="o">=</span><span class="nv">$ACCOUNT_DIR</span>/cacert.pem
-mv <span class="s2">&quot;$EUCALYPTUS_CERT&quot;</span> <span class="s2">&quot;$EUCALYPTUS_CERT.old&quot;</span> &amp;&gt;/dev/null
+<span class="k">if</span> <span class="o">[</span> -e <span class="s2">&quot;$EUCALYPTUS_CERT&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>mv <span class="s2">&quot;$EUCALYPTUS_CERT&quot;</span> <span class="s2">&quot;$EUCALYPTUS_CERT.old&quot;</span>
+<span class="k">fi</span>
 <span class="k">if</span> ! nova x509-get-root-cert <span class="s2">&quot;$EUCALYPTUS_CERT&quot;</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Failed to update the root certificate: $EUCALYPTUS_CERT&quot;</span> &gt;&amp;2
-    mv <span class="s2">&quot;$EUCALYPTUS_CERT.old&quot;</span> <span class="s2">&quot;$EUCALYPTUS_CERT&quot;</span> &amp;&gt;/dev/null
+    <span class="k">if</span> <span class="o">[</span> -e <span class="s2">&quot;$EUCALYPTUS_CERT.old&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>mv <span class="s2">&quot;$EUCALYPTUS_CERT.old&quot;</span> <span class="s2">&quot;$EUCALYPTUS_CERT&quot;</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 
@@ -542,15 +549,23 @@ The Serial does not seams correctly marked either</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Try to preserve the original file on fail (best effort)</p>
 </td><td class=code><div class=highlight><pre>
-    mv -f <span class="s2">&quot;$ec2_private_key&quot;</span> <span class="s2">&quot;$ec2_private_key.old&quot;</span> &amp;&gt;/dev/null
-    mv -f <span class="s2">&quot;$ec2_cert&quot;</span> <span class="s2">&quot;$ec2_cert.old&quot;</span> &amp;&gt;/dev/null
+    <span class="k">if</span> <span class="o">[</span> -e <span class="s2">&quot;$ec2_private_key&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>mv -f <span class="s2">&quot;$ec2_private_key&quot;</span> <span class="s2">&quot;$ec2_private_key.old&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> -e <span class="s2">&quot;$ec2_cert&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>mv -f <span class="s2">&quot;$ec2_cert&quot;</span> <span class="s2">&quot;$ec2_cert.old&quot;</span>
+    <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>It will not create certs when the password is incorrect</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> ! nova --os-password <span class="s2">&quot;$user_passwd&quot;</span> --os-username <span class="s2">&quot;$user_name&quot;</span> --os-tenant-name <span class="s2">&quot;$tenant_name&quot;</span> x509-create-cert <span class="s2">&quot;$ec2_private_key&quot;</span> <span class="s2">&quot;$ec2_cert&quot;</span>; <span class="k">then</span>
-<span class="k">        </span>mv -f <span class="s2">&quot;$ec2_private_key.old&quot;</span> <span class="s2">&quot;$ec2_private_key&quot;</span> &amp;&gt;/dev/null
-        mv -f <span class="s2">&quot;$ec2_cert.old&quot;</span> <span class="s2">&quot;$ec2_cert&quot;</span> &amp;&gt;/dev/null
-    <span class="k">fi</span>
+<span class="k">        if</span> <span class="o">[</span> -e <span class="s2">&quot;$ec2_private_key.old&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span>mv -f <span class="s2">&quot;$ec2_private_key.old&quot;</span> <span class="s2">&quot;$ec2_private_key&quot;</span>
+        <span class="k">fi</span>
+<span class="k">        if</span> <span class="o">[</span> -e <span class="s2">&quot;$ec2_cert.old&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span>mv -f <span class="s2">&quot;$ec2_cert.old&quot;</span> <span class="s2">&quot;$ec2_cert&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="k">    </span>cat &gt;<span class="s2">&quot;$rcfile&quot;</span> <span class="s">&lt;&lt;EOF</span>
 <span class="s"># DIVIDER</span>
 <span class="s">export EC2_ACCESS_KEY=&quot;$ec2_access_key&quot;</span>

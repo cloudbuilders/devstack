@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>install_prereqs.sh</title>
+    <title>config</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>install_prereqs.sh</h1></th>
+        <th class=docs><h1>config</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,112 +359,152 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>install_prereqs.sh</strong></p>
+<p>lib/config - Configuration file manipulation functions
+These functions have no external dependencies and the following side-effects:</p>
+<p>CONFIG_AWK_CMD is defined, default is <tt class="docutils literal">awk</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/usr/bin/env bash</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install system package prerequisites</p>
-<p>install_prereqs.sh [-f]</p>
-<table class="docutils option-list" frame="void" rules="none">
-<col class="option" />
-<col class="description" />
-<tbody valign="top">
-<tr><td class="option-group">
-<kbd><span class="option">-f</span></kbd></td>
-<td>Force an install run now</td></tr>
-</tbody>
-</table>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$1&quot;</span> <span class="o">&amp;&amp;</span>  <span class="s2">&quot;$1&quot;</span> <span class="o">=</span> <span class="s2">&quot;-f&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">FORCE_PREREQ</span><span class="o">=</span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>If TOP_DIR is set we're being sourced rather than running stand-alone
-or in a sub-shell</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Keep track of the devstack directory</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Import common functions</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
-<tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt>
-and <tt class="docutils literal">DISTRO</tt></p>
-</td><td class=code><div class=highlight><pre>
-    GetDistro
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Needed to get <tt class="docutils literal">ENABLED_SERVICES</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Prereq dirs are here</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Minimum wait time</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">PREREQ_RERUN_MARKER</span><span class="o">=</span><span class="k">${</span><span class="nv">PREREQ_RERUN_MARKER</span><span class="k">:-</span><span class="nv">$TOP_DIR</span><span class="p">/.prereqs</span><span class="k">}</span>
-<span class="nv">PREREQ_RERUN_HOURS</span><span class="o">=</span><span class="k">${</span><span class="nv">PREREQ_RERUN_HOURS</span><span class="k">:-</span><span class="nv">2</span><span class="k">}</span>
-<span class="nv">PREREQ_RERUN_SECONDS</span><span class="o">=</span><span class="k">$((</span><span class="m">60</span><span class="o">*</span><span class="m">60</span><span class="o">*</span><span class="nv">$PREREQ_RERUN_HOURS</span><span class="k">))</span>
-
-<span class="nv">NOW</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+%s&quot;</span><span class="k">)</span>
-<span class="nv">LAST_RUN</span><span class="o">=</span><span class="k">$(</span>head -1 <span class="nv">$PREREQ_RERUN_MARKER</span> 2&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> <span class="s2">&quot;0&quot;</span><span class="k">)</span>
-<span class="nv">DELTA</span><span class="o">=</span><span class="k">$((</span><span class="nv">$NOW</span> <span class="o">-</span> <span class="nv">$LAST_RUN</span><span class="k">))</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$DELTA</span> -lt <span class="nv">$PREREQ_RERUN_SECONDS</span> <span class="o">&amp;&amp;</span> -z <span class="s2">&quot;$FORCE_PREREQ&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Re-run time has not expired ($(($PREREQ_RERUN_SECONDS - $DELTA)) seconds remaining) &quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;and FORCE_PREREQ not set; exiting...&quot;</span>
-    <span class="k">return </span>0
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Make sure the proxy config is visible to sub-processes</p>
-</td><td class=code><div class=highlight><pre>
-export_proxy_variables
-
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="install-packages">
-<h1>Install Packages</h1>
+<p>Meta-config files contain multiple INI-style configuration files
+using a specific new section header to delimit them:</p>
+<blockquote>
+[[group-name|file-name]]</blockquote>
+<p>group-name refers to the group of configuration file changes to be processed
+at a particular time.  These are called phases in <tt class="docutils literal">stack.sh</tt> but
+group here as these functions are not DevStack-specific.</p>
+<p>file-name is the destination of the config file</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Install package requirements</p>
+<p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
-install_package <span class="k">$(</span>get_packages general <span class="nv">$ENABLED_SERVICES</span><span class="k">)</span>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    if </span>is_ubuntu <span class="o">||</span> is_fedora; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-relp
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-module-relp
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;rsyslog-relp installation&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
+<span class="nv">C_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nb">set</span> +o xtrace
 
 
 </pre></div></td></tr><tr><td class=docs>
-<div class="section" id="mark-end-of-run">
-<h2>Mark end of run</h2>
+<p>Allow the awk command to be overridden on legacy platforms</p>
 </td><td class=code><div class=highlight><pre>
+<span class="nv">CONFIG_AWK_CMD</span><span class="o">=</span><span class="k">${</span><span class="nv">CONFIG_AWK_CMD</span><span class="k">:-</span><span class="nv">awk</span><span class="k">}</span>
 
-date <span class="s2">&quot;+%s&quot;</span> &gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
-date &gt;&gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Get the section for the specific group and config file
+get_meta_section infile group configfile</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>get_meta_section<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">matchgroup</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">configfile</span><span class="o">=</span><span class="nv">$3</span>
+
+    <span class="o">[[</span> -r <span class="nv">$file</span> <span class="o">]]</span> <span class="o">||</span> <span class="k">return </span>0
+    <span class="o">[[</span> -z <span class="nv">$configfile</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+
+    <span class="nv">$CONFIG_AWK_CMD</span> -v <span class="nv">matchgroup</span><span class="o">=</span><span class="nv">$matchgroup</span> -v <span class="nv">configfile</span><span class="o">=</span><span class="nv">$configfile</span> <span class="s1">&#39;</span>
+<span class="s1">        BEGIN { group = &quot;&quot; }</span>
+<span class="s1">        /^\[\[.+|.*\]\]/ {</span>
+<span class="s1">            if (group == &quot;&quot;) {</span>
+<span class="s1">                gsub(&quot;[][]&quot;, &quot;&quot;, $1);</span>
+<span class="s1">                split($1, a, &quot;|&quot;);</span>
+<span class="s1">                if (a[1] == matchgroup &amp;&amp; a[2] == configfile) {</span>
+<span class="s1">                    group=a[1]</span>
+<span class="s1">                }</span>
+<span class="s1">            } else {</span>
+<span class="s1">                group=&quot;&quot;</span>
+<span class="s1">            }</span>
+<span class="s1">            next</span>
+<span class="s1">        }</span>
+<span class="s1">        {</span>
+<span class="s1">            if (group != &quot;&quot;)</span>
+<span class="s1">                print $0</span>
+<span class="s1">        }</span>
+<span class="s1">    &#39;</span> <span class="nv">$file</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Get a list of config files for a specific group
+get_meta_section_files infile group</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>get_meta_section_files<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">matchgroup</span><span class="o">=</span><span class="nv">$2</span>
+
+    <span class="o">[[</span> -r <span class="nv">$file</span> <span class="o">]]</span> <span class="o">||</span> <span class="k">return </span>0
+
+    <span class="nv">$CONFIG_AWK_CMD</span> -v <span class="nv">matchgroup</span><span class="o">=</span><span class="nv">$matchgroup</span> <span class="s1">&#39;</span>
+<span class="s1">      /^\[\[.+\|.*\]\]/ {</span>
+<span class="s1">          gsub(&quot;[][]&quot;, &quot;&quot;, $1);</span>
+<span class="s1">          split($1, a, &quot;|&quot;);</span>
+<span class="s1">          if (a[1] == matchgroup)</span>
+<span class="s1">              print a[2]</span>
+<span class="s1">      }</span>
+<span class="s1">    &#39;</span> <span class="nv">$file</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Merge the contents of a meta-config file into its destination config file
+If configfile does not exist it will be created.
+merge_config_file infile group configfile</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>merge_config_file<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">matchgroup</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">configfile</span><span class="o">=</span><span class="nv">$3</span>
+
+    <span class="o">[[</span> -r <span class="nv">$configfile</span> <span class="o">]]</span> <span class="o">||</span> touch <span class="nv">$configfile</span>
+
+    get_meta_section <span class="nv">$file</span> <span class="nv">$matchgroup</span> <span class="nv">$configfile</span> | <span class="se">\</span>
+    <span class="nv">$CONFIG_AWK_CMD</span> -v <span class="nv">configfile</span><span class="o">=</span><span class="nv">$configfile</span> <span class="s1">&#39;</span>
+<span class="s1">        BEGIN { section = &quot;&quot; }</span>
+<span class="s1">        /^\[.+\]/ {</span>
+<span class="s1">            gsub(&quot;[][]&quot;, &quot;&quot;, $1);</span>
+<span class="s1">            section=$1</span>
+<span class="s1">            next</span>
+<span class="s1">        }</span>
+<span class="s1">        /^ *\#/ {</span>
+<span class="s1">            next</span>
+<span class="s1">        }</span>
+<span class="s1">        /^.+/ {</span>
+<span class="s1">            split($0, d, &quot; *= *&quot;)</span>
+<span class="s1">            print &quot;iniset &quot; configfile &quot; &quot; section &quot; &quot; d[1] &quot; \&quot;&quot; d[2] &quot;\&quot;&quot;</span>
+<span class="s1">        }</span>
+<span class="s1">    &#39;</span> | <span class="k">while </span><span class="nb">read </span>a; <span class="k">do </span><span class="nb">eval</span> <span class="s2">&quot;$a&quot;</span>; <span class="k">done</span>
+
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Merge all of the files specified by group
+merge_config_group infile group [group ...]</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>merge_config_group<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">localfile</span><span class="o">=</span><span class="nv">$1</span>; <span class="nb">shift</span>
+<span class="nb">    local </span><span class="nv">matchgroups</span><span class="o">=</span><span class="nv">$@</span>
+
+    <span class="o">[[</span> -r <span class="nv">$localfile</span> <span class="o">]]</span> <span class="o">||</span> <span class="k">return </span>0
+
+    <span class="k">for </span>group in <span class="nv">$matchgroups</span>; <span class="k">do</span>
+<span class="k">        for </span>configfile in <span class="k">$(</span>get_meta_section_files <span class="nv">$localfile</span> <span class="nv">$group</span><span class="k">)</span>; <span class="k">do</span>
+<span class="k">            if</span> <span class="o">[[</span> -d <span class="k">$(</span>dirname <span class="nv">$configfile</span><span class="k">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>merge_config_file <span class="nv">$localfile</span> <span class="nv">$group</span> <span class="nv">$configfile</span>
+            <span class="k">fi</span>
+<span class="k">        done</span>
+<span class="k">    done</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Restore xtrace</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">$C_XTRACE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Local variables:
+mode: shell-script
+End:</p>
+</td><td class=code><div class=highlight><pre>
 
 
 </td><td class=code><div class=highlight><pre>
@@ -473,8 +513,6 @@ date &gt;&gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>

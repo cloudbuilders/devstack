@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>install_prereqs.sh</title>
+    <title>run_tests.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>install_prereqs.sh</h1></th>
+        <th class=docs><h1>run_tests.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,112 +359,32 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>install_prereqs.sh</strong></p>
+<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at</p>
+<blockquote>
+<a class="reference external" href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</a></blockquote>
+<p>Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations
+under the License.</p>
+<p>this runs a series of unit tests for devstack to ensure it's functioning</p>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/usr/bin/env bash</span>
+<span class="c">#!/bin/bash</span>
 
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Install system package prerequisites</p>
-<p>install_prereqs.sh [-f]</p>
-<table class="docutils option-list" frame="void" rules="none">
-<col class="option" />
-<col class="description" />
-<tbody valign="top">
-<tr><td class="option-group">
-<kbd><span class="option">-f</span></kbd></td>
-<td>Force an install run now</td></tr>
-</tbody>
-</table>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$1&quot;</span> <span class="o">&amp;&amp;</span>  <span class="s2">&quot;$1&quot;</span> <span class="o">=</span> <span class="s2">&quot;-f&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">FORCE_PREREQ</span><span class="o">=</span>1
+<span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$@</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">FILES</span><span class="o">=</span><span class="nv">$@</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">LIBS</span><span class="o">=</span><span class="sb">`</span>find lib -type f | grep -v <span class="se">\.</span>md<span class="sb">`</span>
+    <span class="nv">SCRIPTS</span><span class="o">=</span><span class="sb">`</span>find . -type f -name <span class="se">\*\.</span>sh<span class="sb">`</span>
+    <span class="nv">EXTRA</span><span class="o">=</span><span class="s2">&quot;functions&quot;</span>
+    <span class="nv">FILES</span><span class="o">=</span><span class="s2">&quot;$SCRIPTS $LIBS $EXTRA&quot;</span>
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>If TOP_DIR is set we're being sourced rather than running stand-alone
-or in a sub-shell</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Keep track of the devstack directory</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nb">echo</span> <span class="s2">&quot;Running bash8...&quot;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Import common functions</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Determine what system we are running on.  This provides <tt class="docutils literal">os_VENDOR</tt>,
-<tt class="docutils literal">os_RELEASE</tt>, <tt class="docutils literal">os_UPDATE</tt>, <tt class="docutils literal">os_PACKAGE</tt>, <tt class="docutils literal">os_CODENAME</tt>
-and <tt class="docutils literal">DISTRO</tt></p>
-</td><td class=code><div class=highlight><pre>
-    GetDistro
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Needed to get <tt class="docutils literal">ENABLED_SERVICES</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Prereq dirs are here</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Minimum wait time</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">PREREQ_RERUN_MARKER</span><span class="o">=</span><span class="k">${</span><span class="nv">PREREQ_RERUN_MARKER</span><span class="k">:-</span><span class="nv">$TOP_DIR</span><span class="p">/.prereqs</span><span class="k">}</span>
-<span class="nv">PREREQ_RERUN_HOURS</span><span class="o">=</span><span class="k">${</span><span class="nv">PREREQ_RERUN_HOURS</span><span class="k">:-</span><span class="nv">2</span><span class="k">}</span>
-<span class="nv">PREREQ_RERUN_SECONDS</span><span class="o">=</span><span class="k">$((</span><span class="m">60</span><span class="o">*</span><span class="m">60</span><span class="o">*</span><span class="nv">$PREREQ_RERUN_HOURS</span><span class="k">))</span>
-
-<span class="nv">NOW</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+%s&quot;</span><span class="k">)</span>
-<span class="nv">LAST_RUN</span><span class="o">=</span><span class="k">$(</span>head -1 <span class="nv">$PREREQ_RERUN_MARKER</span> 2&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> <span class="s2">&quot;0&quot;</span><span class="k">)</span>
-<span class="nv">DELTA</span><span class="o">=</span><span class="k">$((</span><span class="nv">$NOW</span> <span class="o">-</span> <span class="nv">$LAST_RUN</span><span class="k">))</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$DELTA</span> -lt <span class="nv">$PREREQ_RERUN_SECONDS</span> <span class="o">&amp;&amp;</span> -z <span class="s2">&quot;$FORCE_PREREQ&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Re-run time has not expired ($(($PREREQ_RERUN_SECONDS - $DELTA)) seconds remaining) &quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;and FORCE_PREREQ not set; exiting...&quot;</span>
-    <span class="k">return </span>0
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Make sure the proxy config is visible to sub-processes</p>
-</td><td class=code><div class=highlight><pre>
-export_proxy_variables
-
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="install-packages">
-<h1>Install Packages</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Install package requirements</p>
-</td><td class=code><div class=highlight><pre>
-install_package <span class="k">$(</span>get_packages general <span class="nv">$ENABLED_SERVICES</span><span class="k">)</span>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    if </span>is_ubuntu <span class="o">||</span> is_fedora; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-relp
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>install_package rsyslog-module-relp
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;rsyslog-relp installation&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="mark-end-of-run">
-<h2>Mark end of run</h2>
-</td><td class=code><div class=highlight><pre>
-
-date <span class="s2">&quot;+%s&quot;</span> &gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
-date &gt;&gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
+./tools/bash8.py <span class="nv">$FILES</span>
 
 
 </td><td class=code><div class=highlight><pre>
@@ -473,8 +393,6 @@ date &gt;&gt;<span class="nv">$PREREQ_RERUN_MARKER</span>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>

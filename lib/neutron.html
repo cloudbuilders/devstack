@@ -465,7 +465,7 @@ Neutron section.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Default Neutron Plugin</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">Q_PLUGIN</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_PLUGIN</span><span class="k">:-</span><span class="nv">openvswitch</span><span class="k">}</span>
+<span class="nv">Q_PLUGIN</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_PLUGIN</span><span class="k">:-</span><span class="nv">ml2</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Default Neutron Port</p>
 </td><td class=code><div class=highlight><pre>
@@ -908,7 +908,7 @@ Since neutron command is executed in admin context at this point,
 </td><td class=code><div class=highlight><pre>
     screen_it q-svc <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $NEUTRON_BIN_DIR/neutron-server $CFG_FILE_OPTIONS&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for Neutron to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! http_proxy= wget -q -O- http://$Q_HOST:$Q_PORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget --no-proxy -q -O- http://$Q_HOST:$Q_PORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Neutron did not start&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
@@ -1051,6 +1051,13 @@ directory</p>
         iniset <span class="nv">$NEUTRON_CONF</span> quotas quota_port -1
         iniset <span class="nv">$NEUTRON_CONF</span> quotas quota_security_group -1
         iniset <span class="nv">$NEUTRON_CONF</span> quotas quota_security_group_rule -1
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Format logging</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>setup_colorized_logging <span class="nv">$NEUTRON_CONF</span> DEFAULT
     <span class="k">fi</span>
 
 <span class="k">    </span>_neutron_setup_rootwrap

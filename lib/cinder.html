@@ -655,6 +655,7 @@ So check the response and restart if need be</p>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT rootwrap_config <span class="s2">&quot;$CINDER_CONF_DIR/rootwrap.conf&quot;</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT osapi_volume_extension cinder.api.contrib.standard_extensions
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT state_path <span class="nv">$CINDER_STATE_PATH</span>
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT lock_path <span class="nv">$CINDER_STATE_PATH</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT periodic_interval <span class="nv">$CINDER_PERIODIC_INTERVAL</span>
 
     <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
@@ -679,14 +680,11 @@ So check the response and restart if need be</p>
         iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_clear none
     <span class="k">fi</span>
 
-<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Add color to logging output</p>
+<p>Format logging</p>
 </td><td class=code><div class=highlight><pre>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT logging_context_format_string <span class="s2">&quot;%(asctime)s.%(msecs)03d %(color)s%(levelname)s %(name)s [[01;36m%(request_id)s [00;36m%(user_id)s %(project_id)s%(color)s] [01;35m%(instance)s%(color)s%(message)s[00m&quot;</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT logging_default_format_string <span class="s2">&quot;%(asctime)s.%(msecs)03d %(color)s%(levelname)s %(name)s [[00;36m-%(color)s] [01;35m%(instance)s%(color)s%(message)s[00m&quot;</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT logging_debug_format_suffix <span class="s2">&quot;[00;33mfrom (pid=%(process)d) %(funcName)s %(pathname)s:%(lineno)d[00m&quot;</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT logging_exception_prefix <span class="s2">&quot;%(color)s%(asctime)s.%(msecs)03d TRACE %(name)s [01;35m%(instance)s[00m&quot;</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>setup_colorized_logging <span class="nv">$CINDER_CONF</span> DEFAULT <span class="s2">&quot;project_id&quot;</span> <span class="s2">&quot;user_id&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;XenAPINFS&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -981,7 +979,11 @@ name, and would need to be adjusted too</p>
 </td><td class=code><div class=highlight><pre>
             exit_distro_not_supported <span class="s2">&quot;restarting tgt&quot;</span>
         <span class="k">fi</span>
-<span class="k">    fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>NOTE(gfidente): ensure tgtd is running in debug mode</p>
+</td><td class=code><div class=highlight><pre>
+        sudo tgtadm --mode system --op update --name debug --value on
+    <span class="k">fi</span>
 
 <span class="k">    </span>screen_it c-api <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-api --config-file $CINDER_CONF&quot;</span>
     screen_it c-sch <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-scheduler --config-file $CINDER_CONF&quot;</span>

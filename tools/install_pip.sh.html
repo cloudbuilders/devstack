@@ -374,6 +374,9 @@ ul.auto-toc {
 - update pip to $INSTALL_PIP_VERSION</p>
 </td><td class=code><div class=highlight><pre>
 
+<span class="nb">set</span> -o errexit
+<span class="nb">set</span> -o xtrace
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
@@ -420,10 +423,12 @@ GetDistro
 <span class="nb">echo</span> <span class="s2">&quot;Distro: $DISTRO&quot;</span>
 
 <span class="k">function </span>get_versions<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">PIP</span><span class="o">=</span><span class="k">$(</span>which pip 2&gt;/dev/null <span class="o">||</span> which pip-python 2&gt;/dev/null<span class="k">)</span>
+    <span class="nv">PIP</span><span class="o">=</span><span class="k">$(</span>which pip 2&gt;/dev/null <span class="o">||</span> which pip-python 2&gt;/dev/null <span class="o">||</span> <span class="nb">true</span><span class="k">)</span>
     <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$PIP</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">PIP_VERSION</span><span class="o">=</span><span class="k">$(</span><span class="nv">$PIP</span> --version | awk <span class="s1">&#39;{ print $2}&#39;</span><span class="k">)</span>
         <span class="nb">echo</span> <span class="s2">&quot;pip: $PIP_VERSION&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;pip: Not Installed&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -440,9 +445,9 @@ GetDistro
 <span class="k">function </span>install_pip_tarball<span class="o">()</span> <span class="o">{</span>
     <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; <span class="se">\</span>
         curl -O <span class="nv">$PIP_TAR_URL</span>; <span class="se">\</span>
-        tar xvfz pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz; <span class="se">\</span>
+        tar xvfz pip-<span class="nv">$INSTALL_PIP_VERSION</span>.tar.gz 1&gt;/dev/null; <span class="se">\</span>
         <span class="nb">cd </span>pip-<span class="nv">$INSTALL_PIP_VERSION</span>; <span class="se">\</span>
-        sudo python setup.py install; <span class="se">\</span>
+        sudo python setup.py install 1&gt;/dev/null; <span class="se">\</span>
     <span class="o">)</span>
 <span class="o">}</span>
 
