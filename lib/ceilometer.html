@@ -362,36 +362,36 @@ ul.auto-toc {
 <p>lib/ceilometer
 Install and start <strong>Ceilometer</strong> service
 To enable a minimal set of Ceilometer services, add the following to localrc:</p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 4)</p>
-Unexpected indentation.</div>
 <blockquote>
-enable_service ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api</blockquote>
-<dl class="docutils">
-<dt>To ensure Ceilometer alarming services are enabled also, further add to the localrc:</dt>
-<dd>enable_service ceilometer-alarm-notifier ceilometer-alarm-evaluator</dd>
-</dl>
+enable_service ceilometer-acompute ceilometer-acentral ceilometer-anotification ceilometer-collector ceilometer-api</blockquote>
+<p>To ensure Ceilometer alarming services are enabled also, further add to the localrc:</p>
+<blockquote>
+enable_service ceilometer-alarm-notifier ceilometer-alarm-evaluator</blockquote>
 </td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Dependencies:
-- functions
-- OS_AUTH_URL for auth in api
-- DEST set to the destination directory
-- SERVICE_PASSWORD, SERVICE_TENANT_NAME for auth in api
-- STACK_USER service user</p>
+<p>Dependencies:</p>
+<ul class="simple">
+<li>functions</li>
+<li>OS_AUTH_URL for auth in api</li>
+<li>DEST set to the destination directory</li>
+<li>SERVICE_PASSWORD, SERVICE_TENANT_NAME for auth in api</li>
+<li>STACK_USER service user</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="stack-sh">
 <h1>stack.sh</h1>
-<p>install_ceilometer
-configure_ceilometer
-init_ceilometer
-start_ceilometer
-stop_ceilometer
-cleanup_ceilometer</p>
+<ul class="simple">
+<li>install_ceilometer</li>
+<li>configure_ceilometer</li>
+<li>init_ceilometer</li>
+<li>start_ceilometer</li>
+<li>stop_ceilometer</li>
+<li>cleanup_ceilometer</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -428,10 +428,56 @@ cleanup_ceilometer</p>
 <span class="nv">CEILOMETER_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">CEILOMETER_BACKEND</span><span class="k">:-</span><span class="nv">mysql</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Ceilometer connection info.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">CEILOMETER_SERVICE_PROTOCOL</span><span class="o">=</span>http
+<span class="nv">CEILOMETER_SERVICE_HOST</span><span class="o">=</span><span class="nv">$SERVICE_HOST</span>
+<span class="nv">CEILOMETER_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">CEILOMETER_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8777</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
+<p>create_ceilometer_accounts() - Set up common required ceilometer accounts</p>
 </td><td class=code><div class=highlight><pre>
+
+create_ceilometer_accounts<span class="o">()</span> <span class="o">{</span>
+
+    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Ceilometer</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;ceilometer-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">CEILOMETER_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
+            --name<span class="o">=</span>ceilometer <span class="se">\</span>
+            --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+            --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --email<span class="o">=</span>ceilometer@example.com <span class="se">\</span>
+            | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+        keystone user-role-add <span class="se">\</span>
+            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --user-id <span class="nv">$CEILOMETER_USER</span> <span class="se">\</span>
+            --role-id <span class="nv">$ADMIN_ROLE</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">CEILOMETER_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
+                --name<span class="o">=</span>ceilometer <span class="se">\</span>
+                --type<span class="o">=</span>metering <span class="se">\</span>
+                --description<span class="o">=</span><span class="s2">&quot;OpenStack Telemetry Service&quot;</span> <span class="se">\</span>
+                | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+            keystone endpoint-create <span class="se">\</span>
+                --region RegionOne <span class="se">\</span>
+                --service_id <span class="nv">$CEILOMETER_SERVICE</span> <span class="se">\</span>
+                --publicurl <span class="s2">&quot;$CEILOMETER_SERVICE_PROTOCOL://$CEILOMETER_SERVICE_HOST:$CEILOMETER_SERVICE_PORT/&quot;</span> <span class="se">\</span>
+                --adminurl <span class="s2">&quot;$CEILOMETER_SERVICE_PROTOCOL://$CEILOMETER_SERVICE_HOST:$CEILOMETER_SERVICE_PORT/&quot;</span> <span class="se">\</span>
+                --internalurl <span class="s2">&quot;$CEILOMETER_SERVICE_PROTOCOL://$CEILOMETER_SERVICE_HOST:$CEILOMETER_SERVICE_PORT/&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+<span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>cleanup_ceilometer() - Remove residual data files, anything left over from previous
@@ -455,10 +501,10 @@ runs that a clean run would need to clean up</p>
     setup_develop <span class="nv">$CEILOMETER_DIR</span>
 
     <span class="o">[</span> ! -d <span class="nv">$CEILOMETER_CONF_DIR</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> sudo mkdir -m 755 -p <span class="nv">$CEILOMETER_CONF_DIR</span>
-    sudo chown <span class="nv">$USER</span> <span class="nv">$CEILOMETER_CONF_DIR</span>
+    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$CEILOMETER_CONF_DIR</span>
 
     <span class="o">[</span> ! -d <span class="nv">$CEILOMETER_API_LOG_DIR</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  sudo mkdir -m 755 -p <span class="nv">$CEILOMETER_API_LOG_DIR</span>
-    sudo chown <span class="nv">$USER</span> <span class="nv">$CEILOMETER_API_LOG_DIR</span>
+    sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$CEILOMETER_API_LOG_DIR</span>
 
     iniset_rpc_backend ceilometer <span class="nv">$CEILOMETER_CONF</span> DEFAULT
 
@@ -471,6 +517,10 @@ runs that a clean run would need to clean up</p>
     cp <span class="nv">$CEILOMETER_DIR</span>/etc/ceilometer/policy.json <span class="nv">$CEILOMETER_CONF_DIR</span>
     cp <span class="nv">$CEILOMETER_DIR</span>/etc/ceilometer/pipeline.yaml <span class="nv">$CEILOMETER_CONF_DIR</span>
     iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT policy_file <span class="nv">$CEILOMETER_CONF_DIR</span>/policy.json
+
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_PIPELINE_INTERVAL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>sed -i <span class="s2">&quot;s/interval:.*/interval: ${CEILOMETER_PIPELINE_INTERVAL}/&quot;</span> <span class="nv">$CEILOMETER_CONF_DIR</span>/pipeline.yaml
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>the compute and central agents need these credentials in order to
@@ -486,7 +536,7 @@ call out to the public nova and glance APIs</p>
     iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken signing_dir <span class="nv">$CEILOMETER_AUTH_CACHE_DIR</span>
 
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mysql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mysql&#39;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;postgresql&#39;</span> <span class="o">]</span> ; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$CEILOMETER_CONF</span> database connection <span class="sb">`</span>database_connection_url ceilometer<span class="sb">`</span>
     <span class="k">else</span>
 <span class="k">        </span>iniset <span class="nv">$CEILOMETER_CONF</span> database connection mongodb://localhost:27017/ceilometer
@@ -517,7 +567,7 @@ call out to the public nova and glance APIs</p>
     sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$CEILOMETER_AUTH_CACHE_DIR</span>
     rm -f <span class="nv">$CEILOMETER_AUTH_CACHE_DIR</span>/*
 
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mysql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mysql&#39;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;postgresql&#39;</span> <span class="o">]</span> ; <span class="k">then</span>
 <span class="k">        </span>recreate_database ceilometer utf8
         <span class="nv">$CEILOMETER_BIN_DIR</span>/ceilometer-dbsync
     <span class="k">fi</span>
@@ -541,12 +591,21 @@ call out to the public nova and glance APIs</p>
 <p>start_ceilometer() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_ceilometer<span class="o">()</span> <span class="o">{</span>
-    screen_it ceilometer-acompute <span class="s2">&quot;sg $LIBVIRT_GROUP \&quot;ceilometer-agent-compute --config-file $CEILOMETER_CONF\&quot;&quot;</span>
-    screen_it ceilometer-acentral <span class="s2">&quot;ceilometer-agent-central --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-collector <span class="s2">&quot;ceilometer-collector --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-api <span class="s2">&quot;ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-alarm-notifier <span class="s2">&quot;ceilometer-alarm-notifier --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-alarm-evaluator <span class="s2">&quot;ceilometer-alarm-evaluator --config-file $CEILOMETER_CONF&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>screen_it ceilometer-acompute <span class="s2">&quot;cd ; sg $LIBVIRT_GROUP \&quot;ceilometer-agent-compute --config-file $CEILOMETER_CONF\&quot;&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>screen_it ceilometer-acentral <span class="s2">&quot;cd ; ceilometer-agent-central --config-file $CEILOMETER_CONF&quot;</span>
+    screen_it ceilometer-anotification <span class="s2">&quot;cd ; ceilometer-agent-notification --config-file $CEILOMETER_CONF&quot;</span>
+    screen_it ceilometer-collector <span class="s2">&quot;cd ; ceilometer-collector --config-file $CEILOMETER_CONF&quot;</span>
+    screen_it ceilometer-api <span class="s2">&quot;cd ; ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR --config-file $CEILOMETER_CONF&quot;</span>
+
+    <span class="nb">echo</span> <span class="s2">&quot;Waiting for ceilometer-api to start...&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! curl --noproxy &#39;*&#39; -s http://localhost:8777/v2/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;ceilometer-api did not start&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>screen_it ceilometer-alarm-notifier <span class="s2">&quot;cd ; ceilometer-alarm-notifier --config-file $CEILOMETER_CONF&quot;</span>
+    screen_it ceilometer-alarm-evaluator <span class="s2">&quot;cd ; ceilometer-alarm-evaluator --config-file $CEILOMETER_CONF&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -556,9 +615,9 @@ call out to the public nova and glance APIs</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the ceilometer screen windows</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>serv in ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api ceilometer-alarm-notifier ceilometer-alarm-evaluator; <span class="k">do</span>
-<span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
-<span class="nb">    </span><span class="k">done</span>
+    <span class="k">for </span>serv in ceilometer-acompute ceilometer-acentral ceilometer-anotification ceilometer-collector ceilometer-api ceilometer-alarm-notifier ceilometer-alarm-evaluator; <span class="k">do</span>
+<span class="k">        </span>screen_stop <span class="nv">$serv</span>
+    <span class="k">done</span>
 <span class="o">}</span>
 
 
@@ -568,10 +627,11 @@ call out to the public nova and glance APIs</p>
 <span class="nv">$XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local variables:
-mode: shell-script
-End:</p>
+<p>Tell emacs to use shell-script-mode</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## Local variables:</span>
+<span class="c">## mode: shell-script</span>
+<span class="c">## End:</span>
 
 
 </td><td class=code><div class=highlight><pre>

@@ -412,11 +412,14 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
 <span class="nv">ML2_L3_PLUGIN</span><span class="o">=</span><span class="k">${</span><span class="nv">ML2_L3_PLUGIN</span><span class="k">:-</span><span class="nv">neutron</span><span class="p">.services.l3_router.l3_router_plugin.L3RouterPlugin</span><span class="k">}</span>
 
 <span class="k">function </span>populate_ml2_config<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">OPTS</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nv">CONF</span><span class="o">=</span><span class="nv">$2</span>
-    <span class="nv">SECTION</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nv">CONF</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nv">SECTION</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nv">OPTS</span><span class="o">=</span><span class="nv">$3</span>
 
-    <span class="k">for </span>I in <span class="s2">&quot;${OPTS[@]}&quot;</span>; <span class="k">do</span>
+    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$OPTS&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        return</span>
+<span class="k">    fi</span>
+<span class="k">    for </span>I in <span class="s2">&quot;${OPTS[@]}&quot;</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Replace the first '=' with ' ' for iniset syntax</p>
 </td><td class=code><div class=highlight><pre>
@@ -433,11 +436,7 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
 <p>The ML2 plugin delegates L3 routing/NAT functionality to
 the L3 service plugin which must therefore be specified.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$Q_SERVICE_PLUGIN_CLASSES</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">Q_SERVICE_PLUGIN_CLASSES</span><span class="o">=</span><span class="nv">$ML2_L3_PLUGIN</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nv">Q_SERVICE_PLUGIN_CLASSES</span><span class="o">=</span><span class="s2">&quot;$Q_SERVICE_PLUGIN_CLASSES,$ML2_L3_PLUGIN&quot;</span>
-    <span class="k">fi</span>
+    _neutron_service_plugin_class_add <span class="nv">$ML2_L3_PLUGIN</span>
 <span class="o">}</span>
 
 <span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
@@ -492,19 +491,17 @@ groups is enabled, and that will need to be set here instead.</p>
 </td><td class=code><div class=highlight><pre>
     iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs local_ip <span class="nv">$HOST_IP</span>
 
-    populate_ml2_config <span class="nv">mechanism_drivers</span><span class="o">=</span><span class="nv">$Q_ML2_PLUGIN_MECHANISM_DRIVERS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2
+    populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2 <span class="nv">mechanism_drivers</span><span class="o">=</span><span class="nv">$Q_ML2_PLUGIN_MECHANISM_DRIVERS</span>
 
-    populate_ml2_config <span class="nv">type_drivers</span><span class="o">=</span><span class="nv">$Q_ML2_PLUGIN_TYPE_DRIVERS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2
+    populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2 <span class="nv">type_drivers</span><span class="o">=</span><span class="nv">$Q_ML2_PLUGIN_TYPE_DRIVERS</span>
 
-    populate_ml2_config <span class="nv">$Q_SRV_EXTRA_OPTS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2
+    populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2 <span class="nv">$Q_SRV_EXTRA_OPTS</span>
 
-    populate_ml2_config <span class="nv">$Q_ML2_PLUGIN_GRE_TYPE_OPTIONS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_gre
+    populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_gre <span class="nv">$Q_ML2_PLUGIN_GRE_TYPE_OPTIONS</span>
 
-    populate_ml2_config <span class="nv">$Q_ML2_PLUGIN_VXLAN_TYPE_OPTIONS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_vxlan
+    populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_vxlan <span class="nv">$Q_ML2_PLUGIN_VXLAN_TYPE_OPTIONS</span>
 
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>populate_ml2_config <span class="nv">$Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS</span> /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_vlan
-    <span class="k">fi</span>
+    populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_vlan <span class="nv">$Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS</span>
 <span class="o">}</span>
 
 <span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>

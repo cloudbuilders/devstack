@@ -494,6 +494,7 @@ and save it.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | awk <span class="s1">&#39;{print $4}&#39;</span><span class="sb">`</span>
+die_if_not_set <span class="nv">$LINENO</span> TOKEN <span class="s2">&quot;Keystone fail to get token&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -533,24 +534,28 @@ and save it.</p>
 
 <span class="k">function </span>get_image_id <span class="o">{</span>
     <span class="nb">local </span><span class="nv">IMAGE_ID</span><span class="o">=</span><span class="k">$(</span>glance image-list | egrep <span class="s2">&quot; $DEFAULT_IMAGE_NAME &quot;</span> | get_field 1<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> IMAGE_ID <span class="s2">&quot;Failure retrieving IMAGE_ID&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;$IMAGE_ID&quot;</span>
 <span class="o">}</span>
 
 <span class="k">function </span>get_tenant_id <span class="o">{</span>
     <span class="nb">local </span><span class="nv">TENANT_NAME</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="sb">`</span>keystone tenant-list | grep <span class="s2">&quot; $TENANT_NAME &quot;</span> | head -n 1 | get_field 1<span class="sb">`</span>
+    die_if_not_set <span class="nv">$LINENO</span> TENANT_ID <span class="s2">&quot;Failure retrieving TENANT_ID for $TENANT_NAME&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;$TENANT_ID&quot;</span>
 <span class="o">}</span>
 
 <span class="k">function </span>get_user_id <span class="o">{</span>
     <span class="nb">local </span><span class="nv">USER_NAME</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">USER_ID</span><span class="o">=</span><span class="sb">`</span>keystone user-list | grep <span class="nv">$USER_NAME</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
+    die_if_not_set <span class="nv">$LINENO</span> USER_ID <span class="s2">&quot;Failure retrieving USER_ID for $USER_NAME&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;$USER_ID&quot;</span>
 <span class="o">}</span>
 
 <span class="k">function </span>get_role_id <span class="o">{</span>
     <span class="nb">local </span><span class="nv">ROLE_NAME</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">ROLE_ID</span><span class="o">=</span><span class="sb">`</span>keystone role-list | grep <span class="nv">$ROLE_NAME</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
+    die_if_not_set <span class="nv">$LINENO</span> ROLE_ID <span class="s2">&quot;Failure retrieving ROLE_ID for $ROLE_NAME&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;$ROLE_ID&quot;</span>
 <span class="o">}</span>
 
@@ -563,6 +568,7 @@ and save it.</p>
 <span class="k">function </span>get_flavor_id <span class="o">{</span>
     <span class="nb">local </span><span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">FLAVOR_ID</span><span class="o">=</span><span class="sb">`</span>nova flavor-list | grep <span class="nv">$INSTANCE_TYPE</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
+    die_if_not_set <span class="nv">$LINENO</span> FLAVOR_ID <span class="s2">&quot;Failure retrieving FLAVOR_ID for $INSTANCE_TYPE&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;$FLAVOR_ID&quot;</span>
 <span class="o">}</span>
 
@@ -572,6 +578,14 @@ and save it.</p>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;server &#39;$VM_UUID&#39; did not become active!&quot;</span>
         <span class="nb">false</span>
 <span class="nb">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function </span>neutron_debug_admin <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">os_username</span><span class="o">=</span><span class="nv">$OS_USERNAME</span>
+    <span class="nb">local </span><span class="nv">os_tenant_id</span><span class="o">=</span><span class="nv">$OS_TENANT_ID</span>
+    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc admin admin
+    neutron-debug <span class="nv">$@</span>
+    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc <span class="nv">$os_username</span> <span class="nv">$os_tenant_id</span>
 <span class="o">}</span>
 
 <span class="k">function </span>add_tenant <span class="o">{</span>
@@ -627,9 +641,10 @@ and save it.</p>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc admin admin
     <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>get_tenant_id <span class="nv">$TENANT</span><span class="k">)</span>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc <span class="nv">$TENANT</span> <span class="nv">$TENANT</span>
-    <span class="nb">local </span><span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>neutron net-create --tenant_id <span class="nv">$TENANT_ID</span> <span class="nv">$NET_NAME</span> <span class="nv">$EXTRA</span>| grep <span class="s1">&#39; id &#39;</span> | awk <span class="s1">&#39;{print $4}&#39;</span> <span class="k">)</span>
-    neutron subnet-create --ip_version 4 --tenant_id <span class="nv">$TENANT_ID</span> --gateway <span class="nv">$GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$CIDR</span>
-    neutron-debug probe-create --device-owner compute <span class="nv">$NET_ID</span>
+    <span class="nb">local </span><span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>neutron net-create --tenant-id <span class="nv">$TENANT_ID</span> <span class="nv">$NET_NAME</span> <span class="nv">$EXTRA</span>| grep <span class="s1">&#39; id &#39;</span> | awk <span class="s1">&#39;{print $4}&#39;</span> <span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> NET_ID <span class="s2">&quot;Failure creating NET_ID for $TENANT_ID $NET_NAME $EXTRA&quot;</span>
+    neutron subnet-create --ip-version 4 --tenant-id <span class="nv">$TENANT_ID</span> --gateway <span class="nv">$GATEWAY</span> <span class="nv">$NET_ID</span> <span class="nv">$CIDR</span>
+    neutron_debug_admin probe-create --device-owner compute <span class="nv">$NET_ID</span>
     <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc demo demo
 <span class="o">}</span>
 
@@ -673,10 +688,10 @@ and save it.</p>
 <p>Test agent connection.  Assumes namespaces are disabled, and
 that DHCP is in use, but not L3</p>
 </td><td class=code><div class=highlight><pre>
-     <span class="nb">local </span><span class="nv">VM_NAME</span><span class="o">=</span><span class="nv">$1</span>
-     <span class="nb">local </span><span class="nv">NET_NAME</span><span class="o">=</span><span class="nv">$2</span>
-     <span class="nv">IP</span><span class="o">=</span><span class="k">$(</span>get_instance_ip <span class="nv">$VM_NAME</span> <span class="nv">$NET_NAME</span><span class="k">)</span>
-     ping_check <span class="nv">$NET_NAME</span> <span class="nv">$IP</span> <span class="nv">$BOOT_TIMEOUT</span>
+    <span class="nb">local </span><span class="nv">VM_NAME</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">NET_NAME</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nv">IP</span><span class="o">=</span><span class="k">$(</span>get_instance_ip <span class="nv">$VM_NAME</span> <span class="nv">$NET_NAME</span><span class="k">)</span>
+    ping_check <span class="nv">$NET_NAME</span> <span class="nv">$IP</span> <span class="nv">$BOOT_TIMEOUT</span>
 <span class="o">}</span>
 
 <span class="k">function </span>check_vm <span class="o">{</span>
@@ -730,10 +745,10 @@ TODO (nati) test multi-nic</p>
 <span class="o">}</span>
 
 <span class="k">function </span>delete_networks <span class="o">{</span>
-   foreach_tenant_net <span class="s1">&#39;delete_network ${%TENANT%_NAME} %NUM%&#39;</span>
-   <span class="c">#TODO(nati) add secuirty group check after it is implemented</span>
+    foreach_tenant_net <span class="s1">&#39;delete_network ${%TENANT%_NAME} %NUM%&#39;</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>source $TOP_DIR/openrc demo1 demo1
+<p>TODO(nati) add secuirty group check after it is implemented
+source $TOP_DIR/openrc demo1 demo1
 nova secgroup-delete-rule default icmp -1 -1 0.0.0.0/0
 source $TOP_DIR/openrc demo2 demo2
 nova secgroup-delete-rule default icmp -1 -1 0.0.0.0/0</p>
@@ -802,10 +817,10 @@ main<span class="o">()</span> <span class="o">{</span>
     <span class="nb">echo </span>Description
     <span class="nb">echo</span>
 <span class="nb">    echo </span>Copyright 2012, Cisco Systems
-    <span class="nb">echo </span>Copyright 2012, Nicira Networks, Inc.
+    <span class="nb">echo </span>Copyright 2012, VMware, Inc.
     <span class="nb">echo </span>Copyright 2012, NTT MCL, Inc.
     <span class="nb">echo</span>
-<span class="nb">    echo </span>Please direct any questions to dedutta@cisco.com, dan@nicira.com, nachi@nttmcl.com
+<span class="nb">    echo </span>Please direct any questions to dedutta@cisco.com, dwendlandt@vmware.com, nachi@nttmcl.com
     <span class="nb">echo</span>
 
 

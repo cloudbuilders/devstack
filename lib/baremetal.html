@@ -359,26 +359,6 @@ ul.auto-toc {
 <div class="document">
 
 
-<p>vim: tabstop=4 shiftwidth=4 softtabstop=4
-Copyright (c) 2012 Hewlett-Packard Development Company, L.P.
-All Rights Reserved.</p>
-<blockquote>
-<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may
-not use this file except in compliance with the License. You may obtain
-a copy of the License at</p>
-<blockquote>
-<a class="reference external" href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</a></blockquote>
-<p>Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-License for the specific language governing permissions and limitations
-under the License.</p>
-</blockquote>
-</td><td class=code><div class=highlight><pre>
-
-
-
-</pre></div></td></tr><tr><td class=docs>
 <p>This file provides devstack with the environment and utilities to
 control nova-compute's baremetal driver.
 It sets reasonable defaults to run within a single host,
@@ -386,28 +366,51 @@ using virtual machines in place of physical hardware.
 However, by changing just a few options, devstack+baremetal can in fact
 control physical hardware resources on the same network, if you know
 the MAC address(es) and IPMI credentials.</p>
-<dl class="docutils">
-<dt>At a minimum, to enable the baremetal driver, you must set these in loclarc:</dt>
-<dd>VIRT_DRIVER=baremetal
-ENABLED_SERVICES=&quot;$ENABLED_SERVICES,baremetal&quot;</dd>
-</dl>
+<p>At a minimum, to enable the baremetal driver, you must set these in localrc:</p>
+<blockquote>
+VIRT_DRIVER=baremetal
+ENABLED_SERVICES=&quot;$ENABLED_SERVICES,baremetal&quot;</blockquote>
 <p>We utilize diskimage-builder to create a ramdisk, and then
 baremetal driver uses that to push a disk image onto the node(s).</p>
 <p>Below we define various defaults which control the behavior of the
 baremetal compute service, and inform it of the hardware it will control.</p>
 <p>Below that, various functions are defined, which are called by devstack
 in the following order:</p>
+<p>before nova-cpu starts:</p>
 <blockquote>
-<p>before nova-cpu starts:
-- prepare_baremetal_toolchain
-- configure_baremetal_nova_dirs</p>
-<p>after nova and glance have started:
-- build_and_upload_baremetal_deploy_k_and_r $token
-- create_baremetal_flavor $BM_DEPLOY_KERNEL_ID $BM_DEPLOY_RAMDISK_ID
-- upload_baremetal_image $url $token
-- add_baremetal_node &lt;first_mac&gt; &lt;second_mac&gt;</p>
+<ul class="simple">
+<li>prepare_baremetal_toolchain</li>
+<li>configure_baremetal_nova_dirs</li>
+</ul>
+</blockquote>
+<p>after nova and glance have started:</p>
+<blockquote>
+<ul class="simple">
+<li>build_and_upload_baremetal_deploy_k_and_r $token</li>
+<li>create_baremetal_flavor $BM_DEPLOY_KERNEL_ID $BM_DEPLOY_RAMDISK_ID</li>
+<li>upload_baremetal_image $url $token</li>
+<li>add_baremetal_node &lt;first_mac&gt; &lt;second_mac&gt;</li>
+</ul>
 </blockquote>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## vim: tabstop=4 shiftwidth=4 softtabstop=4</span>
+
+<span class="c">## Copyright (c) 2012 Hewlett-Packard Development Company, L.P.</span>
+<span class="c">## All Rights Reserved.</span>
+<span class="c">##</span>
+<span class="c">##    Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may</span>
+<span class="c">##    not use this file except in compliance with the License. You may obtain</span>
+<span class="c">##    a copy of the License at</span>
+<span class="c">##</span>
+<span class="c">##         http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">##</span>
+<span class="c">##    Unless required by applicable law or agreed to in writing, software</span>
+<span class="c">##    distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT</span>
+<span class="c">##    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the</span>
+<span class="c">##    License for the specific language governing permissions and limitations</span>
+<span class="c">##    under the License.</span>
+
+
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -423,22 +426,21 @@ in the following order:</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>sub-driver to use for kernel deployment</dt>
-<dd><ul class="first last simple">
+<p>sub-driver to use for kernel deployment</p>
+<ul class="simple">
 <li>nova.virt.baremetal.pxe.PXE</li>
 <li>nova.virt.baremetal.tilera.TILERA</li>
 </ul>
-</dd>
-</dl>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">BM_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DRIVER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.virt.baremetal.pxe.PXE</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>sub-driver to use for remote power management
-- nova.virt.baremetal.fake.FakePowerManager, for manual power control
-- nova.virt.baremetal.ipmi.IPMI, for remote IPMI
-- nova.virt.baremetal.tilera_pdu.Pdu, for TilePro hardware</p>
+<p>sub-driver to use for remote power management</p>
+<ul class="simple">
+<li>nova.virt.baremetal.fake.FakePowerManager, for manual power control</li>
+<li>nova.virt.baremetal.ipmi.IPMI, for remote IPMI</li>
+<li>nova.virt.baremetal.tilera_pdu.Pdu, for TilePro hardware</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">BM_POWER_MANAGER</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_POWER_MANAGER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.virt.baremetal.fake.FakePowerManager</span><span class="k">}</span>
 
@@ -465,22 +467,12 @@ change the virtualization type: --engine qemu</p>
 <p>To provide PXE, configure nova-network's dnsmasq rather than run the one
 dedicated to baremetal. When enable this, make sure these conditions are
 fulfilled:</p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 93)</p>
-Unexpected indentation.</div>
-<blockquote>
 <ol class="arabic simple">
 <li>nova-compute and nova-network runs on the same host</li>
 <li>nova-network uses FlatDHCPManager</li>
 </ol>
-</blockquote>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 95)</p>
-Block quote ends without a blank line; unexpected unindent.</div>
-<dl class="docutils">
-<dt>NOTE: the other BM_DNSMASQ_* have no effect on the behavior if this option</dt>
-<dd>is enabled.</dd>
-</dl>
+<p>NOTE: the other BM_DNSMASQ_* have no effect on the behavior if this option
+is enabled.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">BM_DNSMASQ_FROM_NOVA_NETWORK</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$BM_DNSMASQ_FROM_NOVA_NETWORK</span><span class="sb">`</span>
 
@@ -505,11 +497,9 @@ BM_DNSMASQ_RANGE must be changed to suit your network</p>
 <span class="nv">BM_DNSMASQ_DNS</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_DNS</span><span class="k">:-}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>BM_FIRST_MAC <em>must</em> be set to the MAC address of the node you will boot.</dt>
-<dd>This is passed to dnsmasq along with the kernel/ramdisk to
-deploy via PXE.</dd>
-</dl>
+<p>BM_FIRST_MAC <em>must</em> be set to the MAC address of the node you will
+boot.  This is passed to dnsmasq along with the kernel/ramdisk to
+deploy via PXE.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">BM_FIRST_MAC</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_FIRST_MAC</span><span class="k">:-}</span>
 
@@ -531,11 +521,9 @@ deploy via PXE.</dd>
 <span class="nv">BM_PM_PASS</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_PM_PASS</span><span class="k">:-</span><span class="nv">pass</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>BM_FLAVOR_* options are arbitrary and not necessarily related to physical</dt>
-<dd>hardware capacity. These can be changed if you are testing
-BaremetalHostManager with multiple nodes and different flavors.</dd>
-</dl>
+<p>BM_FLAVOR_* options are arbitrary and not necessarily related to
+physical hardware capacity. These can be changed if you are testing
+BaremetalHostManager with multiple nodes and different flavors.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">BM_CPU_ARCH</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_CPU_ARCH</span><span class="k">:-</span><span class="nv">x86_64</span><span class="k">}</span>
 <span class="nv">BM_FLAVOR_CPU</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_FLAVOR_CPU</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
@@ -634,15 +622,10 @@ so that we can build the deployment kernel &amp; ramdisk</p>
     <span class="nv">BM_FIRST_MAC</span><span class="o">=</span><span class="k">$(</span>sudo <span class="nv">$bm_poseur</span> get-macs<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>NOTE: there is currently a limitation in baremetal driver</dt>
-<dd>that requires second MAC even if it is not used.
-Passing a fake value allows this to work.</dd>
-</dl>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 187)</p>
-Definition list ends without a blank line; unexpected unindent.</div>
-<p>TODO(deva): remove this after driver issue is fixed.</p>
+<p>NOTE: there is currently a limitation in baremetal driver
+that requires second MAC even if it is not used.
+Passing a fake value allows this to work.
+TODO(deva): remove this after driver issue is fixed.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">BM_SECOND_MAC</span><span class="o">=</span><span class="s1">&#39;12:34:56:78:90:12&#39;</span>
 <span class="o">}</span>
@@ -711,19 +694,19 @@ this function sets BM_DEPLOY_KERNEL_ID and BM_DEPLOY_RAMDISK_ID</p>
 <p>load them into glance</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">BM_DEPLOY_KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-         --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-         --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-         image-create <span class="se">\</span>
-         --name <span class="nv">$BM_DEPLOY_KERNEL</span> <span class="se">\</span>
-         --is-public True --disk-format<span class="o">=</span>aki <span class="se">\</span>
-         &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$BM_DEPLOY_KERNEL</span>  | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image-create <span class="se">\</span>
+        --name <span class="nv">$BM_DEPLOY_KERNEL</span> <span class="se">\</span>
+        --is-public True --disk-format<span class="o">=</span>aki <span class="se">\</span>
+        &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$BM_DEPLOY_KERNEL</span>  | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
     <span class="nv">BM_DEPLOY_RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-         --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-         --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-         image-create <span class="se">\</span>
-         --name <span class="nv">$BM_DEPLOY_RAMDISK</span> <span class="se">\</span>
-         --is-public True --disk-format<span class="o">=</span>ari <span class="se">\</span>
-         &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$BM_DEPLOY_RAMDISK</span>  | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image-create <span class="se">\</span>
+        --name <span class="nv">$BM_DEPLOY_RAMDISK</span> <span class="se">\</span>
+        --is-public True --disk-format<span class="o">=</span>ari <span class="se">\</span>
+        &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$BM_DEPLOY_RAMDISK</span>  | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -734,17 +717,17 @@ this function sets BM_DEPLOY_KERNEL_ID and BM_DEPLOY_RAMDISK_ID</p>
     <span class="nv">aki</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nv">ari</span><span class="o">=</span><span class="nv">$2</span>
     nova flavor-create <span class="nv">$BM_FLAVOR_NAME</span> <span class="nv">$BM_FLAVOR_ID</span> <span class="se">\</span>
-            <span class="nv">$BM_FLAVOR_RAM</span> <span class="nv">$BM_FLAVOR_ROOT_DISK</span> <span class="nv">$BM_FLAVOR_CPU</span>
+        <span class="nv">$BM_FLAVOR_RAM</span> <span class="nv">$BM_FLAVOR_ROOT_DISK</span> <span class="nv">$BM_FLAVOR_CPU</span>
     nova flavor-key <span class="nv">$BM_FLAVOR_NAME</span> <span class="nb">set</span> <span class="se">\</span>
-            <span class="s2">&quot;cpu_arch&quot;</span><span class="o">=</span><span class="s2">&quot;$BM_FLAVOR_ARCH&quot;</span> <span class="se">\</span>
-            <span class="s2">&quot;baremetal:deploy_kernel_id&quot;</span><span class="o">=</span><span class="s2">&quot;$aki&quot;</span> <span class="se">\</span>
-            <span class="s2">&quot;baremetal:deploy_ramdisk_id&quot;</span><span class="o">=</span><span class="s2">&quot;$ari&quot;</span>
+        <span class="s2">&quot;cpu_arch&quot;</span><span class="o">=</span><span class="s2">&quot;$BM_FLAVOR_ARCH&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;baremetal:deploy_kernel_id&quot;</span><span class="o">=</span><span class="s2">&quot;$aki&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;baremetal:deploy_ramdisk_id&quot;</span><span class="o">=</span><span class="s2">&quot;$ari&quot;</span>
 
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>pull run-time kernel/ramdisk out of disk image and load into glance
-note that $file is currently expected to be in qcow2 format
+<p>Pull run-time kernel/ramdisk out of disk image and load into glance.
+Note that $file is currently expected to be in qcow2 format.
 Sets KERNEL_ID and RAMDISK_ID</p>
 <p>Usage: extract_and_upload_k_and_r_from_image $token $file</p>
 </td><td class=code><div class=highlight><pre>
@@ -772,19 +755,19 @@ Sets KERNEL_ID and RAMDISK_ID</p>
 <p>load them into glance</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-         --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-         --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-         image-create <span class="se">\</span>
-         --name <span class="nv">$image_name</span>-kernel <span class="se">\</span>
-         --is-public True --disk-format<span class="o">=</span>aki <span class="se">\</span>
-         &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$OUT_KERNEL</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image-create <span class="se">\</span>
+        --name <span class="nv">$image_name</span>-kernel <span class="se">\</span>
+        --is-public True --disk-format<span class="o">=</span>aki <span class="se">\</span>
+        &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$OUT_KERNEL</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
     <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-         --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-         --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-         image-create <span class="se">\</span>
-         --name <span class="nv">$image_name</span>-initrd <span class="se">\</span>
-         --is-public True --disk-format<span class="o">=</span>ari <span class="se">\</span>
-         &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$OUT_RAMDISK</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image-create <span class="se">\</span>
+        --name <span class="nv">$image_name</span>-initrd <span class="se">\</span>
+        --is-public True --disk-format<span class="o">=</span>ari <span class="se">\</span>
+        &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$OUT_RAMDISK</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 <span class="o">}</span>
 
 
@@ -833,11 +816,11 @@ of the existing function.</p>
             mkdir <span class="s2">&quot;$xdir&quot;</span>
             tar -zxf <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> -C <span class="s2">&quot;$xdir&quot;</span>
             <span class="nv">KERNEL</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-vmlinuz* <span class="s2">&quot;$xdir/&quot;</span>aki-*/image; <span class="k">do</span>
-                     <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
+                <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
             <span class="nv">RAMDISK</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-initrd* <span class="s2">&quot;$xdir/&quot;</span>ari-*/image; <span class="k">do</span>
-                     <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
+                <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
             <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*.img <span class="s2">&quot;$xdir/&quot;</span>ami-*/image; <span class="k">do</span>
-                     <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
+                <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
             <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
             <span class="k">fi</span>
@@ -874,18 +857,18 @@ of the existing function.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(deva): add support for other image types</p>
 </td><td class=code><div class=highlight><pre>
-       <span class="k">return</span>
+        <span class="k">return</span>
 <span class="k">    fi</span>
 
 <span class="k">    </span>glance <span class="se">\</span>
-       --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-       --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-       image-create <span class="se">\</span>
-       --name <span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> --is-public True <span class="se">\</span>
-       --container-format <span class="nv">$CONTAINER_FORMAT</span> <span class="se">\</span>
-       --disk-format <span class="nv">$DISK_FORMAT</span> <span class="se">\</span>
-       <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+--property kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="se">\</span>
-       <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+--property ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image-create <span class="se">\</span>
+        --name <span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> --is-public True <span class="se">\</span>
+        --container-format <span class="nv">$CONTAINER_FORMAT</span> <span class="se">\</span>
+        --disk-format <span class="nv">$DISK_FORMAT</span> <span class="se">\</span>
+        <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+--property kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="se">\</span>
+        <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+--property ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>override DEFAULT_IMAGE_NAME so that tempest can find the image
@@ -903,7 +886,7 @@ that we just uploaded in glance</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>inform nova-baremetal about nodes, MACs, etc
+<p>Inform nova-baremetal about nodes, MACs, etc.
 Defaults to using BM_FIRST_MAC and BM_SECOND_MAC if parameters not specified</p>
 <p>Usage: add_baremetal_node &lt;first_mac&gt; &lt;second_mac&gt;</p>
 </td><td class=code><div class=highlight><pre>
@@ -912,18 +895,20 @@ Defaults to using BM_FIRST_MAC and BM_SECOND_MAC if parameters not specified</p>
     <span class="nv">mac_2</span><span class="o">=</span><span class="k">${</span><span class="nv">2</span><span class="k">:-</span><span class="nv">$BM_SECOND_MAC</span><span class="k">}</span>
 
     <span class="nv">id</span><span class="o">=</span><span class="k">$(</span>nova baremetal-node-create <span class="se">\</span>
-       --pm_address<span class="o">=</span><span class="s2">&quot;$BM_PM_ADDR&quot;</span> <span class="se">\</span>
-       --pm_user<span class="o">=</span><span class="s2">&quot;$BM_PM_USER&quot;</span> <span class="se">\</span>
-       --pm_password<span class="o">=</span><span class="s2">&quot;$BM_PM_PASS&quot;</span> <span class="se">\</span>
-       <span class="s2">&quot;$BM_HOSTNAME&quot;</span> <span class="se">\</span>
-       <span class="s2">&quot;$BM_FLAVOR_CPU&quot;</span> <span class="se">\</span>
-       <span class="s2">&quot;$BM_FLAVOR_RAM&quot;</span> <span class="se">\</span>
-       <span class="s2">&quot;$BM_FLAVOR_ROOT_DISK&quot;</span> <span class="se">\</span>
-       <span class="s2">&quot;$mac_1&quot;</span> <span class="se">\</span>
-       | grep <span class="s1">&#39; id &#39;</span> | get_field 2 <span class="k">)</span>
+        --pm_address<span class="o">=</span><span class="s2">&quot;$BM_PM_ADDR&quot;</span> <span class="se">\</span>
+        --pm_user<span class="o">=</span><span class="s2">&quot;$BM_PM_USER&quot;</span> <span class="se">\</span>
+        --pm_password<span class="o">=</span><span class="s2">&quot;$BM_PM_PASS&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$BM_HOSTNAME&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$BM_FLAVOR_CPU&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$BM_FLAVOR_RAM&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$BM_FLAVOR_ROOT_DISK&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$mac_1&quot;</span> <span class="se">\</span>
+        | grep <span class="s1">&#39; id &#39;</span> | get_field 2 <span class="k">)</span>
     <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$id&quot;</span> <span class="o">]</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Error adding baremetal node&quot;</span>
-    <span class="nv">id2</span><span class="o">=</span><span class="k">$(</span>nova baremetal-interface-add <span class="s2">&quot;$id&quot;</span> <span class="s2">&quot;$mac_2&quot;</span> <span class="k">)</span>
-    <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$id2&quot;</span> <span class="o">]</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Error adding interface to barmetal node $id&quot;</span>
+    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$mac_2&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">id2</span><span class="o">=</span><span class="k">$(</span>nova baremetal-interface-add <span class="s2">&quot;$id&quot;</span> <span class="s2">&quot;$mac_2&quot;</span> <span class="k">)</span>
+        <span class="o">[</span> <span class="nv">$?</span> -eq 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$id2&quot;</span> <span class="o">]</span> <span class="o">||</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;Error adding interface to barmetal node $id&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 
@@ -933,10 +918,11 @@ Defaults to using BM_FIRST_MAC and BM_SECOND_MAC if parameters not specified</p>
 <span class="nv">$XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local variables:
-mode: shell-script
-End:</p>
+<p>Tell emacs to use shell-script-mode</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## Local variables:</span>
+<span class="c">## mode: shell-script</span>
+<span class="c">## End:</span>
 
 
 </td><td class=code><div class=highlight><pre>

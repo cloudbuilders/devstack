@@ -361,25 +361,29 @@ ul.auto-toc {
 
 <p>lib/nova
 Functions to control the configuration and operation of the <strong>Nova</strong> service
-Dependencies:
-<tt class="docutils literal">functions</tt> file
-<tt class="docutils literal">DEST</tt>, <tt class="docutils literal">DATA_DIR</tt>, <tt class="docutils literal">STACK_USER</tt> must be defined
-<tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined
-<tt class="docutils literal">LIBVIRT_TYPE</tt> must be defined
-<tt class="docutils literal">INSTANCE_NAME_PREFIX</tt>, <tt class="docutils literal">VOLUME_NAME_PREFIX</tt> must be defined
-<tt class="docutils literal">KEYSTONE_TOKEN_FORMAT</tt> must be defined</p>
+Dependencies:</p>
+<ul class="simple">
+<li><tt class="docutils literal">functions</tt> file</li>
+<li><tt class="docutils literal">DEST</tt>, <tt class="docutils literal">DATA_DIR</tt>, <tt class="docutils literal">STACK_USER</tt> must be defined</li>
+<li><tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined</li>
+<li><tt class="docutils literal">LIBVIRT_TYPE</tt> must be defined</li>
+<li><tt class="docutils literal">INSTANCE_NAME_PREFIX</tt>, <tt class="docutils literal">VOLUME_NAME_PREFIX</tt> must be defined</li>
+<li><tt class="docutils literal">KEYSTONE_TOKEN_FORMAT</tt> must be defined</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
-<p>install_nova
-configure_nova
-create_nova_conf
-init_nova
-start_nova
-stop_nova
-cleanup_nova</p>
+<ul class="simple">
+<li>install_nova</li>
+<li>configure_nova</li>
+<li>create_nova_conf</li>
+<li>init_nova</li>
+<li>start_nova</li>
+<li>stop_nova</li>
+<li>cleanup_nova</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -442,15 +446,18 @@ NOTE: Set API_RATE_LIMIT=&quot;False&quot; to turn OFF rate limiting</p>
 <span class="nv">API_RATE_LIMIT</span><span class="o">=</span><span class="k">${</span><span class="nv">API_RATE_LIMIT</span><span class="k">:-</span><span class="s2">&quot;True&quot;</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Option to enable/disable config drive
+NOTE: Set FORCE_CONFIG_DRIVE=&quot;False&quot; to turn OFF config drive</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">FORCE_CONFIG_DRIVE</span><span class="o">=</span><span class="k">${</span><span class="nv">FORCE_CONFIG_DRIVE</span><span class="k">:-</span><span class="s2">&quot;always&quot;</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Nova supports pluggable schedulers.  The default <tt class="docutils literal">FilterScheduler</tt>
 should work in most cases.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SCHEDULER</span><span class="o">=</span><span class="k">${</span><span class="nv">SCHEDULER</span><span class="k">:-</span><span class="nv">nova</span><span class="p">.scheduler.filter_scheduler.FilterScheduler</span><span class="k">}</span>
 
 <span class="nv">QEMU_CONF</span><span class="o">=</span>/etc/libvirt/qemu.conf
-
-<span class="nv">NOVNC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
-<span class="nv">SPICE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/spice-html5
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set default defaults here as some hypervisor drivers override these</p>
@@ -630,7 +637,7 @@ Wipe any existing rootwrap.d files first</p>
 <p>Set up the rootwrap sudoers for nova</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$USER ALL=(root) NOPASSWD: $ROOTWRAP_SUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD: $ROOTWRAP_SUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
     chmod 0440 <span class="nv">$TEMPFILE</span>
     sudo chown root:root <span class="nv">$TEMPFILE</span>
     sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
@@ -654,12 +661,6 @@ Wipe any existing rootwrap.d files first</p>
 
     <span class="k">if </span>is_service_enabled n-api; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Use the sample http middleware configuration supplied in the
-Nova sources.  This paste config adds the configuration required
-for Nova to validate Keystone tokens.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Remove legacy paste config if present</p>
 </td><td class=code><div class=highlight><pre>
         rm -f <span class="nv">$NOVA_DIR</span>/bin/nova-api-paste.ini
@@ -669,16 +670,19 @@ for Nova to validate Keystone tokens.</p>
 </td><td class=code><div class=highlight><pre>
         cp <span class="nv">$NOVA_DIR</span>/etc/nova/api-paste.ini <span class="nv">$NOVA_CONF_DIR</span>
 
-        iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-        <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
-<span class="k">            </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-        <span class="k">fi</span>
-<span class="k">        </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-        iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_user nova
-        iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Comment out the keystone configs in Nova's api-paste.ini.
+We are using nova.conf to configure this instead.</p>
+</td><td class=code><div class=highlight><pre>
+        inicomment <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_host
+        inicomment <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken auth_protocol
+        inicomment <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_tenant_name
+        inicomment <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken cafile
+        inicomment <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_user
+        inicomment <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken admin_password
     <span class="k">fi</span>
 
-<span class="k">    </span>iniset <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken signing_dir <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
+<span class="k">    </span>inicomment <span class="nv">$NOVA_API_PASTE_INI</span> filter:authtoken signing_dir
 
     <span class="k">if </span>is_service_enabled n-cpu; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -796,7 +800,7 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
 <span class="k">        </span><span class="nv">NOVA_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
             --name<span class="o">=</span>nova <span class="se">\</span>
             --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
             --email<span class="o">=</span>nova@example.com <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
         keystone user-role-add <span class="se">\</span>
@@ -816,7 +820,7 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
                 --adminurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span>
             <span class="nv">NOVA_V3_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-                --name<span class="o">=</span>nova <span class="se">\</span>
+                --name<span class="o">=</span>novav3 <span class="se">\</span>
                 --type<span class="o">=</span>computev3 <span class="se">\</span>
                 --description<span class="o">=</span><span class="s2">&quot;Nova Compute Service V3&quot;</span> <span class="se">\</span>
                 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
@@ -861,7 +865,9 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT osapi_compute_workers <span class="s2">&quot;4&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_workers <span class="s2">&quot;4&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT metadata_workers <span class="s2">&quot;4&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> conductor workers <span class="s2">&quot;4&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT sql_connection <span class="sb">`</span>database_connection_url nova<span class="sb">`</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT fatal_deprecations <span class="s2">&quot;True&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_name_template <span class="s2">&quot;${INSTANCE_NAME_PREFIX}%08x&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> osapi_v3 enabled <span class="s2">&quot;True&quot;</span>
 
@@ -881,8 +887,23 @@ install things in /usr/bin</p>
 </td><td class=code><div class=highlight><pre>
             iniset <span class="nv">$NOVA_CONF</span> DEFAULT osapi_compute_listen_port <span class="s2">&quot;$NOVA_SERVICE_PORT_INT&quot;</span>
         <span class="k">fi</span>
-<span class="k">    fi</span>
-<span class="k">    if </span>is_service_enabled cinder; <span class="k">then</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Add keystone authtoken configuration</p>
+</td><td class=code><div class=highlight><pre>
+
+        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
+        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken admin_user nova
+        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken signing_dir <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
+
+    <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT volume_api_class <span class="s2">&quot;nova.volume.cinder.API&quot;</span>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[</span> -n <span class="s2">&quot;$NOVA_STATE_PATH&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -901,6 +922,9 @@ install things in /usr/bin</p>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$API_RATE_LIMIT&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT api_rate_limit <span class="s2">&quot;False&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$FORCE_CONFIG_DRIVE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT force_config_drive <span class="s2">&quot;$FORCE_CONFIG_DRIVE&quot;</span>
     <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Format logging</p>
@@ -956,13 +980,13 @@ These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
 <p>Address on which instance vncservers will listen on compute hosts.
 For multi-host, this should be the management ip of the compute host.</p>
 </td><td class=code><div class=highlight><pre>
-      <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
-      <span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
-      iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="nb">true</span>
-<span class="nb">      </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_listen <span class="s2">&quot;$VNCSERVER_LISTEN&quot;</span>
-      iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_proxyclient_address <span class="s2">&quot;$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
+        <span class="nv">VNCSERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+        <span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">VNCSERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="nb">true</span>
+<span class="nb">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_listen <span class="s2">&quot;$VNCSERVER_LISTEN&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT vncserver_proxyclient_address <span class="s2">&quot;$VNCSERVER_PROXYCLIENT_ADDRESS&quot;</span>
     <span class="k">else</span>
-<span class="k">      </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="nb">false</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="nb">false</span>
 <span class="nb">    </span><span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled n-spice; <span class="k">then</span>
@@ -970,13 +994,13 @@ For multi-host, this should be the management ip of the compute host.</p>
 <p>Address on which instance spiceservers will listen on compute hosts.
 For multi-host, this should be the management ip of the compute host.</p>
 </td><td class=code><div class=highlight><pre>
-      <span class="nv">SPICESERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICESERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
-      <span class="nv">SPICESERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICESERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
-      iniset <span class="nv">$NOVA_CONF</span> spice enabled <span class="nb">true</span>
-<span class="nb">      </span>iniset <span class="nv">$NOVA_CONF</span> spice server_listen <span class="s2">&quot;$SPICESERVER_LISTEN&quot;</span>
-      iniset <span class="nv">$NOVA_CONF</span> spice server_proxyclient_address <span class="s2">&quot;$SPICESERVER_PROXYCLIENT_ADDRESS&quot;</span>
+        <span class="nv">SPICESERVER_PROXYCLIENT_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICESERVER_PROXYCLIENT_ADDRESS</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+        <span class="nv">SPICESERVER_LISTEN</span><span class="o">=</span><span class="k">${</span><span class="nv">SPICESERVER_LISTEN</span><span class="p">=127.0.0.1</span><span class="k">}</span>
+        iniset <span class="nv">$NOVA_CONF</span> spice enabled <span class="nb">true</span>
+<span class="nb">        </span>iniset <span class="nv">$NOVA_CONF</span> spice server_listen <span class="s2">&quot;$SPICESERVER_LISTEN&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> spice server_proxyclient_address <span class="s2">&quot;$SPICESERVER_PROXYCLIENT_ADDRESS&quot;</span>
     <span class="k">else</span>
-<span class="k">      </span>iniset <span class="nv">$NOVA_CONF</span> spice enabled <span class="nb">false</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> spice enabled <span class="nb">false</span>
 <span class="nb">    </span><span class="k">fi</span>
 
 <span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_dmz_host <span class="s2">&quot;$EC2_DMZ_HOST&quot;</span>
@@ -1099,6 +1123,34 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 <span class="k">        </span>install_nova_hypervisor
     <span class="k">fi</span>
 
+<span class="k">    if </span>is_service_enabled n-novnc; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>a websockets/html5 or flash powered VNC console for vm instances</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">NOVNC_FROM_PACKAGE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$NOVNC_FROM_PACKAGE</span><span class="sb">`</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$NOVNC_FROM_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">NOVNC_WEB_DIR</span><span class="o">=</span>/usr/share/novnc
+            install_package novnc
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">NOVNC_WEB_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/noVNC
+            git_clone <span class="nv">$NOVNC_REPO</span> <span class="nv">$NOVNC_WEB_DIR</span> <span class="nv">$NOVNC_BRANCH</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+<span class="k">    if </span>is_service_enabled n-spice; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>a websockets/html5 or flash powered SPICE console for vm instances</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nv">SPICE_FROM_PACKAGE</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$SPICE_FROM_PACKAGE</span><span class="sb">`</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SPICE_FROM_PACKAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">SPICE_WEB_DIR</span><span class="o">=</span>/usr/share/spice-html5
+            install_package spice-html5
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">SPICE_WEB_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/spice-html5
+            git_clone <span class="nv">$SPICE_REPO</span> <span class="nv">$SPICE_WEB_DIR</span> <span class="nv">$SPICE_BRANCH</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
 <span class="k">    </span>git_clone <span class="nv">$NOVA_REPO</span> <span class="nv">$NOVA_DIR</span> <span class="nv">$NOVA_BRANCH</span>
     setup_develop <span class="nv">$NOVA_DIR</span>
     sudo install -D -m 0644 -o <span class="nv">$STACK_USER</span> <span class="o">{</span><span class="nv">$NOVA_DIR</span>/tools/,/etc/bash_completion.d/<span class="o">}</span>nova-manage.bash_completion
@@ -1119,7 +1171,7 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 <span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for nova-api to start...&quot;</span>
     <span class="k">if</span> ! wait_for_service <span class="nv">$SERVICE_TIMEOUT</span> http://<span class="nv">$SERVICE_HOST</span>:<span class="nv">$service_port</span>; <span class="k">then</span>
-<span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;nova-api did not start&quot;</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;nova-api did not start&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1131,56 +1183,84 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>start_nova() - Start running processes, including screen</p>
+<p>start_nova_compute() - Start the compute process</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_nova<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">NOVA_CONF_BOTTOM</span><span class="o">=</span><span class="nv">$NOVA_CONF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">screen_it</tt> checks <tt class="docutils literal">is_service_enabled</tt>, it is not needed here</p>
-</td><td class=code><div class=highlight><pre>
-    screen_it n-cond <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-conductor&quot;</span>
-
+<span class="k">function </span>start_nova_compute<span class="o">()</span> <span class="o">{</span>
     <span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
-<span class="k">        </span><span class="nv">NOVA_CONF_BOTTOM</span><span class="o">=</span><span class="nv">$NOVA_CELLS_CONF</span>
-        screen_it n-cond <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-conductor --config-file $NOVA_CELLS_CONF&quot;</span>
-        screen_it n-cell-region <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $NOVA_CONF&quot;</span>
-        screen_it n-cell-child <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $NOVA_CELLS_CONF&quot;</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">compute_cell_conf</span><span class="o">=</span><span class="nv">$NOVA_CELLS_CONF</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">compute_cell_conf</span><span class="o">=</span><span class="nv">$NOVA_CONF</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>Enable client side traces for libvirt</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">export </span><span class="nv">LIBVIRT_LOG_FILTERS</span><span class="o">=</span><span class="s2">&quot;1:libvirt&quot;</span>
+        <span class="nb">export </span><span class="nv">LIBVIRT_LOG_OUTPUTS</span><span class="o">=</span><span class="s2">&quot;1:file:/var/log/libvirt/libvirtd-nova.log&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Enable server side traces for libvirtd</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="s2">&quot;log_filters=\&quot;1:libvirt 1:qemu\&quot;&quot;</span> | sudo tee -a /etc/libvirt/libvirtd.conf
+        <span class="nb">echo</span> <span class="s2">&quot;log_outputs=\&quot;1:file:/var/log/libvirt/libvirtd.log\&quot;&quot;</span> | sudo tee -a /etc/libvirt/libvirtd.conf
+
+</pre></div></td></tr><tr><td class=docs>
 <p>The group <strong>$LIBVIRT_GROUP</strong> is added to the current user in this script.
 Use 'sg' to execute nova-compute as a member of the <strong>$LIBVIRT_GROUP</strong> group.</p>
 </td><td class=code><div class=highlight><pre>
-        screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg $LIBVIRT_GROUP &#39;$NOVA_BIN_DIR/nova-compute --config-file $NOVA_CONF_BOTTOM&#39;&quot;</span>
+        screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg $LIBVIRT_GROUP &#39;$NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf&#39;&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;fake&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">       for </span>i in <span class="sb">`</span>seq 1 <span class="nv">$NUMBER_FAKE_NOVA_COMPUTE</span><span class="sb">`</span>
-       <span class="k">do</span>
-<span class="k">           </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $NOVA_CONF_BOTTOM&quot;</span>
-       <span class="k">done</span>
+<span class="k">        for </span>i in <span class="sb">`</span>seq 1 <span class="nv">$NUMBER_FAKE_NOVA_COMPUTE</span><span class="sb">`</span>; <span class="k">do</span>
+<span class="k">            </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf --config-file &lt;(echo -e &#39;[DEFAULT]\nhost=${HOSTNAME}${i}&#39;)&quot;</span>
+        <span class="k">done</span>
 <span class="k">    else</span>
 <span class="k">        if </span>is_service_enabled n-cpu <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>start_nova_hypervisor
         <span class="k">fi</span>
-<span class="k">        </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $NOVA_CONF_BOTTOM&quot;</span>
+<span class="k">        </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf&quot;</span>
     <span class="k">fi</span>
-<span class="k">    </span>screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cert&quot;</span>
-    screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-network --config-file $NOVA_CONF_BOTTOM&quot;</span>
-    screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-scheduler --config-file $NOVA_CONF_BOTTOM&quot;</span>
-    screen_it n-api-meta <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api-metadata --config-file $NOVA_CONF_BOTTOM&quot;</span>
+<span class="o">}</span>
 
-    screen_it n-novnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-novncproxy --config-file $NOVA_CONF --web $NOVNC_DIR&quot;</span>
-    screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-xvpvncproxy --config-file $NOVA_CONF&quot;</span>
-    screen_it n-spice <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-spicehtml5proxy --config-file $NOVA_CONF --web $SPICE_DIR&quot;</span>
-    screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-consoleauth&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>start_nova() - Start running processes, including screen</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>start_nova_rest<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">api_cell_conf</span><span class="o">=</span><span class="nv">$NOVA_CONF</span>
+    <span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">compute_cell_conf</span><span class="o">=</span><span class="nv">$NOVA_CELLS_CONF</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">compute_cell_conf</span><span class="o">=</span><span class="nv">$NOVA_CONF</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p><tt class="docutils literal">screen_it</tt> checks <tt class="docutils literal">is_service_enabled</tt>, it is not needed here</p>
+</td><td class=code><div class=highlight><pre>
+    screen_it n-cond <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-conductor --config-file $compute_cell_conf&quot;</span>
+    screen_it n-cell-region <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $api_cell_conf&quot;</span>
+    screen_it n-cell-child <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $compute_cell_conf&quot;</span>
+
+    screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cert --config-file $api_cell_conf&quot;</span>
+    screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-network --config-file $compute_cell_conf&quot;</span>
+    screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-scheduler --config-file $compute_cell_conf&quot;</span>
+    screen_it n-api-meta <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api-metadata --config-file $compute_cell_conf&quot;</span>
+
+    screen_it n-novnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-novncproxy --config-file $api_cell_conf --web $NOVNC_WEB_DIR&quot;</span>
+    screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-xvpvncproxy --config-file $api_cell_conf&quot;</span>
+    screen_it n-spice <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-spicehtml5proxy --config-file $api_cell_conf --web $SPICE_WEB_DIR&quot;</span>
+    screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-consoleauth --config-file $api_cell_conf&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Starting the nova-objectstore only if swift3 service is not enabled.
 Swift will act as s3 objectstore.</p>
 </td><td class=code><div class=highlight><pre>
     is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
-        screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-objectstore&quot;</span>
+        screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-objectstore --config-file $api_cell_conf&quot;</span>
+<span class="o">}</span>
+
+<span class="k">function </span>start_nova<span class="o">()</span> <span class="o">{</span>
+    start_nova_compute
+    start_nova_rest
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1192,9 +1272,9 @@ Swift will act as s3 objectstore.</p>
 Some services are listed here twice since more than one instance
 of a service may be running in certain configs.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>serv in n-api n-cpu n-crt n-net n-sch n-novnc n-xvnc n-cauth n-spice n-cond n-cond n-cell n-cell n-api-meta; <span class="k">do</span>
-<span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
-<span class="nb">    </span><span class="k">done</span>
+    <span class="k">for </span>serv in n-api n-cpu n-crt n-net n-sch n-novnc n-xvnc n-cauth n-spice n-cond n-cell n-cell n-api-meta; <span class="k">do</span>
+<span class="k">        </span>screen_stop <span class="nv">$serv</span>
+    <span class="k">done</span>
 <span class="k">    if </span>is_service_enabled n-cpu <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>stop_nova_hypervisor
     <span class="k">fi</span>
@@ -1207,10 +1287,11 @@ of a service may be running in certain configs.</p>
 <span class="nv">$XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local variables:
-mode: shell-script
-End:</p>
+<p>Tell emacs to use shell-script-mode</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## Local variables:</span>
+<span class="c">## mode: shell-script</span>
+<span class="c">## End:</span>
 
 
 </td><td class=code><div class=highlight><pre>

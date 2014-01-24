@@ -377,7 +377,7 @@ developer install.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>To keep this script simple we assume you are running on a recent <strong>Ubuntu</strong>
-(12.04 Precise or newer) or <strong>Fedora</strong> (F16 or newer) machine.  (It may work
+(12.04 Precise or newer) or <strong>Fedora</strong> (F18 or newer) machine.  (It may work
 on other platforms but support for those platforms is left to those who added
 them to DevStack.)  It should work in a VM or physical server.  Additionally
 we maintain a list of <tt class="docutils literal">apt</tt> and <tt class="docutils literal">rpm</tt> dependencies and other configuration
@@ -437,7 +437,7 @@ rm -f <span class="nv">$TOP_DIR</span>/.localrc.auto
 <span class="k">            if</span> <span class="o">[[</span> -r <span class="nv">$TOP_DIR</span>/localrc <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span>warn <span class="nv">$LINENO</span> <span class="s2">&quot;localrc and local.conf:[[local]] both exist, using localrc&quot;</span>
             <span class="k">else</span>
-<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;# Generated file, do not exit&quot;</span> &gt;<span class="nv">$TOP_DIR</span>/.localrc.auto
+<span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;# Generated file, do not edit&quot;</span> &gt;<span class="nv">$TOP_DIR</span>/.localrc.auto
                 get_meta_section <span class="nv">$TOP_DIR</span>/local.conf <span class="nb">local</span> <span class="nv">$lfile</span> &gt;&gt;<span class="nv">$TOP_DIR</span>/.localrc.auto
             <span class="k">fi</span>
 <span class="k">        fi</span>
@@ -537,7 +537,7 @@ disable_negated_services
 <p>Warn users who aren't on an explicitly supported distro, but allow them to
 override check and attempt installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>oneiric|precise|quantal|raring|saucy|7.0|wheezy|sid|testing|jessie|f16|f17|f18|f19|opensuse-12.2|rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>precise|raring|saucy|trusty|7.0|wheezy|sid|testing|jessie|f18|f19|f20|opensuse-12.2|rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: this script has not been tested on $DISTRO&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$FORCE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;If you wish to run this script anyway run with FORCE=yes&quot;</span>
@@ -675,6 +675,15 @@ safe_chmod 0755 <span class="nv">$DEST</span>
 check_path_perm_sanity <span class="k">${</span><span class="nv">DEST</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Certain services such as rabbitmq require that the local hostname resolves
+correctly.  Make sure it exists in /etc/hosts so that is always true.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">LOCAL_HOSTNAME</span><span class="o">=</span><span class="sb">`</span>hostname -s<span class="sb">`</span>
+<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;`grep ^127.0.0.1 /etc/hosts | grep $LOCAL_HOSTNAME`&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>sudo sed -i <span class="s2">&quot;s/\(^127.0.0.1.*\)/\1 $LOCAL_HOSTNAME/&quot;</span> /etc/hosts
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Set <tt class="docutils literal">OFFLINE</tt> to <tt class="docutils literal">True</tt> to configure <tt class="docutils literal">stack.sh</tt> to run cleanly without
 Internet access. <tt class="docutils literal">stack.sh</tt> must have been previously run with Internet
 access to install prerequisites and fetch repositories.</p>
@@ -714,7 +723,7 @@ from either range when attempting to guess the IP to use for the host.
 Note that setting FIXED_RANGE may be necessary when running DevStack
 in an OpenStack cloud that uses either of these address ranges internally.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.224/28</span><span class="k">}</span>
+<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.0/24</span><span class="k">}</span>
 <span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
 <span class="nv">FIXED_NETWORK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_NETWORK_SIZE</span><span class="k">:-</span><span class="nv">256</span><span class="k">}</span>
 
@@ -756,6 +765,12 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SERVICE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TIMEOUT</span><span class="k">:-</span><span class="nv">60</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Reset the bundle of CA certificates</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SSL_BUNDLE_FILE</span><span class="o">=</span><span class="s2">&quot;$DATA_DIR/ca-bundle.pem&quot;</span>
+rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -770,6 +785,7 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tls
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/infra
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/oslo
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/stackforge
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
@@ -1159,7 +1175,9 @@ echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure an appropriate python environment</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$TOP_DIR</span>/tools/install_pip.sh
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="nv">$TOP_DIR</span>/tools/install_pip.sh
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Do the ugly hacks for borken packages and distros</p>
@@ -1207,6 +1225,13 @@ install_infra
 <p>Install oslo libraries that have graduated</p>
 </td><td class=code><div class=highlight><pre>
 install_oslo
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Install stackforge libraries for testing</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled stackforge_libs; <span class="k">then</span>
+<span class="k">    </span>install_stackforge
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Install clients libraries</p>
@@ -1277,20 +1302,6 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
     configure_nova
 <span class="k">fi</span>
 
-<span class="k">if </span>is_service_enabled n-novnc; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>a websockets/html5 or flash powered VNC console for vm instances</p>
-</td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$NOVNC_REPO</span> <span class="nv">$NOVNC_DIR</span> <span class="nv">$NOVNC_BRANCH</span>
-<span class="k">fi</span>
-
-<span class="k">if </span>is_service_enabled n-spice; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>a websockets/html5 or flash powered SPICE console for vm instances</p>
-</td><td class=code><div class=highlight><pre>
-    git_clone <span class="nv">$SPICE_REPO</span> <span class="nv">$SPICE_DIR</span> <span class="nv">$SPICE_BRANCH</span>
-<span class="k">fi</span>
-
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>dashboard</p>
@@ -1331,6 +1342,7 @@ don't be naive and add to existing line!</p>
 
 <span class="k">if </span>is_service_enabled ir-api ir-cond; <span class="k">then</span>
 <span class="k">    </span>install_ironic
+    install_ironicclient
     configure_ironic
 <span class="k">fi</span>
 
@@ -1352,7 +1364,8 @@ don't be naive and add to existing line!</p>
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$TRACK_DEPENDS</span> <span class="o">=</span> True <span class="o">]]</span>; <span class="k">then</span>
     <span class="nv">$DEST</span>/.venv/bin/pip freeze &gt; <span class="nv">$DEST</span>/requires-post-pip
     <span class="k">if</span> ! diff -Nru <span class="nv">$DEST</span>/requires-pre-pip <span class="nv">$DEST</span>/requires-post-pip &gt; <span class="nv">$DEST</span>/requires.diff; <span class="k">then</span>
-<span class="k">        </span>cat <span class="nv">$DEST</span>/requires.diff
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Detect some changes for installed packages of pip, in depend tracking mode&quot;</span>
+        cat <span class="nv">$DEST</span>/requires.diff
     <span class="k">fi</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Ran stack.sh in depend tracking mode, bailing out now&quot;</span>
     <span class="nb">exit </span>0
@@ -1415,6 +1428,22 @@ restart_rpc_backend
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
+<div class="section" id="export-certicate-authority-bundle">
+<h2>Export Certicate Authority Bundle</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>If certificates were used and written to the SSL bundle file then these
+should be exported so clients can validate their connections.</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if</span> <span class="o">[</span> -f <span class="nv">$SSL_BUNDLE_FILE</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">export </span><span class="nv">OS_CACERT</span><span class="o">=</span><span class="nv">$SSL_BUNDLE_FILE</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="configure-database">
 <h2>Configure database</h2>
 </td><td class=code><div class=highlight><pre>
@@ -1471,11 +1500,19 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 <p>If enabled, systat has to start early to track OpenStack service startup.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled sysstat;then
+<span class="k">if </span>is_service_enabled sysstat; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>what we want to measure
+-u : cpu statitics
+-q : load
+-b : io load rates
+-w : process creation and context switch rates</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">SYSSTAT_OPTS</span><span class="o">=</span><span class="s2">&quot;-u -q -b -w&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen_it sysstat <span class="s2">&quot;sar -o $SCREEN_LOGDIR/$SYSSTAT_FILE $SYSSTAT_INTERVAL&quot;</span>
+<span class="k">        </span>screen_it sysstat <span class="s2">&quot;cd $TOP_DIR; ./tools/sar_filter.py $SYSSTAT_OPTS -o $SCREEN_LOGDIR/$SYSSTAT_FILE $SYSSTAT_INTERVAL&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span>screen_it sysstat <span class="s2">&quot;sar $SYSSTAT_INTERVAL&quot;</span>
+<span class="k">        </span>screen_it sysstat <span class="s2">&quot;./tools/sar_filter.py $SYSSTAT_OPTS $SYSSTAT_INTERVAL&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -1522,6 +1559,10 @@ init_service_check
 
     <span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
 <span class="k">        </span>create_trove_accounts
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled ceilometer; <span class="k">then</span>
+<span class="k">        </span>create_ceilometer_accounts
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled swift <span class="o">||</span> is_service_enabled s-proxy; <span class="k">then</span>
@@ -1702,7 +1743,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
     prepare_baremetal_toolchain
     configure_baremetal_nova_dirs
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$BM_USE_FAKE_ENV&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">       </span>create_fake_baremetal_env
+<span class="k">        </span>create_fake_baremetal_env
     <span class="k">fi</span>
 <span class="k">fi</span>
 
@@ -1776,8 +1817,10 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key <span class="o">&amp;&amp;</span> is_service_enabled swift3 <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NOVA_USER_ID</span><span class="o">=</span><span class="k">$(</span>keystone user-list | grep <span class="s1">&#39; nova &#39;</span> | get_field 1<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> NOVA_USER_ID <span class="s2">&quot;Failure retrieving NOVA_USER_ID for nova&quot;</span>
     <span class="nv">NOVA_TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; $SERVICE_TENANT_NAME &quot;</span> | get_field 1<span class="k">)</span>
-    <span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone ec2-credentials-create --user_id <span class="nv">$NOVA_USER_ID</span> --tenant_id <span class="nv">$NOVA_TENANT_ID</span><span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> NOVA_TENANT_ID <span class="s2">&quot;Failure retrieving NOVA_TENANT_ID for $SERVICE_TENANT_NAME&quot;</span>
+    <span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone ec2-credentials-create --user-id <span class="nv">$NOVA_USER_ID</span> --tenant-id <span class="nv">$NOVA_TENANT_ID</span><span class="k">)</span>
     <span class="nv">ACCESS_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ access / { print $4 }&#39;</span><span class="k">)</span>
     <span class="nv">SECRET_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ secret / { print $4 }&#39;</span><span class="k">)</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_access_key <span class="s2">&quot;$ACCESS_KEY&quot;</span>
@@ -1800,10 +1843,8 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
 
 <span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Neutron&quot;</span>
-
     start_neutron_service_and_check
-    create_neutron_initial_network
-    setup_neutron_debug
+    check_neutron_third_party_integration
 <span class="k">elif </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span> <span class="o">&amp;&amp;</span> is_service_enabled n-net; <span class="k">then</span>
 <span class="k">    </span><span class="nv">NM_CONF</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_CONF</span><span class="k">}</span>
     <span class="k">if </span>is_service_enabled n-cell; <span class="k">then</span>
@@ -1828,6 +1869,14 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
 
 <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
 <span class="k">    </span>start_neutron_agents
+<span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Once neutron agents are started setup initial network elements</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled q-svc; <span class="k">then</span>
+<span class="k">    </span>echo_summary <span class="s2">&quot;Creating initial neutron network elements&quot;</span>
+    create_neutron_initial_network
+    setup_neutron_debug
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Nova&quot;</span>
@@ -1875,6 +1924,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
     start_trove
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="create-account-rc-files">
@@ -1888,7 +1938,13 @@ which is helpful in image bundle steps.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled nova <span class="o">&amp;&amp;</span> is_service_enabled key; <span class="k">then</span>
-    <span class="nv">$TOP_DIR</span>/tools/create_userrc.sh -PA --target-dir <span class="nv">$TOP_DIR</span>/accrc
+<span class="k">    </span><span class="nv">USERRC_PARAMS</span><span class="o">=</span><span class="s2">&quot;-PA --target-dir $TOP_DIR/accrc&quot;</span>
+
+    <span class="k">if</span> <span class="o">[</span> -f <span class="nv">$SSL_BUNDLE_FILE</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">USERRC_PARAMS</span><span class="o">=</span><span class="s2">&quot;$USERRC_PARAMS --os-cacert $SSL_BUNDLE_FILE&quot;</span>
+    <span class="k">fi</span>
+
+    <span class="nv">$TOP_DIR</span>/tools/create_userrc.sh <span class="nv">$USERRC_PARAMS</span>
 <span class="k">fi</span>
 
 
@@ -1907,7 +1963,6 @@ See <a class="reference external" href="https://help.ubuntu.com/community/CloudI
 <dl class="docutils">
 <dt>Override <tt class="docutils literal">IMAGE_URLS</tt> with a comma-separated list of UEC images.</dt>
 <dd><ul class="first last simple">
-<li><strong>oneiric</strong>: <a class="reference external" href="http://uec-images.ubuntu.com/oneiric/current/oneiric-server-cloudimg-amd64.tar.gz">http://uec-images.ubuntu.com/oneiric/current/oneiric-server-cloudimg-amd64.tar.gz</a></li>
 <li><strong>precise</strong>: <a class="reference external" href="http://uec-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64.tar.gz">http://uec-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64.tar.gz</a></li>
 </ul>
 </dd>
@@ -1916,34 +1971,35 @@ See <a class="reference external" href="https://help.ubuntu.com/community/CloudI
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
 <span class="k">    </span><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> TOKEN <span class="s2">&quot;Keystone fail to get token&quot;</span>
 
     <span class="k">if </span>is_baremetal; <span class="k">then</span>
-<span class="k">       </span>echo_summary <span class="s2">&quot;Creating and uploading baremetal images&quot;</span>
+<span class="k">        </span>echo_summary <span class="s2">&quot;Creating and uploading baremetal images&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>build and upload separate deploy kernel &amp; ramdisk</p>
 </td><td class=code><div class=highlight><pre>
-       upload_baremetal_deploy <span class="nv">$TOKEN</span>
+        upload_baremetal_deploy <span class="nv">$TOKEN</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>upload images, separating out the kernel &amp; ramdisk for PXE boot</p>
 </td><td class=code><div class=highlight><pre>
-       <span class="k">for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">           </span>upload_baremetal_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
-       <span class="k">done</span>
+        <span class="k">for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span>upload_baremetal_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
+        <span class="k">done</span>
 <span class="k">    else</span>
-<span class="k">       </span>echo_summary <span class="s2">&quot;Uploading images&quot;</span>
+<span class="k">        </span>echo_summary <span class="s2">&quot;Uploading images&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Option to upload legacy ami-tty, which works with xenserver</p>
 </td><td class=code><div class=highlight><pre>
-       <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">           </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}https://github.com/downloads/citrix-openstack/warehouse/tty.tgz&quot;</span>
-       <span class="k">fi</span>
+        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}https://github.com/downloads/citrix-openstack/warehouse/tty.tgz&quot;</span>
+        <span class="k">fi</span>
 
-<span class="k">       for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">           </span>upload_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
-       <span class="k">done</span>
+<span class="k">        for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span>upload_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
+        <span class="k">done</span>
 <span class="k">    fi</span>
 <span class="k">fi</span>
 
@@ -1959,7 +2015,7 @@ are loaded into glance, though just knowing the IDs is sufficient here</p>
 <p>create special flavor for baremetal if we know what images to associate</p>
 </td><td class=code><div class=highlight><pre>
     <span class="o">[[</span> -n <span class="s2">&quot;$BM_DEPLOY_KERNEL_ID&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$BM_DEPLOY_RAMDISK_ID&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="se">\</span>
-       create_baremetal_flavor <span class="nv">$BM_DEPLOY_KERNEL_ID</span> <span class="nv">$BM_DEPLOY_RAMDISK_ID</span>
+        create_baremetal_flavor <span class="nv">$BM_DEPLOY_KERNEL_ID</span> <span class="nv">$BM_DEPLOY_RAMDISK_ID</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>otherwise user can manually add it later by calling nova-baremetal-manage</p>
@@ -1980,7 +2036,7 @@ are loaded into glance, though just knowing the IDs is sufficient here</p>
 <p>ensure callback daemon is running</p>
 </td><td class=code><div class=highlight><pre>
     sudo pkill nova-baremetal-deploy-helper <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>screen_it baremetal <span class="s2">&quot;nova-baremetal-deploy-helper&quot;</span>
+<span class="nb">    </span>screen_it baremetal <span class="s2">&quot;cd ; nova-baremetal-deploy-helper&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1989,7 +2045,7 @@ are loaded into glance, though just knowing the IDs is sufficient here</p>
 <span class="nv">CURRENT_RUN_TIME</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+$TIMESTAMP_FORMAT&quot;</span><span class="k">)</span>
 <span class="nb">echo</span> <span class="s2">&quot;# $CURRENT_RUN_TIME&quot;</span> &gt;<span class="nv">$TOP_DIR</span>/.stackenv
 <span class="k">for </span>i in BASE_SQL_CONN ENABLED_SERVICES HOST_IP LOGFILE <span class="se">\</span>
-  SERVICE_HOST SERVICE_PROTOCOL STACK_USER TLS_IP; <span class="k">do</span>
+    SERVICE_HOST SERVICE_PROTOCOL STACK_USER TLS_IP KEYSTONE_AUTH_PROTOCOL OS_CACERT; <span class="k">do</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="nv">$i</span><span class="o">=</span><span class="k">${</span><span class="p">!i</span><span class="k">}</span> &gt;&gt;<span class="nv">$TOP_DIR</span>/.stackenv
 <span class="k">done</span>
 
@@ -2021,6 +2077,18 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf extra
         <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> stack extra
     <span class="k">done</span>
 <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="id2">
+<h1>Local Configuration</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Apply configuration from local.conf if it exists for layer 2 services
+Phase: post-extra</p>
+</td><td class=code><div class=highlight><pre>
+merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-extra
 
 
 </pre></div></td></tr><tr><td class=docs>

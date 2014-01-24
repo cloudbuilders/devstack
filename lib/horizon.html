@@ -361,23 +361,25 @@ ul.auto-toc {
 
 <p>lib/horizon
 Functions to control the configuration and operation of the horizon service
-&lt;do not include this template file in <tt class="docutils literal">stack.sh</tt>!&gt;
-Dependencies:
-<tt class="docutils literal">functions</tt> file
-<tt class="docutils literal">apache</tt> file
-<tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined
-&lt;list other global vars that are assumed to be defined&gt;</p>
+Dependencies:</p>
+<ul class="simple">
+<li><tt class="docutils literal">functions</tt> file</li>
+<li><tt class="docutils literal">apache</tt> file</li>
+<li><tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
-<p>install_horizon
-configure_horizon
-init_horizon
-start_horizon
-stop_horizon
-cleanup_horizon</p>
+<ul class="simple">
+<li>install_horizon</li>
+<li>configure_horizon</li>
+<li>init_horizon</li>
+<li>start_horizon</li>
+<li>stop_horizon</li>
+<li>cleanup_horizon</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -390,10 +392,6 @@ cleanup_horizon</p>
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="defaults">
 <h1>Defaults</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>&lt;define global variables here that belong to this project&gt;</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -518,8 +516,15 @@ users).  The user system is external (keystone).</p>
 </td><td class=code><div class=highlight><pre>
     sudo mkdir -p <span class="nv">$HORIZON_DIR</span>/.blackhole
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Apache 2.4 uses mod_authz_host for access control now (instead of &quot;Allow&quot;)</p>
+</td><td class=code><div class=highlight><pre>
     <span class="nv">HORIZON_REQUIRE</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
-    <span class="nb">local </span><span class="nv">horizon_conf</span><span class="o">=</span>/etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/horizon.conf
+    <span class="k">if </span>check_apache_version <span class="s2">&quot;2.4&quot;</span> ; <span class="k">then</span>
+<span class="k">        </span><span class="nv">HORIZON_REQUIRE</span><span class="o">=</span><span class="s1">&#39;Require all granted&#39;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nb">local </span><span class="nv">horizon_conf</span><span class="o">=</span>/etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/horizon.conf
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean up the old config name</p>
@@ -531,13 +536,6 @@ users).  The user system is external (keystone).</p>
         sudo touch <span class="nv">$horizon_conf</span>
         sudo a2ensite horizon.conf
     <span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$os_RELEASE&quot;</span> -ge <span class="s2">&quot;18&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>fedora 18 has Require all denied  in its httpd.conf
-and requires explicit Require all granted</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="nv">HORIZON_REQUIRE</span><span class="o">=</span><span class="s1">&#39;Require all granted&#39;</span>
-        <span class="k">fi</span>
 <span class="k">        </span>sudo sed <span class="s1">&#39;/^Listen/s/^.*$/Listen 0.0.0.0:80/&#39;</span> -i /etc/httpd/conf/httpd.conf
     <span class="k">elif </span>is_suse; <span class="k">then</span>
         : <span class="c"># nothing to do</span>
@@ -573,18 +571,7 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 </td><td class=code><div class=highlight><pre>
     install_apache_wsgi
 
-</pre></div></td></tr><tr><td class=docs>
-<p>NOTE(sdague) quantal changed the name of the node binary</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[[</span> ! -e <span class="s2">&quot;/usr/bin/node&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>install_package nodejs-legacy
-        <span class="k">fi</span>
-<span class="k">    elif </span>is_fedora <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">||</span> <span class="s2">&quot;$os_RELEASE&quot;</span> -ge <span class="s2">&quot;18&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>install_package nodejs
-    <span class="k">fi</span>
-
-<span class="k">    </span>git_clone <span class="nv">$HORIZON_REPO</span> <span class="nv">$HORIZON_DIR</span> <span class="nv">$HORIZON_BRANCH</span> <span class="nv">$HORIZON_TAG</span>
+    git_clone <span class="nv">$HORIZON_REPO</span> <span class="nv">$HORIZON_DIR</span> <span class="nv">$HORIZON_BRANCH</span> <span class="nv">$HORIZON_TAG</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -609,10 +596,11 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 <span class="nv">$XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local variables:
-mode: shell-script
-End:</p>
+<p>Tell emacs to use shell-script-mode</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## Local variables:</span>
+<span class="c">## mode: shell-script</span>
+<span class="c">## End:</span>
 
 
 </td><td class=code><div class=highlight><pre>

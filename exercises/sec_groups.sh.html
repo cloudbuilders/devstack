@@ -412,6 +412,12 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/exerciserc
 
 </pre></div></td></tr><tr><td class=docs>
+<p>If nova api is not enabled we exit with exitcode 55 so that
+the exercise is skipped</p>
+</td><td class=code><div class=highlight><pre>
+is_service_enabled n-api <span class="o">||</span> <span class="nb">exit </span>55
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Skip if the hypervisor is Docker</p>
 </td><td class=code><div class=highlight><pre>
 <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;docker&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>55
@@ -447,6 +453,7 @@ nova secgroup-create <span class="nv">$SEC_GROUP_NAME</span> <span class="s1">&#
 <p>Check to make sure rules were added</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SEC_GROUP_RULES</span><span class="o">=(</span> <span class="k">$(</span>nova secgroup-list-rules <span class="nv">$SEC_GROUP_NAME</span> | grep -v <span class="se">\-</span> | grep -v <span class="s1">&#39;Source Group&#39;</span> | cut -d <span class="s1">&#39;|&#39;</span> -f3 | tr -d <span class="s1">&#39; &#39;</span><span class="k">)</span> <span class="o">)</span>
+die_if_not_set <span class="nv">$LINENO</span> SEC_GROUP_RULES <span class="s2">&quot;Failure retrieving SEC_GROUP_RULES for $SEC_GROUP_NAME&quot;</span>
 <span class="k">for </span>i in <span class="s2">&quot;${RULES_TO_ADD[@]}&quot;</span>; <span class="k">do</span>
 <span class="k">    </span><span class="nv">skip</span><span class="o">=</span>
     <span class="k">for </span>j in <span class="s2">&quot;${SEC_GROUP_RULES[@]}&quot;</span>; <span class="k">do</span>
