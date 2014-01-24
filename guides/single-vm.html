@@ -62,10 +62,13 @@
         <p>If the cloud service has an image with <code>cloud-init</code> pre-installed, use it.  You can
         get one from <a href="http://uec-images.ubuntu.com">Ubuntu's Daily Build</a>
         site if necessary.  This will enable you to launch VMs with userdata that installs 
-        everything at boot time.</p>
+        everything at boot time.  The userdata script below will install and run
+        DevStack with a minimal configuration.  The use of <code>cloud-init</code>
+        is outside the scope of this document, refer to <a href"http://cloudinit.readthedocs.org/en/latest/index.html">the
+        <code>cloud-init</code> docs</a> for more information.</p>
 
         <p>If you are directly using a hypervisor like Xen, kvm or VirtualBox you can manually kick off
-        the script below in a bare-bones server installation.</p>
+        the script below as a non-root user in a bare-bones server installation.</p>
       </section>
 
       <section id="requirements">
@@ -73,25 +76,46 @@
           <h2>Installation <small>shake and bake</small></h2>
         </div>
 
-        <h3>Launching with using Userdata</h3>
-        <p>The userdata script grabs the latest version of DevStack via git, creates a minimal 
-        <code>local.conf</code> file and kicks off <code>stack.sh</code>.</p>
-        <pre>#!/bin/sh
-apt-get update || yum update -y
-apt-get install -qqy git || yum install -y git
-git clone https://github.com/openstack-dev/devstack.git
-cd devstack
-echo '[[local|localrc]]' &gt; local.conf
-echo ADMIN_PASSWORD=password &gt; local.conf
-echo MYSQL_PASSWORD=password &gt;&gt; local.conf
-echo RABBIT_PASSWORD=password &gt;&gt; local.conf
-echo SERVICE_PASSWORD=password &gt;&gt; local.conf
-echo SERVICE_TOKEN=tokentoken &gt;&gt; local.conf
-./stack.sh</pre>
+        <h3>Launching With Cloud-Init</h3>
+        <p>This cloud config grabs the latest version of DevStack via git, creates a minimal 
+        <code>local.conf</code> file and kicks off <code>stack.sh</code>.  It should
+        be passed as the user-data file when booting the VM.</p>
+        <pre>#cloud-config
+
+users:
+  - default
+  - name: stack
+    lock_passwd: False
+    sudo: ["ALL=(ALL) NOPASSWD:ALL\nDefaults:stack !requiretty"]
+    shell: /bin/bash
+
+write_files:
+  - content: |
+        #!/bin/sh
+        DEBIAN_FRONTEND=noninteractive sudo apt-get -qqy update || sudo yum update -qy
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -qqy git || sudo yum install -qy git
+        sudo chown stack:stack /home/stack
+        cd /home/stack
+        git clone https://github.com/openstack-dev/devstack.git
+        cd devstack
+        echo '[[local|localrc]]' > local.conf
+        echo ADMIN_PASSWORD=password >> local.conf
+        echo MYSQL_PASSWORD=password >> local.conf
+        echo RABBIT_PASSWORD=password >> local.conf
+        echo SERVICE_PASSWORD=password >> local.conf
+        echo SERVICE_TOKEN=tokentoken >> local.conf
+        ./stack.sh
+    path: /home/stack/start.sh
+    permissions: 0755
+
+runcmd:
+  - su -l stack ./start.sh</pre>
+        <p>As DevStack will refuse to run as root, this configures <code>cloud-init</code>
+        to create a non-root user and run the <code>start.sh</code> script as that user.</p>
 
         <h3>Launching By Hand</h3>
         <p>Using a hypervisor directly, launch the VM and either manually perform the steps in the 
-        script above or copy it into the VM.</p>
+        embedded shell script above or copy it into the VM.</p>
 
         <h3>Using OpenStack</h3>
         <p>At this point you should be able to access the dashboard.  Launch VMs and if you give them floating IPs access those VMs from other machines on your network.</p>
