@@ -418,9 +418,9 @@ GetDistro
 
 xe_min<span class="o">()</span>
 <span class="o">{</span>
-  <span class="nb">local </span><span class="nv">cmd</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
-  <span class="nb">shift</span>
-<span class="nb">  </span>xe <span class="s2">&quot;$cmd&quot;</span> --minimal <span class="s2">&quot;$@&quot;</span>
+    <span class="nb">local </span><span class="nv">cmd</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+    <span class="nb">shift</span>
+<span class="nb">    </span>xe <span class="s2">&quot;$cmd&quot;</span> --minimal <span class="s2">&quot;$@&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -491,12 +491,15 @@ hypervisor, and used by the VMs</p>
 <span class="k">fi</span>
 
 <span class="k">if </span>parameter_is_specified <span class="s2">&quot;FLAT_NETWORK_BRIDGE&quot;</span>; <span class="k">then</span>
-<span class="k">    </span>cat &gt;&amp;2 <span class="s">&lt;&lt; EOF</span>
-<span class="s">ERROR: FLAT_NETWORK_BRIDGE is specified in localrc file</span>
-<span class="s">This is considered as an error, as its value will be derived from the</span>
-<span class="s">VM_BRIDGE_OR_NET_NAME variable&#39;s value.</span>
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$(bridge_for &quot;</span><span class="nv">$VM_BRIDGE_OR_NET_NAME</span><span class="s2">&quot;)&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$(bridge_for &quot;</span><span class="nv">$FLAT_NETWORK_BRIDGE</span><span class="s2">&quot;)&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>cat &gt;&amp;2 <span class="s">&lt;&lt; EOF</span>
+<span class="s">ERROR: FLAT_NETWORK_BRIDGE is specified in localrc file, and either no network</span>
+<span class="s">found on XenServer by searching for networks by that value as name-label or</span>
+<span class="s">bridge name or the network found does not match the network specified by</span>
+<span class="s">VM_BRIDGE_OR_NET_NAME. Please check your localrc file.</span>
 <span class="s">EOF</span>
-    <span class="nb">exit </span>1
+        <span class="nb">exit </span>1
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 <span class="k">if</span> ! xenapi_is_listening_on <span class="s2">&quot;$MGT_BRIDGE_OR_NET_NAME&quot;</span>; <span class="k">then</span>
@@ -517,7 +520,7 @@ hypervisor, and used by the VMs</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>FIXME: This doesn't work on reboot!</p>
 </td><td class=code><div class=highlight><pre>
-      <span class="nb">echo</span> <span class="s2">&quot;FORWARD_IPV4=YES&quot;</span> &gt;&gt; /etc/sysconfig/network
+        <span class="nb">echo</span> <span class="s2">&quot;FORWARD_IPV4=YES&quot;</span> &gt;&gt; /etc/sysconfig/network
     <span class="k">fi</span>
 <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -684,6 +687,16 @@ set_vm_memory <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&
 max_vcpus <span class="s2">&quot;$GUEST_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Wipe out all network cards</p>
+</td><td class=code><div class=highlight><pre>
+destroy_all_vifs_of <span class="s2">&quot;$GUEST_NAME&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Add only one interface to prepare the guest template</p>
+</td><td class=code><div class=highlight><pre>
+add_interface <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;$MGT_BRIDGE_OR_NET_NAME&quot;</span> <span class="s2">&quot;0&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>start the VM to run the prepare steps</p>
 </td><td class=code><div class=highlight><pre>
 xe vm-start <span class="nv">vm</span><span class="o">=</span><span class="s2">&quot;$GUEST_NAME&quot;</span>
@@ -730,7 +743,7 @@ kernel parameter for DomU</p>
         <span class="s2">&quot;xen_integration_bridge=${XEN_INTEGRATION_BRIDGE}&quot;</span>
 <span class="k">fi</span>
 
-<span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">$(</span>bridge_for <span class="s2">&quot;$VM_BRIDGE_OR_NET_NAME&quot;</span><span class="k">)</span>
+<span class="nv">FLAT_NETWORK_BRIDGE</span><span class="o">=</span><span class="s2">&quot;${FLAT_NETWORK_BRIDGE:-$(bridge_for &quot;</span><span class="nv">$VM_BRIDGE_OR_NET_NAME</span><span class="s2">&quot;)}&quot;</span>
 append_kernel_cmdline <span class="s2">&quot;$GUEST_NAME&quot;</span> <span class="s2">&quot;flat_network_bridge=${FLAT_NETWORK_BRIDGE}&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -796,16 +809,12 @@ xe vm-start <span class="nv">vm</span><span class="o">=</span><span class="s2">&
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$WAIT_TILL_LAUNCH&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>  <span class="o">&amp;&amp;</span> <span class="o">[</span> -e ~/.ssh/id_rsa.pub  <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$COPYENV&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">set</span> +x
 
-    <span class="nb">echo</span> <span class="s2">&quot;VM Launched - Waiting for startup script&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>wait for log to appear</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">while</span> ! ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="s2">&quot;[ -e run.sh.log ]&quot;</span>; <span class="k">do</span>
+    <span class="nb">echo</span> <span class="s2">&quot;VM Launched - Waiting for devstack to start&quot;</span>
+    <span class="k">while</span> ! ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="s2">&quot;service devstack status | grep -q running&quot;</span>; <span class="k">do</span>
 <span class="k">        </span>sleep 10
     <span class="k">done</span>
-<span class="k">    </span><span class="nb">echo</span> -n <span class="s2">&quot;Running&quot;</span>
-    <span class="k">while</span> <span class="o">[</span> <span class="sb">`</span>ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> pgrep -c run.sh<span class="sb">`</span> -ge 1 <span class="o">]</span>
-    <span class="k">do</span>
+<span class="k">    </span><span class="nb">echo</span> -n <span class="s2">&quot;devstack is running&quot;</span>
+    <span class="k">while </span>ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="s2">&quot;service devstack status | grep -q running&quot;</span>; <span class="k">do</span>
 <span class="k">        </span>sleep 10
         <span class="nb">echo</span> -n <span class="s2">&quot;.&quot;</span>
     <span class="k">done</span>
@@ -813,14 +822,9 @@ xe vm-start <span class="nv">vm</span><span class="o">=</span><span class="s2">&
     <span class="nb">set</span> -x
 
 </pre></div></td></tr><tr><td class=docs>
-<p>output the run.sh.log</p>
+<p>Fail if devstack did not succeed</p>
 </td><td class=code><div class=highlight><pre>
-    ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="s1">&#39;cat run.sh.log&#39;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Fail if the expected text is not found</p>
-</td><td class=code><div class=highlight><pre>
-    ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="s1">&#39;cat run.sh.log&#39;</span> | grep -q <span class="s1">&#39;stack.sh completed in&#39;</span>
+    ssh_no_check -q stack@<span class="nv">$OS_VM_MANAGEMENT_ADDRESS</span> <span class="s1">&#39;test -e /var/run/devstack.succeeded&#39;</span>
 
     <span class="nb">set</span> +x
     <span class="nb">echo</span> <span class="s2">&quot;################################################################################&quot;</span>
@@ -834,12 +838,13 @@ xe vm-start <span class="nv">vm</span><span class="o">=</span><span class="s2">&
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;All Finished!&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Now, you can monitor the progress of the stack.sh installation by &quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;tailing /opt/stack/run.sh.log from within your domU.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;looking at the console of your domU / checking the log files.&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;ssh into your domU now: &#39;ssh stack@$OS_VM_MANAGEMENT_ADDRESS&#39; using your password&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;and then do: &#39;tail -f /opt/stack/run.sh.log&#39;&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;and then do: &#39;sudo service devstack status&#39; to check if devstack is still running.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Check that /var/run/devstack.succeeded exists&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;When the script completes, you can then visit the OpenStack Dashboard&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;When devstack completes, you can visit the OpenStack Dashboard&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;at http://$OS_VM_SERVICES_ADDRESS, and contact other services at the usual ports.&quot;</span>
 <span class="k">fi</span>
 

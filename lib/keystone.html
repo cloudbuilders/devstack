@@ -361,28 +361,33 @@ ul.auto-toc {
 
 <p>lib/keystone
 Functions to control the configuration and operation of <strong>Keystone</strong>
-Dependencies:
-<tt class="docutils literal">functions</tt> file
-<tt class="docutils literal">DEST</tt>, <tt class="docutils literal">STACK_USER</tt>
-<tt class="docutils literal">IDENTITY_API_VERSION</tt>
-<tt class="docutils literal">BASE_SQL_CONN</tt>
-<tt class="docutils literal">SERVICE_HOST</tt>, <tt class="docutils literal">SERVICE_PROTOCOL</tt>
-<tt class="docutils literal">SERVICE_TOKEN</tt>
-<tt class="docutils literal">S3_SERVICE_PORT</tt> (template backend only)</p>
+Dependencies:</p>
+<ul class="simple">
+<li><tt class="docutils literal">functions</tt> file</li>
+<li><tt class="docutils literal">tls</tt> file</li>
+<li><tt class="docutils literal">DEST</tt>, <tt class="docutils literal">STACK_USER</tt></li>
+<li><tt class="docutils literal">IDENTITY_API_VERSION</tt></li>
+<li><tt class="docutils literal">BASE_SQL_CONN</tt></li>
+<li><tt class="docutils literal">SERVICE_HOST</tt>, <tt class="docutils literal">SERVICE_PROTOCOL</tt></li>
+<li><tt class="docutils literal">SERVICE_TOKEN</tt></li>
+<li><tt class="docutils literal">S3_SERVICE_PORT</tt> (template backend only)</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
-<p>install_keystone
-configure_keystone
-_config_keystone_apache_wsgi
-init_keystone
-start_keystone
-create_keystone_accounts
-stop_keystone
-cleanup_keystone
-_cleanup_keystone_apache_wsgi</p>
+<ul class="simple">
+<li>install_keystone</li>
+<li>configure_keystone</li>
+<li>_config_keystone_apache_wsgi</li>
+<li>init_keystone</li>
+<li>start_keystone</li>
+<li>create_keystone_accounts</li>
+<li>stop_keystone</li>
+<li>cleanup_keystone</li>
+<li>_cleanup_keystone_apache_wsgi</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -391,6 +396,7 @@ _cleanup_keystone_apache_wsgi</p>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tls
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="defaults">
@@ -468,6 +474,15 @@ Choose from 'UUID' and 'PKI'</p>
 <span class="nv">KEYSTONE_VALID_ASSIGNMENT_BACKENDS</span><span class="o">=</span>kvs,ldap,sql
 
 </pre></div></td></tr><tr><td class=docs>
+<p>if we are running with SSL use https protocols</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_ssl_enabled_service <span class="s2">&quot;key&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">KEYSTONE_AUTH_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;https&quot;</span>
+    <span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;https&quot;</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
@@ -527,6 +542,7 @@ This function intentionally left blank</p>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CONF_DIR&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$KEYSTONE_DIR/etc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>cp -p <span class="nv">$KEYSTONE_DIR</span>/etc/keystone.conf.sample <span class="nv">$KEYSTONE_CONF</span>
+        chmod 600 <span class="nv">$KEYSTONE_CONF</span>
         cp -p <span class="nv">$KEYSTONE_DIR</span>/etc/policy.json <span class="nv">$KEYSTONE_CONF_DIR</span>
         <span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;$KEYSTONE_DIR/etc/keystone-paste.ini&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>cp -p <span class="s2">&quot;$KEYSTONE_DIR/etc/keystone-paste.ini&quot;</span> <span class="s2">&quot;$KEYSTONE_PASTE_INI&quot;</span>
@@ -547,17 +563,17 @@ This function intentionally left blank</p>
 
     <span class="k">if </span>is_service_enabled ldap; <span class="k">then</span>
         <span class="c">#Set all needed ldap values</span>
-        iniset <span class="nv">$KEYSTONE_CONF</span> ldap password  <span class="nv">$LDAP_PASSWORD</span>
-        iniset <span class="nv">$KEYSTONE_CONF</span> ldap user <span class="s2">&quot;dc=Manager,dc=openstack,dc=org&quot;</span>
-        iniset <span class="nv">$KEYSTONE_CONF</span> ldap suffix <span class="s2">&quot;dc=openstack,dc=org&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap password <span class="nv">$LDAP_PASSWORD</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap user <span class="nv">$LDAP_MANAGER_DN</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap suffix <span class="nv">$LDAP_BASE_DN</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap use_dumb_member <span class="s2">&quot;True&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap user_attribute_ignore <span class="s2">&quot;enabled,email,tenants,default_project_id&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_attribute_ignore <span class="s2">&quot;enabled&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_domain_id_attribute <span class="s2">&quot;businessCategory&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_desc_attribute <span class="s2">&quot;description&quot;</span>
-        iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_tree_dn <span class="s2">&quot;ou=Projects,dc=openstack,dc=org&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap tenant_tree_dn <span class="s2">&quot;ou=Projects,$LDAP_BASE_DN&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> ldap user_domain_id_attribute <span class="s2">&quot;businessCategory&quot;</span>
-        iniset <span class="nv">$KEYSTONE_CONF</span> ldap user_tree_dn <span class="s2">&quot;ou=Users,dc=openstack,dc=org&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ldap user_tree_dn <span class="s2">&quot;ou=Users,$LDAP_BASE_DN&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT member_role_id <span class="s2">&quot;9fe2ff9ee4384b1894a90878d3e92bab&quot;</span>
         iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT member_role_name <span class="s2">&quot;_member_&quot;</span>
     <span class="k">fi</span>
@@ -582,7 +598,18 @@ This function intentionally left blank</p>
     iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT public_endpoint <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:%(public_port)s/&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_endpoint <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:%(admin_port)s/&quot;</span>
 
-    <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Register SSL certificates if provided</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_ssl_enabled_service key; <span class="k">then</span>
+<span class="k">        </span>ensure_certificates KEYSTONE
+
+        iniset <span class="nv">$KEYSTONE_CONF</span> ssl <span class="nb">enable </span>True
+        iniset <span class="nv">$KEYSTONE_CONF</span> ssl certfile <span class="nv">$KEYSTONE_SSL_CERT</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> ssl keyfile <span class="nv">$KEYSTONE_SSL_KEY</span>
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the service ports for a proxy to take the originals</p>
 </td><td class=code><div class=highlight><pre>
@@ -591,7 +618,6 @@ This function intentionally left blank</p>
     <span class="k">fi</span>
 
 <span class="k">    </span>iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_token <span class="s2">&quot;$SERVICE_TOKEN&quot;</span>
-    iniset <span class="nv">$KEYSTONE_CONF</span> signing token_format <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;UUID&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> token provider keystone.token.providers.uuid.Provider
@@ -602,6 +628,8 @@ This function intentionally left blank</p>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;sql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> token driver keystone.token.backends.sql.Token
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;memcache&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> token driver keystone.token.backends.memcache.Token
     <span class="k">else</span>
 <span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> token driver keystone.token.backends.kvs.Token
     <span class="k">fi</span>
@@ -761,9 +789,23 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Configure the API version for the OpenStack projects.
+configure_API_version conf_file version</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>configure_API_version<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">api_version</span><span class="o">=</span><span class="nv">$2</span>
+    iniset <span class="nv">$conf_file</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v<span class="nv">$api_version</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>init_keystone() - Initialize databases, etc.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_keystone<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if </span>is_service_enabled ldap; <span class="k">then</span>
+<span class="k">        </span>init_ldap
+    <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>(Re)create keystone database</p>
 </td><td class=code><div class=highlight><pre>
@@ -809,6 +851,19 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
     <span class="k">if </span>is_service_enabled ldap; <span class="k">then</span>
 <span class="k">        </span>install_ldap
     <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;memcache&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install memcached and the memcache Python library that keystone uses.
+Unfortunately the Python library goes by different names in the .deb
+and .rpm circles.</p>
+</td><td class=code><div class=highlight><pre>
+        install_package memcached
+        <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">            </span>install_package python-memcache
+        <span class="k">else</span>
+<span class="k">            </span>install_package python-memcached
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="k">    </span>git_clone <span class="nv">$KEYSTONE_REPO</span> <span class="nv">$KEYSTONE_DIR</span> <span class="nv">$KEYSTONE_BRANCH</span>
     setup_develop <span class="nv">$KEYSTONE_DIR</span>
     <span class="k">if </span>is_apache_enabled_service key; <span class="k">then</span>
@@ -835,12 +890,12 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start Keystone in a screen window</p>
 </td><td class=code><div class=highlight><pre>
-        screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug&quot;</span>
+        screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG --debug&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! curl --noproxy &#39;*&#39; -s http://$SERVICE_HOST:$service_port/v$IDENTITY_API_VERSION/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;keystone did not start&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! curl --noproxy &#39;*&#39; -s $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$service_port/v$IDENTITY_API_VERSION/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;keystone did not start&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -859,7 +914,7 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the Keystone screen window</p>
 </td><td class=code><div class=highlight><pre>
-    screen -S <span class="nv">$SCREEN_NAME</span> -p key -X <span class="nb">kill</span>
+    screen_stop key
 <span class="o">}</span>
 
 
@@ -869,10 +924,11 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 <span class="nv">$XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local variables:
-mode: shell-script
-End:</p>
+<p>Tell emacs to use shell-script-mode</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## Local variables:</span>
+<span class="c">## mode: shell-script</span>
+<span class="c">## End:</span>
 
 
 </td><td class=code><div class=highlight><pre>

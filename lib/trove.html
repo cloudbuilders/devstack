@@ -398,9 +398,31 @@ cleanup_trove</p>
 <span class="nv">TROVECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-troveclient
 <span class="nv">TROVE_CONF_DIR</span><span class="o">=</span>/etc/trove
 <span class="nv">TROVE_LOCAL_CONF_DIR</span><span class="o">=</span><span class="nv">$TROVE_DIR</span>/etc/trove
-<span class="nv">TROVE_AUTH_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>//v<span class="nv">$IDENTITY_API_VERSION</span>
 <span class="nv">TROVE_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">TROVE_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/trove</span><span class="k">}</span>
-<span class="nv">TROVE_BIN_DIR</span><span class="o">=</span>/usr/local/bin
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Support entry points installation of console scripts</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TROVE_DIR</span>/bin <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">TROVE_BIN_DIR</span><span class="o">=</span><span class="nv">$TROVE_DIR</span>/bin
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">TROVE_BIN_DIR</span><span class="o">=</span><span class="k">$(</span>get_python_exec_prefix<span class="k">)</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>setup_trove_logging() - Adds logging configuration to conf files</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>setup_trove_logging<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">CONF</span><span class="o">=</span><span class="nv">$1</span>
+    iniset <span class="nv">$CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
+    iniset <span class="nv">$CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Add color to logging output</p>
+</td><td class=code><div class=highlight><pre>
+        setup_colorized_logging <span class="nv">$CONF</span> DEFAULT tenant user
+    <span class="k">fi</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create_trove_accounts() - Set up common required trove accounts</p>
@@ -421,14 +443,15 @@ create_trove_accounts<span class="o">()</span> <span class="o">{</span>
     <span class="nv">SERVICE_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;trove&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">TROVE_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create --name<span class="o">=</span>trove <span class="se">\</span>
-                                                  --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-                                                  --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                                                  --email<span class="o">=</span>trove@example.com <span class="se">\</span>
-                                                  | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+<span class="k">        </span><span class="nv">TROVE_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
+            --name<span class="o">=</span>trove <span class="se">\</span>
+            --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --email<span class="o">=</span>trove@example.com <span class="se">\</span>
+            | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
         keystone user-role-add --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-                               --user-id <span class="nv">$TROVE_USER</span> <span class="se">\</span>
-                               --role-id <span class="nv">$SERVICE_ROLE</span>
+            --user-id <span class="nv">$TROVE_USER</span> <span class="se">\</span>
+            --role-id <span class="nv">$SERVICE_ROLE</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">TROVE_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
                 --name<span class="o">=</span>trove <span class="se">\</span>
@@ -490,6 +513,7 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
     iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
     iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth cafile <span class="nv">$KEYSTONE_SSL_CA</span>
     iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth admin_user trove
     iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth admin_password <span class="nv">$SERVICE_PASSWORD</span>
@@ -511,17 +535,23 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$TROVE_LOCAL_CONF_DIR</span>/trove-guestagent.conf.sample DEFAULT control_exchange trove
     sed -i <span class="s2">&quot;s/localhost/$NETWORK_GATEWAY/g&quot;</span> <span class="nv">$TROVE_LOCAL_CONF_DIR</span>/trove-guestagent.conf.sample
 
+    setup_trove_logging <span class="nv">$TROVE_CONF_DIR</span>/trove.conf
+    setup_trove_logging <span class="nv">$TROVE_LOCAL_CONF_DIR</span>/trove-guestagent.conf.sample
+
 </pre></div></td></tr><tr><td class=docs>
 <p>(Re)create trove taskmanager conf file if needed</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled tr-tmgr; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-taskmanager.conf DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
+<span class="k">        </span><span class="nv">TROVE_AUTH_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>//v<span class="nv">$IDENTITY_API_VERSION</span>
+
+        iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-taskmanager.conf DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
         iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-taskmanager.conf DEFAULT sql_connection <span class="sb">`</span>database_connection_url trove<span class="sb">`</span>
         iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-taskmanager.conf DEFAULT taskmanager_manager trove.taskmanager.manager.Manager
         iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-taskmanager.conf DEFAULT nova_proxy_admin_user radmin
         iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-taskmanager.conf DEFAULT nova_proxy_admin_tenant_name trove
         iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-taskmanager.conf DEFAULT nova_proxy_admin_pass <span class="nv">$RADMIN_USER_PASS</span>
         iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-taskmanager.conf DEFAULT trove_auth_url <span class="nv">$TROVE_AUTH_ENDPOINT</span>
+        setup_trove_logging <span class="nv">$TROVE_CONF_DIR</span>/trove-taskmanager.conf
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -535,6 +565,7 @@ runs that a clean run would need to clean up</p>
         iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-conductor.conf DEFAULT nova_proxy_admin_pass <span class="nv">$RADMIN_USER_PASS</span>
         iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-conductor.conf DEFAULT trove_auth_url <span class="nv">$TROVE_AUTH_ENDPOINT</span>
         iniset <span class="nv">$TROVE_CONF_DIR</span>/trove-conductor.conf DEFAULT control_exchange trove
+        setup_trove_logging <span class="nv">$TROVE_CONF_DIR</span>/trove-conductor.conf
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -560,16 +591,16 @@ runs that a clean run would need to clean up</p>
     recreate_database trove utf8
 
     <span class="c">#Initialize the trove database</span>
-    <span class="nv">$TROVE_DIR</span>/bin/trove-manage db_sync
+    <span class="nv">$TROVE_BIN_DIR</span>/trove-manage db_sync
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>start_trove() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_trove<span class="o">()</span> <span class="o">{</span>
-    screen_it tr-api <span class="s2">&quot;cd $TROVE_DIR; bin/trove-api --config-file=$TROVE_CONF_DIR/trove.conf --debug 2&gt;&amp;1&quot;</span>
-    screen_it tr-tmgr <span class="s2">&quot;cd $TROVE_DIR; bin/trove-taskmanager --config-file=$TROVE_CONF_DIR/trove-taskmanager.conf --debug 2&gt;&amp;1&quot;</span>
-    screen_it tr-cond <span class="s2">&quot;cd $TROVE_DIR; bin/trove-conductor --config-file=$TROVE_CONF_DIR/trove-conductor.conf --debug 2&gt;&amp;1&quot;</span>
+    screen_it tr-api <span class="s2">&quot;cd $TROVE_DIR; $TROVE_BIN_DIR/trove-api --config-file=$TROVE_CONF_DIR/trove.conf --debug 2&gt;&amp;1&quot;</span>
+    screen_it tr-tmgr <span class="s2">&quot;cd $TROVE_DIR; $TROVE_BIN_DIR/trove-taskmanager --config-file=$TROVE_CONF_DIR/trove-taskmanager.conf --debug 2&gt;&amp;1&quot;</span>
+    screen_it tr-cond <span class="s2">&quot;cd $TROVE_DIR; $TROVE_BIN_DIR/trove-conductor --config-file=$TROVE_CONF_DIR/trove-conductor.conf --debug 2&gt;&amp;1&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -580,8 +611,8 @@ runs that a clean run would need to clean up</p>
 <p>Kill the trove screen windows</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">for </span>serv in tr-api tr-tmgr tr-cond; <span class="k">do</span>
-<span class="k">        </span>screen -S <span class="nv">$SCREEN_NAME</span> -p <span class="nv">$serv</span> -X <span class="nb">kill</span>
-<span class="nb">    </span><span class="k">done</span>
+<span class="k">        </span>screen_stop <span class="nv">$serv</span>
+    <span class="k">done</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -590,10 +621,11 @@ runs that a clean run would need to clean up</p>
 <span class="nv">$XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local variables:
-mode: shell-script
-End:</p>
+<p>Tell emacs to use shell-script-mode</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## Local variables:</span>
+<span class="c">## mode: shell-script</span>
+<span class="c">## End:</span>
 
 
 </td><td class=code><div class=highlight><pre>

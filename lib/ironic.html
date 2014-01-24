@@ -361,23 +361,27 @@ ul.auto-toc {
 
 <p>lib/ironic
 Functions to control the configuration and operation of the <strong>Ironic</strong> service
-Dependencies:
-<tt class="docutils literal">functions</tt> file
-<tt class="docutils literal">DEST</tt>, <tt class="docutils literal">DATA_DIR</tt>, <tt class="docutils literal">STACK_USER</tt> must be defined
-<tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined
-<tt class="docutils literal">SERVICE_HOST</tt>
-<tt class="docutils literal">KEYSTONE_TOKEN_FORMAT</tt> must be defined</p>
+Dependencies:</p>
+<ul class="simple">
+<li><tt class="docutils literal">functions</tt> file</li>
+<li><tt class="docutils literal">DEST</tt>, <tt class="docutils literal">DATA_DIR</tt>, <tt class="docutils literal">STACK_USER</tt> must be defined</li>
+<li><tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined</li>
+<li><tt class="docutils literal">SERVICE_HOST</tt></li>
+<li><tt class="docutils literal">KEYSTONE_TOKEN_FORMAT</tt> must be defined</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
-<p>install_ironic
-configure_ironic
-init_ironic
-start_ironic
-stop_ironic
-cleanup_ironic</p>
+<ul class="simple">
+<li>install_ironic</li>
+<li>install_ironicclient</li>
+<li>init_ironic</li>
+<li>start_ironic</li>
+<li>stop_ironic</li>
+<li>cleanup_ironic</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -396,6 +400,7 @@ cleanup_ironic</p>
 <p>Set up default directories</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IRONIC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/ironic
+<span class="nv">IRONICCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-ironicclient
 <span class="nv">IRONIC_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/ironic</span><span class="k">}</span>
 <span class="nv">IRONIC_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/ironic</span><span class="k">}</span>
 <span class="nv">IRONIC_CONF_FILE</span><span class="o">=</span><span class="nv">$IRONIC_CONF_DIR</span>/ironic.conf
@@ -420,6 +425,22 @@ cleanup_ironic</p>
 <div class="section" id="functions">
 <h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>install_ironic() - Collect source and prepare</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_ironic<span class="o">()</span> <span class="o">{</span>
+    git_clone <span class="nv">$IRONIC_REPO</span> <span class="nv">$IRONIC_DIR</span> <span class="nv">$IRONIC_BRANCH</span>
+    setup_develop <span class="nv">$IRONIC_DIR</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>install_ironicclient() - Collect sources and prepare</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_ironicclient<span class="o">()</span> <span class="o">{</span>
+    git_clone <span class="nv">$IRONICCLIENT_REPO</span> <span class="nv">$IRONICCLIENT_DIR</span> <span class="nv">$IRONICCLIENT_BRANCH</span>
+    setup_develop <span class="nv">$IRONICCLIENT_DIR</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>cleanup_ironic() - Remove residual data files, anything left over from previous
@@ -467,9 +488,12 @@ runs that would need to clean up.</p>
 API specific configuration.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_ironic_api<span class="o">()</span> <span class="o">{</span>
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT auth_strategy keystone
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT policy_file <span class="nv">$IRONIC_POLICY_JSON</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken admin_user ironic
@@ -533,11 +557,11 @@ create_ironic_accounts<span class="o">()</span> <span class="o">{</span>
 <span class="k">        </span><span class="nv">IRONIC_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
             --name<span class="o">=</span>ironic <span class="se">\</span>
             --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
             --email<span class="o">=</span>ironic@example.com <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
         keystone user-role-add <span class="se">\</span>
-            --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
             --user_id <span class="nv">$IRONIC_USER</span> <span class="se">\</span>
             --role_id <span class="nv">$ADMIN_ROLE</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -580,14 +604,6 @@ create_ironic_accounts<span class="o">()</span> <span class="o">{</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>install_ironic() - Collect source and prepare</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_ironic<span class="o">()</span> <span class="o">{</span>
-    git_clone <span class="nv">$IRONIC_REPO</span> <span class="nv">$IRONIC_DIR</span> <span class="nv">$IRONIC_BRANCH</span>
-    setup_develop <span class="nv">$IRONIC_DIR</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>start_ironic() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_ironic<span class="o">()</span> <span class="o">{</span>
@@ -614,7 +630,7 @@ Starts Ironic API server.</p>
     screen_it ir-api <span class="s2">&quot;cd $IRONIC_DIR; $IRONIC_BIN_DIR/ironic-api --config-file=$IRONIC_CONF_FILE&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for ir-api ($IRONIC_HOSTPORT) to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget --no-proxy -q -O- http://$IRONIC_HOSTPORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;ir-api did not start&quot;</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;ir-api did not start&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -647,10 +663,11 @@ Starts Ironic conductor.</p>
 <span class="nv">$XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local variables:
-mode: shell-script
-End:</p>
+<p>Tell emacs to use shell-script-mode</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## Local variables:</span>
+<span class="c">## mode: shell-script</span>
+<span class="c">## End:</span>
 
 
 </td><td class=code><div class=highlight><pre>

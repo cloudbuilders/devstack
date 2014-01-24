@@ -542,7 +542,8 @@ nova flavor-list
 </pre></div></td></tr><tr><td class=docs>
 <p>grab the first flavor in the list to launch if default doesn't exist</p>
 </td><td class=code><div class=highlight><pre>
-   <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="k">$(</span>nova flavor-list | head -n 4 | tail -n 1 | get_field 1<span class="k">)</span>
+    <span class="nv">INSTANCE_TYPE</span><span class="o">=</span><span class="k">$(</span>nova flavor-list | head -n 4 | tail -n 1 | get_field 1<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> INSTANCE_TYPE <span class="s2">&quot;Failure retrieving INSTANCE_TYPE&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -559,7 +560,7 @@ nova delete <span class="nv">$VM_NAME</span> <span class="o">||</span> <span cla
 <h2>Boot instance</h2>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">VM_UUID</span><span class="o">=</span><span class="k">$(</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --security_groups<span class="o">=</span><span class="nv">$SECGROUP</span> <span class="nv">$VM_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+<span class="nv">VM_UUID</span><span class="o">=</span><span class="k">$(</span>nova boot --flavor <span class="nv">$INSTANCE_TYPE</span> --image <span class="nv">$IMAGE</span> --security-groups<span class="o">=</span><span class="nv">$SECGROUP</span> <span class="nv">$VM_NAME</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 die_if_not_set <span class="nv">$LINENO</span> VM_UUID <span class="s2">&quot;Failure launching $VM_NAME&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -598,7 +599,7 @@ ping_check <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> <span class
 <p>Create a new volume</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">start_time</span><span class="o">=</span><span class="k">$(</span>date +%s<span class="k">)</span>
-cinder create --display_name <span class="nv">$VOL_NAME</span> --display_description <span class="s2">&quot;test volume: $VOL_NAME&quot;</span> <span class="nv">$DEFAULT_VOLUME_SIZE</span> <span class="o">||</span> <span class="se">\</span>
+cinder create --display-name <span class="nv">$VOL_NAME</span> --display-description <span class="s2">&quot;test volume: $VOL_NAME&quot;</span> <span class="nv">$DEFAULT_VOLUME_SIZE</span> <span class="o">||</span> <span class="se">\</span>
     die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure creating volume $VOL_NAME&quot;</span>
 <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! cinder list | grep $VOL_NAME | grep available; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Volume $VOL_NAME not created&quot;</span>

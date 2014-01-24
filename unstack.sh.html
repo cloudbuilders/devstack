@@ -412,7 +412,12 @@ on the command line</p>
 <p>Get project function libraries</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/baremetal
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/nova
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/swift
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
@@ -463,26 +468,30 @@ GetOSVersion
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Shut down devstack's screen to get the bulk of OpenStack services in one shot</p>
+<p>Call service stop</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SCREEN</span><span class="o">=</span><span class="k">$(</span>which screen<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SCREEN&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">SESSION</span><span class="o">=</span><span class="k">$(</span>screen -ls | awk <span class="s1">&#39;/[0-9].stack/ { print $1 }&#39;</span><span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SESSION&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen -X -S <span class="nv">$SESSION</span> quit
-    <span class="k">fi</span>
+<span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
+<span class="k">    </span>stop_trove
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Shut down Nova hypervisor plugins after Nova</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">NOVA_PLUGINS</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/lib/nova_plugins
-<span class="k">if </span>is_service_enabled nova <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Load plugin</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">source</span> <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span>
-    stop_nova_hypervisor
+<span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
+<span class="k">    </span>stop_heat
+<span class="k">fi</span>
+
+<span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
+<span class="k">    </span>stop_ceilometer
+<span class="k">fi</span>
+
+<span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
+<span class="k">    </span>stop_nova
+<span class="k">fi</span>
+
+<span class="k">if </span>is_service_enabled g-api g-reg; <span class="k">then</span>
+<span class="k">    </span>stop_glance
+<span class="k">fi</span>
+
+<span class="k">if </span>is_service_enabled key; <span class="k">then</span>
+<span class="k">    </span>stop_keystone
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -528,7 +537,8 @@ GetOSVersion
 <p>Get the iSCSI volumes</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
-<span class="k">    </span>cleanup_cinder
+<span class="k">    </span>stop_cinder
+    cleanup_cinder
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UNSTACK_ALL&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -559,6 +569,17 @@ GetOSVersion
 
 <span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
 <span class="k">    </span>cleanup_trove
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean up the remainder of the screen processes</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SCREEN</span><span class="o">=</span><span class="k">$(</span>which screen<span class="k">)</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SCREEN&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">SESSION</span><span class="o">=</span><span class="k">$(</span>screen -ls | awk <span class="s1">&#39;/[0-9].stack/ { print $1 }&#39;</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SESSION&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>screen -X -S <span class="nv">$SESSION</span> quit
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 cleanup_tmp

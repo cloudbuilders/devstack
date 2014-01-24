@@ -361,33 +361,42 @@ ul.auto-toc {
 
 <p>lib/tls
 Functions to control the configuration and operation of the TLS proxy service
-Dependencies:
-!! source _before_ any services that use <tt class="docutils literal">SERVICE_HOST</tt>
-<tt class="docutils literal">functions</tt> file
-<tt class="docutils literal">DEST</tt>, <tt class="docutils literal">DATA_DIR</tt> must be defined
-<tt class="docutils literal">HOST_IP</tt>, <tt class="docutils literal">SERVICE_HOST</tt>
-<tt class="docutils literal">KEYSTONE_TOKEN_FORMAT</tt> must be defined</p>
+!! source _before_ any services that use <tt class="docutils literal">SERVICE_HOST</tt></p>
+<p>Dependencies:</p>
+<ul class="simple">
+<li><tt class="docutils literal">functions</tt> file</li>
+<li><tt class="docutils literal">DEST</tt>, <tt class="docutils literal">DATA_DIR</tt> must be defined</li>
+<li><tt class="docutils literal">HOST_IP</tt>, <tt class="docutils literal">SERVICE_HOST</tt></li>
+<li><tt class="docutils literal">KEYSTONE_TOKEN_FORMAT</tt> must be defined</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Entry points:
-configure_CA
-init_CA</p>
+<p>Entry points:</p>
+<ul class="simple">
+<li>configure_CA</li>
+<li>init_CA</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>configure_proxy
-start_tls_proxy</p>
+<ul class="simple">
+<li>configure_proxy</li>
+<li>start_tls_proxy</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>make_root_ca
-make_int_ca
-new_cert $INT_CA_DIR int-server &quot;abc&quot;
-start_tls_proxy HOST_IP 5000 localhost 5000</p>
+<ul class="simple">
+<li>make_root_ca</li>
+<li>make_int_ca</li>
+<li>new_cert $INT_CA_DIR int-server &quot;abc&quot;</li>
+<li>start_tls_proxy HOST_IP 5000 localhost 5000</li>
+<li>ensure_certificates</li>
+<li>is_ssl_enabled_service</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
-
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="defaults">
@@ -740,6 +749,57 @@ make_root_CA ca-dir</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
+<div class="section" id="certificate-input-configuration">
+<h2>Certificate Input Configuration</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>check to see if the service(s) specified are to be SSL enabled.</p>
+<p>Multiple services specified as arguments are <tt class="docutils literal">OR</tt>'ed together; the test
+is a short-circuit boolean, i.e it returns on the first match.</p>
+<p>Uses global <tt class="docutils literal">SSL_ENABLED_SERVICES</tt></p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_ssl_enabled_service<span class="o">()</span> <span class="o">{</span>
+    <span class="nv">services</span><span class="o">=</span><span class="nv">$@</span>
+    <span class="k">for </span>service in <span class="k">${</span><span class="nv">services</span><span class="k">}</span>; <span class="k">do</span>
+        <span class="o">[[</span> ,<span class="k">${</span><span class="nv">SSL_ENABLED_SERVICES</span><span class="k">}</span>, <span class="o">=</span>~ ,<span class="k">${</span><span class="nv">service</span><span class="k">}</span>, <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">done</span>
+<span class="k">    return </span>1
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Ensure that the certificates for a service are in place. This function does
+not check that a service is SSL enabled, this should already have been
+completed.</p>
+<p>The function expects to find a certificate, key and CA certificate in the
+variables {service}_SSL_CERT, {service}_SSL_KEY and {service}_SSL_CA. For
+example for keystone this would be KEYSTONE_SSL_CERT, KEYSTONE_SSL_KEY and
+KEYSTONE_SSL_CA. If it does not find these certificates the program will
+quit.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>ensure_certificates<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">service</span><span class="o">=</span><span class="nv">$1</span>
+
+    <span class="nb">local </span><span class="nv">cert_var</span><span class="o">=</span><span class="s2">&quot;${service}_SSL_CERT&quot;</span>
+    <span class="nb">local </span><span class="nv">key_var</span><span class="o">=</span><span class="s2">&quot;${service}_SSL_KEY&quot;</span>
+    <span class="nb">local </span><span class="nv">ca_var</span><span class="o">=</span><span class="s2">&quot;${service}_SSL_CA&quot;</span>
+
+    <span class="nb">local </span><span class="nv">cert</span><span class="o">=</span><span class="k">${</span><span class="p">!cert_var</span><span class="k">}</span>
+    <span class="nb">local </span><span class="nv">key</span><span class="o">=</span><span class="k">${</span><span class="p">!key_var</span><span class="k">}</span>
+    <span class="nb">local </span><span class="nv">ca</span><span class="o">=</span><span class="k">${</span><span class="p">!ca_var</span><span class="k">}</span>
+
+    <span class="k">if</span> <span class="o">[[</span> !<span class="o">(</span><span class="nv">$cert</span> <span class="o">&amp;&amp;</span> <span class="nv">$key</span> <span class="o">&amp;&amp;</span> <span class="nv">$ca</span><span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Missing either the ${cert_var} ${key_var} or ${ca_var}&quot;</span> <span class="se">\</span>
+                    <span class="s2">&quot;variable to enable SSL for ${service}&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>cat <span class="nv">$ca</span> &gt;&gt; <span class="nv">$SSL_BUNDLE_FILE</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="proxy-functions">
 <h2>Proxy Functions</h2>
 </td><td class=code><div class=highlight><pre>
@@ -759,10 +819,11 @@ start_tls_proxy front-host front-port back-host back-port</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local variables:
-mode: shell-script
-End:</p>
+<p>Tell emacs to use shell-script-mode</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## Local variables:</span>
+<span class="c">## mode: shell-script</span>
+<span class="c">## End:</span>
 
 
 </td><td class=code><div class=highlight><pre>

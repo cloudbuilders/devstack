@@ -404,221 +404,8 @@ bash -cx <span class="s2">&quot;source $TOP/functions; X=`false`; die_if_not_set
 <span class="k">fi</span>
 
 
-<span class="nb">echo</span> <span class="s2">&quot;Testing INI functions&quot;</span>
-
-cat &gt;test.ini <span class="s">&lt;&lt;EOF</span>
-<span class="s">[default]</span>
-<span class="s"># DIVIDER</span>
-<span class="s">#log_file=./log.conf</span>
-<span class="s">log_file=/etc/log.conf</span>
-<span class="s">handlers=do not disturb</span>
-
-<span class="s">[aaa]</span>
-<span class="s"># DIVIDER</span>
-<span class="s">#handlers=cc,dd</span>
-<span class="s">handlers = aa, bb</span>
-
-<span class="s">[bbb]</span>
-<span class="s">handlers=ee,ff</span>
-
-<span class="s">[ ccc ]</span>
-<span class="s">spaces  =  yes</span>
-
-<span class="s">[ddd]</span>
-<span class="s">empty =</span>
-
-<span class="s">[eee]</span>
-<span class="s">multi = foo1</span>
-<span class="s">multi = foo2</span>
-<span class="s">EOF</span>
-
 </pre></div></td></tr><tr><td class=docs>
-<p>comment an option</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini aaa handlers<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;aa, bb&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-iniset test.ini aaa handlers <span class="s2">&quot;11, 22&quot;</span>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini aaa handlers<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;11, 22&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>the commented option should not change</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini <span class="s2">&quot; ccc &quot;</span> spaces<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-iniset test.ini <span class="s2">&quot;b b&quot;</span> opt_ion 42
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini <span class="s2">&quot;b b&quot;</span> opt_ion<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;42&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Test with spaces</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini bbb handlers<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;ee,ff&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-iniset test.ini bbb handlers <span class="s2">&quot;33,44&quot;</span>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini bbb handlers<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;33,44&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Test with spaces in section header</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>ini_has_option test.ini ddd empty; <span class="k">then</span>
-<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;OK: ddd.empty present&quot;</span>
-<span class="k">else</span>
-<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;ini_has_option failed: ddd.empty not found&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Test without spaces, end of file</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>ini_has_option test.ini bbb handlers; <span class="k">then</span>
-<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;OK: bbb.handlers present&quot;</span>
-<span class="k">else</span>
-<span class="k">   </span><span class="nb">echo</span> <span class="s2">&quot;ini_has_option failed: bbb.handlers not found&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>test empty option</p>
-</td><td class=code><div class=highlight><pre>
-iniset test.ini ddd empty <span class="s2">&quot;42&quot;</span>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini ddd empty<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;42&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: $VAL&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>test non-empty option</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini zzz handlers<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$VAL&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: zzz not present&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-iniset test.ini zzz handlers <span class="s2">&quot;999&quot;</span>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini zzz handlers<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$VAL&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: zzz not present&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>test changing empty option</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini aaa debug<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$VAL&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK aaa.debug not present&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> ! ini_has_option test.ini aaa debug; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK aaa.debug not present&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ini_has_option failed: aaa.debug&quot;</span>
-<span class="k">fi</span>
-
-iniset test.ini aaa debug <span class="s2">&quot;999&quot;</span>
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini aaa debug<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$VAL&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK aaa.debug present&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniget failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Test section not exist</p>
-</td><td class=code><div class=highlight><pre>
-
-inicomment test.ini aaa handlers
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget test.ini aaa handlers<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$VAL&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;inicomment failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Test option not exist</p>
-</td><td class=code><div class=highlight><pre>
-iniset_multiline test.ini eee multi bar1 bar2
-
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget_multiline test.ini eee multi<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;bar1 bar2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: iniset_multiline&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniset_multiline failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Test comments</p>
-</td><td class=code><div class=highlight><pre>
-iniadd test.ini eee multi bar3
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget_multiline test.ini eee multi<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;bar1 bar2 bar3&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: iniadd&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniadd failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Test multiple line iniset/iniget</p>
-</td><td class=code><div class=highlight><pre>
-iniadd test.ini eee non-multi foobar1 foobar2
-<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>iniget_multiline test.ini eee non-multi<span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VAL&quot;</span> <span class="o">==</span> <span class="s2">&quot;foobar1 foobar2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;OK: iniadd with non-exiting value&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;iniadd with non-exsting failed: $VAL&quot;</span>
-<span class="k">fi</span>
-
-rm test.ini
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Test iniadd with exiting values</p>
+<p>Enabling/disabling services</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;Testing enable_service()&quot;</span>
@@ -761,25 +548,25 @@ is_package_installed zzzZZZzzz
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Test iniadd with non-exiting values</p>
+<p>test against removed package...was a bug on Ubuntu</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">    </span><span class="nv">PKG</span><span class="o">=</span>cowsay
     <span class="k">if</span> ! <span class="o">(</span>dpkg -s <span class="nv">$PKG</span> &gt;/dev/null 2&gt;&amp;1<span class="o">)</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Enabling/disabling services</p>
+<p>it was never installed...set up the condition</p>
 </td><td class=code><div class=highlight><pre>
         sudo apt-get install -y cowsay &gt;/dev/null 2&gt;&amp;1
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">(</span>dpkg -s <span class="nv">$PKG</span> &gt;/dev/null 2&gt;&amp;1<span class="o">)</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>test against removed package...was a bug on Ubuntu</p>
+<p>remove it to create the 'un' status</p>
 </td><td class=code><div class=highlight><pre>
         sudo dpkg -P <span class="nv">$PKG</span> &gt;/dev/null 2&gt;&amp;1
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>it was never installed...set up the condition</p>
+<p>now test the installed check on a deleted package</p>
 </td><td class=code><div class=highlight><pre>
     is_package_installed <span class="nv">$PKG</span>
     <span class="nv">VAL</span><span class="o">=</span><span class="nv">$?</span>
@@ -793,13 +580,9 @@ is_package_installed zzzZZZzzz
 
 </td><td class=code><div class=highlight><pre>
 </pre></div></td></tr><tr><td class=docs>
-<p>remove it to create the 'un' status</p>
+</pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>now test the installed check on a deleted package</p>
-</pre></div></td></tr><tr><td class=docs>
-</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 </body>

@@ -361,8 +361,10 @@ ul.auto-toc {
 
 <p>lib/databases/postgresql
 Functions to control the configuration and operation of the <strong>PostgreSQL</strong> database backend
-Dependencies:
-DATABASE_{HOST,USER,PASSWORD} must be defined</p>
+Dependencies:</p>
+<ul class="simple">
+<li>DATABASE_{HOST,USER,PASSWORD} must be defined</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 
@@ -444,10 +446,14 @@ register_database postgresql
     restart_service postgresql
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If creating the role fails, chances are it already existed. Try to alter it.</p>
+<p>Create the role if it's not here or else alter it.</p>
 </td><td class=code><div class=highlight><pre>
-    sudo -u root sudo -u postgres -i psql -c <span class="s2">&quot;CREATE ROLE $DATABASE_USER WITH SUPERUSER LOGIN PASSWORD &#39;$DATABASE_PASSWORD&#39;&quot;</span> <span class="o">||</span> <span class="se">\</span>
-    sudo -u root sudo -u postgres -i psql -c <span class="s2">&quot;ALTER ROLE $DATABASE_USER WITH SUPERUSER LOGIN PASSWORD &#39;$DATABASE_PASSWORD&#39;&quot;</span>
+    <span class="nv">root_roles</span><span class="o">=</span><span class="k">$(</span>sudo -u root sudo -u postgres -i psql -t -c <span class="s2">&quot;SELECT &#39;HERE&#39; from pg_roles where rolname=&#39;root&#39;&quot;</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="k">${</span><span class="nv">root_roles</span><span class="k">}</span> <span class="o">==</span> *HERE <span class="o">]]</span>;<span class="k">then</span>
+<span class="k">        </span>sudo -u root sudo -u postgres -i psql -c <span class="s2">&quot;ALTER ROLE $DATABASE_USER WITH SUPERUSER LOGIN PASSWORD &#39;$DATABASE_PASSWORD&#39;&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>sudo -u root sudo -u postgres -i psql -c <span class="s2">&quot;CREATE ROLE $DATABASE_USER WITH SUPERUSER LOGIN PASSWORD &#39;$DATABASE_PASSWORD&#39;&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 <span class="k">function </span>install_database_postgresql <span class="o">{</span>

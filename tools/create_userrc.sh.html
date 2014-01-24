@@ -409,6 +409,7 @@ cat <span class="s">&lt;&lt;EOF</span>
 <span class="s">--os-tenant-name &lt;tenant_name&gt;</span>
 <span class="s">--os-tenant-id &lt;tenant_id&gt;</span>
 <span class="s">--os-auth-url &lt;auth_url&gt;</span>
+<span class="s">--os-cacert &lt;cert file&gt;</span>
 <span class="s">--target-dir &lt;target_directory&gt;</span>
 <span class="s">--skip-tenant &lt;tenant-name&gt;</span>
 <span class="s">--debug</span>
@@ -419,7 +420,7 @@ cat <span class="s">&lt;&lt;EOF</span>
 <span class="s">EOF</span>
 <span class="o">}</span>
 
-<span class="k">if</span> ! <span class="nv">options</span><span class="o">=</span><span class="k">$(</span>getopt -o hPAp:u:r:C: -l os-username:,os-password:,os-tenant-name:,os-tenant-id:,os-auth-url:,target-dir:,skip-tenant:,help,debug -- <span class="s2">&quot;$@&quot;</span><span class="k">)</span>
+<span class="k">if</span> ! <span class="nv">options</span><span class="o">=</span><span class="k">$(</span>getopt -o hPAp:u:r:C: -l os-username:,os-password:,os-tenant-name:,os-tenant-id:,os-auth-url:,target-dir:,skip-tenant:,os-cacert:,help,debug -- <span class="s2">&quot;$@&quot;</span><span class="k">)</span>
 <span class="k">then</span>
     <span class="c">#parse error</span>
     display_help
@@ -448,6 +449,7 @@ Supporting different tanent for services is out of scope.</p>
     --os-tenant-id<span class="o">)</span> <span class="nb">export </span><span class="nv">OS_TENANT_ID</span><span class="o">=</span><span class="nv">$2</span>; <span class="nb">shift</span> ;;
     --skip-tenant<span class="o">)</span> <span class="nv">SKIP_TENANT</span><span class="o">=</span><span class="s2">&quot;$SKIP_TENANT$2,&quot;</span>; <span class="nb">shift</span> ;;
     --os-auth-url<span class="o">)</span> <span class="nb">export </span><span class="nv">OS_AUTH_URL</span><span class="o">=</span><span class="nv">$2</span>; <span class="nb">shift</span> ;;
+    --os-cacert<span class="o">)</span> <span class="nb">export </span><span class="nv">OS_CACERT</span><span class="o">=</span><span class="nv">$2</span>; <span class="nb">shift</span> ;;
     --target-dir<span class="o">)</span> <span class="nv">ACCOUNT_DIR</span><span class="o">=</span><span class="nv">$2</span>; <span class="nb">shift</span> ;;
     --debug<span class="o">)</span> <span class="nb">set</span> -o xtrace ;;
     -u<span class="o">)</span> <span class="nv">MODE</span><span class="o">=</span><span class="k">${</span><span class="nv">MODE</span><span class="k">:-</span><span class="nv">one</span><span class="k">}</span>;  <span class="nv">USER_NAME</span><span class="o">=</span><span class="nv">$2</span>; <span class="nb">shift</span> ;;
@@ -473,15 +475,15 @@ Supporting different tanent for services is out of scope.</p>
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$OS_TENANT_NAME&quot;</span> -a -z <span class="s2">&quot;$OS_TENANT_ID&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">   </span><span class="nb">export </span><span class="nv">OS_TENANT_NAME</span><span class="o">=</span>admin
+<span class="k">    </span><span class="nb">export </span><span class="nv">OS_TENANT_NAME</span><span class="o">=</span>admin
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$OS_USERNAME&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">   </span><span class="nb">export </span><span class="nv">OS_USERNAME</span><span class="o">=</span>admin
+<span class="k">    </span><span class="nb">export </span><span class="nv">OS_USERNAME</span><span class="o">=</span>admin
 <span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$OS_AUTH_URL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">   </span><span class="nb">export </span><span class="nv">OS_AUTH_URL</span><span class="o">=</span>http://localhost:5000/v2.0/
+<span class="k">    </span><span class="nb">export </span><span class="nv">OS_AUTH_URL</span><span class="o">=</span>http://localhost:5000/v2.0/
 <span class="k">fi</span>
 
 <span class="nv">USER_PASS</span><span class="o">=</span><span class="k">${</span><span class="nv">USER_PASS</span><span class="k">:-</span><span class="nv">$OS_PASSWORD</span><span class="k">}</span>
@@ -577,6 +579,7 @@ The Serial does not seams correctly marked either</p>
 <span class="s"># DIVIDER</span>
 <span class="s">export OS_TENANT_NAME=&quot;$tenant_name&quot;</span>
 <span class="s">export OS_AUTH_URL=&quot;$OS_AUTH_URL&quot;</span>
+<span class="s">export OS_CACERT=&quot;$OS_CACERT&quot;</span>
 <span class="s">export EC2_CERT=&quot;$ec2_cert&quot;</span>
 <span class="s">export EC2_PRIVATE_KEY=&quot;$ec2_private_key&quot;</span>
 <span class="s">export EC2_USER_ID=42 #not checked by nova (can be a 12-digit id)</span>
@@ -629,7 +632,7 @@ The Serial does not seams correctly marked either</p>
 <span class="k">        for </span>user_id_at_name in <span class="sb">`</span>keystone user-list --tenant-id <span class="nv">$tenant_id</span> | awk <span class="s1">&#39;BEGIN {IGNORECASE = 1} /true[[:space:]]*\|[^|]*\|$/ {print  $2 &quot;@&quot; $4}&#39;</span><span class="sb">`</span>; <span class="k">do</span>
 <span class="k">            </span><span class="nb">read </span>user_id user_name <span class="o">&lt;&lt;&lt;</span> <span class="sb">`</span><span class="nb">echo</span> <span class="s2">&quot;$user_id_at_name&quot;</span> | sed <span class="s1">&#39;s/@/ /&#39;</span><span class="sb">`</span>
             <span class="k">if</span> <span class="o">[</span> <span class="nv">$MODE</span> <span class="o">=</span> one -a <span class="s2">&quot;$user_name&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$USER_NAME&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">               continue</span>;
+<span class="k">                continue</span>;
             <span class="k">fi</span>
 <span class="k">            </span>add_entry <span class="s2">&quot;$user_id&quot;</span> <span class="s2">&quot;$user_name&quot;</span> <span class="s2">&quot;$tenant_id&quot;</span> <span class="s2">&quot;$tenant_name&quot;</span> <span class="s2">&quot;$USER_PASS&quot;</span>
         <span class="k">done</span>

@@ -365,9 +365,8 @@ ul.auto-toc {
 
 
 </pre></div></td></tr><tr><td class=docs>
-<dl class="docutils">
-<dt>This script demonstrates how to use host aggregates:</dt>
-<dd><ul class="first last simple">
+<p>This script demonstrates how to use host aggregates:</p>
+<ul class="simple">
 <li>Create an Aggregate</li>
 <li>Updating Aggregate details</li>
 <li>Testing Aggregate metadata</li>
@@ -375,8 +374,6 @@ ul.auto-toc {
 <li>Testing General Aggregates (<a class="reference external" href="https://blueprints.launchpad.net/nova/+spec/general-host-aggregates">https://blueprints.launchpad.net/nova/+spec/general-host-aggregates</a>)</li>
 <li>Testing add/remove hosts (with one host)</li>
 </ul>
-</dd>
-</dl>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;**************************************************&quot;</span>
@@ -428,6 +425,12 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 . <span class="nv">$TOP_DIR</span>/openrc admin admin
 
 </pre></div></td></tr><tr><td class=docs>
+<p>If nova api is not enabled we exit with exitcode 55 so that
+the exercise is skipped</p>
+</td><td class=code><div class=highlight><pre>
+is_service_enabled n-api <span class="o">||</span> <span class="nb">exit </span>55
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Cells does not support aggregates.</p>
 </td><td class=code><div class=highlight><pre>
 is_service_enabled n-cell <span class="o">&amp;&amp;</span> <span class="nb">exit </span>55
@@ -456,7 +459,10 @@ exit_if_aggregate_present<span class="o">()</span> <span class="o">{</span>
 exit_if_aggregate_present <span class="nv">$AGGREGATE_NAME</span>
 
 <span class="nv">AGGREGATE_ID</span><span class="o">=</span><span class="k">$(</span>nova aggregate-create <span class="nv">$AGGREGATE_NAME</span> <span class="nv">$AGGREGATE_A_ZONE</span> | grep <span class="s2">&quot; $AGGREGATE_NAME &quot;</span> | get_field 1<span class="k">)</span>
+die_if_not_set <span class="nv">$LINENO</span> AGGREGATE_ID <span class="s2">&quot;Failure creating AGGREGATE_ID for $AGGREGATE_NAME $AGGREGATE_A_ZONE&quot;</span>
+
 <span class="nv">AGGREGATE2_ID</span><span class="o">=</span><span class="k">$(</span>nova aggregate-create <span class="nv">$AGGREGATE2_NAME</span> <span class="nv">$AGGREGATE_A_ZONE</span> | grep <span class="s2">&quot; $AGGREGATE2_NAME &quot;</span> | get_field 1<span class="k">)</span>
+die_if_not_set <span class="nv">$LINENO</span> AGGREGATE2_ID <span class="s2">&quot;Fail creating AGGREGATE2_ID for $AGGREGATE2_NAME $AGGREGATE_A_ZONE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>check aggregate created</p>
@@ -501,7 +507,7 @@ nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | grep <span class=
 <span class="nv">META_DATA_3_KEY</span><span class="o">=</span>bar
 
 <span class="c">#ensure no additional metadata is set</span>
-nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | egrep <span class="s2">&quot;{u&#39;availability_zone&#39;: u&#39;$AGGREGATE_A_ZONE&#39;}|{}&quot;</span>
+nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | egrep <span class="s2">&quot;\|[{u ]*&#39;availability_zone.+$AGGREGATE_A_ZONE&#39;[ }]*\|&quot;</span>
 
 nova aggregate-set-metadata <span class="nv">$AGGREGATE_ID</span> <span class="k">${</span><span class="nv">META_DATA_1_KEY</span><span class="k">}</span><span class="o">=</span>123
 nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | grep <span class="nv">$META_DATA_1_KEY</span>
@@ -518,7 +524,7 @@ nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | grep <span class=
 nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | grep <span class="nv">$META_DATA_2_KEY</span> <span class="o">&amp;&amp;</span> die <span class="nv">$LINENO</span> <span class="s2">&quot;ERROR metadata was not cleared&quot;</span>
 
 nova aggregate-set-metadata <span class="nv">$AGGREGATE_ID</span> <span class="nv">$META_DATA_3_KEY</span> <span class="nv">$META_DATA_1_KEY</span>
-nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | egrep <span class="s2">&quot;{u&#39;availability_zone&#39;: u&#39;$AGGREGATE_A_ZONE&#39;}|{}&quot;</span>
+nova aggregate-details <span class="nv">$AGGREGATE_ID</span> | egrep <span class="s2">&quot;\|[{u ]*&#39;availability_zone.+$AGGREGATE_A_ZONE&#39;[ }]*\|&quot;</span>
 
 
 </pre></div></td></tr><tr><td class=docs>

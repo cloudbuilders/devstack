@@ -471,23 +471,58 @@ tar xf /tmp/devstack.tar -C <span class="nv">$STAGING_DIR</span>/opt/stack/devst
 <span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Run devstack on launch</p>
+<p>Create an upstart job (task) for devstack, which can interact with the console</p>
 </td><td class=code><div class=highlight><pre>
-cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/rc.local</span>
+cat &gt;<span class="nv">$STAGING_DIR</span>/etc/init/devstack.conf <span class="s">&lt;&lt; EOF</span>
+<span class="s">start on stopped rc RUNLEVEL=[2345]</span>
+
+<span class="s">console output</span>
+<span class="s">task</span>
+
+<span class="s">pre-start script</span>
+<span class="s">    rm -f /var/run/devstack.succeeded</span>
+<span class="s">end script</span>
+
+<span class="s">script</span>
+<span class="s">    initctl stop hvc0 || true</span>
+
 <span class="s"># DIVIDER</span>
-<span class="s">/etc/init.d/networking restart</span>
-<span class="s">chown -R $STACK_USER /opt/stack</span>
-<span class="s">su -c &quot;/opt/stack/run.sh &gt; /opt/stack/run.sh.log&quot; $STACK_USER</span>
-<span class="s">exit 0</span>
+<span class="s">    while read -n 1 -s -t 0.1 -r ignored; do</span>
+<span class="s">        true</span>
+<span class="s">    done</span>
+
+<span class="s">    clear</span>
+
+<span class="s">    chown -R $STACK_USER /opt/stack</span>
+
+<span class="s">    if su -c &quot;/opt/stack/run.sh&quot; $STACK_USER; then</span>
+<span class="s">        touch /var/run/devstack.succeeded</span>
+<span class="s">    fi</span>
+
+<span class="s"># DIVIDER</span>
+<span class="s">    {</span>
+<span class="s">        echo &quot;OpenStack VM - Installed by DevStack&quot;</span>
+<span class="s">        IPADDR=\$(ip -4 address show eth0 | sed -n &#39;s/.*inet \\([0-9\.]\\+\\).*/\1/p&#39;)</span>
+<span class="s">        echo &quot;  Management IP:   \$IPADDR&quot;</span>
+<span class="s">        echo -n &quot;  Devstack run:    &quot;</span>
+<span class="s">        if [ -e /var/run/devstack.succeeded ]; then</span>
+<span class="s">            echo &quot;SUCCEEDED&quot;</span>
+<span class="s">        else</span>
+<span class="s">            echo &quot;FAILED&quot;</span>
+<span class="s">        fi</span>
+<span class="s">        echo &quot;&quot;</span>
+<span class="s">    } &gt; /etc/issue</span>
+<span class="s">    initctl start hvc0 &gt; /dev/null 2&gt;&amp;1</span>
+<span class="s">end script</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>network restart required for getting the right gateway</p>
+<p>Read any leftover characters from standard input</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="nv">$GUEST_NAME</span> &gt; <span class="nv">$STAGING_DIR</span>/etc/hostname
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure the hostname</p>
+<p>Update /etc/issue</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">HOSTS_FILE_IP</span><span class="o">=</span><span class="nv">$PUB_IP</span>
 <span class="k">if</span> <span class="o">[</span> <span class="nv">$MGT_IP</span> !<span class="o">=</span> <span class="s2">&quot;dhcp&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -499,12 +534,12 @@ cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/etc/hosts</span>
 <span class="s">EOF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Hostname must resolve for rabbit</p>
+<p>Configure the hostname</p>
 </td><td class=code><div class=highlight><pre>
 print_interfaces_config &gt; <span class="nv">$STAGING_DIR</span>/etc/network/interfaces
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure the network</p>
+<p>Hostname must resolve for rabbit</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>cp_it <span class="o">{</span>
     <span class="k">if</span> <span class="o">[</span> -e <span class="nv">$1</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> -d <span class="nv">$1</span> <span class="o">]</span>; <span class="k">then</span>
@@ -513,7 +548,7 @@ print_interfaces_config &gt; <span class="nv">$STAGING_DIR</span>/etc/network/in
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Gracefully cp only if source file/dir exists</p>
+<p>Configure the network</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">COPYENV</span><span class="o">=</span><span class="k">${</span><span class="nv">COPYENV</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$COPYENV&quot;</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -525,22 +560,25 @@ print_interfaces_config &gt; <span class="nv">$STAGING_DIR</span>/etc/network/in
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Copy over your ssh keys and env if desired</p>
+<p>Gracefully cp only if source file/dir exists</p>
 </td><td class=code><div class=highlight><pre>
 cat <span class="s">&lt;&lt;EOF &gt;$STAGING_DIR/opt/stack/run.sh</span>
 <span class="s">#!/bin/bash</span>
+<span class="s">set -eux</span>
 <span class="s">cd /opt/stack/devstack</span>
-<span class="s">killall screen</span>
-<span class="s">VIRT_DRIVER=xenserver FORCE=yes MULTI_HOST=$MULTI_HOST HOST_IP_IFACE=$HOST_IP_IFACE $STACKSH_PARAMS ./stack.sh</span>
+<span class="s">./unstack.sh || true</span>
+<span class="s">./stack.sh</span>
 <span class="s">EOF</span>
 chmod 755 <span class="nv">$STAGING_DIR</span>/opt/stack/run.sh
 
 
 </td><td class=code><div class=highlight><pre>
 </pre></div></td></tr><tr><td class=docs>
-<p>Configure run.sh</p>
+<p>Copy over your ssh keys and env if desired</p>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure run.sh</p>
 </pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>

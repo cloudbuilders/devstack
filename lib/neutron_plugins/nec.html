@@ -424,7 +424,7 @@ version is different from the version provided by the distribution.</p>
     _neutron_ovs_base_configure_l3_agent
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_plugin_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_quantum_plugin_setup_bridge<span class="o">()</span> <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$SKIP_OVS_BRIDGE_SETUP&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        return</span>
 <span class="k">    fi</span>
@@ -432,17 +432,22 @@ version is different from the version provided by the distribution.</p>
 <p>Set up integration bridge</p>
 </td><td class=code><div class=highlight><pre>
     _neutron_ovs_base_setup_bridge <span class="nv">$OVS_BRIDGE</span>
-    sudo ovs-vsctl --no-wait <span class="nb">set</span>-controller <span class="nv">$OVS_BRIDGE</span> tcp:<span class="nv">$OFC_OFP_HOST</span>:<span class="nv">$OFC_OFP_PORT</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Generate datapath ID from HOST_IP</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">local </span><span class="nv">dpid</span><span class="o">=</span><span class="k">$(</span><span class="nb">printf</span> <span class="s2">&quot;0x%07d%03d%03d%03d\n&quot;</span> <span class="k">${</span><span class="nv">HOST_IP</span><span class="p">//./ </span><span class="k">})</span>
+    <span class="nb">local </span><span class="nv">dpid</span><span class="o">=</span><span class="k">$(</span><span class="nb">printf</span> <span class="s2">&quot;%07d%03d%03d%03d\n&quot;</span> <span class="k">${</span><span class="nv">HOST_IP</span><span class="p">//./ </span><span class="k">})</span>
     sudo ovs-vsctl --no-wait <span class="nb">set </span>Bridge <span class="nv">$OVS_BRIDGE</span> other-config:datapath-id<span class="o">=</span><span class="nv">$dpid</span>
     sudo ovs-vsctl --no-wait <span class="nb">set</span>-fail-mode <span class="nv">$OVS_BRIDGE</span> secure
+    sudo ovs-vsctl --no-wait <span class="nb">set</span>-controller <span class="nv">$OVS_BRIDGE</span> tcp:<span class="nv">$OFC_OFP_HOST</span>:<span class="nv">$OFC_OFP_PORT</span>
     <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$OVS_INTERFACE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo ovs-vsctl --no-wait -- --may-exist add-port <span class="nv">$OVS_BRIDGE</span> <span class="nv">$OVS_INTERFACE</span>
     <span class="k">fi</span>
 <span class="k">    </span>_neutron_setup_ovs_tunnels <span class="nv">$OVS_BRIDGE</span>
+<span class="o">}</span>
+
+<span class="k">function </span>neutron_plugin_configure_plugin_agent<span class="o">()</span> <span class="o">{</span>
+    _quantum_plugin_setup_bridge
+
     <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$NEUTRON_BIN_DIR/neutron-nec-agent&quot;</span>
 
     _neutron_ovs_base_configure_firewall_driver
@@ -479,15 +484,15 @@ version is different from the version provided by the distribution.</p>
     <span class="nb">local </span><span class="nv">id</span><span class="o">=</span>0
     <span class="nv">GRE_LOCAL_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">GRE_LOCAL_IP</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
     <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$GRE_REMOTE_IPS&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">         for </span>ip in <span class="k">${</span><span class="nv">GRE_REMOTE_IPS</span><span class="p">//:/ </span><span class="k">}</span>
-         <span class="k">do</span>
-<span class="k">             if</span> <span class="o">[[</span> <span class="s2">&quot;$ip&quot;</span> <span class="o">==</span> <span class="s2">&quot;$GRE_LOCAL_IP&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                 continue</span>
-<span class="k">             fi</span>
-<span class="k">             </span>sudo ovs-vsctl --no-wait add-port <span class="nv">$bridge</span> gre<span class="nv">$id</span> -- <span class="se">\</span>
-                 <span class="nb">set </span>Interface gre<span class="nv">$id</span> <span class="nb">type</span><span class="o">=</span>gre options:remote_ip<span class="o">=</span><span class="nv">$ip</span>
-             <span class="nv">id</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$id</span> + 1<span class="sb">`</span>
-         <span class="k">done</span>
+<span class="k">        for </span>ip in <span class="k">${</span><span class="nv">GRE_REMOTE_IPS</span><span class="p">//:/ </span><span class="k">}</span>
+        <span class="k">do</span>
+<span class="k">            if</span> <span class="o">[[</span> <span class="s2">&quot;$ip&quot;</span> <span class="o">==</span> <span class="s2">&quot;$GRE_LOCAL_IP&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                continue</span>
+<span class="k">            fi</span>
+<span class="k">            </span>sudo ovs-vsctl --no-wait add-port <span class="nv">$bridge</span> gre<span class="nv">$id</span> -- <span class="se">\</span>
+                <span class="nb">set </span>Interface gre<span class="nv">$id</span> <span class="nb">type</span><span class="o">=</span>gre options:remote_ip<span class="o">=</span><span class="nv">$ip</span>
+            <span class="nv">id</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$id</span> + 1<span class="sb">`</span>
+        <span class="k">done</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
 

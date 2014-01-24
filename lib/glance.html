@@ -361,23 +361,27 @@ ul.auto-toc {
 
 <p>lib/glance
 Functions to control the configuration and operation of the <strong>Glance</strong> service
-Dependencies:
-<tt class="docutils literal">functions</tt> file
-<tt class="docutils literal">DEST</tt>, <tt class="docutils literal">DATA_DIR</tt>, <tt class="docutils literal">STACK_USER</tt> must be defined
-<tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined
-<tt class="docutils literal">SERVICE_HOST</tt>
-<tt class="docutils literal">KEYSTONE_TOKEN_FORMAT</tt> must be defined</p>
+Dependencies:</p>
+<ul class="simple">
+<li><tt class="docutils literal">functions</tt> file</li>
+<li><tt class="docutils literal">DEST</tt>, <tt class="docutils literal">DATA_DIR</tt>, <tt class="docutils literal">STACK_USER</tt> must be defined</li>
+<li><tt class="docutils literal">SERVICE_{TENANT_NAME|PASSWORD}</tt> must be defined</li>
+<li><tt class="docutils literal">SERVICE_HOST</tt></li>
+<li><tt class="docutils literal">KEYSTONE_TOKEN_FORMAT</tt> must be defined</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
-<p>install_glance
-configure_glance
-init_glance
-start_glance
-stop_glance
-cleanup_glance</p>
+<ul class="simple">
+<li>install_glance</li>
+<li>configure_glance</li>
+<li>init_glance</li>
+<li>start_glance</li>
+<li>stop_glance</li>
+<li>cleanup_glance</li>
+</ul>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -465,7 +469,8 @@ delete image files (glance)</p>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
+    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
+    configure_API_version <span class="nv">$GLANCE_REGISTRY_CONF</span> <span class="nv">$IDENTITY_API_VERSION</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_user glance
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
@@ -482,7 +487,8 @@ delete image files (glance)</p>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
+    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
+    configure_API_version <span class="nv">$GLANCE_API_CONF</span> <span class="nv">$IDENTITY_API_VERSION</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_user glance
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
@@ -507,6 +513,8 @@ delete image files (glance)</p>
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_user <span class="nv">$SERVICE_TENANT_NAME</span>:glance
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_key <span class="nv">$SERVICE_PASSWORD</span>
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_create_container_on_put True
+
+        iniset_multiline DEFAULT known_stores glance.store.filesystem.Store glance.store.http.Store glance.store.swift.Store
     <span class="k">fi</span>
 
 <span class="k">    </span>cp -p <span class="nv">$GLANCE_DIR</span>/etc/glance-registry-paste.ini <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
@@ -600,7 +608,7 @@ delete image files (glance)</p>
     screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for g-api ($GLANCE_HOSTPORT) to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget --no-proxy -q -O- http://$GLANCE_HOSTPORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
-<span class="k">      </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;g-api did not start&quot;</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;g-api did not start&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -611,8 +619,8 @@ delete image files (glance)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the Glance screen windows</p>
 </td><td class=code><div class=highlight><pre>
-    screen -S <span class="nv">$SCREEN_NAME</span> -p g-api -X <span class="nb">kill</span>
-<span class="nb">    </span>screen -S <span class="nv">$SCREEN_NAME</span> -p g-reg -X <span class="nb">kill</span>
+    screen_stop g-api
+    screen_stop g-reg
 <span class="o">}</span>
 
 
@@ -622,10 +630,11 @@ delete image files (glance)</p>
 <span class="nv">$XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Local variables:
-mode: shell-script
-End:</p>
+<p>Tell emacs to use shell-script-mode</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">## Local variables:</span>
+<span class="c">## mode: shell-script</span>
+<span class="c">## End:</span>
 
 
 </td><td class=code><div class=highlight><pre>
