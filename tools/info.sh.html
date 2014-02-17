@@ -468,8 +468,8 @@ GetDistro
 
 </pre></div></td></tr><tr><td class=docs>
 <ul class="simple">
-<li>We are going to check packages only for the services needed.</li>
-<li>We are parsing the packages files and detecting metadatas.</li>
+<li>Only check packages for the services enabled</li>
+<li>Parse version info from the package metadata, not the package/file names</li>
 </ul>
 </td><td class=code><div class=highlight><pre>
 
@@ -546,11 +546,17 @@ rm <span class="nv">$FREEZE_FILE</span>
 <p>Dump localrc with 'localrc|' prepended and comments and passwords left out</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$TOP_DIR</span>/localrc <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">RC</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/localrc
+<span class="k">elif</span> <span class="o">[[</span> -f <span class="nv">$RC_DIR</span>/.localrc.auto <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">RC</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/.localrc.auto
+<span class="k">fi</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$RC</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>sed -e <span class="s1">&#39;</span>
-<span class="s1">        /PASSWORD/d;</span>
+<span class="s1">        /^[ \t]*$/d;</span>
+<span class="s1">        /PASSWORD/s/=.*$/=\&lt;password\&gt;/;</span>
 <span class="s1">        /^#/d;</span>
 <span class="s1">        s/^/localrc\|/;</span>
-<span class="s1">    &#39;</span> <span class="nv">$TOP_DIR</span>/localrc
+<span class="s1">    &#39;</span> <span class="nv">$RC</span>
 <span class="k">fi</span>
 
 

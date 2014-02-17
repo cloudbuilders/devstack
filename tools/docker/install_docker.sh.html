@@ -403,19 +403,23 @@ ul.auto-toc {
 <h1>Install Docker Service</h1>
 </td><td class=code><div class=highlight><pre>
 
+<span class="k">if </span>is_fedora; <span class="k">then</span>
+<span class="k">    </span>install_package docker-io socat
+<span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Stop the auto-repo updates and do it when required here</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">NO_UPDATE_REPOS</span><span class="o">=</span>True
+    <span class="nv">NO_UPDATE_REPOS</span><span class="o">=</span>True
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up home repo</p>
 </td><td class=code><div class=highlight><pre>
-curl https://get.docker.io/gpg | sudo apt-key add -
-install_package python-software-properties <span class="o">&amp;&amp;</span> <span class="se">\</span>
-    sudo sh -c <span class="s2">&quot;echo deb $DOCKER_APT_REPO docker main &gt; /etc/apt/sources.list.d/docker.list&quot;</span>
-apt_get update
-install_package --force-yes lxc-docker socat
+    curl https://get.docker.io/gpg | sudo apt-key add -
+    install_package python-software-properties <span class="o">&amp;&amp;</span> <span class="se">\</span>
+        sudo sh -c <span class="s2">&quot;echo deb $DOCKER_APT_REPO docker main &gt; /etc/apt/sources.list.d/docker.list&quot;</span>
+    apt_get update
+    install_package --force-yes lxc-docker socat
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Start the daemon - restart just in case the package ever auto-starts...</p>
@@ -434,33 +438,22 @@ restart_service docker
 <span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;docker did not start&quot;</span>
 <span class="k">fi</span>
 
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the right group on docker unix socket before retrying</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/docker-ut.tar.gz <span class="o">]]</span>; <span class="k">then</span>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; curl -OR <span class="nv">$DOCKER_IMAGE</span><span class="o">)</span>
-<span class="k">fi</span>
-<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/docker-ut.tar.gz <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Docker image unavailable&quot;</span>
-<span class="k">fi</span>
-docker import - <span class="nv">$DOCKER_IMAGE_NAME</span> &lt;<span class="nv">$FILES</span>/docker-ut.tar.gz
+docker pull <span class="nv">$DOCKER_IMAGE</span>
+docker tag <span class="nv">$DOCKER_IMAGE</span> <span class="nv">$DOCKER_IMAGE_NAME</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Get Docker image</p>
+<p>Get guest container image</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/docker-registry.tar.gz <span class="o">]]</span>; <span class="k">then</span>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$FILES</span>; curl -OR <span class="nv">$DOCKER_REGISTRY_IMAGE</span><span class="o">)</span>
-<span class="k">fi</span>
-<span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$FILES</span>/docker-registry.tar.gz <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Docker registry image unavailable&quot;</span>
-<span class="k">fi</span>
-docker import - <span class="nv">$DOCKER_REGISTRY_IMAGE_NAME</span> &lt;<span class="nv">$FILES</span>/docker-registry.tar.gz
+docker pull <span class="nv">$DOCKER_REGISTRY_IMAGE</span>
+docker tag <span class="nv">$DOCKER_REGISTRY_IMAGE</span> <span class="nv">$DOCKER_REGISTRY_IMAGE_NAME</span>
 
 
 </td><td class=code><div class=highlight><pre>
 </pre></div></td></tr><tr><td class=docs>
-<p>Get Docker registry image</p>
+<p>Get docker-registry image</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>

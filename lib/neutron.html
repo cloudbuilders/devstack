@@ -360,7 +360,7 @@ ul.auto-toc {
 
 
 <p>lib/neutron
-functions - funstions specific to neutron
+functions - functions specific to neutron
 Dependencies:
 <tt class="docutils literal">functions</tt> file
 <tt class="docutils literal">DEST</tt> must be defined
@@ -685,10 +685,25 @@ provider GRE tunnels when <tt class="docutils literal">ENABLE_TENANT_TUNNELS</tt
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Tell Tempest this project is present</p>
+</td><td class=code><div class=highlight><pre>
+TEMPEST_SERVICES+<span class="o">=</span>,neutron
+
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test if any Neutron services are enabled
+is_neutron_enabled</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_neutron_enabled <span class="o">{</span>
+    <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ ,<span class="s2">&quot;q-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_neutron()
@@ -788,29 +803,29 @@ Set common config for all neutron server and agents.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>create_neutron_accounts<span class="o">()</span> <span class="o">{</span>
 
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">NEUTRON_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
-            --name<span class="o">=</span>neutron <span class="se">\</span>
-            --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --email<span class="o">=</span>neutron@example.com <span class="se">\</span>
+<span class="k">        </span><span class="nv">NEUTRON_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
+            neutron <span class="se">\</span>
+            --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --email neutron@example.com <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        keystone user-role-add <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user-id <span class="nv">$NEUTRON_USER</span> <span class="se">\</span>
-            --role-id <span class="nv">$ADMIN_ROLE</span>
+        openstack role add <span class="se">\</span>
+            <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --user <span class="nv">$NEUTRON_USER</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">NEUTRON_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-                --name<span class="o">=</span>neutron <span class="se">\</span>
+<span class="k">            </span><span class="nv">NEUTRON_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
+                neutron <span class="se">\</span>
                 --type<span class="o">=</span>network <span class="se">\</span>
                 --description<span class="o">=</span><span class="s2">&quot;Neutron Service&quot;</span> <span class="se">\</span>
                 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            keystone endpoint-create <span class="se">\</span>
+            openstack endpoint create <span class="se">\</span>
+                <span class="nv">$NEUTRON_SERVICE</span> <span class="se">\</span>
                 --region RegionOne <span class="se">\</span>
-                --service_id <span class="nv">$NEUTRON_SERVICE</span> <span class="se">\</span>
                 --publicurl <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span> <span class="se">\</span>
                 --adminurl <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span>
@@ -819,7 +834,7 @@ Set common config for all neutron server and agents.</p>
 <span class="o">}</span>
 
 <span class="k">function </span>create_neutron_initial_network<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; demo &quot;</span> | get_field 1<span class="k">)</span>
+    <span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>openstack project list | grep <span class="s2">&quot; demo &quot;</span> | get_field 1<span class="k">)</span>
     die_if_not_set <span class="nv">$LINENO</span> TENANT_ID <span class="s2">&quot;Failure retrieving TENANT_ID for demo&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1012,7 +1027,7 @@ Since neutron command is executed in admin context at this point,
         <span class="o">[</span> ! -z <span class="s2">&quot;$pid&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> sudo <span class="nb">kill</span> -9 <span class="nv">$pid</span>
     <span class="k">fi</span>
 <span class="k">    if </span>is_service_enabled q-meta; <span class="k">then</span>
-<span class="k">        </span>sudo pkill -9 neutron-ns-metadata-proxy <span class="o">||</span> :
+<span class="k">        </span>sudo pkill -9 -f neutron-ns-metadata-proxy <span class="o">||</span> :
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled q-lbaas; <span class="k">then</span>
@@ -1137,11 +1152,6 @@ directory</p>
     iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> DEFAULT verbose False
     iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> DEFAULT debug False
     iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
-    iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Intermediate fix until Neutron patch lands and then line above will
-be cleaned.</p>
-</td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> agent root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
 
     _neutron_setup_interface_driver <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span>

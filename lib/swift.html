@@ -506,12 +506,26 @@ base_port + node_num * 10</p>
 <span class="nv">CONTAINER_PORT_BASE</span><span class="o">=</span><span class="k">${</span><span class="nv">CONTAINER_PORT_BASE</span><span class="k">:-</span><span class="nv">6011</span><span class="k">}</span>
 <span class="nv">ACCOUNT_PORT_BASE</span><span class="o">=</span><span class="k">${</span><span class="nv">ACCOUNT_PORT_BASE</span><span class="k">:-</span><span class="nv">6012</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Tell Tempest this project is present</p>
+</td><td class=code><div class=highlight><pre>
+TEMPEST_SERVICES+<span class="o">=</span>,swift
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test if any Swift services are enabled
+is_swift_enabled</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_swift_enabled <span class="o">{</span>
+    <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ ,<span class="s2">&quot;s-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>cleanup_swift() - Remove residual data files</p>
@@ -676,6 +690,8 @@ setup) we configure it with our version of rsync.</p>
 <span class="k">    </span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONF_DIR</span><span class="k">}</span>/proxy-server.conf
     cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/proxy-server.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
 
+    cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/container-sync-realms.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONF_DIR</span><span class="k">}</span>/container-sync-realms.conf
+
     iniuncomment <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT user
     iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> DEFAULT user <span class="k">${</span><span class="nv">STACK_USER</span><span class="k">}</span>
 
@@ -767,7 +783,7 @@ IDs will included in all of its log messages.</p>
 <span class="k">        </span>cat <span class="s">&lt;&lt;EOF &gt;&gt;${SWIFT_CONFIG_PROXY_SERVER}</span>
 <span class="s"># DIVIDER</span>
 <span class="s">[filter:s3token]</span>
-<span class="s">paste.filter_factory = keystone.middleware.s3_token:filter_factory</span>
+<span class="s">paste.filter_factory = keystoneclient.middleware.s3_token:filter_factory</span>
 <span class="s">auth_port = ${KEYSTONE_AUTH_PORT}</span>
 <span class="s">auth_host = ${KEYSTONE_AUTH_HOST}</span>
 <span class="s">auth_protocol = ${KEYSTONE_AUTH_PROTOCOL}</span>
@@ -959,43 +975,6 @@ underscores for separators.</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">function </span>create_swift_accounts<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">KEYSTONE_CATALOG_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_CATALOG_BACKEND</span><span class="k">:-</span><span class="nv">sql</span><span class="k">}</span>
-
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
-
-    <span class="nv">SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create --name<span class="o">=</span>swift --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-        --tenant-id <span class="nv">$SERVICE_TENANT</span> --email<span class="o">=</span>swift@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    keystone user-role-add --tenant-id <span class="nv">$SERVICE_TENANT</span> --user-id <span class="nv">$SWIFT_USER</span> --role-id <span class="nv">$ADMIN_ROLE</span>
-
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">SWIFT_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create --name<span class="o">=</span>swift --type<span class="o">=</span><span class="s2">&quot;object-store&quot;</span> <span class="se">\</span>
-            --description<span class="o">=</span><span class="s2">&quot;Swift Service&quot;</span> | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        keystone endpoint-create <span class="se">\</span>
-            --region RegionOne <span class="se">\</span>
-            --service_id <span class="nv">$SWIFT_SERVICE</span> <span class="se">\</span>
-            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8080&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span>
-    <span class="k">fi</span>
-
-<span class="k">    </span><span class="nv">SWIFT_TENANT_TEST1</span><span class="o">=</span><span class="k">$(</span>keystone tenant-create --name<span class="o">=</span>swifttenanttest1 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    die_if_not_set <span class="nv">$LINENO</span> SWIFT_TENANT_TEST1 <span class="s2">&quot;Failure creating SWIFT_TENANT_TEST1&quot;</span>
-    <span class="nv">SWIFT_USER_TEST1</span><span class="o">=</span><span class="k">$(</span>keystone user-create --name<span class="o">=</span>swiftusertest1 --pass<span class="o">=</span>testing --email<span class="o">=</span><span class="nb">test</span>@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    die_if_not_set <span class="nv">$LINENO</span> SWIFT_USER_TEST1 <span class="s2">&quot;Failure creating SWIFT_USER_TEST1&quot;</span>
-    keystone user-role-add --user-id <span class="nv">$SWIFT_USER_TEST1</span> --role-id <span class="nv">$ADMIN_ROLE</span> --tenant-id <span class="nv">$SWIFT_TENANT_TEST1</span>
-
-    <span class="nv">SWIFT_USER_TEST3</span><span class="o">=</span><span class="k">$(</span>keystone user-create --name<span class="o">=</span>swiftusertest3 --pass<span class="o">=</span>testing3 --email<span class="o">=</span>test3@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    die_if_not_set <span class="nv">$LINENO</span> SWIFT_USER_TEST3 <span class="s2">&quot;Failure creating SWIFT_USER_TEST3&quot;</span>
-    keystone user-role-add --user-id <span class="nv">$SWIFT_USER_TEST3</span> --role-id <span class="nv">$ANOTHER_ROLE</span> --tenant-id <span class="nv">$SWIFT_TENANT_TEST1</span>
-
-    <span class="nv">SWIFT_TENANT_TEST2</span><span class="o">=</span><span class="k">$(</span>keystone tenant-create --name<span class="o">=</span>swifttenanttest2 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    die_if_not_set <span class="nv">$LINENO</span> SWIFT_TENANT_TEST2 <span class="s2">&quot;Failure creating SWIFT_TENANT_TEST2&quot;</span>
-    <span class="nv">SWIFT_USER_TEST2</span><span class="o">=</span><span class="k">$(</span>keystone user-create --name<span class="o">=</span>swiftusertest2 --pass<span class="o">=</span>testing2 --email<span class="o">=</span>test2@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    die_if_not_set <span class="nv">$LINENO</span> SWIFT_USER_TEST2 <span class="s2">&quot;Failure creating SWIFT_USER_TEST2&quot;</span>
-    keystone user-role-add --user-id <span class="nv">$SWIFT_USER_TEST2</span> --role-id <span class="nv">$ADMIN_ROLE</span> --tenant-id <span class="nv">$SWIFT_TENANT_TEST2</span>
-<span class="o">}</span>
-
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="tenant-user-roles">
@@ -1004,6 +983,64 @@ underscores for separators.</p>
 swifttenanttest1   swiftusertest1     admin
 swifttenanttest1   swiftusertest3     anotherrole
 swifttenanttest2   swiftusertest2     admin</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">SWIFTUSERTEST1_PASSWORD</span><span class="o">=</span>testing
+    <span class="nv">SWIFTUSERTEST2_PASSWORD</span><span class="o">=</span>testing2
+    <span class="nv">SWIFTUSERTEST3_PASSWORD</span><span class="o">=</span>testing3
+
+    <span class="nv">KEYSTONE_CATALOG_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_CATALOG_BACKEND</span><span class="k">:-</span><span class="nv">sql</span><span class="k">}</span>
+
+    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+
+    <span class="nv">SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
+        swift <span class="se">\</span>
+        --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+        --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --email<span class="o">=</span>swift@example.com <span class="se">\</span>
+        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    openstack role add <span class="se">\</span>
+        <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
+        --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+        --user <span class="nv">$SWIFT_USER</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">SWIFT_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
+            swift <span class="se">\</span>
+            --type<span class="o">=</span><span class="s2">&quot;object-store&quot;</span> <span class="se">\</span>
+            --description<span class="o">=</span><span class="s2">&quot;Swift Service&quot;</span> <span class="se">\</span>
+            | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+        openstack endpoint create <span class="se">\</span>
+            <span class="nv">$SWIFT_SERVICE</span> <span class="se">\</span>
+            --region RegionOne <span class="se">\</span>
+            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span> <span class="se">\</span>
+            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8080&quot;</span> <span class="se">\</span>
+            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nv">SWIFT_TENANT_TEST1</span><span class="o">=</span><span class="k">$(</span>openstack project create swifttenanttest1 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> SWIFT_TENANT_TEST1 <span class="s2">&quot;Failure creating SWIFT_TENANT_TEST1&quot;</span>
+    <span class="nv">SWIFT_USER_TEST1</span><span class="o">=</span><span class="k">$(</span>openstack user create swiftusertest1 --password<span class="o">=</span><span class="nv">$SWIFTUSERTEST1_PASSWORD</span> <span class="se">\</span>
+        --project <span class="s2">&quot;$SWIFT_TENANT_TEST1&quot;</span> --email<span class="o">=</span><span class="nb">test</span>@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> SWIFT_USER_TEST1 <span class="s2">&quot;Failure creating SWIFT_USER_TEST1&quot;</span>
+    openstack role add --user <span class="nv">$SWIFT_USER_TEST1</span> --project <span class="nv">$SWIFT_TENANT_TEST1</span> <span class="nv">$ADMIN_ROLE</span>
+
+    <span class="nv">SWIFT_USER_TEST3</span><span class="o">=</span><span class="k">$(</span>openstack user create swiftusertest3 --password<span class="o">=</span><span class="nv">$SWIFTUSERTEST3_PASSWORD</span> <span class="se">\</span>
+        --project <span class="s2">&quot;$SWIFT_TENANT_TEST1&quot;</span> --email<span class="o">=</span>test3@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> SWIFT_USER_TEST3 <span class="s2">&quot;Failure creating SWIFT_USER_TEST3&quot;</span>
+    openstack role add --user <span class="nv">$SWIFT_USER_TEST3</span> --project <span class="nv">$SWIFT_TENANT_TEST1</span> <span class="nv">$ANOTHER_ROLE</span>
+
+    <span class="nv">SWIFT_TENANT_TEST2</span><span class="o">=</span><span class="k">$(</span>openstack project create swifttenanttest2 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> SWIFT_TENANT_TEST2 <span class="s2">&quot;Failure creating SWIFT_TENANT_TEST2&quot;</span>
+
+    <span class="nv">SWIFT_USER_TEST2</span><span class="o">=</span><span class="k">$(</span>openstack user create swiftusertest2 --password<span class="o">=</span><span class="nv">$SWIFTUSERTEST2_PASSWORD</span> <span class="se">\</span>
+        --project <span class="s2">&quot;$SWIFT_TENANT_TEST2&quot;</span> --email<span class="o">=</span>test2@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> SWIFT_USER_TEST2 <span class="s2">&quot;Failure creating SWIFT_USER_TEST2&quot;</span>
+    openstack role add --user <span class="nv">$SWIFT_USER_TEST2</span> --project <span class="nv">$SWIFT_TENANT_TEST2</span> <span class="nv">$ADMIN_ROLE</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Defines specific passwords used by tools/create_userrc.sh</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_swift<span class="o">()</span> <span class="o">{</span>
     <span class="nb">local </span>node_number
@@ -1136,11 +1173,11 @@ in case</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>screen normally killed by unstack.sh</p>
 </td><td class=code><div class=highlight><pre>
-    sudo pkill -f swift-proxy-server
+    pkill -f swift-
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Dump the proxy server</p>
+<p>Dump all of the servers</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 

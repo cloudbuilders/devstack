@@ -439,6 +439,42 @@ cleanup_nova_hypervisor - remove transient data and cache</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">XEN_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">XEN_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="s2">&quot;$XEN_FIREWALL_DRIVER&quot;</span>
+
+    <span class="nb">local </span>dom0_ip
+    <span class="nv">dom0_ip</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$XENAPI_CONNECTION_URL&quot;</span> | cut -d <span class="s2">&quot;/&quot;</span> -f 3-<span class="k">)</span>
+
+    <span class="nb">local </span>ssh_dom0
+    <span class="nv">ssh_dom0</span><span class="o">=</span><span class="s2">&quot;sudo -u $DOMZERO_USER ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$dom0_ip&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>install nova plugins to dom0</p>
+</td><td class=code><div class=highlight><pre>
+    tar -czf - -C <span class="nv">$NOVA_DIR</span>/plugins/xenserver/xenapi/etc/xapi.d/plugins/ ./ |
+        <span class="nv">$ssh_dom0</span> <span class="s1">&#39;tar -xzf - -C /etc/xapi.d/plugins/ &amp;&amp; chmod a+x /etc/xapi.d/plugins/*&#39;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>install console logrotate script</p>
+</td><td class=code><div class=highlight><pre>
+    tar -czf - -C <span class="nv">$NOVA_DIR</span>/tools/xenserver/ rotate_xen_guest_logs.sh |
+        <span class="nv">$ssh_dom0</span> <span class="s1">&#39;tar -xzf - -C /root/ &amp;&amp; chmod +x /root/rotate_xen_guest_logs.sh &amp;&amp; mkdir -p /var/log/xen/guest&#39;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create a cron job that will rotate guest logs</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$ssh_dom0</span> crontab - <span class="s">&lt;&lt; CRONTAB</span>
+<span class="s">* * * * * /root/rotate_xen_guest_logs.sh</span>
+<span class="s">CRONTAB</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create directories for kernels and images</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="o">{</span>
+        <span class="nb">echo</span> <span class="s2">&quot;set -eux&quot;</span>
+        cat <span class="nv">$TOP_DIR</span>/tools/xen/functions
+        <span class="nb">echo</span> <span class="s2">&quot;create_directory_for_images&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;create_directory_for_kernels&quot;</span>
+    <span class="o">}</span> | <span class="nv">$ssh_dom0</span>
+
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

@@ -393,6 +393,11 @@ cleanup_nova_hypervisor - remove transient data and cache</p>
 <h1>Defaults</h1>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>File injection is disabled by default in Nova.  This will turn it back on.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ENABLE_FILE_INJECTION</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLE_FILE_INJECTION</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -497,6 +502,7 @@ libvirt to detect those changes.</p>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_type <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_cpu_mode <span class="s2">&quot;none&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT use_usb_tablet <span class="s2">&quot;False&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT default_ephemeral_format <span class="s2">&quot;ext4&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;libvirt.LibvirtDriver&quot;</span>
     <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.firewall.IptablesFirewallDriver&quot;</span><span class="k">}</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="s2">&quot;$LIBVIRT_FIREWALL_DRIVER&quot;</span>
@@ -505,6 +511,23 @@ libvirt to detect those changes.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_arch <span class="s2">&quot;ppc64&quot;</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vnc_enabled <span class="s2">&quot;false&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nv">ENABLE_FILE_INJECTION</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$ENABLE_FILE_INJECTION</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_FILE_INJECTION&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> ; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>When libguestfs is available for file injection, enable using
+libguestfs to inspect the image and figure out the proper
+partition to inject into.</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$NOVA_CONF</span> libvirt inject_partition <span class="s1">&#39;-1&#39;</span>
+        iniset <span class="nv">$NOVA_CONF</span> libvirt inject_key <span class="s1">&#39;true&#39;</span>
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>File injection is being disabled by default in the near future -
+disable it here for now to avoid surprises later.</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$NOVA_CONF</span> libvirt inject_partition <span class="s1">&#39;-2&#39;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 

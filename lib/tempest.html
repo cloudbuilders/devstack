@@ -415,8 +415,8 @@ Dependencies:</p>
 <p>Set up default directories</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TEMPEST_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/tempest
-<span class="nv">TEMPEST_CONF_DIR</span><span class="o">=</span><span class="nv">$TEMPEST_DIR</span>/etc
-<span class="nv">TEMPEST_CONF</span><span class="o">=</span><span class="nv">$TEMPEST_CONF_DIR</span>/tempest.conf
+<span class="nv">TEMPEST_CONFIG_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_CONFIG_DIR</span><span class="k">:-</span><span class="nv">$TEMPEST_DIR</span><span class="p">/etc</span><span class="k">}</span>
+<span class="nv">TEMPEST_CONFIG</span><span class="o">=</span><span class="nv">$TEMPEST_CONFIG_DIR</span>/tempest.conf
 <span class="nv">TEMPEST_STATE_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_STATE_PATH</span><span class="p">:=</span><span class="nv">$DATA_DIR</span><span class="p">/tempest</span><span class="k">}</span>
 
 <span class="nv">NOVA_SOURCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
@@ -427,6 +427,12 @@ Dependencies:</p>
 
 <span class="nv">BOTO_MATERIALS_PATH</span><span class="o">=</span><span class="s2">&quot;$FILES/images/s3-materials/cirros-0.3.1&quot;</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Cinder/Volume variables</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TEMPEST_VOLUME_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_VOLUME_DRIVER</span><span class="k">:-</span><span class="nv">default</span><span class="k">}</span>
+<span class="nv">TEMPEST_VOLUME_VENDOR</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_VOLUME_VENDOR</span><span class="k">:-</span><span class="s2">&quot;Open Source&quot;</span><span class="k">}</span>
+<span class="nv">TEMPEST_STORAGE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_STORAGE_PROTOCOL</span><span class="k">:-</span><span class="nv">iSCSI</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -456,6 +462,11 @@ Dependencies:</p>
     <span class="nb">local </span>tenant_networks_reachable
     <span class="nb">local </span><span class="nv">boto_instance_type</span><span class="o">=</span><span class="s2">&quot;m1.tiny&quot;</span>
     <span class="nb">local </span><span class="nv">ssh_connect_method</span><span class="o">=</span><span class="s2">&quot;fixed&quot;</span>
+
+    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$TEMPEST_CONFIG_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo mkdir -p <span class="nv">$TEMPEST_CONFIG_DIR</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$TEMPEST_CONFIG_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(afazekas):
@@ -517,7 +528,8 @@ if there is more than one returned...
 <p>Create tempest.conf from tempest.conf.sample
 copy every time, because the image UUIDS are going to change</p>
 </td><td class=code><div class=highlight><pre>
-    cp <span class="nv">$TEMPEST_CONF</span>.sample <span class="nv">$TEMPEST_CONF</span>
+    sudo cp <span class="nv">$TEMPEST_DIR</span>/etc/tempest.conf.sample <span class="nv">$TEMPEST_CONFIG</span>
+    sudo chmod 644 <span class="nv">$TEMPEST_CONFIG</span>
 
     <span class="nv">password</span><span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">:-</span><span class="nv">secrete</span><span class="k">}</span>
 
@@ -622,32 +634,33 @@ public router that tempest should be configured to use.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Oslo</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> DEFAULT lock_path <span class="nv">$TEMPEST_STATE_PATH</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> DEFAULT lock_path <span class="nv">$TEMPEST_STATE_PATH</span>
     mkdir -p <span class="nv">$TEMPEST_STATE_PATH</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> DEFAULT use_stderr False
-    iniset <span class="nv">$TEMPEST_CONF</span> DEFAULT log_file tempest.log
-    iniset <span class="nv">$TEMPEST_CONF</span> DEFAULT debug True
+    iniset <span class="nv">$TEMPEST_CONFIG</span> DEFAULT use_stderr False
+    iniset <span class="nv">$TEMPEST_CONFIG</span> DEFAULT log_file tempest.log
+    iniset <span class="nv">$TEMPEST_CONFIG</span> DEFAULT debug True
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Timeouts</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute build_timeout <span class="nv">$BUILD_TIMEOUT</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> volume build_timeout <span class="nv">$BUILD_TIMEOUT</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> boto build_timeout <span class="nv">$BUILD_TIMEOUT</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute build_interval <span class="nv">$BUILD_INTERVAL</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> volume build_interval <span class="nv">$BUILD_INTERVAL</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> boto build_interval <span class="nv">$BUILD_INTERVAL</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> boto http_socket_timeout 5
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute build_timeout <span class="nv">$BUILD_TIMEOUT</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> volume build_timeout <span class="nv">$BUILD_TIMEOUT</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto build_timeout <span class="nv">$BUILD_TIMEOUT</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute build_interval <span class="nv">$BUILD_INTERVAL</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> volume build_interval <span class="nv">$BUILD_INTERVAL</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto build_interval <span class="nv">$BUILD_INTERVAL</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto http_socket_timeout 5
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Identity</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> identity uri <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:5000/v2.0/&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> identity password <span class="s2">&quot;$password&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> identity alt_username <span class="nv">$ALT_USERNAME</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> identity alt_password <span class="s2">&quot;$password&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> identity alt_tenant_name <span class="nv">$ALT_TENANT_NAME</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> identity admin_password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> identity uri <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:5000/v2.0/&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> identity uri_v3 <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:5000/v3/&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> identity password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> identity alt_username <span class="nv">$ALT_USERNAME</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> identity alt_password <span class="s2">&quot;$password&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> identity alt_tenant_name <span class="nv">$ALT_TENANT_NAME</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> identity admin_password <span class="s2">&quot;$password&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Image
@@ -655,118 +668,113 @@ for the gate we want to be able to override this variable so we aren't
 doing an HTTP fetch over the wide internet for this test</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> ! -z <span class="s2">&quot;$TEMPEST_HTTP_IMAGE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> image http_image <span class="nv">$TEMPEST_HTTP_IMAGE</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONFIG</span> image http_image <span class="nv">$TEMPEST_HTTP_IMAGE</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Compute</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute change_password_available False
-</pre></div></td></tr><tr><td class=docs>
-<p>Note(nati) current tempest don't create network for each tenant
-so reuse same tenant for now</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
-<span class="k">        </span><span class="nv">TEMPEST_ALLOW_TENANT_ISOLATION</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_ALLOW_TENANT_ISOLATION</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-    <span class="k">fi</span>
-<span class="k">    </span>iniset <span class="nv">$TEMPEST_CONF</span> compute allow_tenant_isolation <span class="k">${</span><span class="nv">TEMPEST_ALLOW_TENANT_ISOLATION</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span> <span class="c"># DEPRECATED</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute network_for_ssh <span class="nv">$PRIVATE_NETWORK_NAME</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute ip_version_for_ssh 4
-    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_timeout <span class="nv">$BUILD_TIMEOUT</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref <span class="nv">$image_uuid</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute image_ref_alt <span class="nv">$image_uuid_alt</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute image_alt_ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref <span class="nv">$flavor_ref</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute flavor_ref_alt <span class="nv">$flavor_ref_alt</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute live_migration_available <span class="k">${</span><span class="nv">LIVE_MIGRATION_AVAILABLE</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute use_block_migration_for_live_migration <span class="k">${</span><span class="nv">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> compute ssh_connect_method <span class="nv">$ssh_connect_method</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute change_password_available False
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute allow_tenant_isolation <span class="k">${</span><span class="nv">TEMPEST_ALLOW_TENANT_ISOLATION</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span> <span class="c"># DEPRECATED</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute network_for_ssh <span class="nv">$PRIVATE_NETWORK_NAME</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute ip_version_for_ssh 4
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute ssh_timeout <span class="nv">$BUILD_TIMEOUT</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute image_ref <span class="nv">$image_uuid</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute image_ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute image_ref_alt <span class="nv">$image_uuid_alt</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute image_alt_ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute flavor_ref <span class="nv">$flavor_ref</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute flavor_ref_alt <span class="nv">$flavor_ref_alt</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute live_migration_available <span class="k">${</span><span class="nv">LIVE_MIGRATION_AVAILABLE</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute use_block_migration_for_live_migration <span class="k">${</span><span class="nv">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute ssh_connect_method <span class="nv">$ssh_connect_method</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Compute admin</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> <span class="s2">&quot;compute-admin&quot;</span> password <span class="s2">&quot;$password&quot;</span> <span class="c"># DEPRECATED</span>
 
-    iniset <span class="nv">$TEMPEST_CONF</span> network api_version 2.0
-    iniset <span class="nv">$TEMPEST_CONF</span> network tenant_networks_reachable <span class="s2">&quot;$tenant_networks_reachable&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> network public_network_id <span class="s2">&quot;$public_network_id&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> network public_router_id <span class="s2">&quot;$public_router_id&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> network default_network <span class="s2">&quot;$FIXED_RANGE&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> network api_version 2.0
+    iniset <span class="nv">$TEMPEST_CONFIG</span> network tenant_networks_reachable <span class="s2">&quot;$tenant_networks_reachable&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> network public_network_id <span class="s2">&quot;$public_network_id&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> network public_router_id <span class="s2">&quot;$public_router_id&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> network default_network <span class="s2">&quot;$FIXED_RANGE&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>boto</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> boto ec2_url <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> boto s3_url <span class="s2">&quot;http://$SERVICE_HOST:${S3_SERVICE_PORT:-3333}&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> boto s3_materials_path <span class="s2">&quot;$BOTO_MATERIALS_PATH&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> boto instance_type <span class="s2">&quot;$boto_instance_type&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> boto http_socket_timeout 30
-    iniset <span class="nv">$TEMPEST_CONF</span> boto ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto ec2_url <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto s3_url <span class="s2">&quot;http://$SERVICE_HOST:${S3_SERVICE_PORT:-3333}&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto s3_materials_path <span class="s2">&quot;$BOTO_MATERIALS_PATH&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto instance_type <span class="s2">&quot;$boto_instance_type&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto http_socket_timeout 30
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto ssh_user <span class="k">${</span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="k">:-</span><span class="nv">cirros</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Orchestration test image</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> ! -z <span class="s2">&quot;$HEAT_FETCHED_TEST_IMAGE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> orchestration image_ref <span class="s2">&quot;$HEAT_FETCHED_TEST_IMAGE&quot;</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONFIG</span> orchestration image_ref <span class="s2">&quot;$HEAT_FETCHED_TEST_IMAGE&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$HEAT_CREATE_TEST_IMAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>disk_image_create /usr/share/tripleo-image-elements <span class="s2">&quot;vm fedora heat-cfntools&quot;</span> <span class="s2">&quot;i386&quot;</span> <span class="s2">&quot;fedora-vm-heat-cfntools-tempest&quot;</span>
-        iniset <span class="nv">$TEMPEST_CONF</span> orchestration image_ref <span class="s2">&quot;fedora-vm-heat-cfntools-tempest&quot;</span>
+        iniset <span class="nv">$TEMPEST_CONFIG</span> orchestration image_ref <span class="s2">&quot;fedora-vm-heat-cfntools-tempest&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Scenario</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> scenario img_dir <span class="s2">&quot;$FILES/images/cirros-0.3.1-x86_64-uec&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> scenario img_dir <span class="s2">&quot;$FILES/images/cirros-0.3.1-x86_64-uec&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Large Ops Number</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> scenario large_ops_number <span class="k">${</span><span class="nv">TEMPEST_LARGE_OPS_NUMBER</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> scenario large_ops_number <span class="k">${</span><span class="nv">TEMPEST_LARGE_OPS_NUMBER</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Volume</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled c-bak; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> volume volume_backup_enabled <span class="s2">&quot;True&quot;</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONFIG</span> volume volume_backup_enabled <span class="s2">&quot;True&quot;</span>
     <span class="k">fi</span>
 <span class="k">    </span><span class="nv">CINDER_MULTI_LVM_BACKEND</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$CINDER_MULTI_LVM_BACKEND</span><span class="k">)</span>
     <span class="k">if</span> <span class="o">[</span> <span class="nv">$CINDER_MULTI_LVM_BACKEND</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONF</span> volume multi_backend_enabled <span class="s2">&quot;True&quot;</span>
-        iniset <span class="nv">$TEMPEST_CONF</span> volume backend1_name <span class="s2">&quot;LVM_iSCSI&quot;</span>
-        iniset <span class="nv">$TEMPEST_CONF</span> volume backend2_name <span class="s2">&quot;LVM_iSCSI_2&quot;</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONFIG</span> volume-feature-enabled multi_backend <span class="s2">&quot;True&quot;</span>
+        iniset <span class="nv">$TEMPEST_CONFIG</span> volume backend1_name <span class="s2">&quot;LVM_iSCSI&quot;</span>
+        iniset <span class="nv">$TEMPEST_CONFIG</span> volume backend2_name <span class="s2">&quot;LVM_iSCSI_2&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[</span> <span class="nv">$TEMPEST_VOLUME_DRIVER</span> !<span class="o">=</span> <span class="s2">&quot;default&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONFIG</span> volume vendor_name <span class="nv">$TEMPEST_VOLUME_VENDOR</span>
+        iniset <span class="nv">$TEMPEST_CONFIG</span> volume storage_protocol <span class="nv">$TEMPEST_STORAGE_PROTOCOL</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Dashboard</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> dashboard dashboard_url <span class="s2">&quot;http://$SERVICE_HOST/&quot;</span>
-    iniset <span class="nv">$TEMPEST_CONF</span> dashboard login_url <span class="s2">&quot;http://$SERVICE_HOST/auth/login/&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> dashboard dashboard_url <span class="s2">&quot;http://$SERVICE_HOST/&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> dashboard login_url <span class="s2">&quot;http://$SERVICE_HOST/auth/login/&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>cli</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> cli cli_dir <span class="nv">$NOVA_BIN_DIR</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> cli cli_dir <span class="nv">$NOVA_BIN_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Networking</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONF</span> network-feature-enabled api_extensions <span class="s2">&quot;${NETWORK_API_EXTENSIONS:-all}&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> network-feature-enabled api_extensions <span class="s2">&quot;${NETWORK_API_EXTENSIONS:-all}&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>service_available</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>service in nova cinder glance neutron swift heat horizon ceilometer ironic savanna trove marconi; <span class="k">do</span>
+    <span class="k">for </span>service in <span class="k">${</span><span class="nv">TEMPEST_SERVICES</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
 <span class="k">        if </span>is_service_enabled <span class="nv">$service</span> ; <span class="k">then</span>
-<span class="k">            </span>iniset <span class="nv">$TEMPEST_CONF</span> service_available <span class="nv">$service</span> <span class="s2">&quot;True&quot;</span>
+<span class="k">            </span>iniset <span class="nv">$TEMPEST_CONFIG</span> service_available <span class="nv">$service</span> <span class="s2">&quot;True&quot;</span>
         <span class="k">else</span>
-<span class="k">            </span>iniset <span class="nv">$TEMPEST_CONF</span> service_available <span class="nv">$service</span> <span class="s2">&quot;False&quot;</span>
+<span class="k">            </span>iniset <span class="nv">$TEMPEST_CONFIG</span> service_available <span class="nv">$service</span> <span class="s2">&quot;False&quot;</span>
         <span class="k">fi</span>
 <span class="k">    done</span>
-
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Created tempest configuration file:&quot;</span>
-    cat <span class="nv">$TEMPEST_CONF</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore IFS</p>

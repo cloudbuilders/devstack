@@ -416,8 +416,14 @@ register_database postgresql
     <span class="k">if </span>is_fedora; <span class="k">then</span>
 <span class="k">        </span><span class="nv">PG_HBA</span><span class="o">=</span>/var/lib/pgsql/data/pg_hba.conf
         <span class="nv">PG_CONF</span><span class="o">=</span>/var/lib/pgsql/data/postgresql.conf
-        sudo <span class="o">[</span> -e <span class="nv">$PG_HBA</span> <span class="o">]</span> <span class="o">||</span> sudo postgresql-setup initdb
-    <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
+        <span class="k">if</span> ! sudo <span class="o">[</span> -e <span class="nv">$PG_HBA</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            if</span> ! <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>sudo postgresql-setup initdb
+            <span class="k">else</span>
+<span class="k">                </span>sudo service postgresql initdb
+            <span class="k">fi</span>
+<span class="k">        fi</span>
+<span class="k">    elif </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span><span class="nv">PG_DIR</span><span class="o">=</span><span class="sb">`</span>find /etc/postgresql -name pg_hba.conf|xargs dirname<span class="sb">`</span>
         <span class="nv">PG_HBA</span><span class="o">=</span><span class="nv">$PG_DIR</span>/pg_hba.conf
         <span class="nv">PG_CONF</span><span class="o">=</span><span class="nv">$PG_DIR</span>/postgresql.conf

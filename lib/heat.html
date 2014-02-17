@@ -415,6 +415,12 @@ ENABLED_SERVICES+=,heat,h-api,h-api-cfn,h-api-cw,h-eng</blockquote>
 <span class="nv">HEAT_TEMPLATES_DIR</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/templates
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Tell Tempest this project is present</p>
+</td><td class=code><div class=highlight><pre>
+TEMPEST_SERVICES+<span class="o">=</span>,heat
+
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
@@ -445,13 +451,13 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
     rm -f <span class="nv">$HEAT_CONF_DIR</span>/heat-*.conf
 
-    <span class="nv">HEAT_API_CFN_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CFN_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+    <span class="nv">HEAT_API_CFN_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CFN_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
     <span class="nv">HEAT_API_CFN_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CFN_PORT</span><span class="k">:-</span><span class="nv">8000</span><span class="k">}</span>
     <span class="nv">HEAT_ENGINE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_ENGINE_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
     <span class="nv">HEAT_ENGINE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_ENGINE_PORT</span><span class="k">:-</span><span class="nv">8001</span><span class="k">}</span>
-    <span class="nv">HEAT_API_CW_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+    <span class="nv">HEAT_API_CW_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
     <span class="nv">HEAT_API_CW_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_PORT</span><span class="k">:-</span><span class="nv">8003</span><span class="k">}</span>
-    <span class="nv">HEAT_API_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+    <span class="nv">HEAT_API_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
     <span class="nv">HEAT_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_PORT</span><span class="k">:-</span><span class="nv">8004</span><span class="k">}</span>
     <span class="nv">HEAT_API_PASTE_FILE</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/api-paste.ini
     <span class="nv">HEAT_POLICY_FILE</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/policy.json
@@ -509,19 +515,16 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>OpenStack API</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$HEAT_CONF</span> heat_api bind_host <span class="nv">$HEAT_API_HOST</span>
     iniset <span class="nv">$HEAT_CONF</span> heat_api bind_port <span class="nv">$HEAT_API_PORT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Cloudformation API</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$HEAT_CONF</span> heat_api_cfn bind_host <span class="nv">$HEAT_API_CFN_HOST</span>
     iniset <span class="nv">$HEAT_CONF</span> heat_api_cfn bind_port <span class="nv">$HEAT_API_CFN_PORT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Cloudwatch API</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$HEAT_CONF</span> heat_api_cloudwatch bind_host <span class="nv">$HEAT_API_CW_HOST</span>
     iniset <span class="nv">$HEAT_CONF</span> heat_api_cloudwatch bind_port <span class="nv">$HEAT_API_CW_PORT</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -577,6 +580,7 @@ runs that a clean run would need to clean up</p>
 <span class="k">function </span>install_heatclient<span class="o">()</span> <span class="o">{</span>
     git_clone <span class="nv">$HEATCLIENT_REPO</span> <span class="nv">$HEATCLIENT_DIR</span> <span class="nv">$HEATCLIENT_BRANCH</span>
     setup_develop <span class="nv">$HEATCLIENT_DIR</span>
+    sudo install -D -m 0644 -o <span class="nv">$STACK_USER</span> <span class="o">{</span><span class="nv">$HEATCLIENT_DIR</span>/tools/,/etc/bash_completion.d/<span class="o">}</span>heat.bash_completion
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -613,8 +617,7 @@ runs that a clean run would need to clean up</p>
     <span class="nb">local </span><span class="nv">elements</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">arch</span><span class="o">=</span><span class="nv">$3</span>
     <span class="nb">local </span><span class="nv">output</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files/<span class="nv">$4</span>
-    <span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;$output.qcow2&quot;</span> <span class="o">]]</span>;
-    <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;$output.qcow2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Image file already exists: $output_file&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nv">ELEMENTS_PATH</span><span class="o">=</span><span class="nv">$elements_path</span> disk-image-create <span class="se">\</span>

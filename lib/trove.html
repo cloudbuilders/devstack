@@ -410,6 +410,27 @@ cleanup_trove</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Tell Tempest this project is present</p>
+</td><td class=code><div class=highlight><pre>
+TEMPEST_SERVICES+<span class="o">=</span>,trove
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="functions">
+<h1>Functions</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test if any Trove services are enabled
+is_trove_enabled</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_trove_enabled <span class="o">{</span>
+    <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ ,<span class="s2">&quot;tr-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>setup_trove_logging() - Adds logging configuration to conf files</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>setup_trove_logging<span class="o">()</span> <span class="o">{</span>
@@ -439,28 +460,29 @@ create_trove_accounts<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Trove</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">SERVICE_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">SERVICE_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;trove&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">TROVE_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
-            --name<span class="o">=</span>trove <span class="se">\</span>
-            --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --email<span class="o">=</span>trove@example.com <span class="se">\</span>
+<span class="k">        </span><span class="nv">TROVE_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
+            trove <span class="se">\</span>
+            --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --email trove@example.com <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        keystone user-role-add --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user-id <span class="nv">$TROVE_USER</span> <span class="se">\</span>
-            --role-id <span class="nv">$SERVICE_ROLE</span>
+        openstack role add <span class="se">\</span>
+            <span class="nv">$SERVICE_ROLE</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --user <span class="nv">$TROVE_USER</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">TROVE_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-                --name<span class="o">=</span>trove <span class="se">\</span>
+<span class="k">            </span><span class="nv">TROVE_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create
+                trove <span class="se">\</span>
                 --type<span class="o">=</span>database <span class="se">\</span>
                 --description<span class="o">=</span><span class="s2">&quot;Trove Service&quot;</span> <span class="se">\</span>
                 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            keystone endpoint-create <span class="se">\</span>
+            openstack endpoint create <span class="se">\</span>
+                <span class="nv">$TROVE_SERVICE</span> <span class="se">\</span>
                 --region RegionOne <span class="se">\</span>
-                --service_id <span class="nv">$TROVE_SERVICE</span> <span class="se">\</span>
                 --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8779/v1.0/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8779/v1.0/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8779/v1.0/\$(tenant_id)s&quot;</span>
@@ -510,14 +532,14 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
     cp <span class="nv">$TROVE_LOCAL_CONF_DIR</span>/api-paste.ini <span class="nv">$TROVE_CONF_DIR</span>/api-paste.ini
     <span class="nv">TROVE_API_PASTE_INI</span><span class="o">=</span><span class="nv">$TROVE_CONF_DIR</span>/api-paste.ini
-    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth cafile <span class="nv">$KEYSTONE_SSL_CA</span>
-    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth admin_user trove
-    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:tokenauth signing_dir <span class="nv">$TROVE_AUTH_CACHE_DIR</span>
+    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
+    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:authtoken admin_user trove
+    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    iniset <span class="nv">$TROVE_API_PASTE_INI</span> filter:authtoken signing_dir <span class="nv">$TROVE_AUTH_CACHE_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>(Re)create trove conf files</p>
@@ -531,8 +553,6 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$TROVE_CONF_DIR</span>/trove.conf DEFAULT add_addresses True
 
     iniset <span class="nv">$TROVE_LOCAL_CONF_DIR</span>/trove-guestagent.conf.sample DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
-    iniset <span class="nv">$TROVE_LOCAL_CONF_DIR</span>/trove-guestagent.conf.sample DEFAULT sql_connection <span class="sb">`</span>database_connection_url trove<span class="sb">`</span>
-    iniset <span class="nv">$TROVE_LOCAL_CONF_DIR</span>/trove-guestagent.conf.sample DEFAULT control_exchange trove
     sed -i <span class="s2">&quot;s/localhost/$NETWORK_GATEWAY/g&quot;</span> <span class="nv">$TROVE_LOCAL_CONF_DIR</span>/trove-guestagent.conf.sample
 
     setup_trove_logging <span class="nv">$TROVE_CONF_DIR</span>/trove.conf

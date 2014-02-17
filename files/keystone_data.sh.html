@@ -361,12 +361,13 @@ ul.auto-toc {
 
 <p>Initial data for Keystone using python-keystoneclient</p>
 <div class="section" id="tenant-user-roles">
-<h1>Tenant               User       Roles</h1>
-<p>service              glance     admin
-service              heat       service        # if enabled
-service              ceilometer admin          # if enabled
+<h1>Tenant               User         Roles</h1>
+<p>service              glance       service
+service              glance-swift ResellerAdmin
+service              heat         service        # if enabled
+service              ceilometer   admin          # if enabled
 Tempest Only:
-alt_demo             alt_demo  Member</p>
+alt_demo             alt_demo     Member</p>
 <p>Variables set before calling this script:
 SERVICE_TOKEN - aka admin_token in keystone.conf
 SERVICE_ENDPOINT - local Keystone admin endpoint
@@ -477,8 +478,22 @@ swift through the s3 api.</p>
     keystone user-role-add <span class="se">\</span>
         --tenant <span class="nv">$SERVICE_TENANT_NAME</span> <span class="se">\</span>
         --user glance <span class="se">\</span>
-        --role admin
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+        --role service
+</pre></div></td></tr><tr><td class=docs>
+<p>required for swift access</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;s-proxy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>keystone user-create <span class="se">\</span>
+            --name<span class="o">=</span>glance-swift <span class="se">\</span>
+            --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+            --tenant <span class="nv">$SERVICE_TENANT_NAME</span> <span class="se">\</span>
+            --email<span class="o">=</span>glance-swift@example.com
+        keystone user-role-add <span class="se">\</span>
+            --tenant <span class="nv">$SERVICE_TENANT_NAME</span> <span class="se">\</span>
+            --user glance-swift <span class="se">\</span>
+            --role ResellerAdmin
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>keystone service-create <span class="se">\</span>
             --name<span class="o">=</span>glance <span class="se">\</span>
             --type<span class="o">=</span>image <span class="se">\</span>
@@ -495,32 +510,13 @@ swift through the s3 api.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Ceilometer</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;ceilometer&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>keystone user-create --name<span class="o">=</span>ceilometer <span class="se">\</span>
-        --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-        --tenant <span class="nv">$SERVICE_TENANT_NAME</span> <span class="se">\</span>
-        --email<span class="o">=</span>ceilometer@example.com
-    keystone user-role-add --tenant <span class="nv">$SERVICE_TENANT_NAME</span> <span class="se">\</span>
-        --user ceilometer <span class="se">\</span>
-        --role admin
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;ceilometer&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;s-proxy&quot;</span> <span class="o">||</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;swift&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Ceilometer needs ResellerAdmin role to access swift account stats.</p>
 </td><td class=code><div class=highlight><pre>
     keystone user-role-add --tenant <span class="nv">$SERVICE_TENANT_NAME</span> <span class="se">\</span>
         --user ceilometer <span class="se">\</span>
         --role ResellerAdmin
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>keystone service-create <span class="se">\</span>
-            --name<span class="o">=</span>ceilometer <span class="se">\</span>
-            --type<span class="o">=</span>metering <span class="se">\</span>
-            --description<span class="o">=</span><span class="s2">&quot;Ceilometer Service&quot;</span>
-        keystone endpoint-create <span class="se">\</span>
-            --region RegionOne <span class="se">\</span>
-            --service ceilometer <span class="se">\</span>
-            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8777&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8777&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8777&quot;</span>
-    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>

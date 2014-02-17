@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>cinder_driver_cert.sh</title>
+    <title>sheepdog</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>cinder_driver_cert.sh</h1></th>
+        <th class=docs><h1>sheepdog</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,124 +359,66 @@ ul.auto-toc {
 <div class="document">
 
 
-<p><strong>cinder_cert.sh</strong></p>
-</td><td class=code><div class=highlight><pre>
-<span class="c">#!/usr/bin/env bash</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>This script is a simple wrapper around the tempest volume api tests
-It requires that you have a working and functional devstack install
-and that you've enabled your device driver by making the necessary
-modifications to /etc/cinder/cinder.conf</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>This script will refresh your openstack repo's and restart the cinder
-services to pick up your driver changes.
-please NOTE; this script assumes your devstack install is functional
-and includes tempest. A good first step is to make sure you can
-create volumes on your device before you even try and run this script.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>It also assumes default install location (/opt/stack/xxx)
-to aid in debug, you should also verify that you've added
-an output directory for screen logs:</p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 23)</p>
-Unexpected indentation.</div>
+<p>lib/cinder_plugins/sheepdog
+Configure the sheepdog driver
+Enable with:</p>
 <blockquote>
-SCREEN_LOGDIR=/opt/stack/screen-logs</blockquote>
+CINDER_DRIVER=sheepdog</blockquote>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">CERT_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$CERT_DIR</span>/..; <span class="nb">pwd</span><span class="k">)</span>
 
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/infra
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tempest
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
+</pre></div></td></tr><tr><td class=docs>
+<p>Dependencies:</p>
+<ul class="simple">
+<li><tt class="docutils literal">functions</tt> file</li>
+<li><tt class="docutils literal">cinder</tt> configurations</li>
+</ul>
+</td><td class=code><div class=highlight><pre>
 
-<span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-<span class="nv">RECLONE</span><span class="o">=</span>True
+</pre></div></td></tr><tr><td class=docs>
+<p>configure_cinder_driver - make configuration changes, including those to other services</p>
+</td><td class=code><div class=highlight><pre>
 
-<span class="k">function </span>log_message<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">MESSAGE</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nv">STEP_HEADER</span><span class="o">=</span><span class="nv">$2</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$STEP_HEADER&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> -e <span class="s2">&quot;\n========================================================&quot;</span> | tee -a <span class="nv">$TEMPFILE</span>
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nb">echo</span> -e <span class="sb">`</span>date +%m/%d/%y/%T:<span class="sb">`</span><span class="s2">&quot;${MESSAGE}&quot;</span> | tee -a <span class="nv">$TEMPFILE</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$STEP_HEADER&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> -e <span class="s2">&quot;========================================================&quot;</span> | tee -a <span class="nv">$TEMPFILE</span>
-    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Save trace setting</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nb">set</span> +o xtrace
+
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="defaults">
+<h1>Defaults</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up default directories</p>
+</td><td class=code><div class=highlight><pre>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="entry-points">
+<h1>Entry Points</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>configure_cinder_driver - Set config files, create data dirs, etc</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>configure_cinder_driver<span class="o">()</span> <span class="o">{</span>
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_driver <span class="s2">&quot;cinder.volume.drivers.sheepdog.SheepdogDriver&quot;</span>
 <span class="o">}</span>
 
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: Driver cert requires fresh clone/pull from ${CINDER_BRANCH}&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;       Please set OFFLINE=False and retry.&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-log_message <span class="s2">&quot;RUNNING CINDER DRIVER CERTIFICATION CHECK&quot;</span>, True
-log_message <span class="s2">&quot;Output is being logged to: $TEMPFILE&quot;</span>
-
-<span class="nb">cd</span> <span class="nv">$CINDER_DIR</span>
-log_message <span class="s2">&quot;Cloning to ${CINDER_REPO}...&quot;</span>, True
-install_cinder
-
-log_message <span class="s2">&quot;Pull a fresh Clone of cinder repo...&quot;</span>, True
-git status | tee -a <span class="nv">$TEMPFILE</span>
-git log --pretty<span class="o">=</span>oneline -n 1 | tee -a <span class="nv">$TEMPFILE</span>
-
-log_message <span class="s2">&quot;Gathering copy of cinder.conf file (passwords will be scrubbed)...&quot;</span>, True
-cat /etc/cinder/cinder.conf | egrep -v <span class="s2">&quot;(^#.*|^$)&quot;</span> | tee -a <span class="nv">$TEMPFILE</span>
-sed -i <span class="s2">&quot;s/\(.*password.*=\).*$/\1 xxx/i&quot;</span> <span class="nv">$TEMPFILE</span>
-log_message <span class="s2">&quot;End of cinder.conf.&quot;</span>, True
-
-<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Verify tempest is installed/enabled</p>
+<p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> ! is_service_enabled tempest; <span class="k">then</span>
-<span class="k">    </span>log_message <span class="s2">&quot;ERROR!!! Cert requires tempest in enabled_services!&quot;</span>, True
-    log_message<span class="s2">&quot;       Please add tempest to enabled_services and retry.&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-<span class="nb">cd</span> <span class="nv">$TEMPEST_DIR</span>
-install_tempest
-
-log_message <span class="s2">&quot;Verify tempest is current....&quot;</span>, True
-git status | tee -a <span class="nv">$TEMPFILE</span>
-log_message <span class="s2">&quot;Check status and get latest commit...&quot;</span>
-git log --pretty<span class="o">=</span>oneline -n 1 | tee -a <span class="nv">$TEMPFILE</span>
-
-
-<span class="c">#stop and restart cinder services</span>
-log_message <span class="s2">&quot;Restart Cinder services...&quot;</span>, True
-stop_cinder
-sleep 1
-start_cinder
-sleep 5
+<span class="nv">$MY_XTRACE</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>run tempest api/volume/test_*</p>
+<p>Local variables:
+mode: shell-script
+End:</p>
 </td><td class=code><div class=highlight><pre>
-log_message <span class="s2">&quot;Run the actual tempest volume tests (./tools/pretty_tox.sh api.volume)...&quot;</span>, True
-./tools/pretty_tox.sh api.volume 2&gt;&amp;1 | tee -a <span class="nv">$TEMPFILE</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> <span class="o">=</span> 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>log_message <span class="s2">&quot;CONGRATULATIONS!!!  Device driver PASSED!&quot;</span>, True
-    log_message <span class="s2">&quot;Submit output: ($TEMPFILE)&quot;</span>
-    <span class="nb">exit </span>0
-<span class="k">else</span>
-<span class="k">    </span>log_message <span class="s2">&quot;SORRY!!!  Device driver FAILED!&quot;</span>, True
-    log_message <span class="s2">&quot;Check output in $TEMPFILE&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
 
 
 </td><td class=code><div class=highlight><pre>
@@ -485,6 +427,7 @@ log_message <span class="s2">&quot;Run the actual tempest volume tests (./tools/
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 </body>
 </html></td><td class='code'></td></tr>

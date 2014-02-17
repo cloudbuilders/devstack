@@ -522,12 +522,35 @@ here until the admin APIs can replace nova-manage</p>
 <span class="nv">TEST_FLOATING_POOL</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_POOL</span><span class="k">:-</span><span class="nv">test</span><span class="k">}</span>
 <span class="nv">TEST_FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">TEST_FLOATING_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.168.253.0/29</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Tell Tempest this project is present</p>
+</td><td class=code><div class=highlight><pre>
+TEMPEST_SERVICES+<span class="o">=</span>,nova
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test if any Nova services are enabled
+is_nova_enabled</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_nova_enabled <span class="o">{</span>
+    <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ ,<span class="s2">&quot;n-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test if any Nova Cell services are enabled
+is_nova_enabled</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_n-cell_enabled <span class="o">{</span>
+    <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ ,<span class="s2">&quot;n-cell-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Helper to clean iptables rules</p>
@@ -692,11 +715,6 @@ We are using nova.conf to configure this instead.</p>
 
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Attempt to load modules: network block device - used to manage qcow images</p>
-</td><td class=code><div class=highlight><pre>
-            sudo modprobe nbd <span class="o">||</span> <span class="nb">true</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Check for kvm (hardware based virtualization).  If unable to initialize
 kvm, we drop back to the slower emulation mode (qemu).  Note: many systems
 come with hardware virtualization disabled in BIOS.</p>
@@ -790,43 +808,43 @@ mount it (ext filesystems can be labeled via e2label).</p>
 </td><td class=code><div class=highlight><pre>
 create_nova_accounts<span class="o">()</span> <span class="o">{</span>
 
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">NOVA_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
-            --name<span class="o">=</span>nova <span class="se">\</span>
-            --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --email<span class="o">=</span>nova@example.com <span class="se">\</span>
+<span class="k">        </span><span class="nv">NOVA_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
+            nova <span class="se">\</span>
+            --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --email nova@example.com <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        keystone user-role-add <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user-id <span class="nv">$NOVA_USER</span> <span class="se">\</span>
-            --role-id <span class="nv">$ADMIN_ROLE</span>
+        openstack role add <span class="se">\</span>
+            <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --user <span class="nv">$NOVA_USER</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">NOVA_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-                --name<span class="o">=</span>nova <span class="se">\</span>
+<span class="k">            </span><span class="nv">NOVA_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
+                nova <span class="se">\</span>
                 --type<span class="o">=</span>compute <span class="se">\</span>
                 --description<span class="o">=</span><span class="s2">&quot;Nova Compute Service&quot;</span> <span class="se">\</span>
                 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            keystone endpoint-create <span class="se">\</span>
+            openstack endpoint create <span class="se">\</span>
+                <span class="nv">$NOVA_SERVICE</span> <span class="se">\</span>
                 --region RegionOne <span class="se">\</span>
-                --service_id <span class="nv">$NOVA_SERVICE</span> <span class="se">\</span>
                 --publicurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --adminurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span>
-            <span class="nv">NOVA_V3_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-                --name<span class="o">=</span>novav3 <span class="se">\</span>
+            <span class="nv">NOVA_V3_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
+                novav3 <span class="se">\</span>
                 --type<span class="o">=</span>computev3 <span class="se">\</span>
                 --description<span class="o">=</span><span class="s2">&quot;Nova Compute Service V3&quot;</span> <span class="se">\</span>
                 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            keystone endpoint-create <span class="se">\</span>
+            openstack endpoint create <span class="se">\</span>
+                <span class="nv">$NOVA_V3_SERVICE</span> <span class="se">\</span>
                 --region RegionOne <span class="se">\</span>
-                --service_id <span class="nv">$NOVA_V3_SERVICE</span> <span class="se">\</span>
                 --publicurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span> <span class="se">\</span>
                 --adminurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span>
@@ -867,7 +885,6 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT metadata_workers <span class="s2">&quot;4&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> conductor workers <span class="s2">&quot;4&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT sql_connection <span class="sb">`</span>database_connection_url nova<span class="sb">`</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT fatal_deprecations <span class="s2">&quot;True&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_name_template <span class="s2">&quot;${INSTANCE_NAME_PREFIX}%08x&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> osapi_v3 enabled <span class="s2">&quot;True&quot;</span>
 
@@ -880,6 +897,12 @@ install things in /usr/bin</p>
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled n-api; <span class="k">then</span>
+<span class="k">        if </span>is_service_enabled n-api-meta; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If running n-api-meta as a separate service</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="nv">NOVA_ENABLED_APIS</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$NOVA_ENABLED_APIS</span> | sed <span class="s2">&quot;s/,metadata//&quot;</span><span class="k">)</span>
+        <span class="k">fi</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT enabled_apis <span class="s2">&quot;$NOVA_ENABLED_APIS&quot;</span>
         <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -941,7 +964,7 @@ install things in /usr/bin</p>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_usage_audit <span class="s2">&quot;True&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT instance_usage_audit_period <span class="s2">&quot;hour&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT notify_on_state_change <span class="s2">&quot;vm_and_task_state&quot;</span>
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT notification_driver <span class="s2">&quot;nova.openstack.common.notifier.rpc_notifier&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT notification_driver <span class="s2">&quot;messaging&quot;</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1196,14 +1219,17 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 </pre></div></td></tr><tr><td class=docs>
 <p>Enable client side traces for libvirt</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">export </span><span class="nv">LIBVIRT_LOG_FILTERS</span><span class="o">=</span><span class="s2">&quot;1:libvirt&quot;</span>
-        <span class="nb">export </span><span class="nv">LIBVIRT_LOG_OUTPUTS</span><span class="o">=</span><span class="s2">&quot;1:file:/var/log/libvirt/libvirtd-nova.log&quot;</span>
-
+        <span class="nb">local </span><span class="nv">log_filters</span><span class="o">=</span><span class="s2">&quot;1:libvirt 1:qemu 1:conf 1:security 3:event 3:json 3:file 1:util&quot;</span>
+        <span class="nb">local </span><span class="nv">log_outputs</span><span class="o">=</span><span class="s2">&quot;1:file:/var/log/libvirt/libvirtd.log&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Enable server side traces for libvirtd</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="s2">&quot;log_filters=\&quot;1:libvirt 1:qemu\&quot;&quot;</span> | sudo tee -a /etc/libvirt/libvirtd.conf
-        <span class="nb">echo</span> <span class="s2">&quot;log_outputs=\&quot;1:file:/var/log/libvirt/libvirtd.log\&quot;&quot;</span> | sudo tee -a /etc/libvirt/libvirtd.conf
+        <span class="k">if</span> ! grep -q <span class="s2">&quot;log_filters=\&quot;$log_filters\&quot;&quot;</span> /etc/libvirt/libvirtd.conf; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;log_filters=\&quot;$log_filters\&quot;&quot;</span> | sudo tee -a /etc/libvirt/libvirtd.conf
+        <span class="k">fi</span>
+<span class="k">        if</span> ! grep -q <span class="s2">&quot;log_outputs=\&quot;$log_outputs\&quot;&quot;</span> /etc/libvirt/libvirtd.conf; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;log_outputs=\&quot;$log_outputs\&quot;&quot;</span> | sudo tee -a /etc/libvirt/libvirtd.conf
+        <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The group <strong>$LIBVIRT_GROUP</strong> is added to the current user in this script.

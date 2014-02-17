@@ -362,7 +362,7 @@ ul.auto-toc {
 <p><tt class="docutils literal">stack.sh</tt> is an opinionated OpenStack developer installation.  It
 installs and configures various combinations of <strong>Ceilometer</strong>, <strong>Cinder</strong>,
 <strong>Glance</strong>, <strong>Heat</strong>, <strong>Horizon</strong>, <strong>Keystone</strong>, <strong>Nova</strong>, <strong>Neutron</strong>,
-<strong>Swift</strong>, and <strong>Trove</strong></p>
+and <strong>Swift</strong></p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/usr/bin/env bash</span>
 
@@ -392,6 +392,15 @@ files in this repo.</p>
 <p>Make sure custom grep options don't get in the way</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">unset </span>GREP_OPTIONS
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Sanitize language settings to avoid commands bailing out
+with &quot;unsupported locale setting&quot; errors.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">unset </span>LANG
+<span class="nb">unset </span>LANGUAGE
+<span class="nv">LC_ALL</span><span class="o">=</span>C
+<span class="nb">export </span>LC_ALL
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the devstack directory</p>
@@ -755,6 +764,11 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 <span class="nv">SYSSTAT_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSSTAT_FILE</span><span class="k">:-</span><span class="s2">&quot;sysstat.dat&quot;</span><span class="k">}</span>
 <span class="nv">SYSSTAT_INTERVAL</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSSTAT_INTERVAL</span><span class="k">:-</span><span class="s2">&quot;1&quot;</span><span class="k">}</span>
 
+<span class="nv">DSTAT_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">DSTAT_FILE</span><span class="k">:-</span><span class="s2">&quot;dstat.txt&quot;</span><span class="k">}</span>
+
+<span class="nv">PIDSTAT_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">PIDSTAT_FILE</span><span class="k">:-</span><span class="s2">&quot;pidstat.txt&quot;</span><span class="k">}</span>
+<span class="nv">PIDSTAT_INTERVAL</span><span class="o">=</span><span class="k">${</span><span class="nv">PIDSTAT_INTERVAL</span><span class="k">:-</span><span class="s2">&quot;5&quot;</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Use color for logging output (only available if syslog is not used)</p>
 </td><td class=code><div class=highlight><pre>
@@ -779,10 +793,18 @@ rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Source project function libraries</p>
+<p>Import apache functions</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/apache
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import TLS functions</p>
+</td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tls
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Source project function libraries</p>
+</td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/infra
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/oslo
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/stackforge
@@ -797,8 +819,6 @@ rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/baremetal
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ldap
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ironic
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/trove
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="extras-source">
@@ -838,7 +858,11 @@ rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
     <span class="nv">var</span><span class="o">=</span><span class="nv">$1</span>; <span class="nv">msg</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nv">pw</span><span class="o">=</span><span class="k">${</span><span class="p">!var</span><span class="k">}</span>
 
-    <span class="nv">localrc</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/localrc
+    <span class="k">if</span> <span class="o">[[</span> -f <span class="nv">$RC_DIR</span>/localrc <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">localrc</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/localrc
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">localrc</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/.localrc.auto
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If the password is not defined yet, proceed to prompt user for a password.</p>
@@ -1324,12 +1348,6 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
     configure_heat
 <span class="k">fi</span>
 
-<span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
-<span class="k">    </span>install_trove
-    install_troveclient
-    cleanup_trove
-<span class="k">fi</span>
-
 <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 <span class="k">    </span>configure_CA
     init_CA
@@ -1340,11 +1358,6 @@ don't be naive and add to existing line!</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">fi</span>
 
-<span class="k">if </span>is_service_enabled ir-api ir-cond; <span class="k">then</span>
-<span class="k">    </span>install_ironic
-    install_ironicclient
-    configure_ironic
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1516,6 +1529,30 @@ init_service_check
     <span class="k">fi</span>
 <span class="k">fi</span>
 
+<span class="k">if </span>is_service_enabled dstat; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Per-process stats</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">DSTAT_OPTS</span><span class="o">=</span><span class="s2">&quot;-tcndylp --top-cpu-adv&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>screen_it dstat <span class="s2">&quot;cd $TOP_DIR; dstat $DSTAT_OPTS | tee $SCREEN_LOGDIR/$DSTAT_FILE&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>screen_it dstat <span class="s2">&quot;dstat $DSTAT_OPTS&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="k">if </span>is_service_enabled pidstat; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Per-process stats</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">PIDSTAT_OPTS</span><span class="o">=</span><span class="s2">&quot;-l -p ALL -T ALL&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>screen_it pidstat <span class="s2">&quot;cd $TOP_DIR; pidstat $PIDSTAT_OPTS $PIDSTAT_INTERVAL &gt; $SCREEN_LOGDIR/$PIDSTAT_FILE&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>screen_it pidstat <span class="s2">&quot;pidstat $PIDSTAT_OPTS $PIDSTAT_INTERVAL&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1552,16 +1589,17 @@ init_service_check
 </td><td class=code><div class=highlight><pre>
     <span class="nb">export </span><span class="nv">OS_SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span>
     <span class="nb">export </span><span class="nv">OS_SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Add temporarily to make openstackclient work</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">export </span><span class="nv">OS_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span>
+    <span class="nb">export </span><span class="nv">OS_URL</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span>
     create_keystone_accounts
     create_nova_accounts
     create_cinder_accounts
     create_neutron_accounts
 
-    <span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
-<span class="k">        </span>create_trove_accounts
-    <span class="k">fi</span>
-
-<span class="k">    if </span>is_service_enabled ceilometer; <span class="k">then</span>
+    <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
 <span class="k">        </span>create_ceilometer_accounts
     <span class="k">fi</span>
 
@@ -1582,6 +1620,7 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up auth creds now that keystone is bootstrapped</p>
 </td><td class=code><div class=highlight><pre>
+    <span class="nb">unset </span>OS_TOKEN OS_URL
     <span class="nb">export </span><span class="nv">OS_AUTH_URL</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span>
     <span class="nb">export </span><span class="nv">OS_TENANT_NAME</span><span class="o">=</span>admin
     <span class="nb">export </span><span class="nv">OS_USERNAME</span><span class="o">=</span>admin
@@ -1616,18 +1655,6 @@ init_service_check
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Glance&quot;</span>
     init_glance
-<span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="ironic">
-<h2>Ironic</h2>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if </span>is_service_enabled ir-api ir-cond; <span class="k">then</span>
-<span class="k">    </span>echo_summary <span class="s2">&quot;Configuring Ironic&quot;</span>
-    init_ironic
 <span class="k">fi</span>
 
 
@@ -1799,17 +1826,64 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
 </pre></div></td></tr><tr><td class=docs>
 <p>Launch the Glance services</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled g-api g-reg; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled glance; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Glance&quot;</span>
     start_glance
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Launch the Ironic services</p>
+</div>
+<div class="section" id="install-images">
+<h1>Install Images</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled ir-api ir-cond; <span class="k">then</span>
-<span class="k">    </span>echo_summary <span class="s2">&quot;Starting Ironic&quot;</span>
-    start_ironic
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Upload an image to glance.</p>
+<p>The default image is cirros, a small testing image which lets you login as <strong>root</strong>
+cirros has a <tt class="docutils literal"><span class="pre">cloud-init</span></tt> analog supporting login via keypair and sending
+scripts as userdata.
+See <a class="reference external" href="https://help.ubuntu.com/community/CloudInit">https://help.ubuntu.com/community/CloudInit</a> for more on cloud-init</p>
+<dl class="docutils">
+<dt>Override <tt class="docutils literal">IMAGE_URLS</tt> with a comma-separated list of UEC images.</dt>
+<dd><ul class="first last simple">
+<li><strong>precise</strong>: <a class="reference external" href="http://uec-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64.tar.gz">http://uec-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64.tar.gz</a></li>
+</ul>
+</dd>
+</dl>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
+<span class="k">    </span><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> TOKEN <span class="s2">&quot;Keystone fail to get token&quot;</span>
+
+    <span class="k">if </span>is_baremetal; <span class="k">then</span>
+<span class="k">        </span>echo_summary <span class="s2">&quot;Creating and uploading baremetal images&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>build and upload separate deploy kernel &amp; ramdisk</p>
+</td><td class=code><div class=highlight><pre>
+        upload_baremetal_deploy <span class="nv">$TOKEN</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>upload images, separating out the kernel &amp; ramdisk for PXE boot</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span>upload_baremetal_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
+        <span class="k">done</span>
+<span class="k">    else</span>
+<span class="k">        </span>echo_summary <span class="s2">&quot;Uploading images&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Option to upload legacy ami-tty, which works with xenserver</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}https://github.com/downloads/citrix-openstack/warehouse/tty.tgz&quot;</span>
+        <span class="k">fi</span>
+
+<span class="k">        for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span>upload_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
+        <span class="k">done</span>
+<span class="k">    fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1826,6 +1900,17 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_access_key <span class="s2">&quot;$ACCESS_KEY&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_secret_key <span class="s2">&quot;$SECRET_KEY&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_affix_tenant <span class="s2">&quot;True&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create a randomized default value for the keymgr's fixed_key</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
+<span class="k">    </span><span class="nv">FIXED_KEY</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">for </span>i in <span class="k">$(</span>seq 1 64<span class="k">)</span>; <span class="k">do</span>
+<span class="k">        </span>FIXED_KEY+<span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;obase=16; $(($RANDOM % 16))&quot;</span> | bc<span class="k">)</span>;
+    <span class="k">done</span>;
+    iniset <span class="nv">$NOVA_CONF</span> keymgr fixed_key <span class="s2">&quot;$FIXED_KEY&quot;</span>
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled zeromq; <span class="k">then</span>
@@ -1897,31 +1982,12 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Initialize heat, including replacing nova flavors</p>
+<p>Initialize heat</p>
 </td><td class=code><div class=highlight><pre>
     echo_summary <span class="s2">&quot;Configuring Heat&quot;</span>
     init_heat
     echo_summary <span class="s2">&quot;Starting Heat&quot;</span>
     start_heat
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure and launch the trove service api, and taskmanager</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled trove; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Initialize trove</p>
-</td><td class=code><div class=highlight><pre>
-    echo_summary <span class="s2">&quot;Configuring Trove&quot;</span>
-    configure_troveclient
-    configure_trove
-    init_trove
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Start the trove API and trove taskmgr components</p>
-</td><td class=code><div class=highlight><pre>
-    echo_summary <span class="s2">&quot;Starting Trove&quot;</span>
-    start_trove
 <span class="k">fi</span>
 
 
@@ -1947,61 +2013,6 @@ which is helpful in image bundle steps.</p>
     <span class="nv">$TOP_DIR</span>/tools/create_userrc.sh <span class="nv">$USERRC_PARAMS</span>
 <span class="k">fi</span>
 
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="install-images">
-<h1>Install Images</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Upload an image to glance.</p>
-<p>The default image is cirros, a small testing image which lets you login as <strong>root</strong>
-cirros has a <tt class="docutils literal"><span class="pre">cloud-init</span></tt> analog supporting login via keypair and sending
-scripts as userdata.
-See <a class="reference external" href="https://help.ubuntu.com/community/CloudInit">https://help.ubuntu.com/community/CloudInit</a> for more on cloud-init</p>
-<dl class="docutils">
-<dt>Override <tt class="docutils literal">IMAGE_URLS</tt> with a comma-separated list of UEC images.</dt>
-<dd><ul class="first last simple">
-<li><strong>precise</strong>: <a class="reference external" href="http://uec-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64.tar.gz">http://uec-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64.tar.gz</a></li>
-</ul>
-</dd>
-</dl>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
-<span class="k">    </span><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-    die_if_not_set <span class="nv">$LINENO</span> TOKEN <span class="s2">&quot;Keystone fail to get token&quot;</span>
-
-    <span class="k">if </span>is_baremetal; <span class="k">then</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Creating and uploading baremetal images&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>build and upload separate deploy kernel &amp; ramdisk</p>
-</td><td class=code><div class=highlight><pre>
-        upload_baremetal_deploy <span class="nv">$TOKEN</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>upload images, separating out the kernel &amp; ramdisk for PXE boot</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">            </span>upload_baremetal_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
-        <span class="k">done</span>
-<span class="k">    else</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Uploading images&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Option to upload legacy ami-tty, which works with xenserver</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$UPLOAD_LEGACY_TTY&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">IMAGE_URLS</span><span class="o">=</span><span class="s2">&quot;${IMAGE_URLS:+${IMAGE_URLS},}https://github.com/downloads/citrix-openstack/warehouse/tty.tgz&quot;</span>
-        <span class="k">fi</span>
-
-<span class="k">        for </span>image_url in <span class="k">${</span><span class="nv">IMAGE_URLS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">            </span>upload_image <span class="nv">$image_url</span> <span class="nv">$TOKEN</span>
-        <span class="k">done</span>
-<span class="k">    fi</span>
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If we are running nova with baremetal driver, there are a few
@@ -2148,13 +2159,6 @@ to access the site using your browser.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Horizon is now available at http://$SERVICE_HOST/&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Warn that the default flavors have been changed by Heat</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Heat has replaced the default flavors. View by running: nova flavor-list&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>

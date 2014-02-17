@@ -391,6 +391,9 @@ the functions defined here.</p>
 
     <span class="nv">XE_CALLS</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
     truncate -s 0 <span class="nv">$XE_CALLS</span>
+
+    <span class="nv">DEAD_MESSAGES</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
+    truncate -s 0 <span class="nv">$DEAD_MESSAGES</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -428,6 +431,10 @@ the functions defined here.</p>
 
 <span class="k">function </span>assert_xe_param <span class="o">{</span>
     grep -qe <span class="s2">&quot;^$1\$&quot;</span> <span class="nv">$XE_CALLS</span>
+<span class="o">}</span>
+
+<span class="k">function </span>assert_died_with <span class="o">{</span>
+    diff -u &lt;<span class="o">(</span><span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span><span class="o">)</span> <span class="nv">$DEAD_MESSAGES</span>
 <span class="o">}</span>
 
 <span class="k">function </span>mock_out <span class="o">{</span>
@@ -477,16 +484,22 @@ the functions defined here.</p>
     grep <span class="s2">&quot;[ -d /usr/lib/xcp/plugins/ ]&quot;</span> <span class="nv">$LIST_OF_ACTIONS</span>
 <span class="o">}</span>
 
-<span class="k">function </span>test_zip_snapshot_location <span class="o">{</span>
+<span class="k">function </span>test_zip_snapshot_location_http <span class="o">{</span>
     diff <span class="se">\</span>
-    &lt;<span class="o">(</span>zip_snapshot_location <span class="s2">&quot;git://git.openstack.org/openstack/nova.git&quot;</span> <span class="s2">&quot;master&quot;</span><span class="o">)</span> <span class="se">\</span>
-    &lt;<span class="o">(</span><span class="nb">echo</span> <span class="s2">&quot;git://git.openstack.org/openstack/nova/zipball/master&quot;</span><span class="o">)</span>
+    &lt;<span class="o">(</span>zip_snapshot_location <span class="s2">&quot;http://github.com/openstack/nova.git&quot;</span> <span class="s2">&quot;master&quot;</span><span class="o">)</span> <span class="se">\</span>
+    &lt;<span class="o">(</span><span class="nb">echo</span> <span class="s2">&quot;http://github.com/openstack/nova/zipball/master&quot;</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="k">function </span>test_zip_snapsot_location_git <span class="o">{</span>
+    diff <span class="se">\</span>
+    &lt;<span class="o">(</span>zip_snapshot_location <span class="s2">&quot;git://github.com/openstack/nova.git&quot;</span> <span class="s2">&quot;master&quot;</span><span class="o">)</span> <span class="se">\</span>
+    &lt;<span class="o">(</span><span class="nb">echo</span> <span class="s2">&quot;http://github.com/openstack/nova/zipball/master&quot;</span><span class="o">)</span>
 <span class="o">}</span>
 
 <span class="k">function </span>test_create_directory_for_kernels <span class="o">{</span>
     <span class="o">(</span>
         . mocks
-        mock_out get_local_sr uuid1
+        mock_out get_local_sr_path /var/run/sr-mount/uuid1
         create_directory_for_kernels
     <span class="o">)</span>
 
@@ -509,7 +522,7 @@ the functions defined here.</p>
 <span class="k">function </span>test_create_directory_for_images <span class="o">{</span>
     <span class="o">(</span>
         . mocks
-        mock_out get_local_sr uuid1
+        mock_out get_local_sr_path /var/run/sr-mount/uuid1
         create_directory_for_images
     <span class="o">)</span>
 
@@ -547,7 +560,7 @@ the functions defined here.</p>
     <span class="nb">local </span>IGNORE
     <span class="nv">IGNORE</span><span class="o">=</span><span class="k">$(</span>. mocks <span class="o">&amp;&amp;</span> extract_remote_zipball <span class="s2">&quot;failurl&quot;</span><span class="k">)</span>
 
-    assert_previous_command_failed
+    assert_died_with <span class="s2">&quot;Failed to download [failurl]&quot;</span>
 <span class="o">}</span>
 
 <span class="k">function </span>test_find_nova_plugins <span class="o">{</span>
@@ -567,8 +580,7 @@ the functions defined here.</p>
 
     <span class="o">[</span> <span class="s2">&quot;$RESULT&quot;</span> <span class="o">==</span> <span class="s2">&quot;uuid123&quot;</span> <span class="o">]</span>
 
-    assert_xe_min
-    assert_xe_param <span class="s2">&quot;sr-list&quot;</span> <span class="s2">&quot;name-label=Local storage&quot;</span>
+    assert_xe_param <span class="s2">&quot;pool-list&quot;</span> <span class="nv">params</span><span class="o">=</span>default-SR <span class="nv">minimal</span><span class="o">=</span><span class="nb">true</span>
 <span class="o">}</span>
 
 <span class="k">function </span>test_get_local_sr_path <span class="o">{</span>
@@ -585,16 +597,14 @@ the functions defined here.</p>
 <span class="o">}</span>
 
 <span class="o">[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">=</span> <span class="s2">&quot;run_tests&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">{</span>
-    <span class="k">for </span>testname in <span class="k">$(</span><span class="nv">$0</span><span class="k">)</span>
-    <span class="k">do</span>
+    <span class="k">for </span>testname in <span class="k">$(</span><span class="nv">$0</span><span class="k">)</span>; <span class="k">do</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;$testname&quot;</span>
         before_each_test
         <span class="o">(</span>
             <span class="nb">set</span> -eux
             <span class="nv">$testname</span>
         <span class="o">)</span>
-        <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$?&quot;</span> !<span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]</span>
-        <span class="k">then</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$?&quot;</span> !<span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;FAIL&quot;</span>
             <span class="nb">exit </span>1
         <span class="k">else</span>

@@ -405,7 +405,6 @@ Dependencies:</p>
 <span class="nv">IRONIC_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/ironic</span><span class="k">}</span>
 <span class="nv">IRONIC_CONF_FILE</span><span class="o">=</span><span class="nv">$IRONIC_CONF_DIR</span>/ironic.conf
 <span class="nv">IRONIC_ROOTWRAP_CONF</span><span class="o">=</span><span class="nv">$IRONIC_CONF_DIR</span>/rootwrap.conf
-<span class="nv">IRONIC_ROOTWRAP_FILTERS</span><span class="o">=</span><span class="nv">$IRONIC_CONF_DIR</span>/rootwrap.d
 <span class="nv">IRONIC_POLICY_JSON</span><span class="o">=</span><span class="nv">$IRONIC_CONF_DIR</span>/policy.json
 
 </pre></div></td></tr><tr><td class=docs>
@@ -419,12 +418,26 @@ Dependencies:</p>
 <span class="nv">IRONIC_SERVICE_PROTOCOL</span><span class="o">=</span>http
 <span class="nv">IRONIC_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_HOSTPORT</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="p">:</span><span class="nv">6385</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Tell Tempest this project is present</p>
+</td><td class=code><div class=highlight><pre>
+TEMPEST_SERVICES+<span class="o">=</span>,ironic
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test if any Ironic services are enabled
+is_ironic_enabled</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_ironic_enabled <span class="o">{</span>
+    <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ ,<span class="s2">&quot;ir-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install_ironic() - Collect source and prepare</p>
@@ -498,12 +511,7 @@ API specific configuration.</p>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken admin_user ironic
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    <span class="k">if </span>is_service_enabled qpid; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT notifier_strategy qpid
-    <span class="k">elif</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT notifier_strategy rabbit
-    <span class="k">fi</span>
-<span class="k">    </span>iniset_rpc_backend ironic <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT
+    iniset_rpc_backend ironic <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken signing_dir <span class="nv">$IRONIC_AUTH_CACHE_DIR</span>/api
 
     cp -p <span class="nv">$IRONIC_DIR</span>/etc/ironic/policy.json <span class="nv">$IRONIC_POLICY_JSON</span>
@@ -515,7 +523,7 @@ Sets conductor specific settings.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_ironic_conductor<span class="o">()</span> <span class="o">{</span>
     cp <span class="nv">$IRONIC_DIR</span>/etc/ironic/rootwrap.conf <span class="nv">$IRONIC_ROOTWRAP_CONF</span>
-    cp -r <span class="nv">$IRONIC_DIR</span>/etc/ironic/rootwrap.d <span class="nv">$IRONIC_ROOTWRAP_FILTERS</span>
+    cp -r <span class="nv">$IRONIC_DIR</span>/etc/ironic/rootwrap.d <span class="nv">$IRONIC_CONF_DIR</span>
 
     iniset <span class="nv">$IRONIC_CONF</span> DEFAULT rootwrap_config <span class="nv">$IRONIC_ROOTWRAP_CONF</span>
 <span class="o">}</span>
@@ -547,32 +555,32 @@ Sets conductor specific settings.</p>
 </td><td class=code><div class=highlight><pre>
 create_ironic_accounts<span class="o">()</span> <span class="o">{</span>
 
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Ironic</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;ir-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IRONIC_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
-            --name<span class="o">=</span>ironic <span class="se">\</span>
-            --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --email<span class="o">=</span>ironic@example.com <span class="se">\</span>
+<span class="k">        </span><span class="nv">IRONIC_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
+            ironic <span class="se">\</span>
+            --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --email ironic@example.com <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        keystone user-role-add <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user_id <span class="nv">$IRONIC_USER</span> <span class="se">\</span>
-            --role_id <span class="nv">$ADMIN_ROLE</span>
+        openstack role add <span class="se">\</span>
+            <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --user <span class="nv">$IRONIC_USER</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">IRONIC_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-                --name<span class="o">=</span>ironic <span class="se">\</span>
+<span class="k">            </span><span class="nv">IRONIC_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
+                ironic <span class="se">\</span>
                 --type<span class="o">=</span>baremetal <span class="se">\</span>
                 --description<span class="o">=</span><span class="s2">&quot;Ironic baremetal provisioning service&quot;</span> <span class="se">\</span>
                 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            keystone endpoint-create <span class="se">\</span>
+            openstack endpoint create <span class="se">\</span>
+                <span class="nv">$IRONIC_SERVICE</span> <span class="se">\</span>
                 --region RegionOne <span class="se">\</span>
-                --service_id <span class="nv">$IRONIC_SERVICE</span> <span class="se">\</span>
                 --publicurl <span class="s2">&quot;$IRONIC_SERVICE_PROTOCOL://$IRONIC_HOSTPORT&quot;</span> <span class="se">\</span>
                 --adminurl <span class="s2">&quot;$IRONIC_SERVICE_PROTOCOL://$IRONIC_HOSTPORT&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;$IRONIC_SERVICE_PROTOCOL://$IRONIC_HOSTPORT&quot;</span>

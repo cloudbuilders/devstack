@@ -381,6 +381,69 @@ and shuts down the VM to signal the script has completed</p>
 <span class="nv">GUEST_PASSWORD</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
 <span class="nv">XS_TOOLS_PATH</span><span class="o">=</span><span class="s2">&quot;$2&quot;</span>
 <span class="nv">STACK_USER</span><span class="o">=</span><span class="s2">&quot;$3&quot;</span>
+<span class="nv">DOMZERO_USER</span><span class="o">=</span><span class="s2">&quot;$4&quot;</span>
+
+
+<span class="k">function </span>setup_domzero_user<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span>username
+
+    <span class="nv">username</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
+
+    <span class="nb">local </span>key_updater_script
+    <span class="nb">local </span>sudoers_file
+    <span class="nv">key_updater_script</span><span class="o">=</span><span class="s2">&quot;/home/$username/update_authorized_keys.sh&quot;</span>
+    <span class="nv">sudoers_file</span><span class="o">=</span><span class="s2">&quot;/etc/sudoers.d/allow_$username&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create user</p>
+</td><td class=code><div class=highlight><pre>
+    adduser --disabled-password --quiet <span class="s2">&quot;$username&quot;</span> --gecos <span class="s2">&quot;$username&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Give passwordless sudo</p>
+</td><td class=code><div class=highlight><pre>
+    cat &gt; <span class="nv">$sudoers_file</span> <span class="s">&lt;&lt; EOF</span>
+<span class="s">    $username ALL = NOPASSWD: ALL</span>
+<span class="s">EOF</span>
+    chmod 0440 <span class="nv">$sudoers_file</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>A script to populate this user's authenticated_keys from xenstore</p>
+</td><td class=code><div class=highlight><pre>
+    cat &gt; <span class="nv">$key_updater_script</span> <span class="s">&lt;&lt; EOF</span>
+<span class="s">#!/bin/bash</span>
+<span class="s">set -eux</span>
+
+<span class="s">DOMID=\$(sudo xenstore-read domid)</span>
+<span class="s">sudo xenstore-exists /local/domain/\$DOMID/authorized_keys/$username</span>
+<span class="s">sudo xenstore-read /local/domain/\$DOMID/authorized_keys/$username &gt; /home/$username/xenstore_value</span>
+<span class="s">cat /home/$username/xenstore_value &gt; /home/$username/.ssh/authorized_keys</span>
+<span class="s">EOF</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Give the key updater to the user</p>
+</td><td class=code><div class=highlight><pre>
+    chown <span class="nv">$username</span>:<span class="nv">$username</span> <span class="nv">$key_updater_script</span>
+    chmod 0700 <span class="nv">$key_updater_script</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setup the .ssh folder</p>
+</td><td class=code><div class=highlight><pre>
+    mkdir -p /home/<span class="nv">$username</span>/.ssh
+    chown <span class="nv">$username</span>:<span class="nv">$username</span> /home/<span class="nv">$username</span>/.ssh
+    chmod 0700 /home/<span class="nv">$username</span>/.ssh
+    touch /home/<span class="nv">$username</span>/.ssh/authorized_keys
+    chown <span class="nv">$username</span>:<span class="nv">$username</span> /home/<span class="nv">$username</span>/.ssh/authorized_keys
+    chmod 0600 /home/<span class="nv">$username</span>/.ssh/authorized_keys
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Setup the key updater as a cron job</p>
+</td><td class=code><div class=highlight><pre>
+    crontab -u <span class="nv">$username</span> - <span class="s">&lt;&lt; EOF</span>
+<span class="s">* * * * * $key_updater_script</span>
+<span class="s">EOF</span>
+
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Install basics</p>
@@ -422,6 +485,8 @@ groupadd libvirtd
 useradd <span class="nv">$STACK_USER</span> -s /bin/bash -d /opt/stack -G libvirtd
 <span class="nb">echo</span> <span class="nv">$STACK_USER</span>:<span class="nv">$GUEST_PASSWORD</span> | chpasswd
 <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(ALL) NOPASSWD: ALL&quot;</span> &gt;&gt; /etc/sudoers
+
+setup_domzero_user <span class="s2">&quot;$DOMZERO_USER&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Add an udev rule, so that new block devices could be written by stack user</p>

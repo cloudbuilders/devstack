@@ -396,8 +396,6 @@ Dependencies:</p>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tls
-
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="defaults">
 <h1>Defaults</h1>
@@ -597,6 +595,7 @@ This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT public_endpoint <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:%(public_port)s/&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_endpoint <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:%(admin_port)s/&quot;</span>
+    iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_bind_host <span class="s2">&quot;$KEYSTONE_SERVICE_HOST&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Register SSL certificates if provided</p>
@@ -623,7 +622,7 @@ This function intentionally left blank</p>
 <span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> token provider keystone.token.providers.uuid.Provider
     <span class="k">fi</span>
 
-<span class="k">    </span>iniset <span class="nv">$KEYSTONE_CONF</span> sql connection <span class="sb">`</span>database_connection_url keystone<span class="sb">`</span>
+<span class="k">    </span>iniset <span class="nv">$KEYSTONE_CONF</span> database connection <span class="sb">`</span>database_connection_url keystone<span class="sb">`</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> ec2 driver <span class="s2">&quot;keystone.contrib.ec2.backends.sql.Ec2&quot;</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;sql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -678,16 +677,18 @@ This function intentionally left blank</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up logging</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">LOGGING_ROOT</span><span class="o">=</span><span class="s2">&quot;devel&quot;</span>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">LOGGING_ROOT</span><span class="o">=</span><span class="s2">&quot;$LOGGING_ROOT,production&quot;</span>
+<span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT use_syslog <span class="s2">&quot;True&quot;</span>
     <span class="k">fi</span>
-<span class="k">    </span><span class="nv">KEYSTONE_LOG_CONFIG</span><span class="o">=</span><span class="s2">&quot;--log-config $KEYSTONE_CONF_DIR/logging.conf&quot;</span>
-    cp <span class="nv">$KEYSTONE_DIR</span>/etc/logging.conf.sample <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf
-    iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root level <span class="s2">&quot;DEBUG&quot;</span>
-    iniset <span class="nv">$KEYSTONE_CONF_DIR</span>/logging.conf logger_root handlers <span class="s2">&quot;devel,production&quot;</span>
 
-    <span class="k">if </span>is_apache_enabled_service key; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Format logging</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>setup_colorized_logging <span class="nv">$KEYSTONE_CONF</span> DEFAULT
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_apache_enabled_service key; <span class="k">then</span>
 <span class="k">        </span>_config_keystone_apache_wsgi
     <span class="k">fi</span>
 <span class="o">}</span>
@@ -716,72 +717,81 @@ create_keystone_accounts<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>admin</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ADMIN_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-create <span class="se">\</span>
-        --name admin <span class="se">\</span>
+    <span class="nv">ADMIN_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project create <span class="se">\</span>
+        admin <span class="se">\</span>
         | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">ADMIN_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
-        --name admin <span class="se">\</span>
-        --pass <span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
+    <span class="nv">ADMIN_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
+        admin <span class="se">\</span>
+        --project <span class="s2">&quot;$ADMIN_TENANT&quot;</span> <span class="se">\</span>
         --email admin@example.com <span class="se">\</span>
+        --password <span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
         | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-create <span class="se">\</span>
-        --name admin <span class="se">\</span>
+    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role create <span class="se">\</span>
+        admin <span class="se">\</span>
         | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    keystone user-role-add <span class="se">\</span>
-        --user-id <span class="nv">$ADMIN_USER</span> <span class="se">\</span>
-        --role-id <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
-        --tenant-id <span class="nv">$ADMIN_TENANT</span>
+    openstack role add <span class="se">\</span>
+        <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
+        --project <span class="nv">$ADMIN_TENANT</span> <span class="se">\</span>
+        --user <span class="nv">$ADMIN_USER</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>service</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-create <span class="se">\</span>
-        --name <span class="nv">$SERVICE_TENANT_NAME</span> <span class="se">\</span>
+    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project create <span class="se">\</span>
+        <span class="nv">$SERVICE_TENANT_NAME</span> <span class="se">\</span>
         | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The Member role is used by Horizon and Swift so we need to keep it:</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">MEMBER_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-create --name<span class="o">=</span>Member | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">MEMBER_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role create <span class="se">\</span>
+        Member <span class="se">\</span>
+        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>ANOTHER_ROLE demonstrates that an arbitrary role may be created and used
 TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ANOTHER_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-create --name<span class="o">=</span>anotherrole | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">ANOTHER_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role create <span class="se">\</span>
+        anotherrole <span class="se">\</span>
+        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>invisible tenant - admin can't see this one</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">INVIS_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-create --name<span class="o">=</span>invisible_to_admin | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">INVIS_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project create <span class="se">\</span>
+        invisible_to_admin <span class="se">\</span>
+        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>demo</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">DEMO_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-create <span class="se">\</span>
-        --name<span class="o">=</span>demo <span class="se">\</span>
+    <span class="nv">DEMO_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project create <span class="se">\</span>
+        demo <span class="se">\</span>
         | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">DEMO_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
-        --name demo <span class="se">\</span>
-        --pass <span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
+    <span class="nv">DEMO_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
+        demo <span class="se">\</span>
+        --project <span class="nv">$DEMO_TENANT</span> <span class="se">\</span>
         --email demo@example.com <span class="se">\</span>
+        --password <span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
         | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    keystone user-role-add --user-id <span class="nv">$DEMO_USER</span> --role-id <span class="nv">$MEMBER_ROLE</span> --tenant-id <span class="nv">$DEMO_TENANT</span>
-    keystone user-role-add --user-id <span class="nv">$ADMIN_USER</span> --role-id <span class="nv">$ADMIN_ROLE</span> --tenant-id <span class="nv">$DEMO_TENANT</span>
-    keystone user-role-add --user-id <span class="nv">$DEMO_USER</span> --role-id <span class="nv">$ANOTHER_ROLE</span> --tenant-id <span class="nv">$DEMO_TENANT</span>
-    keystone user-role-add --user-id <span class="nv">$DEMO_USER</span> --role-id <span class="nv">$MEMBER_ROLE</span> --tenant-id <span class="nv">$INVIS_TENANT</span>
+
+    openstack role add --project <span class="nv">$DEMO_TENANT</span> --user <span class="nv">$DEMO_USER</span> <span class="nv">$MEMBER_ROLE</span>
+    openstack role add --project <span class="nv">$DEMO_TENANT</span> --user <span class="nv">$ADMIN_USER</span> <span class="nv">$ADMIN_ROLE</span>
+    openstack role add --project <span class="nv">$DEMO_TENANT</span> --user <span class="nv">$DEMO_USER</span> <span class="nv">$ANOTHER_ROLE</span>
+    openstack role add --project <span class="nv">$INVIS_TENANT</span> --user <span class="nv">$DEMO_USER</span> <span class="nv">$MEMBER_ROLE</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keystone</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">KEYSTONE_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-            --name keystone <span class="se">\</span>
+<span class="k">        </span><span class="nv">KEYSTONE_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
+            keystone <span class="se">\</span>
             --type identity <span class="se">\</span>
             --description <span class="s2">&quot;Keystone Identity Service&quot;</span> <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        keystone endpoint-create <span class="se">\</span>
+        openstack endpoint create <span class="se">\</span>
+            <span class="nv">$KEYSTONE_SERVICE</span> <span class="se">\</span>
             --region RegionOne <span class="se">\</span>
-            --service_id <span class="nv">$KEYSTONE_SERVICE</span> <span class="se">\</span>
             --publicurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v$IDENTITY_API_VERSION&quot;</span> <span class="se">\</span>
             --adminurl <span class="s2">&quot;$KEYSTONE_AUTH_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_AUTH_PORT/v$IDENTITY_API_VERSION&quot;</span> <span class="se">\</span>
             --internalurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v$IDENTITY_API_VERSION&quot;</span>
@@ -890,7 +900,7 @@ and .rpm circles.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start Keystone in a screen window</p>
 </td><td class=code><div class=highlight><pre>
-        screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG --debug&quot;</span>
+        screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF --debug&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>

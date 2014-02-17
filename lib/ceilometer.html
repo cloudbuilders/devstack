@@ -433,44 +433,60 @@ enable_service ceilometer-alarm-notifier ceilometer-alarm-evaluator</blockquote>
 <span class="nv">CEILOMETER_SERVICE_PROTOCOL</span><span class="o">=</span>http
 <span class="nv">CEILOMETER_SERVICE_HOST</span><span class="o">=</span><span class="nv">$SERVICE_HOST</span>
 <span class="nv">CEILOMETER_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">CEILOMETER_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8777</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
+<p>Tell Tempest this project is present</p>
 </td><td class=code><div class=highlight><pre>
+TEMPEST_SERVICES+<span class="o">=</span>,ceilometer
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test if any Ceilometer services are enabled
+is_ceilometer_enabled</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_ceilometer_enabled <span class="o">{</span>
+    <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ ,<span class="s2">&quot;ceilometer-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>create_ceilometer_accounts() - Set up common required ceilometer accounts</p>
 </td><td class=code><div class=highlight><pre>
 
 create_ceilometer_accounts<span class="o">()</span> <span class="o">{</span>
 
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Ceilometer</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;ceilometer-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">CEILOMETER_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
-            --name<span class="o">=</span>ceilometer <span class="se">\</span>
-            --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --tenant_id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --email<span class="o">=</span>ceilometer@example.com <span class="se">\</span>
+<span class="k">        </span><span class="nv">CEILOMETER_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
+            ceilometer <span class="se">\</span>
+            --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --email ceilometer@example.com <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        keystone user-role-add <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user-id <span class="nv">$CEILOMETER_USER</span> <span class="se">\</span>
-            --role-id <span class="nv">$ADMIN_ROLE</span>
+        openstack role add <span class="se">\</span>
+            <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --user <span class="nv">$CEILOMETER_USER</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">CEILOMETER_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-                --name<span class="o">=</span>ceilometer <span class="se">\</span>
+<span class="k">            </span><span class="nv">CEILOMETER_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
+                ceilometer <span class="se">\</span>
                 --type<span class="o">=</span>metering <span class="se">\</span>
                 --description<span class="o">=</span><span class="s2">&quot;OpenStack Telemetry Service&quot;</span> <span class="se">\</span>
                 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            keystone endpoint-create <span class="se">\</span>
+            openstack endpoint create <span class="se">\</span>
+                <span class="nv">$CEILOMETER_SERVICE</span> <span class="se">\</span>
                 --region RegionOne <span class="se">\</span>
-                --service_id <span class="nv">$CEILOMETER_SERVICE</span> <span class="se">\</span>
                 --publicurl <span class="s2">&quot;$CEILOMETER_SERVICE_PROTOCOL://$CEILOMETER_SERVICE_HOST:$CEILOMETER_SERVICE_PORT/&quot;</span> <span class="se">\</span>
                 --adminurl <span class="s2">&quot;$CEILOMETER_SERVICE_PROTOCOL://$CEILOMETER_SERVICE_HOST:$CEILOMETER_SERVICE_PORT/&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;$CEILOMETER_SERVICE_PROTOCOL://$CEILOMETER_SERVICE_HOST:$CEILOMETER_SERVICE_PORT/&quot;</span>
@@ -492,6 +508,7 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_ceilometerclient<span class="o">()</span> <span class="o">{</span>
     setup_develop <span class="nv">$CEILOMETERCLIENT_DIR</span>
+    sudo install -D -m 0644 -o <span class="nv">$STACK_USER</span> <span class="o">{</span><span class="nv">$CEILOMETERCLIENT_DIR</span>/tools/,/etc/bash_completion.d/<span class="o">}</span>ceilometer.bash_completion
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -530,7 +547,9 @@ call out to the public nova and glance APIs</p>
     iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT os_password <span class="nv">$SERVICE_PASSWORD</span>
     iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT os_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
 
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken auth_protocol http
+    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
+    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
     iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_user ceilometer
     iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
     iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
@@ -547,6 +566,10 @@ call out to the public nova and glance APIs</p>
 
 <span class="k">function </span>configure_mongodb<span class="o">()</span> <span class="o">{</span>
     <span class="k">if </span>is_fedora; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>install mongodb client</p>
+</td><td class=code><div class=highlight><pre>
+        install_package mongodb
 </pre></div></td></tr><tr><td class=docs>
 <p>ensure smallfiles selected to minimize freespace requirements</p>
 </td><td class=code><div class=highlight><pre>

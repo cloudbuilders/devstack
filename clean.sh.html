@@ -406,6 +406,11 @@ and <tt class="docutils literal">DISTRO</tt></p>
 </td><td class=code><div class=highlight><pre>
 GetDistro
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Import apache functions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/apache
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ldap
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import database library</p>
@@ -413,8 +418,9 @@ GetDistro
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/rpc_backend
 
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/oslo
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tls
+
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/oslo
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
@@ -425,7 +431,9 @@ GetDistro
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/baremetal
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ldap
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ironic
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/trove
+
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="extras-source">
@@ -485,17 +493,8 @@ cleanup_swift
 </pre></div></td></tr><tr><td class=docs>
 <p>Do the hypervisor cleanup until this can be moved back into lib/nova</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled nova <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>cleanup_nova_hypervisor
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>cinder doesn't always clean up the volume group as it might be used elsewhere...
-clean it up if it is a loop device</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">VG_DEV</span><span class="o">=</span><span class="k">$(</span>sudo losetup -j <span class="nv">$DATA_DIR</span>/<span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">}</span>-backing-file | awk -F<span class="s1">&#39;:&#39;</span> <span class="s1">&#39;/backing-file/ { print $1}&#39;</span><span class="k">)</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$VG_DEV&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>sudo losetup -d <span class="nv">$VG_DEV</span>
 <span class="k">fi</span>
 
 <span class="c">#if mount | grep $DATA_DIR/swift/drives; then</span>
@@ -514,13 +513,22 @@ sudo rm -rf /etc/keystone /etc/glance /etc/nova /etc/cinder /etc/swift
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean out tgt</p>
 </td><td class=code><div class=highlight><pre>
-sudo rm /etc/tgt/conf.d/*
+sudo rm -f /etc/tgt/conf.d/*
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean up the message queue</p>
 </td><td class=code><div class=highlight><pre>
 cleanup_rpc_backend
 cleanup_database
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean out data, logs and status</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">LOGDIR</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
+sudo rm -rf <span class="nv">$DATA_DIR</span> <span class="nv">$LOGDIR</span> <span class="nv">$DEST</span>/status
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> -d <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>sudo rm -rf <span class="nv">$SCREEN_LOGDIR</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean up networking...

@@ -401,6 +401,14 @@ Dependencies:</p>
 <p>set up default driver</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">CINDER_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_DRIVER</span><span class="k">:-</span><span class="nv">default</span><span class="k">}</span>
+<span class="nv">CINDER_PLUGINS</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/lib/cinder_plugins
+
+</pre></div></td></tr><tr><td class=docs>
+<p>grab plugin config if specified via cinder_driver</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$CINDER_PLUGINS</span>/<span class="nv">$CINDER_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">source</span> <span class="nv">$CINDER_PLUGINS</span>/<span class="nv">$CINDER_DRIVER</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>set up default directories</p>
@@ -469,11 +477,28 @@ less than the 60 second default
 
 <span class="nv">VOLUME_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">:-</span><span class="nv">volume</span><span class="p">-</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Tell Tempest this project is present</p>
+</td><td class=code><div class=highlight><pre>
+TEMPEST_SERVICES+<span class="o">=</span>,cinder
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test if any Cinder services are enabled
+is_cinder_enabled</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_cinder_enabled <span class="o">{</span>
+    <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ ,<span class="s2">&quot;c-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>_clean_lvm_lv removes all cinder LVM volumes</p>
 <p>Usage: _clean_lvm_lv $VOLUME_GROUP $VOLUME_NAME_PREFIX</p>
 </td><td class=code><div class=highlight><pre>
@@ -510,9 +535,9 @@ of the backing file</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>if the backing physical device is a loop device, it was probably setup by devstack</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">VG_DEV</span><span class="o">=</span><span class="k">$(</span>sudo losetup -j <span class="nv">$DATA_DIR</span>/<span class="k">${</span><span class="nv">vg</span><span class="k">}</span>-backing-file | awk -F<span class="s1">&#39;:&#39;</span> <span class="s1">&#39;/backing-file/ { print $1}&#39;</span><span class="k">)</span>
-        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$VG_DEV&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>sudo losetup -d <span class="nv">$VG_DEV</span>
+        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$VG_DEV&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> -e <span class="s2">&quot;$VG_DEV&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">VG_DEV</span><span class="o">=</span><span class="k">$(</span>sudo losetup -j <span class="nv">$DATA_DIR</span>/<span class="k">${</span><span class="nv">vg</span><span class="k">}</span>-backing-file | awk -F<span class="s1">&#39;:&#39;</span> <span class="s1">&#39;/backing-file/ { print $1}&#39;</span><span class="k">)</span>
+            sudo losetup -d <span class="nv">$VG_DEV</span>
             rm -f <span class="nv">$DATA_DIR</span>/<span class="k">${</span><span class="nv">vg</span><span class="k">}</span>-backing-file
         <span class="k">fi</span>
 <span class="k">    fi</span>
@@ -580,55 +605,38 @@ So check the response and restart if need be</p>
 <p>Set the paths of certain binaries</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">CINDER_ROOTWRAP</span><span class="o">=</span><span class="k">$(</span>get_rootwrap_location cinder<span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> ! -x <span class="nv">$CINDER_ROOTWRAP</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">CINDER_ROOTWRAP</span><span class="o">=</span><span class="k">$(</span>get_rootwrap_location oslo<span class="k">)</span>
-        <span class="k">if</span> <span class="o">[[</span> ! -x <span class="nv">$CINDER_ROOTWRAP</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;No suitable rootwrap found.&quot;</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If Cinder ships the new rootwrap filters files, deploy them
-(owned by root) and add a parameter to $CINDER_ROOTWRAP</p>
+<p>Deploy new rootwrap filters files (owned by root).
+Wipe any existing rootwrap.d files first</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ROOTWRAP_CINDER_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$CINDER_ROOTWRAP&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$CINDER_DIR</span>/etc/cinder/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Wipe any existing rootwrap.d files first</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>sudo rm -rf <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
-        <span class="k">fi</span>
+    <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo rm -rf <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
+    <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Deploy filters to /etc/cinder/rootwrap.d</p>
 </td><td class=code><div class=highlight><pre>
-        sudo mkdir -m 755 <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
-        sudo cp <span class="nv">$CINDER_DIR</span>/etc/cinder/rootwrap.d/*.filters <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
-        sudo chown -R root:root <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
-        sudo chmod 644 <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d/*
+    sudo mkdir -m 755 <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
+    sudo cp <span class="nv">$CINDER_DIR</span>/etc/cinder/rootwrap.d/*.filters <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
+    sudo chown -R root:root <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d
+    sudo chmod 644 <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.d/*
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up rootwrap.conf, pointing to /etc/cinder/rootwrap.d</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> -f <span class="nv">$CINDER_DIR</span>/etc/cinder/rootwrap.conf <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>sudo cp <span class="nv">$CINDER_DIR</span>/etc/cinder/rootwrap.conf <span class="nv">$CINDER_CONF_DIR</span>/
-        <span class="k">else</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>rootwrap.conf is no longer shipped in Cinder itself</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="nb">echo</span> <span class="s2">&quot;filters_path=&quot;</span> | sudo tee <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf &gt; /dev/null
-        <span class="k">fi</span>
-<span class="k">        </span>sudo sed -e <span class="s2">&quot;s:^filters_path=.*$:filters_path=$CINDER_CONF_DIR/rootwrap.d:&quot;</span> -i <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf
-        sudo chown root:root <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf
-        sudo chmod 0644 <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf
+    sudo cp <span class="nv">$CINDER_DIR</span>/etc/cinder/rootwrap.conf <span class="nv">$CINDER_CONF_DIR</span>/
+    sudo sed -e <span class="s2">&quot;s:^filters_path=.*$:filters_path=$CINDER_CONF_DIR/rootwrap.d:&quot;</span> -i <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf
+    sudo chown root:root <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf
+    sudo chmod 0644 <span class="nv">$CINDER_CONF_DIR</span>/rootwrap.conf
 </pre></div></td></tr><tr><td class=docs>
 <p>Specify rootwrap.conf as first parameter to rootwrap</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">CINDER_ROOTWRAP</span><span class="o">=</span><span class="s2">&quot;$CINDER_ROOTWRAP $CINDER_CONF_DIR/rootwrap.conf&quot;</span>
-        <span class="nv">ROOTWRAP_CINDER_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$CINDER_ROOTWRAP *&quot;</span>
-    <span class="k">fi</span>
+    <span class="nv">ROOTWRAP_CSUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$CINDER_ROOTWRAP $CINDER_CONF_DIR/rootwrap.conf *&quot;</span>
 
-<span class="k">    </span><span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD: $ROOTWRAP_CINDER_SUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up the rootwrap sudoers for cinder</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD: $ROOTWRAP_CSUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
     chmod 0440 <span class="nv">$TEMPFILE</span>
     sudo chown root:root <span class="nv">$TEMPFILE</span>
     sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/cinder-rootwrap
@@ -730,44 +738,8 @@ So check the response and restart if need be</p>
 <span class="k">        </span>setup_colorized_logging <span class="nv">$CINDER_CONF</span> DEFAULT <span class="s2">&quot;project_id&quot;</span> <span class="s2">&quot;user_id&quot;</span>
     <span class="k">fi</span>
 
-<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;XenAPINFS&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-        <span class="o">(</span>
-            <span class="nb">set</span> -u
-            iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_driver <span class="s2">&quot;cinder.volume.drivers.xenapi.sm.XenAPINFSDriver&quot;</span>
-            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_connection_url <span class="s2">&quot;$CINDER_XENAPI_CONNECTION_URL&quot;</span>
-            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_connection_username <span class="s2">&quot;$CINDER_XENAPI_CONNECTION_USERNAME&quot;</span>
-            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_connection_password <span class="s2">&quot;$CINDER_XENAPI_CONNECTION_PASSWORD&quot;</span>
-            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_nfs_server <span class="s2">&quot;$CINDER_XENAPI_NFS_SERVER&quot;</span>
-            iniset <span class="nv">$CINDER_CONF</span> DEFAULT xenapi_nfs_serverpath <span class="s2">&quot;$CINDER_XENAPI_NFS_SERVERPATH&quot;</span>
-        <span class="o">)</span>
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;nfs&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_driver <span class="s2">&quot;cinder.volume.drivers.nfs.NfsDriver&quot;</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT nfs_shares_config <span class="s2">&quot;$CINDER_CONF_DIR/nfs_shares.conf&quot;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;$CINDER_NFS_SERVERPATH&quot;</span> | sudo tee <span class="s2">&quot;$CINDER_CONF_DIR/nfs_shares.conf&quot;</span>
-        sudo chmod 666 <span class="nv">$CINDER_CONF_DIR</span>/nfs_shares.conf
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;sheepdog&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_driver <span class="s2">&quot;cinder.volume.drivers.sheepdog.SheepdogDriver&quot;</span>
-    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;glusterfs&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>To use glusterfs, set the following in localrc:
-CINDER_DRIVER=glusterfs
-CINDER_GLUSTERFS_SHARES=&quot;127.0.0.1:/vol1;127.0.0.1:/vol2&quot;
-Shares are &lt;host&gt;:&lt;volume&gt; and separated by semicolons.</p>
-</td><td class=code><div class=highlight><pre>
-
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_driver <span class="s2">&quot;cinder.volume.drivers.glusterfs.GlusterfsDriver&quot;</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT glusterfs_shares_config <span class="s2">&quot;$CINDER_CONF_DIR/glusterfs_shares&quot;</span>
-        touch <span class="nv">$CINDER_CONF_DIR</span>/glusterfs_shares
-        <span class="k">if</span> <span class="o">[</span> ! -z <span class="s2">&quot;$CINDER_GLUSTERFS_SHARES&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">CINDER_GLUSTERFS_SHARES</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$CINDER_GLUSTERFS_SHARES</span> | tr <span class="s2">&quot;;&quot;</span> <span class="s2">&quot;\n&quot;</span><span class="k">)</span>
-            <span class="nb">echo</span> <span class="s2">&quot;$CINDER_GLUSTERFS_SHARES&quot;</span> &gt; <span class="nv">$CINDER_CONF_DIR</span>/glusterfs_shares
-        <span class="k">fi</span>
-<span class="k">    elif</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;vsphere&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>echo_summary <span class="s2">&quot;Using VMware vCenter driver&quot;</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT vmware_host_ip <span class="s2">&quot;$VMWAREAPI_IP&quot;</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT vmware_host_username <span class="s2">&quot;$VMWAREAPI_USER&quot;</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT vmware_host_password <span class="s2">&quot;$VMWAREAPI_PASSWORD&quot;</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_driver <span class="s2">&quot;cinder.volume.drivers.vmware.vmdk.VMwareVcVmdkDriver&quot;</span>
+<span class="k">    if</span> <span class="o">[[</span> -r <span class="nv">$CINDER_PLUGINS</span>/<span class="nv">$CINDER_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>configure_cinder_driver
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -806,47 +778,46 @@ see <a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi
 </td><td class=code><div class=highlight><pre>
 create_cinder_accounts<span class="o">()</span> <span class="o">{</span>
 
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>keystone role-list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Cinder</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;c-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">CINDER_USER</span><span class="o">=</span><span class="k">$(</span>keystone user-create <span class="se">\</span>
-            --name<span class="o">=</span>cinder <span class="se">\</span>
-            --pass<span class="o">=</span><span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --email<span class="o">=</span>cinder@example.com <span class="se">\</span>
+<span class="k">        </span><span class="nv">CINDER_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
+            cinder <span class="se">\</span>
+            --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --email cinder@example.com <span class="se">\</span>
             | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        keystone user-role-add <span class="se">\</span>
-            --tenant-id <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user-id <span class="nv">$CINDER_USER</span> <span class="se">\</span>
-            --role-id <span class="nv">$ADMIN_ROLE</span>
+        openstack role add <span class="se">\</span>
+            <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
+            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
+            --user <span class="nv">$CINDER_USER</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">CINDER_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-                --name<span class="o">=</span>cinder <span class="se">\</span>
+<span class="k">            </span><span class="nv">CINDER_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
+                cinder <span class="se">\</span>
                 --type<span class="o">=</span>volume <span class="se">\</span>
                 --description<span class="o">=</span><span class="s2">&quot;Cinder Volume Service&quot;</span> <span class="se">\</span>
                 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            keystone endpoint-create <span class="se">\</span>
+            openstack endpoint create <span class="se">\</span>
+                <span class="nv">$CINDER_SERVICE</span> <span class="se">\</span>
                 --region RegionOne <span class="se">\</span>
-                --service_id <span class="nv">$CINDER_SERVICE</span> <span class="se">\</span>
                 --publicurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --adminurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span>
-            <span class="nv">CINDER_V2_SERVICE</span><span class="o">=</span><span class="k">$(</span>keystone service-create <span class="se">\</span>
-                --name<span class="o">=</span>cinderv2 <span class="se">\</span>
+            <span class="nv">CINDER_V2_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
+                cinderv2 <span class="se">\</span>
                 --type<span class="o">=</span>volumev2 <span class="se">\</span>
                 --description<span class="o">=</span><span class="s2">&quot;Cinder Volume Service V2&quot;</span> <span class="se">\</span>
                 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            keystone endpoint-create <span class="se">\</span>
+            openstack endpoint create <span class="se">\</span>
+                <span class="nv">$CINDER_V2_SERVICE</span> <span class="se">\</span>
                 --region RegionOne <span class="se">\</span>
-                --service_id <span class="nv">$CINDER_V2_SERVICE</span> <span class="se">\</span>
                 --publicurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --adminurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 --internalurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span>
-
         <span class="k">fi</span>
 <span class="k">    fi</span>
 <span class="o">}</span>

@@ -428,12 +428,26 @@ Dependencies:</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Tell Tempest this project is present</p>
+</td><td class=code><div class=highlight><pre>
+TEMPEST_SERVICES+<span class="o">=</span>,glance
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test if any Glance services are enabled
+is_glance_enabled</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>is_glance_enabled <span class="o">{</span>
+    <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span> <span class="o">=</span>~ ,<span class="s2">&quot;g-&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
+    <span class="k">return </span>1
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>cleanup_glance() - Remove residual data files, anything left over from previous
@@ -492,10 +506,8 @@ delete image files (glance)</p>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_user glance
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    <span class="k">if </span>is_service_enabled qpid; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT notifier_strategy qpid
-    <span class="k">elif</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>  <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT notifier_strategy rabbit
+    <span class="k">if </span>is_service_enabled qpid <span class="o">||</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT notification_driver messaging
     <span class="k">fi</span>
 <span class="k">    </span>iniset_rpc_backend glance <span class="nv">$GLANCE_API_CONF</span> DEFAULT
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken signing_dir <span class="nv">$GLANCE_AUTH_CACHE_DIR</span>/api
@@ -510,11 +522,11 @@ delete image files (glance)</p>
     <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT default_store swift
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_auth_address <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/
-        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_user <span class="nv">$SERVICE_TENANT_NAME</span>:glance
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_user <span class="nv">$SERVICE_TENANT_NAME</span>:glance-swift
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_key <span class="nv">$SERVICE_PASSWORD</span>
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_create_container_on_put True
 
-        iniset_multiline DEFAULT known_stores glance.store.filesystem.Store glance.store.http.Store glance.store.swift.Store
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT known_stores <span class="s2">&quot;glance.store.filesystem.Store, glance.store.http.Store, glance.store.swift.Store&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    </span>cp -p <span class="nv">$GLANCE_DIR</span>/etc/glance-registry-paste.ini <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
