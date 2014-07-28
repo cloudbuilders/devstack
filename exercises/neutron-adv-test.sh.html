@@ -383,7 +383,7 @@ only the first error that occurred.</p>
 <span class="nb">set</span> -o errtrace
 
 <span class="nb">trap </span>failed ERR
-failed<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>failed <span class="o">{</span>
     <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
     <span class="nb">set</span> +o errtrace
     <span class="nb">set</span> +o xtrace
@@ -486,17 +486,6 @@ neutron_plugin_check_adv_test_requirements <span class="o">||</span> <span class
 <span class="nv">DEMO1_ROUTER1_NET</span><span class="o">=</span><span class="s2">&quot;demo1-net1&quot;</span>
 <span class="nv">DEMO2_ROUTER1_NET</span><span class="o">=</span><span class="s2">&quot;demo2-net1&quot;</span>
 
-<span class="nv">KEYSTONE</span><span class="o">=</span><span class="s2">&quot;keystone&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Manually create a token by querying keystone (sending JSON data).  Keystone
-returns a token and catalog of endpoints.  We use python to parse the token
-and save it.</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="nv">TOKEN</span><span class="o">=</span><span class="sb">`</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | awk <span class="s1">&#39;{print $4}&#39;</span><span class="sb">`</span>
-die_if_not_set <span class="nv">$LINENO</span> TOKEN <span class="s2">&quot;Keystone fail to get token&quot;</span>
-
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="various-functions">
@@ -541,21 +530,21 @@ die_if_not_set <span class="nv">$LINENO</span> TOKEN <span class="s2">&quot;Keys
 
 <span class="k">function </span>get_tenant_id <span class="o">{</span>
     <span class="nb">local </span><span class="nv">TENANT_NAME</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="sb">`</span>keystone tenant-list | grep <span class="s2">&quot; $TENANT_NAME &quot;</span> | head -n 1 | get_field 1<span class="sb">`</span>
+    <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="sb">`</span>openstack project list | grep <span class="s2">&quot; $TENANT_NAME &quot;</span> | head -n 1 | get_field 1<span class="sb">`</span>
     die_if_not_set <span class="nv">$LINENO</span> TENANT_ID <span class="s2">&quot;Failure retrieving TENANT_ID for $TENANT_NAME&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;$TENANT_ID&quot;</span>
 <span class="o">}</span>
 
 <span class="k">function </span>get_user_id <span class="o">{</span>
     <span class="nb">local </span><span class="nv">USER_NAME</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">USER_ID</span><span class="o">=</span><span class="sb">`</span>keystone user-list | grep <span class="nv">$USER_NAME</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
+    <span class="nb">local </span><span class="nv">USER_ID</span><span class="o">=</span><span class="sb">`</span>openstack user list | grep <span class="nv">$USER_NAME</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
     die_if_not_set <span class="nv">$LINENO</span> USER_ID <span class="s2">&quot;Failure retrieving USER_ID for $USER_NAME&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;$USER_ID&quot;</span>
 <span class="o">}</span>
 
 <span class="k">function </span>get_role_id <span class="o">{</span>
     <span class="nb">local </span><span class="nv">ROLE_NAME</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">ROLE_ID</span><span class="o">=</span><span class="sb">`</span>keystone role-list | grep <span class="nv">$ROLE_NAME</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
+    <span class="nb">local </span><span class="nv">ROLE_ID</span><span class="o">=</span><span class="sb">`</span>openstack role list | grep <span class="nv">$ROLE_NAME</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
     die_if_not_set <span class="nv">$LINENO</span> ROLE_ID <span class="s2">&quot;Failure retrieving ROLE_ID for $ROLE_NAME&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;$ROLE_ID&quot;</span>
 <span class="o">}</span>
@@ -590,28 +579,21 @@ die_if_not_set <span class="nv">$LINENO</span> TOKEN <span class="s2">&quot;Keys
 <span class="o">}</span>
 
 <span class="k">function </span>add_tenant <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">TENANT</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">USER</span><span class="o">=</span><span class="nv">$2</span>
-
-    <span class="nv">$KEYSTONE</span> tenant-create --name<span class="o">=</span><span class="nv">$TENANT</span>
-    <span class="nv">$KEYSTONE</span> user-create --name<span class="o">=</span><span class="nv">$USER</span> --pass<span class="o">=</span><span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">}</span>
-
-    <span class="nb">local </span><span class="nv">USER_ID</span><span class="o">=</span><span class="k">$(</span>get_user_id <span class="nv">$USER</span><span class="k">)</span>
-    <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>get_tenant_id <span class="nv">$TENANT</span><span class="k">)</span>
-
-    <span class="nv">$KEYSTONE</span> user-role-add --user-id <span class="nv">$USER_ID</span> --role-id <span class="k">$(</span>get_role_id Member<span class="k">)</span> --tenant-id <span class="nv">$TENANT_ID</span>
+    openstack project create <span class="nv">$1</span>
+    openstack user create <span class="nv">$2</span> --password <span class="k">${</span><span class="nv">ADMIN_PASSWORD</span><span class="k">}</span> --project <span class="nv">$1</span>
+    openstack role add Member --project <span class="nv">$1</span> --user <span class="nv">$2</span>
 <span class="o">}</span>
 
 <span class="k">function </span>remove_tenant <span class="o">{</span>
     <span class="nb">local </span><span class="nv">TENANT</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>get_tenant_id <span class="nv">$TENANT</span><span class="k">)</span>
-    <span class="nv">$KEYSTONE</span> tenant-delete <span class="nv">$TENANT_ID</span>
+    openstack project delete <span class="nv">$TENANT_ID</span>
 <span class="o">}</span>
 
 <span class="k">function </span>remove_user <span class="o">{</span>
     <span class="nb">local </span><span class="nv">USER</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">USER_ID</span><span class="o">=</span><span class="k">$(</span>get_user_id <span class="nv">$USER</span><span class="k">)</span>
-    <span class="nv">$KEYSTONE</span> user-delete <span class="nv">$USER_ID</span>
+    openstack user delete <span class="nv">$USER_ID</span>
 <span class="o">}</span>
 
 <span class="k">function </span>create_tenants <span class="o">{</span>
@@ -800,7 +782,7 @@ nova secgroup-delete-rule default icmp -1 -1 0.0.0.0/0</p>
 <h1>Usage and main</h1>
 </td><td class=code><div class=highlight><pre>
 
-usage<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>usage <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;$0: [-h]&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;  -h, --help              Display help message&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;  -t, --tenant            Create tenants&quot;</span>
@@ -813,7 +795,7 @@ usage<span class="o">()</span> <span class="o">{</span>
     <span class="nb">echo</span> <span class="s2">&quot;  -T, --test              Test functions&quot;</span>
 <span class="o">}</span>
 
-main<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>main <span class="o">{</span>
 
     <span class="nb">echo </span>Description
 

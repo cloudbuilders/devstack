@@ -359,13 +359,19 @@ ul.auto-toc {
 <div class="document" id="neutron-midonet-plugin">
 <h1 class="title">Neutron MidoNet plugin</h1>
 
-<p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">MIDONET_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/midonet</span><span class="k">}</span>
+<span class="nv">MIDONET_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_API_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
+<span class="nv">MIDONET_API_URL</span><span class="o">=</span><span class="k">${</span><span class="nv">MIDONET_API_URL</span><span class="k">:-</span><span class="nv">http</span><span class="p">://localhost:</span><span class="nv">$MIDONET_API_PORT</span><span class="p">/midonet-api</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Save trace setting</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MN_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
-<span class="k">function </span>is_neutron_ovs_base_plugin<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>is_neutron_ovs_base_plugin <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>MidoNet does not use l3-agent
 0 means True here</p>
@@ -373,26 +379,25 @@ ul.auto-toc {
     <span class="k">return </span>1
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_create_nova_conf<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_create_nova_conf <span class="o">{</span>
     <span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtGenericVIFDriver&quot;</span><span class="k">}</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_install_agent_packages<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_install_agent_packages <span class="o">{</span>
     :
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_common <span class="o">{</span>
     <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/neutron/plugins/midonet
     <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>midonet.ini
-    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;neutron_midonet&quot;</span>
     <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.midonet.plugin.MidonetPluginV2&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_debug_command<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_debug_command <span class="o">{</span>
     :
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_dhcp_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_dhcp_agent <span class="o">{</span>
     <span class="nv">DHCP_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">DHCP_DRIVER</span><span class="k">:-</span><span class="s2">&quot;neutron.plugins.midonet.agent.midonet_driver.DhcpNoOpDriver&quot;</span><span class="k">}</span>
     neutron_plugin_setup_interface_driver <span class="nv">$Q_DHCP_CONF_FILE</span>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT dhcp_driver <span class="nv">$DHCP_DRIVER</span>
@@ -400,17 +405,17 @@ ul.auto-toc {
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT enable_isolated_metadata True
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_l3_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_l3_agent <span class="o">{</span>
     die <span class="nv">$LINENO</span> <span class="s2">&quot;q-l3 must not be executed with MidoNet plugin!&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_plugin_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_plugin_agent <span class="o">{</span>
     die <span class="nv">$LINENO</span> <span class="s2">&quot;q-agt must not be executed with MidoNet plugin!&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$MIDONET_API_URI&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> MIDONET midonet_uri <span class="nv">$MIDONET_API_URI</span>
+<span class="k">function </span>neutron_plugin_configure_service <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$MIDONET_API_URL&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> MIDONET midonet_uri <span class="nv">$MIDONET_API_URL</span>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$MIDONET_USERNAME&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> MIDONET username <span class="nv">$MIDONET_USERNAME</span>
@@ -421,27 +426,24 @@ ul.auto-toc {
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$MIDONET_PROJECT_ID&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> MIDONET project_id <span class="nv">$MIDONET_PROJECT_ID</span>
     <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$MIDONET_PROVIDER_ROUTER_ID&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> MIDONET provider_router_id <span class="nv">$MIDONET_PROVIDER_ROUTER_ID</span>
-    <span class="k">fi</span>
 
 <span class="k">    </span><span class="nv">Q_L3_ENABLED</span><span class="o">=</span>True
     <span class="nv">Q_L3_ROUTER_PER_TENANT</span><span class="o">=</span>True
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_setup_interface_driver<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_setup_interface_driver <span class="o">{</span>
     <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
     iniset <span class="nv">$conf_file</span> DEFAULT interface_driver neutron.agent.linux.interface.MidonetInterfaceDriver
 <span class="o">}</span>
 
-<span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>has_neutron_plugin_security_group <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>0 means True here</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">return </span>0
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_check_adv_test_requirements<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_check_adv_test_requirements <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>0 means True here</p>
 </td><td class=code><div class=highlight><pre>
@@ -451,7 +453,7 @@ ul.auto-toc {
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$MY_XTRACE</span>
+<span class="nv">$MN_XTRACE</span>
 
 
 </td><td class=code><div class=highlight><pre>

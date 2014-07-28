@@ -389,9 +389,16 @@ Functions to control the configuration and operation of the TLS proxy service
 
 </pre></div></td></tr><tr><td class=docs>
 <ul class="simple">
-<li>make_root_ca</li>
-<li>make_int_ca</li>
-<li>new_cert $INT_CA_DIR int-server &quot;abc&quot;</li>
+<li>stop_tls_proxy</li>
+<li>cleanup_CA</li>
+</ul>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<ul class="simple">
+<li>make_root_CA</li>
+<li>make_int_CA</li>
+<li>make_cert ca-dir cert-name &quot;common-name&quot; [&quot;alt-name&quot; ...]</li>
 <li>start_tls_proxy HOST_IP 5000 localhost 5000</li>
 <li>ensure_certificates</li>
 <li>is_ssl_enabled_service</li>
@@ -452,7 +459,7 @@ will be added to /etc/hosts?</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Do primary CA configuration</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_CA<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_CA <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>build common config file</p>
 </td><td class=code><div class=highlight><pre>
@@ -472,7 +479,7 @@ will be added to /etc/hosts?</p>
 <p>Creates a new CA directory structure
 create_CA_base ca-dir</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_CA_base<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_CA_base <span class="o">{</span>
     <span class="nb">local </span><span class="nv">ca_dir</span><span class="o">=</span><span class="nv">$1</span>
 
     <span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$ca_dir</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -495,7 +502,7 @@ create_CA_base ca-dir</p>
 <p>Create a new CA configuration file
 create_CA_config ca-dir common-name</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_CA_config<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_CA_config <span class="o">{</span>
     <span class="nb">local </span><span class="nv">ca_dir</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">common_name</span><span class="o">=</span><span class="nv">$2</span>
 
@@ -550,7 +557,7 @@ create_CA_config ca-dir common-name</p>
 <p>Create a new signing configuration file
 create_signing_config ca-dir</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_signing_config<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_signing_config <span class="o">{</span>
     <span class="nb">local </span><span class="nv">ca_dir</span><span class="o">=</span><span class="nv">$1</span>
 
     <span class="nb">echo</span> <span class="s2">&quot;</span>
@@ -644,7 +651,7 @@ init_cert</p>
 <p>make_cert creates and signs a new certificate with the given commonName and CA
 make_cert ca-dir cert-name &quot;common-name&quot; [&quot;alt-name&quot; ...]</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>make_cert<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>make_cert <span class="o">{</span>
     <span class="nb">local </span><span class="nv">ca_dir</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">cert_name</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">common_name</span><span class="o">=</span><span class="nv">$3</span>
@@ -686,7 +693,7 @@ make_cert ca-dir cert-name &quot;common-name&quot; [&quot;alt-name&quot; ...]</p
 <p>Make an intermediate CA to sign everything else
 make_int_CA ca-dir signing-ca-dir</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>make_int_CA<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>make_int_CA <span class="o">{</span>
     <span class="nb">local </span><span class="nv">ca_dir</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">signing_ca_dir</span><span class="o">=</span><span class="nv">$2</span>
 
@@ -724,7 +731,7 @@ make_int_CA ca-dir signing-ca-dir</p>
 <p>Make a root CA to sign other CAs
 make_root_CA ca-dir</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>make_root_CA<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>make_root_CA <span class="o">{</span>
     <span class="nb">local </span><span class="nv">ca_dir</span><span class="o">=</span><span class="nv">$1</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -759,8 +766,9 @@ make_root_CA ca-dir</p>
 is a short-circuit boolean, i.e it returns on the first match.</p>
 <p>Uses global <tt class="docutils literal">SSL_ENABLED_SERVICES</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>is_ssl_enabled_service<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">services</span><span class="o">=</span><span class="nv">$@</span>
+<span class="k">function </span>is_ssl_enabled_service <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">services</span><span class="o">=</span><span class="nv">$@</span>
+    <span class="nb">local </span><span class="nv">service</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
     <span class="k">for </span>service in <span class="k">${</span><span class="nv">services</span><span class="k">}</span>; <span class="k">do</span>
         <span class="o">[[</span> ,<span class="k">${</span><span class="nv">SSL_ENABLED_SERVICES</span><span class="k">}</span>, <span class="o">=</span>~ ,<span class="k">${</span><span class="nv">service</span><span class="k">}</span>, <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
     <span class="k">done</span>
@@ -778,7 +786,7 @@ example for keystone this would be KEYSTONE_SSL_CERT, KEYSTONE_SSL_KEY and
 KEYSTONE_SSL_CA. If it does not find these certificates the program will
 quit.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>ensure_certificates<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>ensure_certificates <span class="o">{</span>
     <span class="nb">local </span><span class="nv">service</span><span class="o">=</span><span class="nv">$1</span>
 
     <span class="nb">local </span><span class="nv">cert_var</span><span class="o">=</span><span class="s2">&quot;${service}_SSL_CERT&quot;</span>
@@ -789,7 +797,7 @@ quit.</p>
     <span class="nb">local </span><span class="nv">key</span><span class="o">=</span><span class="k">${</span><span class="p">!key_var</span><span class="k">}</span>
     <span class="nb">local </span><span class="nv">ca</span><span class="o">=</span><span class="k">${</span><span class="p">!ca_var</span><span class="k">}</span>
 
-    <span class="k">if</span> <span class="o">[[</span> !<span class="o">(</span><span class="nv">$cert</span> <span class="o">&amp;&amp;</span> <span class="nv">$key</span> <span class="o">&amp;&amp;</span> <span class="nv">$ca</span><span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$cert&quot;</span> <span class="o">||</span> -z <span class="s2">&quot;$key&quot;</span> <span class="o">||</span> -z <span class="s2">&quot;$ca&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Missing either the ${cert_var} ${key_var} or ${ca_var}&quot;</span> <span class="se">\</span>
                     <span class="s2">&quot;variable to enable SSL for ${service}&quot;</span>
     <span class="k">fi</span>
@@ -808,7 +816,7 @@ quit.</p>
 <p>Starts the TLS proxy for the given IP/ports
 start_tls_proxy front-host front-port back-host back-port</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_tls_proxy<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_tls_proxy <span class="o">{</span>
     <span class="nb">local </span><span class="nv">f_host</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">f_port</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">b_host</span><span class="o">=</span><span class="nv">$3</span>
@@ -817,6 +825,37 @@ start_tls_proxy front-host front-port back-host back-port</p>
     stud <span class="nv">$STUD_PROTO</span> -f <span class="nv">$f_host</span>,<span class="nv">$f_port</span> -b <span class="nv">$b_host</span>,<span class="nv">$b_port</span> <span class="nv">$DEVSTACK_CERT</span> 2&gt;/dev/null
 <span class="o">}</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="cleanup-functions">
+<h2>Cleanup Functions</h2>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 216)</p>
+<p>Title underline too short.</p>
+<pre class="literal-block">
+Cleanup Functions
+===============
+</pre>
+</div>
+</td><td class=code><div class=highlight><pre>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Stops all stud processes. This should be done only after all services
+using tls configuration are down.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>stop_tls_proxy <span class="o">{</span>
+    killall stud
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove CA along with configuration, as well as the local server certificate</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>cleanup_CA <span class="o">{</span>
+    rm -rf <span class="s2">&quot;$DATA_DIR/CA&quot;</span> <span class="s2">&quot;$DEVSTACK_CERT&quot;</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Tell emacs to use shell-script-mode</p>

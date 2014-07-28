@@ -404,8 +404,41 @@ pip 1.4 doesn't fix it (1.3 did)</li>
 
 <span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
 
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="keystone-port-reservation">
+<h1>Keystone Port Reservation</h1>
+<p>Reserve and prevent $KEYSTONE_AUTH_PORT and $KEYSTONE_AUTH_PORT_INT from
+being used as ephemeral ports by the system. The default(s) are 35357 and
+35358 which are in the Linux defined ephemeral port range (in disagreement
+with the IANA ephemeral port range). This is a workaround for bug #1253482
+where Keystone will try and bind to the port and the port will already be
+in use as an ephemeral port by another process. This places an explicit
+exception into the Kernel for the Keystone AUTH ports.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">keystone_ports</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_PORT</span><span class="k">:-</span><span class="nv">35357</span><span class="k">}</span>,<span class="k">${</span><span class="nv">KEYSTONE_AUTH_PORT_INT</span><span class="k">:-</span><span class="nv">35358</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Get any currently reserved ports, strip off leading whitespace</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">reserved_ports</span><span class="o">=</span><span class="k">$(</span>sysctl net.ipv4.ip_local_reserved_ports | awk -F<span class="s1">&#39;=&#39;</span> <span class="s1">&#39;{print $2;}&#39;</span> | sed <span class="s1">&#39;s/^ //&#39;</span><span class="k">)</span>
+
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;${reserved_ports}&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If there are no currently reserved ports, reserve the keystone ports</p>
+</td><td class=code><div class=highlight><pre>
+    sudo sysctl -w net.ipv4.ip_local_reserved_ports<span class="o">=</span><span class="k">${</span><span class="nv">keystone_ports</span><span class="k">}</span>
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If there are currently reserved ports, keep those and also reserve the
+keystone specific ports. Duplicate reservations are merged into a single
+reservation (or range) automatically by the kernel.</p>
+</td><td class=code><div class=highlight><pre>
+    sudo sysctl -w net.ipv4.ip_local_reserved_ports<span class="o">=</span><span class="k">${</span><span class="nv">keystone_ports</span><span class="k">}</span>,<span class="k">${</span><span class="nv">reserved_ports</span><span class="k">}</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="python-packages">
 <h1>Python Packages</h1>
 </td><td class=code><div class=highlight><pre>
@@ -413,7 +446,7 @@ pip 1.4 doesn't fix it (1.3 did)</li>
 </pre></div></td></tr><tr><td class=docs>
 <p>get_package_path python-package    # in import notation</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>get_package_path<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>get_package_path <span class="o">{</span>
     <span class="nb">local </span><span class="nv">package</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">echo</span> <span class="k">$(</span>python -c <span class="s2">&quot;import os; import $package; print(os.path.split(os.path.realpath($package.__file__))[0])&quot;</span><span class="k">)</span>
 <span class="o">}</span>
@@ -456,14 +489,9 @@ pip_install httplib2
 </div>
 <div class="section" id="ubuntu-12-04">
 <h1>Ubuntu 12.04</h1>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 70)</p>
-<p>Title underline too short.</p>
-<pre class="literal-block">
-Ubuntu 12.04
------
-</pre>
-</div>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>We can regularly get kernel crashes on the 12.04 default kernel, so attempt
 to install a new kernel</p>
 </td><td class=code><div class=highlight><pre>
@@ -482,14 +510,7 @@ to install a new kernel</p>
 <span class="k">fi</span>
 
 
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="rhel6">
-<h1>RHEL6</h1>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-
+<span class="k">if </span>is_fedora; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Disable selinux to avoid configuring to allow Apache access
 to Horizon files (LP#1175444)</p>
@@ -497,6 +518,15 @@ to Horizon files (LP#1175444)</p>
     <span class="k">if </span>selinuxenabled; <span class="k">then</span>
 <span class="k">        </span>sudo setenforce 0
     <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="rhel6">
+<h1>RHEL6</h1>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If the <tt class="docutils literal">dbus</tt> package was installed by DevStack dependencies the
@@ -559,6 +589,17 @@ work unmolested.</p>
 </td><td class=code><div class=highlight><pre>
     sudo ln -sf /usr/bin/nosetests1.1 /usr/local/bin/nosetests
 
+</pre></div></td></tr><tr><td class=docs>
+<p>workaround for <a class="reference external" href="https://code.google.com/p/unittest-ext/issues/detail?id=79">https://code.google.com/p/unittest-ext/issues/detail?id=79</a></p>
+</td><td class=code><div class=highlight><pre>
+    install_package python-unittest2 patch
+    pip_install discover
+    <span class="o">(</span><span class="nb">cd</span> /usr/lib/python2.6/site-packages/; sudo patch &lt;<span class="s2">&quot;$FILES/patches/unittest2-discover.patch&quot;</span> <span class="o">||</span> <span class="nb">echo</span> <span class="s1">&#39;Assume already applied&#39;</span><span class="o">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure the discover.pyc is up to date</p>
+</td><td class=code><div class=highlight><pre>
+    sudo rm /usr/lib/python2.6/site-packages/discover.pyc <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>sudo python -c <span class="s1">&#39;import discover&#39;</span>
 <span class="k">fi</span>
 
 

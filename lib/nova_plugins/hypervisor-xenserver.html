@@ -414,7 +414,7 @@ cleanup_nova_hypervisor - remove transient data and cache</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>clean_nova_hypervisor - Clean up an installation</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>cleanup_nova_hypervisor <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>
@@ -424,15 +424,15 @@ cleanup_nova_hypervisor - remove transient data and cache</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_nova_hypervisor - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_nova_hypervisor <span class="o">{</span>
     <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$XENAPI_CONNECTION_URL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;XENAPI_CONNECTION_URL is not specified&quot;</span>
     <span class="k">fi</span>
 <span class="k">    </span>read_password XENAPI_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR XEN.&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver <span class="s2">&quot;xenapi.XenAPIDriver&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_connection_url <span class="s2">&quot;$XENAPI_CONNECTION_URL&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_connection_username <span class="s2">&quot;$XENAPI_USER&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_connection_password <span class="s2">&quot;$XENAPI_PASSWORD&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> xenserver connection_url <span class="s2">&quot;$XENAPI_CONNECTION_URL&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> xenserver connection_username <span class="s2">&quot;$XENAPI_USER&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> xenserver connection_password <span class="s2">&quot;$XENAPI_PASSWORD&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT flat_injected <span class="s2">&quot;False&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Need to avoid crash due to new firewall support</p>
@@ -447,10 +447,16 @@ cleanup_nova_hypervisor - remove transient data and cache</p>
     <span class="nv">ssh_dom0</span><span class="o">=</span><span class="s2">&quot;sudo -u $DOMZERO_USER ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$dom0_ip&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Find where the plugins should go in dom0</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">xen_functions</span><span class="o">=</span><span class="sb">`</span>cat <span class="nv">$TOP_DIR</span>/tools/xen/functions<span class="sb">`</span>
+    <span class="nv">PLUGIN_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nv">$ssh_dom0</span> <span class="s2">&quot;$xen_functions; set -eux; xapi_plugin_location&quot;</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>install nova plugins to dom0</p>
 </td><td class=code><div class=highlight><pre>
     tar -czf - -C <span class="nv">$NOVA_DIR</span>/plugins/xenserver/xenapi/etc/xapi.d/plugins/ ./ |
-        <span class="nv">$ssh_dom0</span> <span class="s1">&#39;tar -xzf - -C /etc/xapi.d/plugins/ &amp;&amp; chmod a+x /etc/xapi.d/plugins/*&#39;</span>
+        <span class="nv">$ssh_dom0</span> <span class="s2">&quot;tar -xzf - -C $PLUGIN_DIR &amp;&amp; chmod a+x $PLUGIN_DIR/*&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install console logrotate script</p>
@@ -480,7 +486,7 @@ cleanup_nova_hypervisor - remove transient data and cache</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install_nova_hypervisor() - Install external components</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_nova_hypervisor <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>
@@ -490,7 +496,7 @@ cleanup_nova_hypervisor - remove transient data and cache</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>start_nova_hypervisor - Start any required external services</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_nova_hypervisor <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>
@@ -500,7 +506,7 @@ cleanup_nova_hypervisor - remove transient data and cache</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_nova_hypervisor - Stop any external services</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_nova_hypervisor<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_nova_hypervisor <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>

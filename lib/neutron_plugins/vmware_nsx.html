@@ -362,12 +362,12 @@ ul.auto-toc {
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">NSX_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/ovs_base
 
-<span class="k">function </span>setup_integration_bridge<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>setup_integration_bridge <span class="o">{</span>
     _neutron_ovs_base_setup_bridge <span class="nv">$OVS_BRIDGE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set manager to NSX controller (1st of list)</p>
@@ -384,14 +384,14 @@ ul.auto-toc {
 <span class="k">    </span>sudo ovs-vsctl <span class="nb">set</span>-manager ssl:<span class="nv">$OVS_MGR_IP</span>
 <span class="o">}</span>
 
-<span class="k">function </span>is_neutron_ovs_base_plugin<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>is_neutron_ovs_base_plugin <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>NSX uses OVS, but not the l3-agent</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">return </span>0
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_create_nova_conf<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_create_nova_conf <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>if n-cpu is enabled, then setup integration bridge</p>
 </td><td class=code><div class=highlight><pre>
@@ -400,50 +400,46 @@ ul.auto-toc {
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_install_agent_packages<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_install_agent_packages <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>VMware NSX Plugin does not run q-agt, but it currently needs dhcp and metadata agents</p>
 </td><td class=code><div class=highlight><pre>
     _neutron_ovs_base_install_agent_packages
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_common <span class="o">{</span>
     <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/neutron/plugins/vmware
     <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>nsx.ini
-    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;neutron_nsx&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>TODO(armando-migliaccio): rename this once the code rename is complete</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.nicira.NeutronPlugin.NvpPluginV2&quot;</span>
+    <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.vmware.plugin.NsxPlugin&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_debug_command<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_debug_command <span class="o">{</span>
     sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$PUBLIC_BRIDGE</span>
     iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="s2">&quot;$PUBLIC_BRIDGE&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_dhcp_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_dhcp_agent <span class="o">{</span>
     setup_integration_bridge
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT enable_isolated_metadata True
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT enable_metadata_network True
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT ovs_use_veth True
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_l3_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_l3_agent <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>VMware NSX plugin does not run L3 agent</p>
 </td><td class=code><div class=highlight><pre>
-    die <span class="nv">$LINENO</span> <span class="s2">&quot;q-l3 should must not be executed with VMware NSX plugin!&quot;</span>
+    die <span class="nv">$LINENO</span> <span class="s2">&quot;q-l3 should not be executed with VMware NSX plugin!&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_plugin_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_plugin_agent <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>VMware NSX plugin does not run L2 agent</p>
 </td><td class=code><div class=highlight><pre>
     die <span class="nv">$LINENO</span> <span class="s2">&quot;q-agt must not be executed with VMware NSX plugin!&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_service <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$MAX_LP_PER_BRIDGED_LS&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> nsx max_lp_per_bridged_ls <span class="nv">$MAX_LP_PER_BRIDGED_LS</span>
     <span class="k">fi</span>
@@ -510,26 +506,26 @@ ul.auto-toc {
 <span class="k">    fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_setup_interface_driver<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_setup_interface_driver <span class="o">{</span>
     <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
     iniset <span class="nv">$conf_file</span> DEFAULT interface_driver neutron.agent.linux.interface.OVSInterfaceDriver
 <span class="o">}</span>
 
-<span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>has_neutron_plugin_security_group <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>0 means True here</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">return </span>0
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_check_adv_test_requirements<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_check_adv_test_requirements <span class="o">{</span>
     is_service_enabled q-dhcp <span class="o">&amp;&amp;</span> <span class="k">return </span>0
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$MY_XTRACE</span>
+<span class="nv">$NSX_XTRACE</span>
 
 
 </td><td class=code><div class=highlight><pre>

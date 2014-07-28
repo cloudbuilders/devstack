@@ -427,12 +427,6 @@ LinuxBridge plugin, please see the top level README file under the
 Neutron section.</p>
 </td><td class=code><div class=highlight><pre>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Save trace setting</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
-<span class="nb">set</span> +o xtrace
-
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -468,6 +462,10 @@ Neutron section.</p>
 <span class="nv">NEUTRON_CONF</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/neutron.conf
 <span class="nb">export </span><span class="nv">NEUTRON_TEST_CONFIG_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">NEUTRON_TEST_CONFIG_FILE</span><span class="k">:-</span><span class="s2">&quot;$NEUTRON_CONF_DIR/debug.ini&quot;</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Default name for Neutron database</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_DB_NAME</span><span class="k">:-</span><span class="nv">neutron</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Default Neutron Plugin</p>
 </td><td class=code><div class=highlight><pre>
@@ -517,6 +515,13 @@ Neutron section.</p>
 <p>nova vif driver that all plugins should use</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_VIF_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_VIF_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.libvirt.vif.LibvirtGenericVIFDriver&quot;</span><span class="k">}</span>
+<span class="nv">Q_NOTIFY_NOVA_PORT_STATUS_CHANGES</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_NOTIFY_NOVA_PORT_STATUS_CHANGES</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+<span class="nv">Q_NOTIFY_NOVA_PORT_DATA_CHANGES</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_NOTIFY_NOVA_PORT_DATA_CHANGES</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+<span class="nv">VIF_PLUGGING_IS_FATAL</span><span class="o">=</span><span class="k">${</span><span class="nv">VIF_PLUGGING_IS_FATAL</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+<span class="nv">VIF_PLUGGING_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">VIF_PLUGGING_TIMEOUT</span><span class="k">:-</span><span class="nv">300</span><span class="k">}</span>
+
+<span class="c">## Provider Network Information</span>
+<span class="nv">PROVIDER_SUBNET_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">PROVIDER_SUBNET_NAME</span><span class="k">:-</span><span class="s2">&quot;provider_net&quot;</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The next two variables are configured by plugin
@@ -535,14 +540,37 @@ See _configure_neutron_common() for details about setting it up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">declare</span> -a Q_PLUGIN_EXTRA_CONF_FILES
 
-<span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
-<span class="k">    </span><span class="nv">Q_RR_CONF_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/rootwrap.conf
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_ROOTWRAP&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nv">NEUTRON_ROOTWRAP</span><span class="o">=</span><span class="k">$(</span>get_rootwrap_location neutron<span class="k">)</span>
-        <span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo $NEUTRON_ROOTWRAP $Q_RR_CONF_FILE&quot;</span>
-    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>List of (optional) config files for VPN device drivers to use with
+the neutron-q-vpn agent</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">declare</span> -a Q_VPN_EXTRA_CONF_FILES
+
+
+<span class="nv">Q_RR_CONF_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/rootwrap.conf
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_ROOTWRAP&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">NEUTRON_ROOTWRAP</span><span class="o">=</span><span class="k">$(</span>get_rootwrap_location neutron<span class="k">)</span>
+    <span class="nv">Q_RR_COMMAND</span><span class="o">=</span><span class="s2">&quot;sudo $NEUTRON_ROOTWRAP $Q_RR_CONF_FILE&quot;</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Distributed Virtual Router (DVR) configuration
+Can be:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 162)</p>
+Unexpected indentation.</div>
+<blockquote>
+legacy   - No DVR functionality
+dvr_snat - Controller or single node DVR
+dvr      - Compute node in multi-node DVR</blockquote>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">Q_DVR_MODE</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_DVR_MODE</span><span class="k">:-</span><span class="nv">legacy</span><span class="k">}</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_DVR_MODE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;legacy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">Q_ML2_PLUGIN_MECHANISM_DRIVERS</span><span class="o">=</span>openvswitch,linuxbridge,l2population
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -564,21 +592,21 @@ available for the allocation of provider networks.</p>
 <tt class="docutils literal">localrc</tt>. GRE tunnels are only supported by the openvswitch
 plugin, and currently only on Ubuntu.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ENABLE_TENANT_TUNNELS</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLE_TENANT_TUNNELS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+<span class="nv">ENABLE_TENANT_TUNNELS</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLE_TENANT_TUNNELS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If using GRE tunnels for tenant networks, specify the range of
 tunnel IDs from which tenant networks are allocated. Can be
 overriden in <tt class="docutils literal">localrc</tt> in necesssary.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">TENANT_TUNNEL_RANGES</span><span class="o">=</span><span class="k">${</span><span class="nv">TENANT_TUNNEL_RANGE</span><span class="k">:-</span><span class="nv">1</span><span class="p">:</span><span class="nv">1000</span><span class="k">}</span>
+<span class="nv">TENANT_TUNNEL_RANGES</span><span class="o">=</span><span class="k">${</span><span class="nv">TENANT_TUNNEL_RANGES</span><span class="k">:-</span><span class="nv">1</span><span class="p">:</span><span class="nv">1000</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>To use VLANs for tenant networks, set to True in localrc. VLANs
 are supported by the openvswitch and linuxbridge plugins, each
 requiring additional configuration described below.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ENABLE_TENANT_VLANS</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLE_TENANT_VLANS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+<span class="nv">ENABLE_TENANT_VLANS</span><span class="o">=</span><span class="k">${</span><span class="nv">ENABLE_TENANT_VLANS</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If using VLANs for tenant networks, set in <tt class="docutils literal">localrc</tt> to specify
@@ -587,7 +615,7 @@ allocated. An external network switch must be configured to
 trunk these VLANs between hosts for multi-host connectivity.</p>
 <p>Example: <tt class="docutils literal">TENANT_VLAN_RANGE=1000:1999</tt></p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">TENANT_VLAN_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">TENANT_VLAN_RANGE</span><span class="k">:-}</span>
+<span class="nv">TENANT_VLAN_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">TENANT_VLAN_RANGE</span><span class="k">:-}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If using VLANs for tenant networks, or if using flat or VLAN
@@ -597,7 +625,7 @@ openvswitch agent or <tt class="docutils literal">LB_PHYSICAL_INTERFACE</tt> for
 agent, as described below.</p>
 <p>Example: <tt class="docutils literal">PHYSICAL_NETWORK=default</tt></p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">PHYSICAL_NETWORK</span><span class="o">=</span><span class="k">${</span><span class="nv">PHYSICAL_NETWORK</span><span class="k">:-}</span>
+<span class="nv">PHYSICAL_NETWORK</span><span class="o">=</span><span class="k">${</span><span class="nv">PHYSICAL_NETWORK</span><span class="k">:-}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>With the openvswitch plugin, if using VLANs for tenant networks,
@@ -608,7 +636,7 @@ physical interface must be manually added to the bridge as a
 port for external connectivity.</p>
 <p>Example: <tt class="docutils literal"><span class="pre">OVS_PHYSICAL_BRIDGE=br-eth1</span></tt></p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">OVS_PHYSICAL_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_PHYSICAL_BRIDGE</span><span class="k">:-}</span>
+<span class="nv">OVS_PHYSICAL_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_PHYSICAL_BRIDGE</span><span class="k">:-}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>With the linuxbridge plugin, if using VLANs for tenant networks,
@@ -617,15 +645,23 @@ the name of the network interface to use for the physical
 network.</p>
 <p>Example: <tt class="docutils literal">LB_PHYSICAL_INTERFACE=eth1</tt></p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">LB_PHYSICAL_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">LB_PHYSICAL_INTERFACE</span><span class="k">:-}</span>
+<span class="nv">LB_PHYSICAL_INTERFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">LB_PHYSICAL_INTERFACE</span><span class="k">:-}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>When Neutron tunnels are enabled it is needed to specify the
+IP address of the end point in the local server. This IP is set
+by default to the same IP address that the HOST IP.
+This variable can be used to specify a different end point IP address
+Example: <tt class="docutils literal">TUNNEL_ENDPOINT_IP=1.1.1.1</tt></p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TUNNEL_ENDPOINT_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">TUNNEL_ENDPOINT_IP</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>With the openvswitch plugin, set to True in <tt class="docutils literal">localrc</tt> to enable
 provider GRE tunnels when <tt class="docutils literal">ENABLE_TENANT_TUNNELS</tt> is False.</p>
 <p>Example: <tt class="docutils literal">OVS_ENABLE_TUNNELING=True</tt></p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">OVS_ENABLE_TUNNELING</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_ENABLE_TUNNELING</span><span class="k">:-</span><span class="nv">$ENABLE_TENANT_TUNNELS</span><span class="k">}</span>
-<span class="k">fi</span>
+<span class="nv">OVS_ENABLE_TUNNELING</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_ENABLE_TUNNELING</span><span class="k">:-</span><span class="nv">$ENABLE_TENANT_TUNNELS</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -691,6 +727,13 @@ TEMPEST_SERVICES+<span class="o">=</span>,neutron
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Save trace setting</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nb">set</span> +o xtrace
+
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="functions">
 <h1>Functions</h1>
@@ -709,7 +752,7 @@ is_neutron_enabled</p>
 <p>configure_neutron()
 Set common config for all neutron server and agents.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_neutron<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_neutron <span class="o">{</span>
     _configure_neutron_common
     iniset_rpc_backend neutron <span class="nv">$NEUTRON_CONF</span> DEFAULT
 
@@ -728,7 +771,7 @@ Set common config for all neutron server and agents.</p>
 <span class="k">    if </span>is_service_enabled q-fwaas; <span class="k">then</span>
 <span class="k">        </span>_configure_neutron_fwaas
     <span class="k">fi</span>
-<span class="k">    if </span>is_service_enabled q-svc; <span class="k">then</span>
+<span class="k">    if </span>is_service_enabled q-agt q-svc; <span class="k">then</span>
 <span class="k">        </span>_configure_neutron_service
     <span class="k">fi</span>
 <span class="k">    if </span>is_service_enabled q-agt; <span class="k">then</span>
@@ -744,18 +787,25 @@ Set common config for all neutron server and agents.</p>
 <span class="k">        </span>_configure_neutron_metadata_agent
     <span class="k">fi</span>
 
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_DVR_MODE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;legacy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>_configure_dvr
+    <span class="k">fi</span>
+<span class="k">    if </span>is_service_enabled ceilometer; <span class="k">then</span>
+<span class="k">        </span>_configure_neutron_ceilometer_notifications
+    <span class="k">fi</span>
+
 <span class="k">    </span>_configure_neutron_debug_command
 <span class="o">}</span>
 
-<span class="k">function </span>create_nova_conf_neutron<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_nova_conf_neutron <span class="o">{</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT network_api_class <span class="s2">&quot;nova.network.neutronv2.api.API&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_admin_username <span class="s2">&quot;$Q_ADMIN_USERNAME&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_admin_password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_admin_auth_url <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_auth_strategy <span class="s2">&quot;$Q_AUTH_STRATEGY&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_admin_tenant_name <span class="s2">&quot;$SERVICE_TENANT_NAME&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_region_name <span class="s2">&quot;RegionOne&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT neutron_url <span class="s2">&quot;http://$Q_HOST:$Q_PORT&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> neutron admin_username <span class="s2">&quot;$Q_ADMIN_USERNAME&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> neutron admin_password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> neutron admin_auth_url <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> neutron auth_strategy <span class="s2">&quot;$Q_AUTH_STRATEGY&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> neutron admin_tenant_name <span class="s2">&quot;$SERVICE_TENANT_NAME&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> neutron region_name <span class="s2">&quot;$REGION_NAME&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> neutron url <span class="s2">&quot;http://$Q_HOST:$Q_PORT&quot;</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span>nova.virt.firewall.NoopFirewallDriver
@@ -768,17 +818,20 @@ Set common config for all neutron server and agents.</p>
 </td><td class=code><div class=highlight><pre>
     neutron_plugin_create_nova_conf
 
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT libvirt_vif_driver <span class="s2">&quot;$NOVA_VIF_DRIVER&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> libvirt vif_driver <span class="s2">&quot;$NOVA_VIF_DRIVER&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT linuxnet_interface_driver <span class="s2">&quot;$LINUXNET_VIF_DRIVER&quot;</span>
     <span class="k">if </span>is_service_enabled q-meta; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT service_neutron_metadata_proxy <span class="s2">&quot;True&quot;</span>
     <span class="k">fi</span>
+
+<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT vif_plugging_is_fatal <span class="s2">&quot;$VIF_PLUGGING_IS_FATAL&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT vif_plugging_timeout <span class="s2">&quot;$VIF_PLUGGING_TIMEOUT&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create_neutron_cache_dir() - Part of the _neutron_setup_keystone() process</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_neutron_cache_dir<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_neutron_cache_dir <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create cache dir</p>
 </td><td class=code><div class=highlight><pre>
@@ -801,39 +854,31 @@ Set common config for all neutron server and agents.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Migrated from keystone_data.sh</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_neutron_accounts<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_neutron_accounts <span class="o">{</span>
 
     <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
     <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;q-svc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">NEUTRON_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
-            neutron <span class="se">\</span>
-            --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --email neutron@example.com <span class="se">\</span>
-            | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        openstack role add <span class="se">\</span>
-            <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
-            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user <span class="nv">$NEUTRON_USER</span>
+
+<span class="k">        </span><span class="nv">NEUTRON_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;neutron&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
+        get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$NEUTRON_USER</span> <span class="nv">$SERVICE_TENANT</span>
+
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">NEUTRON_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
-                neutron <span class="se">\</span>
-                --type<span class="o">=</span>network <span class="se">\</span>
-                --description<span class="o">=</span><span class="s2">&quot;Neutron Service&quot;</span> <span class="se">\</span>
-                | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            openstack endpoint create <span class="se">\</span>
-                <span class="nv">$NEUTRON_SERVICE</span> <span class="se">\</span>
-                --region RegionOne <span class="se">\</span>
-                --publicurl <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span> <span class="se">\</span>
-                --adminurl <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span> <span class="se">\</span>
-                --internalurl <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span>
+
+<span class="k">            </span><span class="nv">NEUTRON_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;neutron&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;network&quot;</span> <span class="s2">&quot;Neutron Service&quot;</span><span class="k">)</span>
+            get_or_create_endpoint <span class="nv">$NEUTRON_SERVICE</span> <span class="se">\</span>
+                <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;http://$SERVICE_HOST:9696/&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>create_neutron_initial_network<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_neutron_initial_network <span class="o">{</span>
     <span class="nv">TENANT_ID</span><span class="o">=</span><span class="k">$(</span>openstack project list | grep <span class="s2">&quot; demo &quot;</span> | get_field 1<span class="k">)</span>
     die_if_not_set <span class="nv">$LINENO</span> TENANT_ID <span class="s2">&quot;Failure retrieving TENANT_ID for demo&quot;</span>
 
@@ -857,6 +902,15 @@ Since neutron command is executed in admin context at this point,
         die_if_not_set <span class="nv">$LINENO</span> SUBNET_ID <span class="s2">&quot;Failure creating SUBNET_ID for $TENANT_ID&quot;</span>
         sudo ifconfig <span class="nv">$OVS_PHYSICAL_BRIDGE</span> up
         sudo route add default gw <span class="nv">$NETWORK_GATEWAY</span> dev <span class="nv">$OVS_PHYSICAL_BRIDGE</span>
+    <span class="k">elif </span>is_provider_network; <span class="k">then</span>
+<span class="k">        </span>die_if_not_set <span class="nv">$LINENO</span> SEGMENTATION_ID <span class="s2">&quot;A SEGMENTATION_ID is required to use provider networking&quot;</span>
+        die_if_not_set <span class="nv">$LINENO</span> PROVIDER_NETWORK_TYPE <span class="s2">&quot;You must specifiy the PROVIDER_NETWORK_TYPE&quot;</span>
+        <span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>neutron net-create <span class="nv">$PHYSICAL_NETWORK</span> --tenant_id <span class="nv">$TENANT_ID</span> --provider:network_type <span class="nv">$PROVIDER_NETWORK_TYPE</span> --provider:physical_network <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> --provider:segmentation_id <span class="s2">&quot;$SEGMENTATION_ID&quot;</span> --shared | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        <span class="nv">SUBNET_ID</span><span class="o">=</span><span class="k">$(</span>neutron subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 4 <span class="k">${</span><span class="nv">ALLOCATION_POOL</span><span class="p">:+--allocation-pool </span><span class="nv">$ALLOCATION_POOL</span><span class="k">}</span> --name <span class="nv">$PROVIDER_SUBNET_NAME</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        <span class="nv">SUBNET_V6_ID</span><span class="o">=</span><span class="k">$(</span>neutron subnet-create --tenant_id <span class="nv">$TENANT_ID</span> --ip_version 6 --ipv6-address-mode slaac --gateway <span class="nv">$V6_NETWORK_GATEWAY</span> --name <span class="nv">$PROVIDER_SUBNET_NAME_V6</span> <span class="nv">$NET_ID</span> <span class="nv">$FIXED_RANGE_V6</span> | grep <span class="s1">&#39;id&#39;</span> | get_field 2<span class="k">)</span>
+        sudo ip link <span class="nb">set</span> <span class="nv">$OVS_PHYSICAL_BRIDGE</span> up
+        sudo ip link <span class="nb">set </span>br-int up
+        sudo ip link <span class="nb">set</span> <span class="nv">$PUBLIC_INTERFACE</span> up
     <span class="k">else</span>
 <span class="k">        </span><span class="nv">NET_ID</span><span class="o">=</span><span class="k">$(</span>neutron net-create --tenant-id <span class="nv">$TENANT_ID</span> <span class="s2">&quot;$PRIVATE_NETWORK_NAME&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
         die_if_not_set <span class="nv">$LINENO</span> NET_ID <span class="s2">&quot;Failure creating NET_ID for $PHYSICAL_NETWORK $TENANT_ID&quot;</span>
@@ -916,7 +970,7 @@ Since neutron command is executed in admin context at this point,
 </pre></div></td></tr><tr><td class=docs>
 <p>init_neutron() - Initialize databases, etc.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_neutron<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_neutron <span class="o">{</span>
     recreate_database <span class="nv">$Q_DB_NAME</span> utf8
 </pre></div></td></tr><tr><td class=docs>
 <p>Run Neutron db migrations</p>
@@ -927,7 +981,7 @@ Since neutron command is executed in admin context at this point,
 </pre></div></td></tr><tr><td class=docs>
 <p>install_neutron() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_neutron<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_neutron <span class="o">{</span>
     git_clone <span class="nv">$NEUTRON_REPO</span> <span class="nv">$NEUTRON_DIR</span> <span class="nv">$NEUTRON_BRANCH</span>
     setup_develop <span class="nv">$NEUTRON_DIR</span>
 <span class="o">}</span>
@@ -935,7 +989,7 @@ Since neutron command is executed in admin context at this point,
 </pre></div></td></tr><tr><td class=docs>
 <p>install_neutronclient() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_neutronclient<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_neutronclient <span class="o">{</span>
     git_clone <span class="nv">$NEUTRONCLIENT_REPO</span> <span class="nv">$NEUTRONCLIENT_DIR</span> <span class="nv">$NEUTRONCLIENT_BRANCH</span>
     setup_develop <span class="nv">$NEUTRONCLIENT_DIR</span>
     sudo install -D -m 0644 -o <span class="nv">$STACK_USER</span> <span class="o">{</span><span class="nv">$NEUTRONCLIENT_DIR</span>/tools/,/etc/bash_completion.d/<span class="o">}</span>neutron.bash_completion
@@ -944,7 +998,7 @@ Since neutron command is executed in admin context at this point,
 </pre></div></td></tr><tr><td class=docs>
 <p>install_neutron_agent_packages() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_neutron_agent_packages<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_neutron_agent_packages <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>install packages that are specific to plugin agent(s)</p>
 </td><td class=code><div class=highlight><pre>
@@ -960,7 +1014,7 @@ Since neutron command is executed in admin context at this point,
 </pre></div></td></tr><tr><td class=docs>
 <p>Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_neutron_service_and_check<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_neutron_service_and_check <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>build config-file options</p>
 </td><td class=code><div class=highlight><pre>
@@ -982,7 +1036,7 @@ Since neutron command is executed in admin context at this point,
 </pre></div></td></tr><tr><td class=docs>
 <p>Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_neutron_agents<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_neutron_agents <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start up the neutron agents if enabled</p>
 </td><td class=code><div class=highlight><pre>
@@ -991,11 +1045,19 @@ Since neutron command is executed in admin context at this point,
 
     <span class="nv">L3_CONF_FILES</span><span class="o">=</span><span class="s2">&quot;--config-file $NEUTRON_CONF --config-file=$Q_L3_CONF_FILE&quot;</span>
 
-    <span class="k">if </span>is_service_enabled q-fwaas; <span class="k">then</span>
+    <span class="k">if </span>is_provider_network; <span class="k">then</span>
+<span class="k">        </span>sudo ovs-vsctl add-port <span class="nv">$OVS_PHYSICAL_BRIDGE</span> <span class="nv">$PUBLIC_INTERFACE</span>
+        sudo ip link <span class="nb">set</span> <span class="nv">$OVS_PHYSICAL_BRIDGE</span> up
+        sudo ip link <span class="nb">set </span>br-int up
+        sudo ip link <span class="nb">set</span> <span class="nv">$PUBLIC_INTERFACE</span> up
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled q-fwaas; <span class="k">then</span>
 <span class="k">        </span><span class="nv">L3_CONF_FILES</span><span class="o">=</span><span class="s2">&quot;$L3_CONF_FILES --config-file $Q_FWAAS_CONF_FILE&quot;</span>
+        <span class="nv">VPN_CONF_FILES</span><span class="o">=</span><span class="s2">&quot;$VPN_CONF_FILES --config-file $Q_FWAAS_CONF_FILE&quot;</span>
     <span class="k">fi</span>
 <span class="k">    if </span>is_service_enabled q-vpn; <span class="k">then</span>
-<span class="k">        </span>screen_it q-vpn <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; $AGENT_VPN_BINARY $L3_CONF_FILES&quot;</span>
+<span class="k">        </span>screen_it q-vpn <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; $AGENT_VPN_BINARY $VPN_CONF_FILES&quot;</span>
     <span class="k">else</span>
 <span class="k">        </span>screen_it q-l3 <span class="s2">&quot;cd $NEUTRON_DIR &amp;&amp; python $AGENT_L3_BINARY $L3_CONF_FILES&quot;</span>
     <span class="k">fi</span>
@@ -1021,7 +1083,7 @@ Since neutron command is executed in admin context at this point,
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_neutron() - Stop running processes (non-screen)</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_neutron<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_neutron <span class="o">{</span>
     <span class="k">if </span>is_service_enabled q-dhcp; <span class="k">then</span>
 <span class="k">        </span><span class="nv">pid</span><span class="o">=</span><span class="k">$(</span>ps aux | awk <span class="s1">&#39;/[d]nsmasq.+interface=(tap|ns-)/ { print $2 }&#39;</span><span class="k">)</span>
         <span class="o">[</span> ! -z <span class="s2">&quot;$pid&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> sudo <span class="nb">kill</span> -9 <span class="nv">$pid</span>
@@ -1048,7 +1110,7 @@ Since neutron command is executed in admin context at this point,
 <p>cleanup_neutron() - Remove residual data files, anything left over from previous
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_neutron<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>cleanup_neutron <span class="o">{</span>
     <span class="k">if </span>is_neutron_ovs_base_plugin; <span class="k">then</span>
 <span class="k">        </span>neutron_ovs_base_cleanup
     <span class="k">fi</span>
@@ -1056,7 +1118,7 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>delete all namespaces created by neutron</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>ns in <span class="k">$(</span>sudo ip netns list | grep -o -E <span class="s1">&#39;(qdhcp|qrouter|qlbaas)-[0-9a-f-]*&#39;</span><span class="k">)</span>; <span class="k">do</span>
+    <span class="k">for </span>ns in <span class="k">$(</span>sudo ip netns list | grep -o -E <span class="s1">&#39;(qdhcp|qrouter|qlbaas|fip|snat)-[0-9a-f-]*&#39;</span><span class="k">)</span>; <span class="k">do</span>
 <span class="k">        </span>sudo ip netns delete <span class="k">${</span><span class="nv">ns</span><span class="k">}</span>
     <span class="k">done</span>
 <span class="o">}</span>
@@ -1066,7 +1128,7 @@ runs that a clean run would need to clean up</p>
 Set common config for all neutron server and agents.
 This MUST be called before other <tt class="docutils literal">_configure_neutron_*</tt> functions.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_configure_neutron_common<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_common <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Put config files in <tt class="docutils literal">NEUTRON_CONF_DIR</tt> for everyone to find</p>
 </td><td class=code><div class=highlight><pre>
@@ -1113,11 +1175,9 @@ For addition plugin config files, set <tt class="docutils literal">Q_PLUGIN_EXTR
 directory</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="nv">$Q_PLUGIN_EXTRA_CONF_PATH</span> !<span class="o">=</span> <span class="s1">&#39;&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>mkdir -p /<span class="nv">$Q_PLUGIN_EXTRA_CONF_PATH</span>
-        <span class="nb">local </span>f
+<span class="k">        </span><span class="nb">local </span>f
         <span class="k">for</span> <span class="o">((</span> <span class="nv">f</span><span class="o">=</span>0; <span class="nv">$f</span> &lt; <span class="k">${#</span><span class="nv">Q_PLUGIN_EXTRA_CONF_FILES</span><span class="p">[@]</span><span class="k">}</span>; f+<span class="o">=</span>1 <span class="o">))</span>; <span class="k">do</span>
 <span class="k">            </span>Q_PLUGIN_EXTRA_CONF_FILES<span class="o">[</span><span class="nv">$f</span><span class="o">]=</span><span class="nv">$Q_PLUGIN_EXTRA_CONF_PATH</span>/<span class="k">${</span><span class="nv">Q_PLUGIN_EXTRA_CONF_FILES</span><span class="p">[</span><span class="nv">$f</span><span class="p">]</span><span class="k">}</span>
-            cp <span class="nv">$NEUTRON_DIR</span>/<span class="k">${</span><span class="nv">Q_PLUGIN_EXTRA_CONF_FILES</span><span class="p">[</span><span class="nv">$f</span><span class="p">]</span><span class="k">}</span> /<span class="k">${</span><span class="nv">Q_PLUGIN_EXTRA_CONF_FILES</span><span class="p">[</span><span class="nv">$f</span><span class="p">]</span><span class="k">}</span>
         <span class="k">done</span>
 <span class="k">    fi</span>
 
@@ -1142,7 +1202,7 @@ directory</p>
 <span class="k">    </span>_neutron_setup_rootwrap
 <span class="o">}</span>
 
-<span class="k">function </span>_configure_neutron_debug_command<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_debug_command <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_DEBUG_COMMAND&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        return</span>
 <span class="k">    fi</span>
@@ -1159,7 +1219,7 @@ directory</p>
     neutron_plugin_configure_debug_command
 <span class="o">}</span>
 
-<span class="k">function </span>_configure_neutron_dhcp_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_dhcp_agent <span class="o">{</span>
     <span class="nv">AGENT_DHCP_BINARY</span><span class="o">=</span><span class="s2">&quot;$NEUTRON_BIN_DIR/neutron-dhcp-agent&quot;</span>
     <span class="nv">Q_DHCP_CONF_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/dhcp_agent.ini
 
@@ -1170,24 +1230,13 @@ directory</p>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT use_namespaces <span class="nv">$Q_USE_NAMESPACE</span>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Define extra &quot;DEFAULT&quot; configuration options when q-dhcp is configured by
-defining the array <tt class="docutils literal">Q_DHCP_EXTRA_DEFAULT_OPTS</tt>.
-For Example: <tt class="docutils literal"><span class="pre">Q_DHCP_EXTRA_DEFAULT_OPTS=(foo=true</span> bar=2)</tt></p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>I in <span class="s2">&quot;${Q_DHCP_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Replace the first '=' with ' ' for iniset syntax</p>
-</td><td class=code><div class=highlight><pre>
-        iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
-    <span class="k">done</span>
-
-<span class="k">    </span>_neutron_setup_interface_driver <span class="nv">$Q_DHCP_CONF_FILE</span>
+    _neutron_setup_interface_driver <span class="nv">$Q_DHCP_CONF_FILE</span>
 
     neutron_plugin_configure_dhcp_agent
 <span class="o">}</span>
 
-<span class="k">function </span>_configure_neutron_l3_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_l3_agent <span class="o">{</span>
+    <span class="nb">local </span>cfg_file
     <span class="nv">Q_L3_ENABLED</span><span class="o">=</span>True
 </pre></div></td></tr><tr><td class=docs>
 <p>for l3-agent, only use per tenant router if we have namespaces</p>
@@ -1201,6 +1250,15 @@ For Example: <tt class="docutils literal"><span class="pre">Q_DHCP_EXTRA_DEFAULT
 <span class="k">        </span><span class="nv">Q_FWAAS_CONF_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/fwaas_driver.ini
     <span class="k">fi</span>
 
+<span class="k">    if </span>is_service_enabled q-vpn; <span class="k">then</span>
+<span class="k">        </span><span class="nv">Q_VPN_CONF_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/vpn_agent.ini
+        cp <span class="nv">$NEUTRON_DIR</span>/etc/vpn_agent.ini <span class="nv">$Q_VPN_CONF_FILE</span>
+        <span class="nv">VPN_CONF_FILES</span><span class="o">=</span><span class="s2">&quot;--config-file $NEUTRON_CONF --config-file=$Q_L3_CONF_FILE --config-file=$Q_VPN_CONF_FILE&quot;</span>
+        <span class="k">for </span>cfg_file in <span class="k">${</span><span class="nv">Q_VPN_EXTRA_CONF_FILES</span><span class="p">[@]</span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span>VPN_CONF_FILES+<span class="o">=</span><span class="s2">&quot; --config-file $cfg_file&quot;</span>
+        <span class="k">done</span>
+<span class="k">    fi</span>
+
 <span class="k">    </span>cp <span class="nv">$NEUTRON_DIR</span>/etc/l3_agent.ini <span class="nv">$Q_L3_CONF_FILE</span>
 
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT verbose True
@@ -1213,7 +1271,7 @@ For Example: <tt class="docutils literal"><span class="pre">Q_DHCP_EXTRA_DEFAULT
     neutron_plugin_configure_l3_agent
 <span class="o">}</span>
 
-<span class="k">function </span>_configure_neutron_metadata_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_metadata_agent <span class="o">{</span>
     <span class="nv">AGENT_META_BINARY</span><span class="o">=</span><span class="s2">&quot;$NEUTRON_BIN_DIR/neutron-metadata-agent&quot;</span>
     <span class="nv">Q_META_CONF_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/metadata_agent.ini
 
@@ -1224,36 +1282,45 @@ For Example: <tt class="docutils literal"><span class="pre">Q_DHCP_EXTRA_DEFAULT
     iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT nova_metadata_ip <span class="nv">$Q_META_DATA_IP</span>
     iniset <span class="nv">$Q_META_CONF_FILE</span> DEFAULT root_helper <span class="s2">&quot;$Q_RR_COMMAND&quot;</span>
 
-    _neutron_setup_keystone <span class="nv">$Q_META_CONF_FILE</span> DEFAULT True True True
+    _neutron_setup_keystone <span class="nv">$Q_META_CONF_FILE</span> DEFAULT True True
 
 <span class="o">}</span>
 
-<span class="k">function </span>_configure_neutron_lbaas<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_ceilometer_notifications <span class="o">{</span>
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT notification_driver neutron.openstack.common.notifier.rpc_notifier
+<span class="o">}</span>
+
+<span class="k">function </span>_configure_neutron_lbaas <span class="o">{</span>
     neutron_agent_lbaas_configure_common
     neutron_agent_lbaas_configure_agent
 <span class="o">}</span>
 
-<span class="k">function </span>_configure_neutron_metering<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_metering <span class="o">{</span>
     neutron_agent_metering_configure_common
     neutron_agent_metering_configure_agent
 <span class="o">}</span>
 
-<span class="k">function </span>_configure_neutron_fwaas<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_fwaas <span class="o">{</span>
     neutron_fwaas_configure_common
     neutron_fwaas_configure_driver
 <span class="o">}</span>
 
-<span class="k">function </span>_configure_neutron_vpn<span class="o">()</span>
-<span class="o">{</span>
+<span class="k">function </span>_configure_neutron_vpn <span class="o">{</span>
     neutron_vpn_install_agent_packages
     neutron_vpn_configure_common
 <span class="o">}</span>
+
+<span class="k">function </span>_configure_dvr <span class="o">{</span>
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT router_distributed True
+    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT agent_mode <span class="nv">$Q_DVR_MODE</span>
+<span class="o">}</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>_configure_neutron_plugin_agent() - Set config files for neutron plugin agent
 It is called when q-agt is enabled.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_configure_neutron_plugin_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_plugin_agent <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Specify the default root helper prior to agent configuration to
 ensure that an agent's configuration can override the default</p>
@@ -1272,7 +1339,7 @@ ensure that an agent's configuration can override the default</p>
 <p>_configure_neutron_service() - Set config files for neutron service
 It is called when q-svc is enabled.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_configure_neutron_service<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_neutron_service <span class="o">{</span>
     <span class="nv">Q_API_PASTE_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/api-paste.ini
     <span class="nv">Q_POLICY_FILE</span><span class="o">=</span><span class="nv">$NEUTRON_CONF_DIR</span>/policy.json
 
@@ -1297,16 +1364,16 @@ It is called when q-svc is enabled.</p>
     _neutron_setup_keystone <span class="nv">$NEUTRON_CONF</span> keystone_authtoken
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Define extra &quot;DEFAULT&quot; configuration options when q-svc is configured by
-defining the array <tt class="docutils literal">Q_SRV_EXTRA_DEFAULT_OPTS</tt>.
-For Example: <tt class="docutils literal"><span class="pre">Q_SRV_EXTRA_DEFAULT_OPTS=(foo=true</span> bar=2)</tt></p>
+<p>Configuration for neutron notifations to nova.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>I in <span class="s2">&quot;${Q_SRV_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Replace the first '=' with ' ' for iniset syntax</p>
-</td><td class=code><div class=highlight><pre>
-        iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT <span class="k">${</span><span class="nv">I</span><span class="p">/=/ </span><span class="k">}</span>
-    <span class="k">done</span>
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT notify_nova_on_port_status_changes <span class="nv">$Q_NOTIFY_NOVA_PORT_STATUS_CHANGES</span>
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT notify_nova_on_port_data_changes <span class="nv">$Q_NOTIFY_NOVA_PORT_DATA_CHANGES</span>
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT nova_url <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2&quot;</span>
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT nova_admin_username nova
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT nova_admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    <span class="nv">ADMIN_TENANT_ID</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ service / { print \$2 }&quot;</span><span class="k">)</span>
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT nova_admin_tenant_id <span class="nv">$ADMIN_TENANT_ID</span>
+    iniset <span class="nv">$NEUTRON_CONF</span> DEFAULT nova_admin_auth_url  <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_AUTH_PORT/v2.0&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure plugin</p>
@@ -1322,7 +1389,7 @@ For Example: <tt class="docutils literal"><span class="pre">Q_SRV_EXTRA_DEFAULT_
 </pre></div></td></tr><tr><td class=docs>
 <p>_neutron_service_plugin_class_add() - add service plugin class</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_neutron_service_plugin_class_add<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_service_plugin_class_add <span class="o">{</span>
     <span class="nb">local </span><span class="nv">service_plugin_class</span><span class="o">=</span><span class="nv">$1</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="nv">$Q_SERVICE_PLUGIN_CLASSES</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">Q_SERVICE_PLUGIN_CLASSES</span><span class="o">=</span><span class="nv">$service_plugin_class</span>
@@ -1334,7 +1401,7 @@ For Example: <tt class="docutils literal"><span class="pre">Q_SRV_EXTRA_DEFAULT_
 </pre></div></td></tr><tr><td class=docs>
 <p>_neutron_setup_rootwrap() - configure Neutron's rootwrap</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_neutron_setup_rootwrap<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_setup_rootwrap <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_ROOTWRAP&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        return</span>
 <span class="k">    fi</span>
@@ -1388,24 +1455,15 @@ location moved in newer versions, prefer new location</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Configures keystone integration for neutron service and agents</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_neutron_setup_keystone<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_setup_keystone <span class="o">{</span>
     <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">use_auth_url</span><span class="o">=</span><span class="nv">$3</span>
     <span class="nb">local </span><span class="nv">skip_auth_cache</span><span class="o">=</span><span class="nv">$4</span>
-    <span class="nb">local </span><span class="nv">use_service_port</span><span class="o">=</span><span class="nv">$5</span>
-    <span class="nb">local </span><span class="nv">keystone_port</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_PORT</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$use_service_port</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">keystone_port</span><span class="o">=</span><span class="nv">$KEYSTONE_SERVICE_PORT</span>
-    <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[[</span> -n <span class="nv">$use_auth_url</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_url <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_AUTH_HOST:$keystone_port/v2.0&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span>iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_host <span class="nv">$KEYSTONE_SERVICE_HOST</span>
-        iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_port <span class="nv">$keystone_port</span>
-        iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_protocol <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>
-    <span class="k">fi</span>
-<span class="k">    </span>iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
+
+    iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> auth_uri <span class="nv">$KEYSTONE_SERVICE_URI</span>
+    iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
+    iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> admin_user <span class="nv">$Q_ADMIN_USERNAME</span>
     iniset <span class="nv">$conf_file</span> <span class="nv">$section</span> admin_password <span class="nv">$SERVICE_PASSWORD</span>
     <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$skip_auth_cache</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1417,7 +1475,7 @@ location moved in newer versions, prefer new location</p>
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_neutron_setup_interface_driver<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_setup_interface_driver <span class="o">{</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>ovs_use_veth needs to be set before the plugin configuration
@@ -1433,14 +1491,14 @@ occurs to allow plugins to override the setting.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#--------------------------------</span>
 
-<span class="k">function </span>delete_probe<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>delete_probe <span class="o">{</span>
     <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
     <span class="nv">net_id</span><span class="o">=</span><span class="sb">`</span>_get_net_id <span class="nv">$from_net</span><span class="sb">`</span>
     <span class="nv">probe_id</span><span class="o">=</span><span class="sb">`</span>neutron-debug --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> probe-list -c id -c network_id | grep <span class="nv">$net_id</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="sb">`</span>
     neutron-debug --os-tenant-name admin --os-username admin probe-delete <span class="nv">$probe_id</span>
 <span class="o">}</span>
 
-<span class="k">function </span>setup_neutron_debug<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>setup_neutron_debug <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_DEBUG_COMMAND&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">public_net_id</span><span class="o">=</span><span class="sb">`</span>_get_net_id <span class="nv">$PUBLIC_NETWORK_NAME</span><span class="sb">`</span>
         neutron-debug --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> probe-create --device-owner compute <span class="nv">$public_net_id</span>
@@ -1449,23 +1507,23 @@ occurs to allow plugins to override the setting.</p>
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>teardown_neutron_debug<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>teardown_neutron_debug <span class="o">{</span>
     delete_probe <span class="nv">$PUBLIC_NETWORK_NAME</span>
     delete_probe <span class="nv">$PRIVATE_NETWORK_NAME</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_get_net_id<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_get_net_id <span class="o">{</span>
     neutron --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> net-list | grep <span class="nv">$1</span> | awk <span class="s1">&#39;{print $2}&#39;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_get_probe_cmd_prefix<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_get_probe_cmd_prefix <span class="o">{</span>
     <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="s2">&quot;$1&quot;</span>
     <span class="nv">net_id</span><span class="o">=</span><span class="sb">`</span>_get_net_id <span class="nv">$from_net</span><span class="sb">`</span>
     <span class="nv">probe_id</span><span class="o">=</span><span class="sb">`</span>neutron-debug --os-tenant-name admin --os-username admin --os-password <span class="nv">$ADMIN_PASSWORD</span> probe-list -c id -c network_id | grep <span class="nv">$net_id</span> | awk <span class="s1">&#39;{print $2}&#39;</span> | head -n 1<span class="sb">`</span>
     <span class="nb">echo</span> <span class="s2">&quot;$Q_RR_COMMAND ip netns exec qprobe-$probe_id&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_ping_check_neutron<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_ping_check_neutron <span class="o">{</span>
     <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">ip</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">timeout_sec</span><span class="o">=</span><span class="nv">$3</span>
@@ -1489,7 +1547,7 @@ occurs to allow plugins to override the setting.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>ssh check</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_ssh_check_neutron<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_ssh_check_neutron <span class="o">{</span>
     <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">key_file</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">ip</span><span class="o">=</span><span class="nv">$3</span>
@@ -1519,7 +1577,7 @@ occurs to allow plugins to override the setting.</p>
     <span class="k">fi</span>
 <span class="k">done</span>
 
-<span class="k">function </span>_neutron_third_party_do<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_third_party_do <span class="o">{</span>
     <span class="k">for </span>third_party in <span class="k">${</span><span class="nv">NEUTRON_THIRD_PARTIES</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
         <span class="k">${</span><span class="nv">1</span><span class="k">}</span>_<span class="k">${</span><span class="nv">third_party</span><span class="k">}</span>
     <span class="k">done</span>
@@ -1528,43 +1586,50 @@ occurs to allow plugins to override the setting.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_neutron_third_party() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_neutron_third_party<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_neutron_third_party <span class="o">{</span>
     _neutron_third_party_do configure
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>init_neutron_third_party() - Initialize databases, etc.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_neutron_third_party<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_neutron_third_party <span class="o">{</span>
     _neutron_third_party_do init
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install_neutron_third_party() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_neutron_third_party<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_neutron_third_party <span class="o">{</span>
     _neutron_third_party_do install
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>start_neutron_third_party() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_neutron_third_party<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_neutron_third_party <span class="o">{</span>
     _neutron_third_party_do start
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_neutron_third_party - Stop running processes (non-screen)</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_neutron_third_party<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_neutron_third_party <span class="o">{</span>
     _neutron_third_party_do stop
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>check_neutron_third_party_integration() - Check that third party integration is sane</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>check_neutron_third_party_integration<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>check_neutron_third_party_integration <span class="o">{</span>
     _neutron_third_party_do check
+<span class="o">}</span>
+
+<span class="k">function </span>is_provider_network <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$Q_USE_PROVIDER_NETWORKING&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$Q_L3_ENABLED&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        return </span>0
+    <span class="k">fi</span>
+<span class="k">    return </span>1
 <span class="o">}</span>
 
 

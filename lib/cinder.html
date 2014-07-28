@@ -402,6 +402,7 @@ Dependencies:</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">CINDER_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_DRIVER</span><span class="k">:-</span><span class="nv">default</span><span class="k">}</span>
 <span class="nv">CINDER_PLUGINS</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/lib/cinder_plugins
+<span class="nv">CINDER_BACKENDS</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/lib/cinder_backends
 
 </pre></div></td></tr><tr><td class=docs>
 <p>grab plugin config if specified via cinder_driver</p>
@@ -439,10 +440,27 @@ Dependencies:</p>
 <span class="k">    </span><span class="nv">CINDER_BIN_DIR</span><span class="o">=</span><span class="k">$(</span>get_python_exec_prefix<span class="k">)</span>
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Support for multi lvm backend configuration (default is no support)</p>
+<p>Maintain this here for backward-compatibility with the old configuration
+DEPRECATED: Use CINDER_ENABLED_BACKENDS instead
+Support for multi lvm backend configuration (default is no support)</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">CINDER_MULTI_LVM_BACKEND</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$CINDER_MULTI_LVM_BACKEND</span><span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Default backends
+The backend format is type:name where type is one of the supported backend
+types (lvm, nfs, etc) and name is the identifier used in the Cinder
+configuration and for the volume type name.  Multiple backends are
+comma-separated.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$CINDER_MULTI_LVM_BACKEND</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="k">:-</span><span class="nv">lvm</span><span class="p">:</span><span class="nv">lvmdriver</span><span class="p">-1</span><span class="k">}</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="k">:-</span><span class="nv">lvm</span><span class="p">:</span><span class="nv">lvmdriver</span><span class="p">-1,lvm:</span><span class="nv">lvmdriver</span><span class="p">-2</span><span class="k">}</span>
+<span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Should cinder perform secure deletion of volumes?
@@ -462,25 +480,23 @@ less than the 60 second default
 <span class="nv">CINDER_PERIODIC_INTERVAL</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_PERIODIC_INTERVAL</span><span class="k">:-</span><span class="nv">60</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Name of the lvm volume groups to use/create for iscsi volumes</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">VOLUME_GROUP</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">:-</span><span class="nv">stack</span><span class="p">-volumes</span><span class="k">}</span>
-<span class="nv">VOLUME_BACKING_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
-<span class="nv">VOLUME_BACKING_DEVICE</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_DEVICE</span><span class="k">:-}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>VOLUME_GROUP2 is used only if CINDER_MULTI_LVM_BACKEND = True</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">VOLUME_GROUP2</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_GROUP2</span><span class="k">:-</span><span class="nv">stack</span><span class="p">-volumes2</span><span class="k">}</span>
-<span class="nv">VOLUME_BACKING_FILE2</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_FILE2</span><span class="k">:-</span><span class="nv">$DATA_DIR</span><span class="p">/</span><span class="k">${</span><span class="nv">VOLUME_GROUP2</span><span class="k">}</span><span class="p">-backing-file</span><span class="k">}</span>
-<span class="nv">VOLUME_BACKING_DEVICE2</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_BACKING_DEVICE2</span><span class="k">:-}</span>
-
-<span class="nv">VOLUME_NAME_PREFIX</span><span class="o">=</span><span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">:-</span><span class="nv">volume</span><span class="p">-</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Tell Tempest this project is present</p>
 </td><td class=code><div class=highlight><pre>
 TEMPEST_SERVICES+<span class="o">=</span>,cinder
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Source the enabled backends</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled c-vol <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">        </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+        <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
+        <span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$CINDER_BACKENDS</span>/<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">source</span> <span class="nv">$CINDER_BACKENDS</span>/<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span>
+        <span class="k">fi</span>
+<span class="k">    done</span>
+<span class="k">fi</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -499,55 +515,10 @@ is_cinder_enabled</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>_clean_lvm_lv removes all cinder LVM volumes</p>
-<p>Usage: _clean_lvm_lv $VOLUME_GROUP $VOLUME_NAME_PREFIX</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_clean_lvm_lv<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">vg</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">lv_prefix</span><span class="o">=</span><span class="nv">$2</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean out existing volumes</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>lv in <span class="sb">`</span>sudo lvs --noheadings -o lv_name <span class="nv">$vg</span><span class="sb">`</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>lv_prefix prefixes the LVs we want</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;${lv#$lv_prefix}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$lv&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>sudo lvremove -f <span class="nv">$vg</span>/<span class="nv">$lv</span>
-        <span class="k">fi</span>
-<span class="k">    done</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>_clean_lvm_backing_file() removes the backing file of the
-volume group used by cinder</p>
-<p>Usage: _clean_lvm_backing_file() $VOLUME_GROUP</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_clean_lvm_backing_file<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">vg</span><span class="o">=</span><span class="nv">$1</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>if there is no logical volume left, it's safe to attempt a cleanup
-of the backing file</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;`sudo lvs --noheadings -o lv_name $vg`&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>if the backing physical device is a loop device, it was probably setup by devstack</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$VG_DEV&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> -e <span class="s2">&quot;$VG_DEV&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">VG_DEV</span><span class="o">=</span><span class="k">$(</span>sudo losetup -j <span class="nv">$DATA_DIR</span>/<span class="k">${</span><span class="nv">vg</span><span class="k">}</span>-backing-file | awk -F<span class="s1">&#39;:&#39;</span> <span class="s1">&#39;/backing-file/ { print $1}&#39;</span><span class="k">)</span>
-            sudo losetup -d <span class="nv">$VG_DEV</span>
-            rm -f <span class="nv">$DATA_DIR</span>/<span class="k">${</span><span class="nv">vg</span><span class="k">}</span>-backing-file
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>cleanup_cinder() - Remove residual data files, anything left over from previous
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_cinder<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>cleanup_cinder <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>ensure the volume group is cleared up because fails might
 leave dead volumes in the group</p>
@@ -575,32 +546,27 @@ So check the response and restart if need be</p>
         <span class="k">done</span>
 <span class="k">    fi</span>
 
-<span class="k">    if </span>is_service_enabled cinder; <span class="k">then</span>
-<span class="k">        </span>sudo rm -rf <span class="nv">$CINDER_STATE_PATH</span>/volumes/*
-    <span class="k">fi</span>
-
 <span class="k">    if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span>stop_service tgt
     <span class="k">else</span>
 <span class="k">        </span>stop_service tgtd
     <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Campsite rule: leave behind a volume group at least as clean as we found it</p>
-</td><td class=code><div class=highlight><pre>
-    _clean_lvm_lv <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
-    _clean_lvm_backing_file <span class="nv">$VOLUME_GROUP</span>
-
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>_clean_lvm_lv <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
-        _clean_lvm_backing_file <span class="nv">$VOLUME_GROUP2</span>
-    <span class="k">fi</span>
+<span class="k">    if </span>is_service_enabled c-vol <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+            <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
+            <span class="k">if </span><span class="nb">type </span>cleanup_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
+<span class="k">                </span>cleanup_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span>
+            <span class="k">fi</span>
+<span class="k">        done</span>
+<span class="k">    fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_cinder_rootwrap() - configure Cinder's rootwrap</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_cinder_rootwrap<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_cinder_rootwrap <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the paths of certain binaries</p>
 </td><td class=code><div class=highlight><pre>
@@ -645,7 +611,7 @@ Wipe any existing rootwrap.d files first</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_cinder() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_cinder<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_cinder <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$CINDER_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$CINDER_CONF_DIR</span>
     <span class="k">fi</span>
@@ -666,11 +632,7 @@ Wipe any existing rootwrap.d files first</p>
     inicomment <span class="nv">$CINDER_API_PASTE_INI</span> filter:authtoken admin_password
     inicomment <span class="nv">$CINDER_API_PASTE_INI</span> filter:authtoken signing_dir
 
-    cp <span class="nv">$CINDER_DIR</span>/etc/cinder/cinder.conf.sample <span class="nv">$CINDER_CONF</span>
-
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
     iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
     iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken admin_user cinder
@@ -680,26 +642,8 @@ Wipe any existing rootwrap.d files first</p>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT auth_strategy keystone
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT verbose True
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT enabled_backends lvmdriver-1,lvmdriver-2
-        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-1 volume_group <span class="nv">$VOLUME_GROUP</span>
-        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-1 volume_driver cinder.volume.drivers.lvm.LVMISCSIDriver
-        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-1 volume_backend_name LVM_iSCSI
-        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-2 volume_group <span class="nv">$VOLUME_GROUP2</span>
-        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-2 volume_driver cinder.volume.drivers.lvm.LVMISCSIDriver
-        iniset <span class="nv">$CINDER_CONF</span> lvmdriver-2 volume_backend_name LVM_iSCSI_2
-</pre></div></td></tr><tr><td class=docs>
-<p>NOTE(mriedem): Work around Cinder &quot;wishlist&quot; bug 1255593</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CINDER_SECURE_DELETE&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>iniset <span class="nv">$CINDER_CONF</span> lvmdriver-1 volume_clear none
-            iniset <span class="nv">$CINDER_CONF</span> lvmdriver-2 volume_clear none
-        <span class="k">fi</span>
-<span class="k">    else</span>
-<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_group <span class="nv">$VOLUME_GROUP</span>
-        iniset <span class="nv">$CINDER_CONF</span> DEFAULT volume_name_template <span class="k">${</span><span class="nv">VOLUME_NAME_PREFIX</span><span class="k">}</span>%s
-    <span class="k">fi</span>
-<span class="k">    </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT my_ip <span class="s2">&quot;$CINDER_SERVICE_HOST&quot;</span>
+
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT my_ip <span class="s2">&quot;$CINDER_SERVICE_HOST&quot;</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT iscsi_helper tgtadm
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT sql_connection <span class="sb">`</span>database_connection_url cinder<span class="sb">`</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT api_paste_config <span class="nv">$CINDER_API_PASTE_INI</span>
@@ -708,9 +652,39 @@ Wipe any existing rootwrap.d files first</p>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT state_path <span class="nv">$CINDER_STATE_PATH</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT lock_path <span class="nv">$CINDER_STATE_PATH</span>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT periodic_interval <span class="nv">$CINDER_PERIODIC_INTERVAL</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>NOTE(thingee): Cinder V1 API is deprecated and defaults to off as of
+Juno. Keep it enabled so we can continue testing while it's still
+supported.</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT enable_v1_api <span class="nb">true</span>
 
-    <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT notification_driver <span class="s2">&quot;cinder.openstack.common.notifier.rpc_notifier&quot;</span>
+<span class="nb">    </span><span class="k">if </span>is_service_enabled c-vol <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">enabled_backends</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="nv">default_type</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="k">for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+            <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
+            <span class="k">if </span><span class="nb">type </span>configure_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
+<span class="k">                </span>configure_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span>
+            <span class="k">fi</span>
+<span class="k">            if</span> <span class="o">[[</span> -z <span class="s2">&quot;$default_type&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">default_type</span><span class="o">=</span><span class="nv">$BE_TYPE</span>
+            <span class="k">fi</span>
+<span class="k">            </span>enabled_backends+<span class="o">=</span><span class="nv">$BE_NAME</span>,
+        <span class="k">done</span>
+<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT enabled_backends <span class="k">${</span><span class="nv">enabled_backends</span><span class="p">%,*</span><span class="k">}</span>
+        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$default_type&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT default_volume_type <span class="k">${</span><span class="nv">default_type</span><span class="k">}</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+<span class="k">    if </span>is_service_enabled swift; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT backup_swift_url <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled ceilometer; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT notification_driver <span class="s2">&quot;messaging&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled tls-proxy; <span class="k">then</span>
@@ -776,7 +750,7 @@ see <a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi
 </pre></div></td></tr><tr><td class=docs>
 <p>Migrated from keystone_data.sh</p>
 </td><td class=code><div class=highlight><pre>
-create_cinder_accounts<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_cinder_accounts <span class="o">{</span>
 
     <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
     <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
@@ -785,39 +759,26 @@ create_cinder_accounts<span class="o">()</span> <span class="o">{</span>
 <p>Cinder</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;c-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">CINDER_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
-            cinder <span class="se">\</span>
-            --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --email cinder@example.com <span class="se">\</span>
-            | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        openstack role add <span class="se">\</span>
-            <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
-            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user <span class="nv">$CINDER_USER</span>
+
+<span class="k">        </span><span class="nv">CINDER_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;cinder&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
+        get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$CINDER_USER</span> <span class="nv">$SERVICE_TENANT</span>
+
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">CINDER_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
-                cinder <span class="se">\</span>
-                --type<span class="o">=</span>volume <span class="se">\</span>
-                --description<span class="o">=</span><span class="s2">&quot;Cinder Volume Service&quot;</span> <span class="se">\</span>
-                | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            openstack endpoint create <span class="se">\</span>
-                <span class="nv">$CINDER_SERVICE</span> <span class="se">\</span>
-                --region RegionOne <span class="se">\</span>
-                --publicurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
-                --adminurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
-                --internalurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span>
-            <span class="nv">CINDER_V2_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
-                cinderv2 <span class="se">\</span>
-                --type<span class="o">=</span>volumev2 <span class="se">\</span>
-                --description<span class="o">=</span><span class="s2">&quot;Cinder Volume Service V2&quot;</span> <span class="se">\</span>
-                | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            openstack endpoint create <span class="se">\</span>
-                <span class="nv">$CINDER_V2_SERVICE</span> <span class="se">\</span>
-                --region RegionOne <span class="se">\</span>
-                --publicurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
-                --adminurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
-                --internalurl <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span>
+
+<span class="k">            </span><span class="nv">CINDER_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;cinder&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;volume&quot;</span> <span class="s2">&quot;Cinder Volume Service&quot;</span><span class="k">)</span>
+            get_or_create_endpoint <span class="nv">$CINDER_SERVICE</span> <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span>
+
+            <span class="nv">CINDER_V2_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;cinderv2&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;volumev2&quot;</span> <span class="s2">&quot;Cinder Volume Service V2&quot;</span><span class="k">)</span>
+            get_or_create_endpoint <span class="nv">$CINDER_V2_SERVICE</span> <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
@@ -825,7 +786,7 @@ create_cinder_accounts<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>create_cinder_cache_dir() - Part of the init_cinder() process</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_cinder_cache_dir<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_cinder_cache_dir <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create cache dir</p>
 </td><td class=code><div class=highlight><pre>
@@ -834,66 +795,10 @@ create_cinder_accounts<span class="o">()</span> <span class="o">{</span>
     rm -f <span class="nv">$CINDER_AUTH_CACHE_DIR</span>/*
 <span class="o">}</span>
 
-create_cinder_volume_group<span class="o">()</span> <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>According to the <tt class="docutils literal">CINDER_MULTI_LVM_BACKEND</tt> value, configure one or two default volumes
-group called <tt class="docutils literal"><span class="pre">stack-volumes</span></tt> (and <tt class="docutils literal"><span class="pre">stack-volumes2</span></tt>) for the volume
-service if it (they) does (do) not yet exist. If you don't wish to use a
-file backed volume group, create your own volume group called <tt class="docutils literal"><span class="pre">stack-volumes</span></tt>
-and <tt class="docutils literal"><span class="pre">stack-volumes2</span></tt> before invoking <tt class="docutils literal">stack.sh</tt>.</p>
-<p>The two backing files are <tt class="docutils literal">VOLUME_BACKING_FILE_SIZE</tt> in size, and they are stored in
-the <tt class="docutils literal">DATA_DIR</tt>.</p>
-</td><td class=code><div class=highlight><pre>
-
-    <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[</span> -z <span class="s2">&quot;$VOLUME_BACKING_DEVICE&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Only create if the file doesn't already exists</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE</span>
-            <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
-</td><td class=code><div class=highlight><pre>
-            <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">                </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$DEV</span>
-            <span class="k">fi</span>
-<span class="k">        else</span>
-<span class="k">            </span>sudo vgcreate <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_BACKING_DEVICE</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-        <span class="c">#set up the second volume if CINDER_MULTI_LVM_BACKEND is enabled</span>
-
-        <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP2</span>; <span class="k">then</span>
-<span class="k">            if</span> <span class="o">[</span> -z <span class="s2">&quot;$VOLUME_BACKING_DEVICE2&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Only create if the file doesn't already exists</p>
-</td><td class=code><div class=highlight><pre>
-                <span class="o">[[</span> -f <span class="nv">$VOLUME_BACKING_FILE2</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$VOLUME_BACKING_FILE2</span>
-
-                <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$VOLUME_BACKING_FILE2</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
-</td><td class=code><div class=highlight><pre>
-                <span class="k">if</span> ! sudo vgs <span class="nv">$VOLUME_GROUP2</span>; <span class="k">then</span>
-<span class="k">                    </span>sudo vgcreate <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$DEV</span>
-                <span class="k">fi</span>
-<span class="k">            else</span>
-<span class="k">                </span>sudo vgcreate <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_BACKING_DEVICE2</span>
-            <span class="k">fi</span>
-<span class="k">        fi</span>
-<span class="k">    fi</span>
-
-<span class="k">    </span>mkdir -p <span class="nv">$CINDER_STATE_PATH</span>/volumes
-<span class="o">}</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>init_cinder() - Initialize database and volume group</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_cinder<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_cinder <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Force nova volumes off</p>
 </td><td class=code><div class=highlight><pre>
@@ -911,39 +816,24 @@ the <tt class="docutils literal">DATA_DIR</tt>.</p>
         <span class="nv">$CINDER_BIN_DIR</span>/cinder-manage db sync
     <span class="k">fi</span>
 
-<span class="k">    if </span>is_service_enabled c-vol; <span class="k">then</span>
-
-<span class="k">        </span>create_cinder_volume_group
-
-        <span class="k">if </span>sudo vgs <span class="nv">$VOLUME_GROUP</span>; <span class="k">then</span>
-<span class="k">            if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>service is not started by default</p>
-</td><td class=code><div class=highlight><pre>
-                start_service tgtd
+<span class="k">    if </span>is_service_enabled c-vol <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+            <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
+            <span class="k">if </span><span class="nb">type </span>init_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
+<span class="k">                </span>init_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span>
             <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Remove iscsi targets</p>
-</td><td class=code><div class=highlight><pre>
-            sudo tgtadm --op show --mode target | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | grep Target | cut -f3 -d <span class="s1">&#39; &#39;</span> | sudo xargs -n1 tgt-admin --delete <span class="o">||</span> <span class="nb">true</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Start with a clean volume group</p>
-</td><td class=code><div class=highlight><pre>
-            _clean_lvm_lv <span class="nv">$VOLUME_GROUP</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
-            <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">                </span>_clean_lvm_lv <span class="nv">$VOLUME_GROUP2</span> <span class="nv">$VOLUME_NAME_PREFIX</span>
-            <span class="k">fi</span>
-<span class="k">        fi</span>
+<span class="k">        done</span>
 <span class="k">    fi</span>
 
-<span class="k">    </span>create_cinder_cache_dir
+<span class="k">    </span>mkdir -p <span class="nv">$CINDER_STATE_PATH</span>/volumes
+    create_cinder_cache_dir
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install_cinder() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_cinder<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_cinder <span class="o">{</span>
     git_clone <span class="nv">$CINDER_REPO</span> <span class="nv">$CINDER_DIR</span> <span class="nv">$CINDER_BRANCH</span>
     setup_develop <span class="nv">$CINDER_DIR</span>
 <span class="o">}</span>
@@ -951,7 +841,7 @@ the <tt class="docutils literal">DATA_DIR</tt>.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install_cinderclient() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_cinderclient<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_cinderclient <span class="o">{</span>
     git_clone <span class="nv">$CINDERCLIENT_REPO</span> <span class="nv">$CINDERCLIENT_DIR</span> <span class="nv">$CINDERCLIENT_BRANCH</span>
     setup_develop <span class="nv">$CINDERCLIENT_DIR</span>
     sudo install -D -m 0644 -o <span class="nv">$STACK_USER</span> <span class="o">{</span><span class="nv">$CINDERCLIENT_DIR</span>/tools/,/etc/bash_completion.d/<span class="o">}</span>cinder.bash_completion
@@ -960,7 +850,7 @@ the <tt class="docutils literal">DATA_DIR</tt>.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>apply config.d approach for cinder volumes directory</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_configure_tgt_for_config_d<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_configure_tgt_for_config_d <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> ! -d /etc/tgt/stack.d/ <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo ln -sf <span class="nv">$CINDER_STATE_PATH</span>/volumes /etc/tgt/stack.d
         <span class="nb">echo</span> <span class="s2">&quot;include /etc/tgt/stack.d/*&quot;</span> | sudo tee -a /etc/tgt/targets.conf
@@ -970,7 +860,7 @@ the <tt class="docutils literal">DATA_DIR</tt>.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>start_cinder() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_cinder<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_cinder <span class="o">{</span>
     <span class="k">if </span>is_service_enabled c-vol; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete any old stack.conf</p>
@@ -978,18 +868,17 @@ the <tt class="docutils literal">DATA_DIR</tt>.</p>
         sudo rm -f /etc/tgt/conf.d/stack.conf
         _configure_tgt_for_config_d
         <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>tgt in oneiric doesn't restart properly if tgtd isn't running
-do it in two steps</p>
-</td><td class=code><div class=highlight><pre>
-            sudo stop tgt <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">            </span>sudo start tgt
+<span class="k">            </span>sudo service tgt restart
         <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">            if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>sudo /sbin/service tgtd restart
+            <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>bypass redirection to systemctl during restart</p>
 </td><td class=code><div class=highlight><pre>
-            sudo /sbin/service --skip-redirect tgtd restart
-        <span class="k">elif </span>is_suse; <span class="k">then</span>
+                sudo /sbin/service --skip-redirect tgtd restart
+            <span class="k">fi</span>
+<span class="k">        elif </span>is_suse; <span class="k">then</span>
 <span class="k">            </span>restart_service tgtd
         <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -1005,7 +894,12 @@ name, and would need to be adjusted too</p>
     <span class="k">fi</span>
 
 <span class="k">    </span>screen_it c-api <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-api --config-file $CINDER_CONF&quot;</span>
-    screen_it c-sch <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-scheduler --config-file $CINDER_CONF&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Waiting for Cinder API to start...&quot;</span>
+    <span class="k">if</span> ! wait_for_service <span class="nv">$SERVICE_TIMEOUT</span> <span class="nv">$CINDER_SERVICE_PROTOCOL</span>://<span class="nv">$CINDER_SERVICE_HOST</span>:<span class="nv">$CINDER_SERVICE_PORT</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;c-api did not start&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>screen_it c-sch <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-scheduler --config-file $CINDER_CONF&quot;</span>
     screen_it c-bak <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-backup --config-file $CINDER_CONF&quot;</span>
     screen_it c-vol <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-volume --config-file $CINDER_CONF&quot;</span>
 
@@ -1026,7 +920,7 @@ has started.  This is a quick fix for lp bug/1189595</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_cinder() - Stop running processes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_cinder<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_cinder <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the cinder screen windows</p>
 </td><td class=code><div class=highlight><pre>
@@ -1041,6 +935,40 @@ has started.  This is a quick fix for lp bug/1189595</p>
 <span class="k">            </span>stop_service tgtd
         <span class="k">fi</span>
 <span class="k">    fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create_volume_types() - Create Cinder's configured volume types</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>create_volume_types <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create volume types</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled c-api <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+            <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
+            <span class="k">if </span><span class="nb">type </span>configure_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>openstack volume type create --property volume_backend_name=&quot;${BE_TYPE}&quot; ${BE_NAME}</p>
+</td><td class=code><div class=highlight><pre>
+                cinder <span class="nb">type</span>-create <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span> <span class="o">&amp;&amp;</span> <span class="se">\</span>
+                    cinder <span class="nb">type</span>-key <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span> <span class="nb">set </span><span class="nv">volume_backend_name</span><span class="o">=</span><span class="s2">&quot;${BE_NAME}&quot;</span>
+            <span class="k">fi</span>
+<span class="k">        done</span>
+<span class="k">    fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Compatibility for Grenade</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">function </span>create_cinder_volume_group <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>During a transition period Grenade needs to have this function defined
+It is effectively a no-op in the Grenade 'target' use case</p>
+</td><td class=code><div class=highlight><pre>
+    :
 <span class="o">}</span>
 
 

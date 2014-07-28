@@ -398,6 +398,7 @@ Dependencies:</p>
 <p>Set up default directories</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">HORIZON_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/horizon
+<span class="nv">HORIZONAUTH_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/django_openstack_auth
 
 </pre></div></td></tr><tr><td class=docs>
 <p>local_settings.py is used to customize Dashboard settings.
@@ -420,13 +421,16 @@ TEMPEST_SERVICES+<span class="o">=</span>,horizon
 </pre></div></td></tr><tr><td class=docs>
 <p>utility method of setting python option</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_horizon_config_set<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_horizon_config_set <span class="o">{</span>
     <span class="nb">local </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">section</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">option</span><span class="o">=</span><span class="nv">$3</span>
     <span class="nb">local </span><span class="nv">value</span><span class="o">=</span><span class="nv">$4</span>
 
-    <span class="k">if </span>grep -q <span class="s2">&quot;^$section&quot;</span> <span class="nv">$file</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$section&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>sed -e <span class="s2">&quot;/^$option/d&quot;</span> -i <span class="nv">$local_settings</span>
+        <span class="nb">echo</span> -e <span class="s2">&quot;\n$option=$value&quot;</span> &gt;&gt; <span class="nv">$file</span>
+    <span class="k">elif </span>grep -q <span class="s2">&quot;^$section&quot;</span> <span class="nv">$file</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">line</span><span class="o">=</span><span class="k">$(</span>sed -ne <span class="s2">&quot;/^$section/,/^}/ { /^ *&#39;$option&#39;:/ p; }&quot;</span> <span class="nv">$file</span><span class="k">)</span>
         <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$line&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">            </span>sed -i -e <span class="s2">&quot;/^$section/,/^}/ s/^\( *&#39;$option&#39;\) *:.*$/\1: $value,/&quot;</span> <span class="nv">$file</span>
@@ -450,7 +454,7 @@ TEMPEST_SERVICES+<span class="o">=</span>,horizon
 <p>cleanup_horizon() - Remove residual data files, anything left over from previous
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_horizon<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>cleanup_horizon <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>If <tt class="docutils literal">/usr/bin/node</tt> points into <tt class="docutils literal">$DEST</tt>
@@ -460,19 +464,22 @@ we installed it via <tt class="docutils literal">install_nodejs</tt></p>
 <span class="k">            </span>sudo rm /usr/bin/node
         <span class="k">fi</span>
 <span class="k">    fi</span>
+
+<span class="k">    </span><span class="nb">local </span><span class="nv">horizon_conf</span><span class="o">=</span><span class="k">$(</span>apache_site_config_for horizon<span class="k">)</span>
+    sudo rm -f <span class="nv">$horizon_conf</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_horizon() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_horizon<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_horizon <span class="o">{</span>
     setup_develop <span class="nv">$HORIZON_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>init_horizon() - Initialize databases, etc.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_horizon<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_horizon <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">local_settings.py</tt> is used to override horizon default settings.</p>
 </td><td class=code><div class=highlight><pre>
@@ -503,6 +510,13 @@ we installed it via <tt class="docutils literal">install_nodejs</tt></p>
 <span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> OPENSTACK_NEUTRON_NETWORK enable_vpn True
     <span class="k">fi</span>
 
+<span class="k">    </span>_horizon_config_set <span class="nv">$local_settings</span> <span class="s2">&quot;&quot;</span> OPENSTACK_HOST <span class="se">\&quot;</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_HOST</span><span class="k">}</span><span class="se">\&quot;</span>
+    _horizon_config_set <span class="nv">$local_settings</span> <span class="s2">&quot;&quot;</span> OPENSTACK_KEYSTONE_URL <span class="s2">&quot;\&quot;${KEYSTONE_SERVICE_PROTOCOL}://${KEYSTONE_SERVICE_HOST}:${KEYSTONE_SERVICE_PORT}/v2.0\&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="o">[</span> -f <span class="nv">$SSL_BUNDLE_FILE</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> <span class="s2">&quot;&quot;</span> OPENSTACK_SSL_CACERT <span class="se">\&quot;</span><span class="k">${</span><span class="nv">SSL_BUNDLE_FILE</span><span class="k">}</span><span class="se">\&quot;</span>
+    <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Create an empty directory that apache uses as docroot</p>
 </td><td class=code><div class=highlight><pre>
@@ -516,30 +530,7 @@ we installed it via <tt class="docutils literal">install_nodejs</tt></p>
 <span class="k">        </span><span class="nv">HORIZON_REQUIRE</span><span class="o">=</span><span class="s1">&#39;Require all granted&#39;</span>
     <span class="k">fi</span>
 
-<span class="k">    </span><span class="nb">local </span><span class="nv">horizon_conf</span><span class="o">=</span>/etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/horizon.conf
-    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean up the old config name</p>
-</td><td class=code><div class=highlight><pre>
-        sudo rm -f /etc/apache2/sites-enabled/000-default
-</pre></div></td></tr><tr><td class=docs>
-<p>Be a good citizen and use the distro tools here</p>
-</td><td class=code><div class=highlight><pre>
-        sudo touch <span class="nv">$horizon_conf</span>
-        sudo a2ensite horizon.conf
-    <span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span>sudo sed <span class="s1">&#39;/^Listen/s/^.*$/Listen 0.0.0.0:80/&#39;</span> -i /etc/httpd/conf/httpd.conf
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-        : <span class="c"># nothing to do</span>
-    <span class="k">else</span>
-<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;horizon apache configuration&quot;</span>
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Remove old log files that could mess with how devstack detects whether Horizon
-has been successfully started (see start_horizon() and functions::screen_it())</p>
-</td><td class=code><div class=highlight><pre>
-    sudo rm -f /var/log/<span class="nv">$APACHE_NAME</span>/horizon_*
+<span class="k">    </span><span class="nb">local </span><span class="nv">horizon_conf</span><span class="o">=</span><span class="k">$(</span>apache_site_config_for horizon<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure apache to run horizon</p>
@@ -552,12 +543,39 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 <span class="s2">        s,%DEST%,$DEST,g;</span>
 <span class="s2">        s,%HORIZON_REQUIRE%,$HORIZON_REQUIRE,g;</span>
 <span class="s2">    \&quot; $FILES/apache-horizon.template &gt;$horizon_conf&quot;</span>
+
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>disable_apache_site 000-default
+        sudo touch <span class="nv">$horizon_conf</span>
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span>sudo sed <span class="s1">&#39;/^Listen/s/^.*$/Listen 0.0.0.0:80/&#39;</span> -i /etc/httpd/conf/httpd.conf
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+        : <span class="c"># nothing to do</span>
+    <span class="k">else</span>
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;horizon apache configuration&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>enable_apache_site horizon
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove old log files that could mess with how devstack detects whether Horizon
+has been successfully started (see start_horizon() and functions::screen_it())</p>
+</td><td class=code><div class=highlight><pre>
+    sudo rm -f /var/log/<span class="nv">$APACHE_NAME</span>/horizon_*
+
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>install_django_openstack_auth() - Collect source and prepare</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_django_openstack_auth <span class="o">{</span>
+    git_clone <span class="nv">$HORIZONAUTH_REPO</span> <span class="nv">$HORIZONAUTH_DIR</span> <span class="nv">$HORIZONAUTH_BRANCH</span>
+    setup_install <span class="nv">$HORIZONAUTH_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install_horizon() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_horizon<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_horizon <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Apache installation, because we mark it NOPRIME</p>
 </td><td class=code><div class=highlight><pre>
@@ -569,7 +587,7 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 </pre></div></td></tr><tr><td class=docs>
 <p>start_horizon() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_horizon<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_horizon <span class="o">{</span>
     restart_apache_server
     screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
 <span class="o">}</span>
@@ -577,7 +595,7 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_horizon() - Stop running processes (non-screen)</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_horizon<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_horizon <span class="o">{</span>
     stop_apache_server
 <span class="o">}</span>
 

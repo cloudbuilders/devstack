@@ -453,7 +453,7 @@ is_glance_enabled</p>
 <p>cleanup_glance() - Remove residual data files, anything left over from previous
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_glance<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>cleanup_glance <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>kill instances (nova)
 delete image files (glance)</p>
@@ -464,7 +464,7 @@ delete image files (glance)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_glance() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_glance<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_glance <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$GLANCE_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$GLANCE_CONF_DIR</span>
     <span class="k">fi</span>
@@ -480,9 +480,7 @@ delete image files (glance)</p>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> paste_deploy flavor keystone
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
     configure_API_version <span class="nv">$GLANCE_REGISTRY_CONF</span> <span class="nv">$IDENTITY_API_VERSION</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
@@ -498,9 +496,7 @@ delete image files (glance)</p>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT image_cache_dir <span class="nv">$GLANCE_CACHE_DIR</span>/
     iniset <span class="nv">$GLANCE_API_CONF</span> paste_deploy flavor keystone+cachemanagement
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
     configure_API_version <span class="nv">$GLANCE_API_CONF</span> <span class="nv">$IDENTITY_API_VERSION</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
@@ -521,7 +517,7 @@ delete image files (glance)</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT default_store swift
-        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_auth_address <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_auth_address <span class="nv">$KEYSTONE_SERVICE_URI</span>/v2.0/
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_user <span class="nv">$SERVICE_TENANT_NAME</span>:glance-swift
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_key <span class="nv">$SERVICE_PASSWORD</span>
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_create_container_on_put True
@@ -540,7 +536,7 @@ delete image files (glance)</p>
     iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
     iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT image_cache_dir <span class="nv">$GLANCE_CACHE_DIR</span>/
     iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_url
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_url <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_url <span class="nv">$KEYSTONE_AUTH_URI</span>/v2.0
     iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_tenant_name
     iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_user
@@ -553,9 +549,51 @@ delete image files (glance)</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>create_glance_accounts() - Set up common required glance accounts</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="project-user-roles">
+<h1>Project              User         Roles</h1>
+<p>SERVICE_TENANT_NAME  glance       service
+SERVICE_TENANT_NAME  glance-swift ResellerAdmin (if Swift is enabled)</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">function </span>create_glance_accounts <span class="o">{</span>
+    <span class="k">if </span>is_service_enabled g-api; <span class="k">then</span>
+
+<span class="k">        </span><span class="nv">GLANCE_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;glance&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT_NAME</span><span class="k">)</span>
+        get_or_add_user_role service <span class="nv">$GLANCE_USER</span> <span class="nv">$SERVICE_TENANT_NAME</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>required for swift access</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
+
+<span class="k">            </span><span class="nv">GLANCE_SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;glance-swift&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT_NAME</span> <span class="s2">&quot;glance-swift@example.com&quot;</span><span class="k">)</span>
+            get_or_add_user_role <span class="s2">&quot;ResellerAdmin&quot;</span> <span class="nv">$GLANCE_SWIFT_USER</span> <span class="nv">$SERVICE_TENANT_NAME</span>
+        <span class="k">fi</span>
+
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+
+<span class="k">            </span><span class="nv">GLANCE_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;glance&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;image&quot;</span> <span class="s2">&quot;Glance Image Service&quot;</span><span class="k">)</span>
+            get_or_create_endpoint <span class="nv">$GLANCE_SERVICE</span> <span class="se">\</span>
+                <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;http://$GLANCE_HOSTPORT&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;http://$GLANCE_HOSTPORT&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;http://$GLANCE_HOSTPORT&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>create_glance_cache_dir() - Part of the init_glance() process</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_glance_cache_dir<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_glance_cache_dir <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create cache dir</p>
 </td><td class=code><div class=highlight><pre>
@@ -570,7 +608,7 @@ delete image files (glance)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>init_glance() - Initialize databases, etc.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_glance<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_glance <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete existing images</p>
 </td><td class=code><div class=highlight><pre>
@@ -599,7 +637,7 @@ delete image files (glance)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install_glanceclient() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_glanceclient<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_glanceclient <span class="o">{</span>
     git_clone <span class="nv">$GLANCECLIENT_REPO</span> <span class="nv">$GLANCECLIENT_DIR</span> <span class="nv">$GLANCECLIENT_BRANCH</span>
     setup_develop <span class="nv">$GLANCECLIENT_DIR</span>
 <span class="o">}</span>
@@ -607,7 +645,7 @@ delete image files (glance)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install_glance() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_glance<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_glance <span class="o">{</span>
     git_clone <span class="nv">$GLANCE_REPO</span> <span class="nv">$GLANCE_DIR</span> <span class="nv">$GLANCE_BRANCH</span>
     setup_develop <span class="nv">$GLANCE_DIR</span>
 <span class="o">}</span>
@@ -615,7 +653,7 @@ delete image files (glance)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>start_glance() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_glance<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_glance <span class="o">{</span>
     screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf&quot;</span>
     screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for g-api ($GLANCE_HOSTPORT) to start...&quot;</span>
@@ -627,7 +665,7 @@ delete image files (glance)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_glance() - Stop running processes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_glance<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_glance <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the Glance screen windows</p>
 </td><td class=code><div class=highlight><pre>

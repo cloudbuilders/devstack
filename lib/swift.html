@@ -449,9 +449,9 @@ Default is 1 gigabyte.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set <tt class="docutils literal">SWIFT_EXTRAS_MIDDLEWARE</tt> to extras middlewares.
-Default is <tt class="docutils literal">staticweb, tempurl, formpost</tt></p>
+Default is <tt class="docutils literal">staticweb, formpost</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SWIFT_EXTRAS_MIDDLEWARE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_EXTRAS_MIDDLEWARE</span><span class="k">:-</span><span class="nv">tempurl</span><span class="p"> formpost staticweb</span><span class="k">}</span>
+<span class="nv">SWIFT_EXTRAS_MIDDLEWARE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_EXTRAS_MIDDLEWARE</span><span class="k">:-</span><span class="nv">formpost</span><span class="p"> staticweb</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set <tt class="docutils literal">SWIFT_EXTRAS_MIDDLEWARE_LAST</tt> to extras middlewares that need to be at
@@ -497,6 +497,12 @@ trace through the logs when looking for its use.</p>
 <span class="nv">SWIFT_LOG_TOKEN_LENGTH</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_LOG_TOKEN_LENGTH</span><span class="k">:-</span><span class="nv">12</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Set <tt class="docutils literal">SWIFT_MAX_HEADER_SIZE</tt> to configure the maximun length of headers in
+Swift API</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SWIFT_MAX_HEADER_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_MAX_HEADER_SIZE</span><span class="k">:-</span><span class="nv">16384</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Set <tt class="docutils literal">OBJECT_PORT_BASE</tt>, <tt class="docutils literal">CONTAINER_PORT_BASE</tt>, <tt class="docutils literal">ACCOUNT_PORT_BASE</tt>
 Port bases used in port number calclution for the service &quot;nodes&quot;
 The specified port number will be used, the additinal ports calculated by
@@ -511,6 +517,10 @@ base_port + node_num * 10</p>
 </td><td class=code><div class=highlight><pre>
 TEMPEST_SERVICES+<span class="o">=</span>,swift
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Toggle for deploying Keystone under HTTPD + mod_wsgi</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SWIFT_USE_MOD_WSGI</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_USE_MOD_WSGI</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -530,7 +540,7 @@ is_swift_enabled</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>cleanup_swift() - Remove residual data files</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_swift<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>cleanup_swift <span class="o">{</span>
     rm -f <span class="k">${</span><span class="nv">SWIFT_CONF_DIR</span><span class="k">}</span><span class="o">{</span>*.builder,*.ring.gz,backups/*.builder,backups/*.ring.gz<span class="o">}</span>
     <span class="k">if </span>egrep -q <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1 /proc/mounts; <span class="k">then</span>
 <span class="k">        </span>sudo umount <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/drives/sdb1
@@ -539,7 +549,7 @@ is_swift_enabled</p>
 <span class="k">        </span>rm <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span>
     <span class="k">fi</span>
 <span class="k">    </span>rm -rf <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/run/
-    <span class="k">if </span>is_apache_enabled_service swift; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SWIFT_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>_cleanup_swift_apache_wsgi
     <span class="k">fi</span>
 <span class="o">}</span>
@@ -547,14 +557,14 @@ is_swift_enabled</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>_cleanup_swift_apache_wsgi() - Remove wsgi files, disable and remove apache vhost file</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_cleanup_swift_apache_wsgi<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_cleanup_swift_apache_wsgi <span class="o">{</span>
     sudo rm -f <span class="nv">$SWIFT_APACHE_WSGI_DIR</span>/*.wsgi
     disable_apache_site proxy-server
     <span class="k">for </span>node_number in <span class="k">${</span><span class="nv">SWIFT_REPLICAS_SEQ</span><span class="k">}</span>; <span class="k">do</span>
 <span class="k">        for </span><span class="nb">type </span>in object container account; <span class="k">do</span>
 <span class="k">            </span><span class="nv">site_name</span><span class="o">=</span><span class="k">${</span><span class="nv">type</span><span class="k">}</span>-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
             disable_apache_site <span class="k">${</span><span class="nv">site_name</span><span class="k">}</span>
-            sudo rm -f /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/<span class="k">${</span><span class="nv">site_name</span><span class="k">}</span>
+            sudo rm -f <span class="k">$(</span>apache_site_config_for <span class="k">${</span><span class="nv">site_name</span><span class="k">})</span>
         <span class="k">done</span>
 <span class="k">    done</span>
 <span class="o">}</span>
@@ -562,22 +572,21 @@ is_swift_enabled</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>_config_swift_apache_wsgi() - Set WSGI config files of Swift</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_config_swift_apache_wsgi<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_config_swift_apache_wsgi <span class="o">{</span>
     sudo mkdir -p <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>
-    <span class="nb">local </span><span class="nv">apache_vhost_dir</span><span class="o">=</span>/etc/<span class="k">${</span><span class="nv">APACHE_NAME</span><span class="k">}</span>/<span class="nv">$APACHE_CONF_DIR</span>
     <span class="nb">local </span><span class="nv">proxy_port</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DEFAULT_BIND_PORT</span><span class="k">:-</span><span class="nv">8080</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>copy proxy vhost and wsgi file</p>
 </td><td class=code><div class=highlight><pre>
-    sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/apache2/proxy-server.template <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/proxy-server
+    sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/apache2/proxy-server.template <span class="k">$(</span>apache_site_config_for proxy-server<span class="k">)</span>
     sudo sed -e <span class="s2">&quot;</span>
 <span class="s2">        /^#/d;/^$/d;</span>
 <span class="s2">        s/%PORT%/$proxy_port/g;</span>
 <span class="s2">        s/%SERVICENAME%/proxy-server/g;</span>
 <span class="s2">        s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
 <span class="s2">        s/%USER%/${STACK_USER}/g;</span>
-<span class="s2">    &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/proxy-server
+<span class="s2">    &quot;</span> -i <span class="k">$(</span>apache_site_config_for proxy-server<span class="k">)</span>
     enable_apache_site proxy-server
 
     sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/wsgi/proxy-server.wsgi.template <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/proxy-server.wsgi
@@ -594,13 +603,13 @@ is_swift_enabled</p>
         <span class="nv">container_port</span><span class="o">=</span><span class="nv">$[</span>CONTAINER_PORT_BASE + 10 * <span class="o">(</span><span class="nv">$node_number</span> - 1<span class="o">)]</span>
         <span class="nv">account_port</span><span class="o">=</span><span class="nv">$[</span>ACCOUNT_PORT_BASE + 10 * <span class="o">(</span><span class="nv">$node_number</span> - 1<span class="o">)]</span>
 
-        sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/apache2/object-server.template <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+        sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/apache2/object-server.template <span class="k">$(</span>apache_site_config_for object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">})</span>
         sudo sed -e <span class="s2">&quot;</span>
 <span class="s2">            s/%PORT%/$object_port/g;</span>
 <span class="s2">            s/%SERVICENAME%/object-server-${node_number}/g;</span>
 <span class="s2">            s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
 <span class="s2">            s/%USER%/${STACK_USER}/g;</span>
-<span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+<span class="s2">        &quot;</span> -i <span class="k">$(</span>apache_site_config_for object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">})</span>
         enable_apache_site object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
 
         sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/wsgi/object-server.wsgi.template <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
@@ -609,14 +618,14 @@ is_swift_enabled</p>
 <span class="s2">            s/%SERVICECONF%/object-server\/${node_number}.conf/g;</span>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/object-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
 
-        sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/apache2/container-server.template <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+        sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/apache2/container-server.template <span class="k">$(</span>apache_site_config_for container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">})</span>
         sudo sed -e <span class="s2">&quot;</span>
 <span class="s2">            /^#/d;/^$/d;</span>
 <span class="s2">            s/%PORT%/$container_port/g;</span>
 <span class="s2">            s/%SERVICENAME%/container-server-${node_number}/g;</span>
 <span class="s2">            s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
 <span class="s2">            s/%USER%/${STACK_USER}/g;</span>
-<span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+<span class="s2">        &quot;</span> -i <span class="k">$(</span>apache_site_config_for container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">})</span>
         enable_apache_site container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
 
         sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/wsgi/container-server.wsgi.template <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
@@ -625,14 +634,14 @@ is_swift_enabled</p>
 <span class="s2">            s/%SERVICECONF%/container-server\/${node_number}.conf/g;</span>
 <span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/container-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
 
-        sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/apache2/account-server.template <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+        sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/apache2/account-server.template <span class="k">$(</span>apache_site_config_for account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">})</span>
         sudo sed -e <span class="s2">&quot;</span>
 <span class="s2">            /^#/d;/^$/d;</span>
 <span class="s2">            s/%PORT%/$account_port/g;</span>
 <span class="s2">            s/%SERVICENAME%/account-server-${node_number}/g;</span>
 <span class="s2">            s/%APACHE_NAME%/${APACHE_NAME}/g;</span>
 <span class="s2">            s/%USER%/${STACK_USER}/g;</span>
-<span class="s2">        &quot;</span> -i <span class="k">${</span><span class="nv">apache_vhost_dir</span><span class="k">}</span>/account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+<span class="s2">        &quot;</span> -i <span class="k">$(</span>apache_site_config_for account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">})</span>
         enable_apache_site account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
 
         sudo cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/examples/wsgi/account-server.wsgi.template <span class="k">${</span><span class="nv">SWIFT_APACHE_WSGI_DIR</span><span class="k">}</span>/account-server-<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.wsgi
@@ -644,9 +653,51 @@ is_swift_enabled</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>This function generates an object/container/account configuration
+emulating 4 nodes on different ports</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>generate_swift_config <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">swift_node_config</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">node_id</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">bind_port</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">server_type</span><span class="o">=</span><span class="nv">$4</span>
+
+    <span class="nv">log_facility</span><span class="o">=</span><span class="nv">$[</span> node_id - 1 <span class="o">]</span>
+    <span class="nv">node_path</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
+
+    iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT user
+    iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT user <span class="k">${</span><span class="nv">STACK_USER</span><span class="k">}</span>
+
+    iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT bind_port
+    iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT bind_port <span class="k">${</span><span class="nv">bind_port</span><span class="k">}</span>
+
+    iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT swift_dir
+    iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT swift_dir <span class="k">${</span><span class="nv">SWIFT_CONF_DIR</span><span class="k">}</span>
+
+    iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT devices
+    iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT devices <span class="k">${</span><span class="nv">node_path</span><span class="k">}</span>
+
+    iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT log_facility
+    iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT log_facility LOG_LOCAL<span class="k">${</span><span class="nv">log_facility</span><span class="k">}</span>
+
+    iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT workers
+    iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT workers 1
+
+    iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT disable_fallocate
+    iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT disable_fallocate <span class="nb">true</span>
+
+<span class="nb">    </span>iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT mount_check
+    iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT mount_check <span class="nb">false</span>
+
+<span class="nb">    </span>iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-replicator vm_test_mode
+    iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-replicator vm_test_mode yes
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 <p>configure_swift() - Set config files, create data dirs and loop image</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_swift<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_swift <span class="o">{</span>
     <span class="nb">local </span><span class="nv">swift_pipeline</span><span class="o">=</span><span class="s2">&quot;${SWIFT_EXTRAS_MIDDLEWARE_NO_AUTH}&quot;</span>
     <span class="nb">local </span>node_number
     <span class="nb">local </span>swift_node_config
@@ -683,7 +734,7 @@ setup) we configure it with our version of rsync.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span>sudo sed -i <span class="s1">&#39;/^RSYNC_ENABLE=false/ { s/false/true/ }&#39;</span> /etc/default/rsync
-    <span class="k">else</span>
+    <span class="k">elif</span> <span class="o">[</span> -e /etc/xinetd.d/rsync <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo sed -i <span class="s1">&#39;/disable *= *yes/ { s/yes/no/ }&#39;</span> /etc/xinetd.d/rsync
     <span class="k">fi</span>
 
@@ -722,7 +773,8 @@ return</p>
 <p>Configure Ceilometer</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:ceilometer use <span class="s2">&quot;egg:ceilometer#swift&quot;</span>
+<span class="k">        </span>iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:ceilometer <span class="s2">&quot;set log_level&quot;</span> <span class="s2">&quot;WARN&quot;</span>
+        iniset <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span> filter:ceilometer use <span class="s2">&quot;egg:ceilometer#swift&quot;</span>
         <span class="nv">SWIFT_EXTRAS_MIDDLEWARE_LAST</span><span class="o">=</span><span class="s2">&quot;${SWIFT_EXTRAS_MIDDLEWARE_LAST} ceilometer&quot;</span>
     <span class="k">fi</span>
 
@@ -740,7 +792,12 @@ token for keystoneauth would have the standard reseller_prefix <cite>AUTH_</cite
     <span class="k">if </span>is_service_enabled swift3;then
         swift_pipeline+<span class="o">=</span><span class="s2">&quot; swift3 s3token &quot;</span>
     <span class="k">fi</span>
-<span class="k">    </span>swift_pipeline+<span class="o">=</span><span class="s2">&quot; authtoken keystoneauth tempauth &quot;</span>
+
+<span class="k">    if </span>is_service_enabled key;then
+        swift_pipeline+<span class="o">=</span><span class="s2">&quot; authtoken keystoneauth&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>swift_pipeline+<span class="o">=</span><span class="s2">&quot; tempauth &quot;</span>
+
     sed -i <span class="s2">&quot;/^pipeline/ { s/tempauth/${swift_pipeline} ${SWIFT_EXTRAS_MIDDLEWARE}/ ;}&quot;</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
     sed -i <span class="s2">&quot;/^pipeline/ { s/proxy-server/${SWIFT_EXTRAS_MIDDLEWARE_LAST} proxy-server/ ; }&quot;</span> <span class="k">${</span><span class="nv">SWIFT_CONFIG_PROXY_SERVER</span><span class="k">}</span>
 
@@ -798,47 +855,7 @@ IDs will included in all of its log messages.</p>
 
 <span class="k">    </span>cp <span class="k">${</span><span class="nv">SWIFT_DIR</span><span class="k">}</span>/etc/swift.conf-sample <span class="k">${</span><span class="nv">SWIFT_CONF_DIR</span><span class="k">}</span>/swift.conf
     iniset <span class="k">${</span><span class="nv">SWIFT_CONF_DIR</span><span class="k">}</span>/swift.conf swift-hash swift_hash_path_suffix <span class="k">${</span><span class="nv">SWIFT_HASH</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>NOTE(chmou): s3token middleware is not updated yet to use only
-username and password.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">function </span>generate_swift_config<span class="o">()</span> <span class="o">{</span>
-        <span class="nb">local </span><span class="nv">swift_node_config</span><span class="o">=</span><span class="nv">$1</span>
-        <span class="nb">local </span><span class="nv">node_id</span><span class="o">=</span><span class="nv">$2</span>
-        <span class="nb">local </span><span class="nv">bind_port</span><span class="o">=</span><span class="nv">$3</span>
-        <span class="nb">local </span><span class="nv">server_type</span><span class="o">=</span><span class="nv">$4</span>
-
-        <span class="nv">log_facility</span><span class="o">=</span><span class="nv">$[</span> node_id - 1 <span class="o">]</span>
-        <span class="nv">node_path</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>
-
-        iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT user
-        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT user <span class="k">${</span><span class="nv">STACK_USER</span><span class="k">}</span>
-
-        iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT bind_port
-        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT bind_port <span class="k">${</span><span class="nv">bind_port</span><span class="k">}</span>
-
-        iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT swift_dir
-        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT swift_dir <span class="k">${</span><span class="nv">SWIFT_CONF_DIR</span><span class="k">}</span>
-
-        iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT devices
-        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT devices <span class="k">${</span><span class="nv">node_path</span><span class="k">}</span>
-
-        iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT log_facility
-        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT log_facility LOG_LOCAL<span class="k">${</span><span class="nv">log_facility</span><span class="k">}</span>
-
-        iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT workers
-        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT workers 1
-
-        iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT disable_fallocate
-        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT disable_fallocate <span class="nb">true</span>
-
-<span class="nb">        </span>iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT mount_check
-        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> DEFAULT mount_check <span class="nb">false</span>
-
-<span class="nb">        </span>iniuncomment <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-replicator vm_test_mode
-        iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">server_type</span><span class="k">}</span>-replicator vm_test_mode yes
-    <span class="o">}</span>
+    iniset <span class="k">${</span><span class="nv">SWIFT_CONF_DIR</span><span class="k">}</span>/swift.conf swift-constraints max_header_size <span class="k">${</span><span class="nv">SWIFT_MAX_HEADER_SIZE</span><span class="k">}</span>
 
     <span class="k">for </span>node_number in <span class="k">${</span><span class="nv">SWIFT_REPLICAS_SEQ</span><span class="k">}</span>; <span class="k">do</span>
 <span class="k">        </span><span class="nv">swift_node_config</span><span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_CONF_DIR</span><span class="k">}</span>/object-server/<span class="k">${</span><span class="nv">node_number</span><span class="k">}</span>.conf
@@ -846,8 +863,8 @@ username and password.</p>
         generate_swift_config <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> <span class="k">${</span><span class="nv">node_number</span><span class="k">}</span> <span class="nv">$[</span>OBJECT_PORT_BASE + 10 * <span class="o">(</span>node_number - 1<span class="o">)]</span> object
         iniset <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span> filter:recon recon_cache_path  <span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/cache
 </pre></div></td></tr><tr><td class=docs>
-<p>This function generates an object/container/account configuration
-emulating 4 nodes on different ports</p>
+<p>NOTE(chmou): s3token middleware is not updated yet to use only
+username and password.</p>
 </td><td class=code><div class=highlight><pre>
         sed -i -e <span class="s2">&quot;s,#[ ]*recon_cache_path .*,recon_cache_path = ${SWIFT_DATA_DIR}/cache,&quot;</span> <span class="k">${</span><span class="nv">swift_node_config</span><span class="k">}</span>
 
@@ -895,17 +912,25 @@ modification and make sure it works for new sections.</p>
     rm -rf <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
     mkdir -p <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>/hourly
     sudo chown -R <span class="k">${</span><span class="nv">STACK_USER</span><span class="k">}</span>:adm <span class="k">${</span><span class="nv">swift_log_dir</span><span class="k">}</span>
-    sed <span class="s2">&quot;s,%SWIFT_LOGDIR%,${swift_log_dir},&quot;</span> <span class="nv">$FILES</span>/swift/rsyslog.conf | sudo <span class="se">\</span>
-        tee /etc/rsyslog.d/10-swift.conf
-    <span class="k">if </span>is_apache_enabled_service swift; <span class="k">then</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$SYSLOG</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sed <span class="s2">&quot;s,%SWIFT_LOGDIR%,${swift_log_dir},&quot;</span> <span class="nv">$FILES</span>/swift/rsyslog.conf | sudo <span class="se">\</span>
+            tee /etc/rsyslog.d/10-swift.conf
+</pre></div></td></tr><tr><td class=docs>
+<p>Set accounts for functional tests</p>
+</td><td class=code><div class=highlight><pre>
+        sudo killall -HUP rsyslogd
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$SWIFT_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>_config_swift_apache_wsgi
     <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Set accounts for functional tests</p>
+<p>restart syslog to take the changes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_swift_disk<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_swift_disk <span class="o">{</span>
     <span class="nb">local </span>node_number
 
 </pre></div></td></tr><tr><td class=docs>
@@ -936,7 +961,7 @@ changing the permissions so we can run it as our user.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a loopback disk and format it to XFS.</p>
 </td><td class=code><div class=highlight><pre>
-    mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span>
+    /sbin/mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024  <span class="k">${</span><span class="nv">SWIFT_DISK_IMAGE</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make a fresh XFS filesystem</p>
@@ -974,7 +999,7 @@ since we want to make it compatible with tempauth which use
 underscores for separators.</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">function </span>create_swift_accounts<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_swift_accounts <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="tenant-user-roles">
@@ -993,56 +1018,46 @@ swifttenanttest2   swiftusertest2     admin</p>
     <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
     <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
-    <span class="nv">SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
-        swift <span class="se">\</span>
-        --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-        --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-        --email<span class="o">=</span>swift@example.com <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    openstack role add <span class="se">\</span>
-        <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
-        --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-        --user <span class="nv">$SWIFT_USER</span>
+    <span class="nv">SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;swift&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
+    get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$SWIFT_USER</span> <span class="nv">$SERVICE_TENANT</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">SWIFT_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
-            swift <span class="se">\</span>
-            --type<span class="o">=</span><span class="s2">&quot;object-store&quot;</span> <span class="se">\</span>
-            --description<span class="o">=</span><span class="s2">&quot;Swift Service&quot;</span> <span class="se">\</span>
-            | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        openstack endpoint create <span class="se">\</span>
-            <span class="nv">$SWIFT_SERVICE</span> <span class="se">\</span>
-            --region RegionOne <span class="se">\</span>
-            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8080&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span>
+
+<span class="k">        </span><span class="nv">SWIFT_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;swift&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;object-store&quot;</span> <span class="s2">&quot;Swift Service&quot;</span><span class="k">)</span>
+        get_or_create_endpoint <span class="nv">$SWIFT_SERVICE</span> <span class="se">\</span>
+            <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;http://$SERVICE_HOST:8080&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;http://$SERVICE_HOST:8080/v1/AUTH_\$(tenant_id)s&quot;</span>
     <span class="k">fi</span>
 
-<span class="k">    </span><span class="nv">SWIFT_TENANT_TEST1</span><span class="o">=</span><span class="k">$(</span>openstack project create swifttenanttest1 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+<span class="k">    </span><span class="nv">SWIFT_TENANT_TEST1</span><span class="o">=</span><span class="k">$(</span>get_or_create_project swifttenanttest1<span class="k">)</span>
     die_if_not_set <span class="nv">$LINENO</span> SWIFT_TENANT_TEST1 <span class="s2">&quot;Failure creating SWIFT_TENANT_TEST1&quot;</span>
-    <span class="nv">SWIFT_USER_TEST1</span><span class="o">=</span><span class="k">$(</span>openstack user create swiftusertest1 --password<span class="o">=</span><span class="nv">$SWIFTUSERTEST1_PASSWORD</span> <span class="se">\</span>
-        --project <span class="s2">&quot;$SWIFT_TENANT_TEST1&quot;</span> --email<span class="o">=</span><span class="nb">test</span>@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">SWIFT_USER_TEST1</span><span class="o">=</span><span class="k">$(</span>get_or_create_user swiftusertest1 <span class="nv">$SWIFTUSERTEST1_PASSWORD</span> <span class="se">\</span>
+        <span class="s2">&quot;$SWIFT_TENANT_TEST1&quot;</span> <span class="s2">&quot;test@example.com&quot;</span><span class="k">)</span>
     die_if_not_set <span class="nv">$LINENO</span> SWIFT_USER_TEST1 <span class="s2">&quot;Failure creating SWIFT_USER_TEST1&quot;</span>
-    openstack role add --user <span class="nv">$SWIFT_USER_TEST1</span> --project <span class="nv">$SWIFT_TENANT_TEST1</span> <span class="nv">$ADMIN_ROLE</span>
+    get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$SWIFT_USER_TEST1</span> <span class="nv">$SWIFT_TENANT_TEST1</span>
 
-    <span class="nv">SWIFT_USER_TEST3</span><span class="o">=</span><span class="k">$(</span>openstack user create swiftusertest3 --password<span class="o">=</span><span class="nv">$SWIFTUSERTEST3_PASSWORD</span> <span class="se">\</span>
-        --project <span class="s2">&quot;$SWIFT_TENANT_TEST1&quot;</span> --email<span class="o">=</span>test3@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">SWIFT_USER_TEST3</span><span class="o">=</span><span class="k">$(</span>get_or_create_user swiftusertest3 <span class="nv">$SWIFTUSERTEST3_PASSWORD</span> <span class="se">\</span>
+        <span class="s2">&quot;$SWIFT_TENANT_TEST1&quot;</span> <span class="s2">&quot;test3@example.com&quot;</span><span class="k">)</span>
     die_if_not_set <span class="nv">$LINENO</span> SWIFT_USER_TEST3 <span class="s2">&quot;Failure creating SWIFT_USER_TEST3&quot;</span>
-    openstack role add --user <span class="nv">$SWIFT_USER_TEST3</span> --project <span class="nv">$SWIFT_TENANT_TEST1</span> <span class="nv">$ANOTHER_ROLE</span>
+    get_or_add_user_role <span class="nv">$ANOTHER_ROLE</span> <span class="nv">$SWIFT_USER_TEST3</span> <span class="nv">$SWIFT_TENANT_TEST1</span>
 
-    <span class="nv">SWIFT_TENANT_TEST2</span><span class="o">=</span><span class="k">$(</span>openstack project create swifttenanttest2 | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">SWIFT_TENANT_TEST2</span><span class="o">=</span><span class="k">$(</span>get_or_create_project swifttenanttest2<span class="k">)</span>
     die_if_not_set <span class="nv">$LINENO</span> SWIFT_TENANT_TEST2 <span class="s2">&quot;Failure creating SWIFT_TENANT_TEST2&quot;</span>
 
-    <span class="nv">SWIFT_USER_TEST2</span><span class="o">=</span><span class="k">$(</span>openstack user create swiftusertest2 --password<span class="o">=</span><span class="nv">$SWIFTUSERTEST2_PASSWORD</span> <span class="se">\</span>
-        --project <span class="s2">&quot;$SWIFT_TENANT_TEST2&quot;</span> --email<span class="o">=</span>test2@example.com | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">SWIFT_USER_TEST2</span><span class="o">=</span><span class="k">$(</span>get_or_create_user swiftusertest2 <span class="nv">$SWIFTUSERTEST2_PASSWORD</span> <span class="se">\</span>
+        <span class="s2">&quot;$SWIFT_TENANT_TEST2&quot;</span> <span class="s2">&quot;test2@example.com&quot;</span><span class="k">)</span>
     die_if_not_set <span class="nv">$LINENO</span> SWIFT_USER_TEST2 <span class="s2">&quot;Failure creating SWIFT_USER_TEST2&quot;</span>
-    openstack role add --user <span class="nv">$SWIFT_USER_TEST2</span> --project <span class="nv">$SWIFT_TENANT_TEST2</span> <span class="nv">$ADMIN_ROLE</span>
+    get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$SWIFT_USER_TEST2</span> <span class="nv">$SWIFT_TENANT_TEST2</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Defines specific passwords used by tools/create_userrc.sh</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_swift<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_swift <span class="o">{</span>
     <span class="nb">local </span>node_number
 </pre></div></td></tr><tr><td class=docs>
 <p>init_swift() - Initialize rings</p>
@@ -1084,15 +1099,15 @@ different object servers binding on different ports.</p>
     rm -f <span class="nv">$SWIFT_AUTH_CACHE_DIR</span>/*
 <span class="o">}</span>
 
-<span class="k">function </span>install_swift<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_swift <span class="o">{</span>
     git_clone <span class="nv">$SWIFT_REPO</span> <span class="nv">$SWIFT_DIR</span> <span class="nv">$SWIFT_BRANCH</span>
     setup_develop <span class="nv">$SWIFT_DIR</span>
-    <span class="k">if </span>is_apache_enabled_service swift; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SWIFT_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>install_apache_wsgi
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>install_swiftclient<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_swiftclient <span class="o">{</span>
     git_clone <span class="nv">$SWIFTCLIENT_REPO</span> <span class="nv">$SWIFTCLIENT_DIR</span> <span class="nv">$SWIFTCLIENT_BRANCH</span>
     setup_develop <span class="nv">$SWIFTCLIENT_DIR</span>
 <span class="o">}</span>
@@ -1100,13 +1115,9 @@ different object servers binding on different ports.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create cache dir</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_swift<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_swift <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>start_swift() - Start running processes, including screen</p>
-</td><td class=code><div class=highlight><pre>
-    restart_service rsyslog
-</pre></div></td></tr><tr><td class=docs>
-<p>(re)start rsyslog</p>
 </td><td class=code><div class=highlight><pre>
     restart_service memcached
 
@@ -1115,11 +1126,13 @@ different object servers binding on different ports.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span>sudo /etc/init.d/rsync restart <span class="o">||</span> :
+    <span class="k">elif</span> <span class="o">[</span> -e /etc/xinetd.d/rsync <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>start_service xinetd
     <span class="k">else</span>
-<span class="k">        </span>sudo systemctl start xinetd.service
+<span class="k">        </span>start_service rsyncd
     <span class="k">fi</span>
 
-<span class="k">    if </span>is_apache_enabled_service swift; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$SWIFT_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>restart_apache_server
         swift-init --run-dir<span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/run rest start
         screen_it s-proxy <span class="s2">&quot;cd $SWIFT_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/proxy-server&quot;</span>
@@ -1158,9 +1171,9 @@ service so we can run it in foreground in screen.  <tt class="docutils literal">
 {stop|restart}</tt> exits with '1' if no servers are running, ignore it just
 in case</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_swift<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_swift <span class="o">{</span>
 
-    <span class="k">if </span>is_apache_enabled_service swift; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$SWIFT_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>swift-init --run-dir<span class="o">=</span><span class="k">${</span><span class="nv">SWIFT_DATA_DIR</span><span class="k">}</span>/run rest stop <span class="o">&amp;&amp;</span> <span class="k">return </span>0
     <span class="k">fi</span>
 
@@ -1173,11 +1186,18 @@ in case</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>screen normally killed by unstack.sh</p>
 </td><td class=code><div class=highlight><pre>
+    <span class="k">for </span><span class="nb">type </span>in proxy object container account; <span class="k">do</span>
+<span class="k">        </span>screen_stop s-<span class="k">${</span><span class="nv">type</span><span class="k">}</span>
+    <span class="k">done</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Dump all of the servers
+Maintain the iteration as screen_stop() has some desirable side-effects</p>
+</td><td class=code><div class=highlight><pre>
     pkill -f swift-
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Dump all of the servers</p>
+<p>Blast out any stragglers</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
 

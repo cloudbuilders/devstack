@@ -402,14 +402,14 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Import project functions</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Import configuration</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/openrc
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import project functions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import exercise configuration</p>
@@ -421,11 +421,6 @@ an error.  It is also useful for following allowing as the install occurs.</p>
 the exercise is skipped</p>
 </td><td class=code><div class=highlight><pre>
 is_service_enabled n-api <span class="o">||</span> <span class="nb">exit </span>55
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Skip if the hypervisor is Docker</p>
-</td><td class=code><div class=highlight><pre>
-<span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">==</span> <span class="s2">&quot;docker&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">exit </span>55
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Instance type to create</p>
@@ -635,10 +630,14 @@ ping_check <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span> <span class=
 nova secgroup-delete-rule <span class="nv">$SECGROUP</span> icmp -1 -1 0.0.0.0/0 <span class="o">||</span> <span class="se">\</span>
     die <span class="nv">$LINENO</span> <span class="s2">&quot;Failure deleting security group rule from $SECGROUP&quot;</span>
 
+<span class="k">if</span> ! timeout <span class="nv">$ASSOCIATE_TIMEOUT</span> sh -c <span class="s2">&quot;while nova secgroup-list-rules $SECGROUP | grep -q icmp; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Security group rule not deleted from $SECGROUP&quot;</span>
+<span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>FIXME (anthony): make xs support security groups</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;xenserver&quot;</span> -a <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;openvz&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;ironic&quot;</span> -a <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;xenserver&quot;</span> -a <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;openvz&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Test we can aren't able to ping our floating ip within ASSOCIATE_TIMEOUT seconds</p>
 </td><td class=code><div class=highlight><pre>

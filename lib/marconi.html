@@ -362,9 +362,6 @@ ul.auto-toc {
 <p>lib/marconi
 Install and start <strong>Marconi</strong> service
 To enable a minimal set of Marconi services, add the following to localrc:</p>
-<div class="system-message">
-<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">&lt;stdin&gt;</tt>, line 4)</p>
-Unexpected indentation.</div>
 <blockquote>
 enable_service marconi-server</blockquote>
 <p>Dependencies:
@@ -407,7 +404,8 @@ cleanup_marconi</p>
 <span class="nv">MARCONICLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-marconiclient
 <span class="nv">MARCONI_CONF_DIR</span><span class="o">=</span>/etc/marconi
 <span class="nv">MARCONI_CONF</span><span class="o">=</span><span class="nv">$MARCONI_CONF_DIR</span>/marconi.conf
-<span class="nv">MARCONI_API_LOG_DIR</span><span class="o">=</span>/var/log/marconi-api
+<span class="nv">MARCONI_API_LOG_DIR</span><span class="o">=</span>/var/log/marconi
+<span class="nv">MARCONI_API_LOG_FILE</span><span class="o">=</span><span class="nv">$MARCONI_API_LOG_DIR</span>/queues.log
 <span class="nv">MARCONI_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">MARCONI_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/marconi</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -418,7 +416,7 @@ cleanup_marconi</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up database backend</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">MARCONI_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">MARCONI_BACKEND</span><span class="k">:-</span><span class="nv">mongodb</span><span class="k">}</span>
+<span class="nv">MARCONI_BACKEND</span><span class="o">=</span><span class="k">${</span><span class="nv">MARCONI_BACKEND</span><span class="k">:-</span><span class="nv">sqlite</span><span class="k">}</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
@@ -432,6 +430,13 @@ cleanup_marconi</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">MARCONICLIENT_REPO</span><span class="o">=</span><span class="k">${</span><span class="nv">MARCONICLIENT_REPO</span><span class="k">:-${</span><span class="nv">GIT_BASE</span><span class="k">}</span><span class="p">/openstack/python-marconiclient.git</span><span class="k">}</span>
 <span class="nv">MARCONICLIENT_BRANCH</span><span class="o">=</span><span class="k">${</span><span class="nv">MARCONICLIENT_BRANCH</span><span class="k">:-</span><span class="nv">master</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set Marconi Connection Info</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">MARCONI_SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MARCONI_SERVICE_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+<span class="nv">MARCONI_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">MARCONI_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8888</span><span class="k">}</span>
+<span class="nv">MARCONI_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">MARCONI_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">$SERVICE_PROTOCOL</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Tell Tempest this project is present</p>
@@ -458,21 +463,23 @@ is_marconi_enabled</p>
 <p>cleanup_marconi() - Remove residual data files, anything left over from previous
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_marconi<span class="o">()</span> <span class="o">{</span>
-    mongo marconi --eval <span class="s2">&quot;db.dropDatabase();&quot;</span>
+<span class="k">function </span>cleanup_marconi <span class="o">{</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! mongo marconi --eval &#39;db.dropDatabase();&#39;; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Mongo DB did not start&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_marconiclient() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_marconiclient<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_marconiclient <span class="o">{</span>
     setup_develop <span class="nv">$MARCONICLIENT_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_marconi() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_marconi<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_marconi <span class="o">{</span>
     setup_develop <span class="nv">$MARCONI_DIR</span>
 
     <span class="o">[</span> ! -d <span class="nv">$MARCONI_CONF_DIR</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> sudo mkdir -m 755 -p <span class="nv">$MARCONI_CONF_DIR</span>
@@ -482,7 +489,9 @@ runs that a clean run would need to clean up</p>
     sudo chown <span class="nv">$USER</span> <span class="nv">$MARCONI_API_LOG_DIR</span>
 
     iniset <span class="nv">$MARCONI_CONF</span> DEFAULT verbose True
-    iniset <span class="nv">$MARCONI_CONF</span> <span class="s1">&#39;drivers:transport:wsgi&#39;</span> <span class="nb">bind</span> <span class="s1">&#39;0.0.0.0&#39;</span>
+    iniset <span class="nv">$MARCONI_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
+    iniset <span class="nv">$MARCONI_CONF</span> DEFAULT log_file <span class="nv">$MARCONI_API_LOG_FILE</span>
+    iniset <span class="nv">$MARCONI_CONF</span> <span class="s1">&#39;drivers:transport:wsgi&#39;</span> <span class="nb">bind</span> <span class="nv">$MARCONI_SERVICE_HOST</span>
 
     iniset <span class="nv">$MARCONI_CONF</span> keystone_authtoken auth_protocol http
     iniset <span class="nv">$MARCONI_CONF</span> keystone_authtoken admin_user marconi
@@ -490,14 +499,18 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$MARCONI_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$MARCONI_CONF</span> keystone_authtoken signing_dir <span class="nv">$MARCONI_AUTH_CACHE_DIR</span>
 
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$MARCONI_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mongodb&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$MARCONI_CONF</span> database connection mongodb://localhost:27017/marconi
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$MARCONI_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mysql&#39;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$MARCONI_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;postgresql&#39;</span> <span class="o">]</span> ; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$MARCONI_CONF</span> drivers storage sqlalchemy
+        iniset <span class="nv">$MARCONI_CONF</span> <span class="s1">&#39;drivers:storage:sqlalchemy&#39;</span> uri <span class="sb">`</span>database_connection_url marconi<span class="sb">`</span>
+    <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$MARCONI_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mongodb&#39;</span> <span class="o">]</span> ; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$MARCONI_CONF</span>  drivers storage mongodb
+        iniset <span class="nv">$MARCONI_CONF</span> <span class="s1">&#39;drivers:storage:mongodb&#39;</span> uri mongodb://localhost:27017/marconi
         configure_mongodb
         cleanup_marconi
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>configure_mongodb<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_mongodb <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set nssize to 2GB. This increases the number of namespaces supported
 # per database.</p>
@@ -517,7 +530,7 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>init_marconi() - Initialize etc.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_marconi<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_marconi <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create cache dir</p>
 </td><td class=code><div class=highlight><pre>
@@ -529,7 +542,7 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install_marconi() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_marconi<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_marconi <span class="o">{</span>
     git_clone <span class="nv">$MARCONI_REPO</span> <span class="nv">$MARCONI_DIR</span> <span class="nv">$MARCONI_BRANCH</span>
     setup_develop <span class="nv">$MARCONI_DIR</span>
 <span class="o">}</span>
@@ -537,7 +550,7 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install_marconiclient() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_marconiclient<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_marconiclient <span class="o">{</span>
     git_clone <span class="nv">$MARCONICLIENT_REPO</span> <span class="nv">$MARCONICLIENT_DIR</span> <span class="nv">$MARCONICLIENT_BRANCH</span>
     setup_develop <span class="nv">$MARCONICLIENT_DIR</span>
 <span class="o">}</span>
@@ -545,14 +558,23 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>start_marconi() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_marconi<span class="o">()</span> <span class="o">{</span>
-    screen_it marconi-server <span class="s2">&quot;marconi-server --config-file $MARCONI_CONF&quot;</span>
+<span class="k">function </span>start_marconi <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$USE_SCREEN&quot;</span> <span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>screen_it marconi-server <span class="s2">&quot;marconi-server --config-file $MARCONI_CONF --daemon&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>screen_it marconi-server <span class="s2">&quot;marconi-server --config-file $MARCONI_CONF&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for Marconi to start...&quot;</span>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget --no-proxy -q -O- $MARCONI_SERVICE_PROTOCOL://$MARCONI_SERVICE_HOST:$MARCONI_SERVICE_PORT/v1/health; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Marconi did not start&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_marconi() - Stop running processes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_marconi<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_marconi <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the marconi screen windows</p>
 </td><td class=code><div class=highlight><pre>
@@ -561,33 +583,23 @@ runs that a clean run would need to clean up</p>
 <span class="nb">    </span><span class="k">done</span>
 <span class="o">}</span>
 
-<span class="k">function </span>create_marconi_accounts<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_marconi_accounts <span class="o">{</span>
     <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
     <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
-    <span class="nv">MARCONI_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
-        marconi <span class="se">\</span>
-        --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-        --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-        --email marconi@example.com <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    openstack role add <span class="se">\</span>
-        <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
-        --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-        --user <span class="nv">$MARCONI_USER</span>
+    <span class="nv">MARCONI_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;marconi&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
+    get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$MARCONI_USER</span> <span class="nv">$SERVICE_TENANT</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">MARCONI_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
-            marconi <span class="se">\</span>
-            --type<span class="o">=</span>queuing <span class="se">\</span>
-            --description<span class="o">=</span><span class="s2">&quot;Marconi Service&quot;</span> <span class="se">\</span>
-            | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        openstack endpoint create <span class="se">\</span>
-            <span class="nv">$MARCONI_SERVICE</span> <span class="se">\</span>
-            --region RegionOne <span class="se">\</span>
-            --publicurl <span class="s2">&quot;http://$SERVICE_HOST:8888&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;http://$SERVICE_HOST:8888&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;http://$SERVICE_HOST:8888&quot;</span>
+
+<span class="k">        </span><span class="nv">MARCONI_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;marconi&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;queuing&quot;</span> <span class="s2">&quot;Marconi Service&quot;</span><span class="k">)</span>
+        get_or_create_endpoint <span class="nv">$MARCONI_SERVICE</span> <span class="se">\</span>
+            <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$MARCONI_SERVICE_PROTOCOL://$MARCONI_SERVICE_HOST:$MARCONI_SERVICE_PORT&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$MARCONI_SERVICE_PROTOCOL://$MARCONI_SERVICE_HOST:$MARCONI_SERVICE_PORT&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$MARCONI_SERVICE_PROTOCOL://$MARCONI_SERVICE_HOST:$MARCONI_SERVICE_PORT&quot;</span>
     <span class="k">fi</span>
 
 <span class="o">}</span>

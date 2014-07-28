@@ -452,18 +452,6 @@ in the following order:</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>whether to create a fake environment, eg. for devstack-gate</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">BM_USE_FAKE_ENV</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$BM_USE_FAKE_ENV</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Extra options to pass to bm_poseur
-change the bridge name or IP: --bridge br99 --bridge-ip 192.0.2.1
-change the virtualization type: --engine qemu</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">BM_POSEUR_EXTRA_OPTS</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_POSEUR_EXTRA_OPTS</span><span class="k">:-}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>To provide PXE, configure nova-network's dnsmasq rather than run the one
 dedicated to baremetal. When enable this, make sure these conditions are
 fulfilled:</p>
@@ -479,17 +467,12 @@ is enabled.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>BM_DNSMASQ_IFACE should match FLAT_NETWORK_BRIDGE</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$BM_USE_FAKE_ENV&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">BM_DNSMASQ_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_IFACE</span><span class="k">:-</span><span class="nv">br99</span><span class="k">}</span>
-    <span class="nv">BM_DNSMASQ_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.0.2.32,192.0.2.48</span><span class="k">}</span>
-<span class="k">else</span>
-<span class="k">    </span><span class="nv">BM_DNSMASQ_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_IFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
+<span class="nv">BM_DNSMASQ_IFACE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_IFACE</span><span class="k">:-</span><span class="nv">eth0</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>if testing on a physical network,
 BM_DNSMASQ_RANGE must be changed to suit your network</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">BM_DNSMASQ_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_RANGE</span><span class="k">:-}</span>
-<span class="k">fi</span>
+<span class="nv">BM_DNSMASQ_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DNSMASQ_RANGE</span><span class="k">:-}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>BM_DNSMASQ_DNS provide dns server to bootstrap clients</p>
@@ -540,8 +523,7 @@ BaremetalHostManager with multiple nodes and different flavors.</p>
 <p>Below this, we set some path and filenames.
 Defaults are probably sufficient.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">BM_IMAGE_BUILD_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_IMAGE_BUILD_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/diskimage-builder</span><span class="k">}</span>
-<span class="nv">BM_POSEUR_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_POSEUR_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/bm_poseur</span><span class="k">}</span>
+<span class="nv">DIB_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DIB_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/diskimage-builder</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Use DIB to create deploy ramdisk and kernel.</p>
@@ -557,8 +539,12 @@ Defaults are probably sufficient.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>If you need to add any extra flavors to the deploy ramdisk image
 eg, specific network drivers, specify them here</p>
+<dl class="docutils">
+<dt>NOTE(deva): this will be moved to lib/ironic in a future patch</dt>
+<dd>for now, set the default to a suitable value for Ironic's needs</dd>
+</dl>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">BM_DEPLOY_FLAVOR</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DEPLOY_FLAVOR</span><span class="k">:-}</span>
+<span class="nv">BM_DEPLOY_FLAVOR</span><span class="o">=</span><span class="k">${</span><span class="nv">BM_DEPLOY_FLAVOR</span><span class="k">:-</span><span class="p">-a amd64 ubuntu deploy-ironic</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>set URL and version for google shell-in-a-box</p>
@@ -577,7 +563,7 @@ eg, specific network drivers, specify them here</p>
 Returns false if VIRT_DRIVER is not baremetal, or if ENABLED_SERVICES
 does not contain &quot;baremetal&quot;</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>is_baremetal<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>is_baremetal <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;baremetal&#39;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;baremetal&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        return </span>0
     <span class="k">fi</span>
@@ -588,9 +574,8 @@ does not contain &quot;baremetal&quot;</p>
 <p>Install diskimage-builder and shell-in-a-box
 so that we can build the deployment kernel &amp; ramdisk</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>prepare_baremetal_toolchain<span class="o">()</span> <span class="o">{</span>
-    git_clone <span class="nv">$BM_IMAGE_BUILD_REPO</span> <span class="nv">$BM_IMAGE_BUILD_DIR</span> <span class="nv">$BM_IMAGE_BUILD_BRANCH</span>
-    git_clone <span class="nv">$BM_POSEUR_REPO</span> <span class="nv">$BM_POSEUR_DIR</span> <span class="nv">$BM_POSEUR_BRANCH</span>
+<span class="k">function </span>prepare_baremetal_toolchain <span class="o">{</span>
+    git_clone <span class="nv">$DIB_REPO</span> <span class="nv">$DIB_DIR</span> <span class="nv">$DIB_BUILD_BRANCH</span>
 
     <span class="nb">local </span><span class="nv">shellinabox_basename</span><span class="o">=</span><span class="k">$(</span>basename <span class="nv">$BM_SHELL_IN_A_BOX</span><span class="k">)</span>
     <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$DEST</span>/<span class="nv">$shellinabox_basename</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -610,36 +595,9 @@ so that we can build the deployment kernel &amp; ramdisk</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>set up virtualized environment for devstack-gate testing</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_fake_baremetal_env<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">bm_poseur</span><span class="o">=</span><span class="s2">&quot;$BM_POSEUR_DIR/bm_poseur&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>TODO(deva): add support for &gt;1 VM</p>
-</td><td class=code><div class=highlight><pre>
-    sudo <span class="nv">$bm_poseur</span> <span class="nv">$BM_POSEUR_EXTRA_OPTS</span> create-bridge
-    sudo <span class="nv">$bm_poseur</span> <span class="nv">$BM_POSEUR_EXTRA_OPTS</span> create-vm
-    <span class="nv">BM_FIRST_MAC</span><span class="o">=</span><span class="k">$(</span>sudo <span class="nv">$bm_poseur</span> get-macs<span class="k">)</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>NOTE: there is currently a limitation in baremetal driver
-that requires second MAC even if it is not used.
-Passing a fake value allows this to work.
-TODO(deva): remove this after driver issue is fixed.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">BM_SECOND_MAC</span><span class="o">=</span><span class="s1">&#39;12:34:56:78:90:12&#39;</span>
-<span class="o">}</span>
-
-<span class="k">function </span>cleanup_fake_baremetal_env<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">bm_poseur</span><span class="o">=</span><span class="s2">&quot;$BM_POSEUR_DIR/bm_poseur&quot;</span>
-    sudo <span class="nv">$bm_poseur</span> <span class="nv">$BM_POSEUR_EXTRA_OPTS</span> destroy-vm
-    sudo <span class="nv">$bm_poseur</span> <span class="nv">$BM_POSEUR_EXTRA_OPTS</span> destroy-bridge
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>prepare various directories needed by baremetal hypervisor</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_baremetal_nova_dirs<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_baremetal_nova_dirs <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>ensure /tftpboot is prepared</p>
 </td><td class=code><div class=highlight><pre>
@@ -678,14 +636,14 @@ because baremetal driver will reconfigure and restart this as needed</p>
 <p>build deploy kernel+ramdisk, then upload them to glance
 this function sets BM_DEPLOY_KERNEL_ID and BM_DEPLOY_RAMDISK_ID</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>upload_baremetal_deploy<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>upload_baremetal_deploy <span class="o">{</span>
     <span class="nv">token</span><span class="o">=</span><span class="nv">$1</span>
 
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$BM_BUILD_DEPLOY_RAMDISK&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">BM_DEPLOY_KERNEL</span><span class="o">=</span>bm-deploy.kernel
         <span class="nv">BM_DEPLOY_RAMDISK</span><span class="o">=</span>bm-deploy.initramfs
         <span class="k">if</span> <span class="o">[</span> ! -e <span class="s2">&quot;$TOP_DIR/files/$BM_DEPLOY_KERNEL&quot;</span> -o ! -e <span class="s2">&quot;$TOP_DIR/files/$BM_DEPLOY_RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-            <span class="nv">$BM_IMAGE_BUILD_DIR</span>/bin/ramdisk-image-create <span class="nv">$BM_DEPLOY_FLAVOR</span> deploy <span class="se">\</span>
+            <span class="nv">$DIB_DIR</span>/bin/ramdisk-image-create <span class="nv">$BM_DEPLOY_FLAVOR</span> <span class="se">\</span>
                 -o <span class="nv">$TOP_DIR</span>/files/bm-deploy
         <span class="k">fi</span>
 <span class="k">    fi</span>
@@ -713,7 +671,7 @@ this function sets BM_DEPLOY_KERNEL_ID and BM_DEPLOY_RAMDISK_ID</p>
 <p>create a basic baremetal flavor, associated with deploy kernel &amp; ramdisk</p>
 <p>Usage: create_baremetal_flavor &lt;aki_uuid&gt; &lt;ari_uuid&gt;</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_baremetal_flavor<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_baremetal_flavor <span class="o">{</span>
     <span class="nv">aki</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nv">ari</span><span class="o">=</span><span class="nv">$2</span>
     nova flavor-create <span class="nv">$BM_FLAVOR_NAME</span> <span class="nv">$BM_FLAVOR_ID</span> <span class="se">\</span>
@@ -731,7 +689,7 @@ Note that $file is currently expected to be in qcow2 format.
 Sets KERNEL_ID and RAMDISK_ID</p>
 <p>Usage: extract_and_upload_k_and_r_from_image $token $file</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>extract_and_upload_k_and_r_from_image<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>extract_and_upload_k_and_r_from_image <span class="o">{</span>
     <span class="nv">token</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nv">file</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nv">image_name</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$file&quot;</span> <span class="s2">&quot;.qcow2&quot;</span><span class="k">)</span>
@@ -739,7 +697,7 @@ Sets KERNEL_ID and RAMDISK_ID</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>this call returns the file names as &quot;$kernel,$ramdisk&quot;</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">out</span><span class="o">=</span><span class="k">$(</span><span class="nv">$BM_IMAGE_BUILD_DIR</span>/bin/disk-image-get-kernel <span class="se">\</span>
+    <span class="nv">out</span><span class="o">=</span><span class="k">$(</span><span class="nv">$DIB_DIR</span>/bin/disk-image-get-kernel <span class="se">\</span>
             -x -d <span class="nv">$TOP_DIR</span>/files -o bm-deploy -i <span class="nv">$file</span><span class="k">)</span>
     <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Failed to get kernel and ramdisk from $file&quot;</span>
@@ -777,7 +735,7 @@ Sets KERNEL_ID and RAMDISK_ID</p>
 easier to create a separate method, rather than complicate the logic
 of the existing function.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>upload_baremetal_image<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>upload_baremetal_image <span class="o">{</span>
     <span class="nb">local </span><span class="nv">image_url</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">token</span><span class="o">=</span><span class="nv">$2</span>
 
@@ -877,7 +835,7 @@ that we just uploaded in glance</p>
     <span class="nv">DEFAULT_IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>clear_baremetal_of_all_nodes<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>clear_baremetal_of_all_nodes <span class="o">{</span>
     <span class="nv">list</span><span class="o">=</span><span class="k">$(</span>nova baremetal-node-list | awk -F <span class="s1">&#39;| &#39;</span> <span class="s1">&#39;NR&gt;3 {print $2}&#39;</span> <span class="k">)</span>
     <span class="k">for </span>node in <span class="nv">$list</span>; <span class="k">do</span>
 <span class="k">        </span>nova baremetal-node-delete <span class="nv">$node</span>
@@ -889,7 +847,7 @@ that we just uploaded in glance</p>
 Defaults to using BM_FIRST_MAC and BM_SECOND_MAC if parameters not specified</p>
 <p>Usage: add_baremetal_node &lt;first_mac&gt; &lt;second_mac&gt;</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>add_baremetal_node<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>add_baremetal_node <span class="o">{</span>
     <span class="nv">mac_1</span><span class="o">=</span><span class="k">${</span><span class="nv">1</span><span class="k">:-</span><span class="nv">$BM_FIRST_MAC</span><span class="k">}</span>
     <span class="nv">mac_2</span><span class="o">=</span><span class="k">${</span><span class="nv">2</span><span class="k">:-</span><span class="nv">$BM_SECOND_MAC</span><span class="k">}</span>
 

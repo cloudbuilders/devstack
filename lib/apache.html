@@ -364,20 +364,13 @@ Functions to control configuration and operation of apache web server
 Dependencies:</p>
 <ul class="simple">
 <li><tt class="docutils literal">functions</tt> file</li>
+<li><tt class="docutils literal">STACK_USER</tt> must be defined</li>
 </ul>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 6)</p>
-Bullet list ends without a blank line; unexpected unindent.</div>
-<p>-<tt class="docutils literal">STACK_USER</tt> must be defined</p>
-</td><td class=code><div class=highlight><pre>
-
-
-</pre></div></td></tr><tr><td class=docs>
 <p>lib/apache exports the following functions:</p>
 <ul class="simple">
-<li>is_apache_enabled_service</li>
 <li>install_apache_wsgi</li>
 <li>config_apache_wsgi</li>
+<li>apache_site_config_for</li>
 <li>enable_apache_site</li>
 <li>disable_apache_site</li>
 <li>start_apache_server</li>
@@ -385,6 +378,7 @@ Bullet list ends without a blank line; unexpected unindent.</div>
 <li>restart_apache_server</li>
 </ul>
 </td><td class=code><div class=highlight><pre>
+
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Save trace setting</p>
@@ -405,40 +399,21 @@ current user and his default group.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">    </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
-    <span class="nv">APACHE_CONF_DIR</span><span class="o">=</span>sites-available
+    <span class="nv">APACHE_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/</span><span class="nv">$APACHE_NAME</span><span class="p">/sites-available</span><span class="k">}</span>
 <span class="k">elif </span>is_fedora; <span class="k">then</span>
 <span class="k">    </span><span class="nv">APACHE_NAME</span><span class="o">=</span>httpd
-    <span class="nv">APACHE_CONF_DIR</span><span class="o">=</span>conf.d
+    <span class="nv">APACHE_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/</span><span class="nv">$APACHE_NAME</span><span class="p">/conf.d</span><span class="k">}</span>
 <span class="k">elif </span>is_suse; <span class="k">then</span>
 <span class="k">    </span><span class="nv">APACHE_NAME</span><span class="o">=</span>apache2
-    <span class="nv">APACHE_CONF_DIR</span><span class="o">=</span>vhosts.d
+    <span class="nv">APACHE_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">APACHE_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/</span><span class="nv">$APACHE_NAME</span><span class="p">/vhosts.d</span><span class="k">}</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="functions">
 <h1>Functions</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>is_apache_enabled_service() checks if the service(s) specified as arguments are
-apache enabled by the user in <tt class="docutils literal">APACHE_ENABLED_SERVICES</tt> as web front end.</p>
-<p>Multiple services specified as arguments are <tt class="docutils literal">OR</tt>'ed together; the test
-is a short-circuit boolean, i.e it returns on the first match.</p>
-<p>Uses global <tt class="docutils literal">APACHE_ENABLED_SERVICES</tt>
-APACHE_ENABLED_SERVICES service [service ...]</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>is_apache_enabled_service<span class="o">()</span> <span class="o">{</span>
-    <span class="nv">services</span><span class="o">=</span><span class="nv">$@</span>
-    <span class="k">for </span>service in <span class="k">${</span><span class="nv">services</span><span class="k">}</span>; <span class="k">do</span>
-        <span class="o">[[</span> ,<span class="k">${</span><span class="nv">APACHE_ENABLED_SERVICES</span><span class="k">}</span>, <span class="o">=</span>~ ,<span class="k">${</span><span class="nv">service</span><span class="k">}</span>, <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
-    <span class="k">done</span>
-<span class="k">    return </span>1
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>install_apache_wsgi() - Install Apache server and wsgi module</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_apache_wsgi<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_apache_wsgi <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Apache installation, because we mark it NOPRIME</p>
 </td><td class=code><div class=highlight><pre>
@@ -466,43 +441,100 @@ APACHE_ENABLED_SERVICES service [service ...]</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>enable_apache_site() - Enable a particular apache site</p>
+<p>apache_site_config_for() - The filename of the site's configuration file.
+This function uses the global variables APACHE_NAME and APACHE_CONF_DIR.</p>
+<p>On Ubuntu 14.04, the site configuration file must have a .conf suffix for a2ensite and a2dissite to
+recognise it. a2ensite and a2dissite ignore the .conf suffix used as parameter. The default sites'
+files are 000-default.conf and default-ssl.conf.</p>
+<p>On Ubuntu 12.04, the site configuration file may have any format, as long as it is in
+/etc/apache2/sites-available/. a2ensite and a2dissite need the entire file name to work. The default
+sites' files are default and default-ssl.</p>
+<p>On Fedora and openSUSE, any file in /etc/httpd/conf.d/ whose name ends with .conf is enabled.</p>
+<p>On RHEL and CentOS, things should hopefully work as in Fedora.</p>
+<p>The table below summarizes what should happen on each distribution:
++----------------------+--------------------+--------------------------+--------------------------+
+| Distribution         | File name          | Site enabling command    | Site disabling command   |
++----------------------+--------------------+--------------------------+--------------------------+
+| Ubuntu 12.04         | site               | a2ensite site            | a2dissite site           |
+| Ubuntu 14.04         | site.conf          | a2ensite site            | a2dissite site           |
+| Fedora, RHEL, CentOS | site.conf.disabled | mv site.conf{.disabled,} | mv site.conf{,.disabled} |
++----------------------+--------------------+--------------------------+--------------------------+</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>enable_apache_site<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>apache_site_config_for <span class="o">{</span>
     <span class="nb">local </span><span class="nv">site</span><span class="o">=</span><span class="nv">$@</span>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span>sudo a2ensite <span class="k">${</span><span class="nv">site</span><span class="k">}</span>
-    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">apache_version</span><span class="o">=</span><span class="k">$(</span>sudo /usr/sbin/apache2ctl -v | awk <span class="s1">&#39;/Server version/ {print $3}&#39;</span> | cut -f2 -d/<span class="k">)</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$apache_version&quot;</span> <span class="o">=</span>~ ^2<span class="se">\.</span>2<span class="se">\.</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Ubuntu 12.04 - Apache 2.2</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="nb">echo</span> <span class="nv">$APACHE_CONF_DIR</span>/<span class="k">${</span><span class="nv">site</span><span class="k">}</span>
+        <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Ubuntu 14.04 - Apache 2.4</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="nb">echo</span> <span class="nv">$APACHE_CONF_DIR</span>/<span class="k">${</span><span class="nv">site</span><span class="k">}</span>.conf
+        <span class="k">fi</span>
+<span class="k">    elif </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>fedora conf.d is only imported if it ends with .conf so this is approx the same</p>
 </td><td class=code><div class=highlight><pre>
-        sudo mv /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/<span class="k">${</span><span class="nv">site</span><span class="k">}</span> /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/<span class="k">${</span><span class="nv">site</span><span class="k">}</span>.conf
-    <span class="k">fi</span>
+        <span class="nb">local </span><span class="nv">enabled_site_file</span><span class="o">=</span><span class="s2">&quot;$APACHE_CONF_DIR/${site}.conf&quot;</span>
+        <span class="k">if</span> <span class="o">[</span> -f <span class="nv">$enabled_site_file</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="k">${</span><span class="nv">enabled_site_file</span><span class="k">}</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="k">${</span><span class="nv">enabled_site_file</span><span class="k">}</span>.disabled
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>enable_apache_site() - Enable a particular apache site</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>enable_apache_site <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">site</span><span class="o">=</span><span class="nv">$@</span>
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>sudo a2ensite <span class="k">${</span><span class="nv">site</span><span class="k">}</span>
+    <span class="k">elif </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">enabled_site_file</span><span class="o">=</span><span class="s2">&quot;$APACHE_CONF_DIR/${site}.conf&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Do nothing if site already enabled or no site config exists</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> -f <span class="k">${</span><span class="nv">enabled_site_file</span><span class="k">}</span>.disabled <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> ! -f <span class="k">${</span><span class="nv">enabled_site_file</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>sudo mv <span class="k">${</span><span class="nv">enabled_site_file</span><span class="k">}</span>.disabled <span class="k">${</span><span class="nv">enabled_site_file</span><span class="k">}</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>disable_apache_site() - Disable a particular apache site</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>disable_apache_site<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>disable_apache_site <span class="o">{</span>
     <span class="nb">local </span><span class="nv">site</span><span class="o">=</span><span class="nv">$@</span>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span>sudo a2dissite <span class="k">${</span><span class="nv">site</span><span class="k">}</span>
-    <span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span>sudo mv /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/<span class="k">${</span><span class="nv">site</span><span class="k">}</span>.conf /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/<span class="k">${</span><span class="nv">site</span><span class="k">}</span>
-    <span class="k">fi</span>
+    <span class="k">elif </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">enabled_site_file</span><span class="o">=</span><span class="s2">&quot;$APACHE_CONF_DIR/${site}.conf&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Do nothing if no site config exists</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[[</span> -f <span class="k">${</span><span class="nv">enabled_site_file</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>sudo mv <span class="k">${</span><span class="nv">enabled_site_file</span><span class="k">}</span> <span class="k">${</span><span class="nv">enabled_site_file</span><span class="k">}</span>.disabled
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>start_apache_server() - Start running apache server</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_apache_server<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_apache_server <span class="o">{</span>
     start_service <span class="nv">$APACHE_NAME</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_apache_server() - Stop running apache server</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_apache_server<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_apache_server <span class="o">{</span>
     <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$APACHE_NAME&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>stop_service <span class="nv">$APACHE_NAME</span>
     <span class="k">else</span>
@@ -513,8 +545,15 @@ APACHE_ENABLED_SERVICES service [service ...]</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>restart_apache_server</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>restart_apache_server<span class="o">()</span> <span class="o">{</span>
-    restart_service <span class="nv">$APACHE_NAME</span>
+<span class="k">function </span>restart_apache_server <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Apache can be slow to stop, doing an explicit stop, sleep, start helps
+to mitigate issues where apache will claim a port it's listening on is
+still in use and fail to start.</p>
+</td><td class=code><div class=highlight><pre>
+    stop_service <span class="nv">$APACHE_NAME</span>
+    sleep 3
+    start_service <span class="nv">$APACHE_NAME</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

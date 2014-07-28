@@ -385,11 +385,12 @@ Dependencies:</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Save trace setting</p>
+<p>Save trace and pipefail settings</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">PIPEFAIL</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep pipefail<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
-
+<span class="nb">set</span> +o pipefail
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="defaults">
@@ -400,12 +401,63 @@ Dependencies:</p>
 <p>Set up default directories</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">IRONIC_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/ironic
+<span class="nv">IRONIC_DATA_DIR</span><span class="o">=</span><span class="nv">$DATA_DIR</span>/ironic
+<span class="nv">IRONIC_STATE_PATH</span><span class="o">=</span>/var/lib/ironic
 <span class="nv">IRONICCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-ironicclient
 <span class="nv">IRONIC_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/ironic</span><span class="k">}</span>
 <span class="nv">IRONIC_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/ironic</span><span class="k">}</span>
 <span class="nv">IRONIC_CONF_FILE</span><span class="o">=</span><span class="nv">$IRONIC_CONF_DIR</span>/ironic.conf
 <span class="nv">IRONIC_ROOTWRAP_CONF</span><span class="o">=</span><span class="nv">$IRONIC_CONF_DIR</span>/rootwrap.conf
 <span class="nv">IRONIC_POLICY_JSON</span><span class="o">=</span><span class="nv">$IRONIC_CONF_DIR</span>/policy.json
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up defaults for functional / integration testing</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">IRONIC_SCRIPTS_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_SCRIPTS_DIR</span><span class="k">:-</span><span class="nv">$TOP_DIR</span><span class="p">/tools/ironic/scripts</span><span class="k">}</span>
+<span class="nv">IRONIC_TEMPLATES_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_TEMPLATES_DIR</span><span class="k">:-</span><span class="nv">$TOP_DIR</span><span class="p">/tools/ironic/templates</span><span class="k">}</span>
+<span class="nv">IRONIC_BAREMETAL_BASIC_OPS</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$IRONIC_BAREMETAL_BASIC_OPS</span><span class="k">)</span>
+<span class="nv">IRONIC_ENABLED_DRIVERS</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_ENABLED_DRIVERS</span><span class="k">:-</span><span class="nv">fake</span><span class="p">,pxe_ssh,pxe_ipmitool</span><span class="k">}</span>
+<span class="nv">IRONIC_SSH_USERNAME</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_SSH_USERNAME</span><span class="k">:-</span><span class="sb">`</span>whoami<span class="sb">`</span><span class="k">}</span>
+<span class="nv">IRONIC_SSH_KEY_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_SSH_KEY_DIR</span><span class="k">:-</span><span class="nv">$IRONIC_DATA_DIR</span><span class="p">/ssh_keys</span><span class="k">}</span>
+<span class="nv">IRONIC_SSH_KEY_FILENAME</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_SSH_KEY_FILENAME</span><span class="k">:-</span><span class="nv">ironic_key</span><span class="k">}</span>
+<span class="nv">IRONIC_KEY_FILE</span><span class="o">=</span><span class="nv">$IRONIC_SSH_KEY_DIR</span>/<span class="nv">$IRONIC_SSH_KEY_FILENAME</span>
+<span class="nv">IRONIC_SSH_VIRT_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_SSH_VIRT_TYPE</span><span class="k">:-</span><span class="nv">virsh</span><span class="k">}</span>
+<span class="nv">IRONIC_TFTPBOOT_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_TFTPBOOT_DIR</span><span class="k">:-</span><span class="nv">$IRONIC_DATA_DIR</span><span class="p">/tftpboot</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_SSH_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_SSH_PORT</span><span class="k">:-</span><span class="nv">22</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_SSH_ADDRESS</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_SSH_ADDRESS</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_COUNT</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_COUNT</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_SPECS_CPU</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_SPECS_CPU</span><span class="k">:-</span><span class="nv">1</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_SPECS_RAM</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_SPECS_RAM</span><span class="k">:-</span><span class="nv">512</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_SPECS_DISK</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_SPECS_DISK</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_EPHEMERAL_DISK</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_EPHEMERAL_DISK</span><span class="k">:-</span><span class="nv">0</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_EMULATOR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_EMULATOR</span><span class="k">:-</span><span class="p">/usr/bin/qemu-system-x86_64</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_NETWORK_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_NETWORK_BRIDGE</span><span class="k">:-</span><span class="nv">brbm</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_NETWORK_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_NETWORK_RANGE</span><span class="k">:-</span><span class="nv">192</span><span class="p">.0.2.0/24</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_MACS_CSV_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_MACS_CSV_FILE</span><span class="k">:-</span><span class="nv">$IRONIC_DATA_DIR</span><span class="p">/ironic_macs.csv</span><span class="k">}</span>
+<span class="nv">IRONIC_AUTHORIZED_KEYS_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_AUTHORIZED_KEYS_FILE</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/.ssh/authorized_keys</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>By default, baremetal VMs will console output to file.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">IRONIC_VM_LOG_CONSOLE</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_LOG_CONSOLE</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+<span class="nv">IRONIC_VM_LOG_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_VM_LOG_DIR</span><span class="k">:-</span><span class="nv">$IRONIC_DATA_DIR</span><span class="p">/logs/</span><span class="k">}</span>
+
+<span class="nv">DIB_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DIB_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/diskimage-builder</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Use DIB to create deploy ramdisk and kernel.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">IRONIC_BUILD_DEPLOY_RAMDISK</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$IRONIC_BUILD_DEPLOY_RAMDISK</span><span class="sb">`</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If not use DIB, these files are used as deploy ramdisk/kernel.
+(The value must be a absolute path)</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">IRONIC_DEPLOY_RAMDISK</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_DEPLOY_RAMDISK</span><span class="k">:-}</span>
+<span class="nv">IRONIC_DEPLOY_KERNEL</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_DEPLOY_KERNEL</span><span class="k">:-}</span>
+<span class="nv">IRONIC_DEPLOY_ELEMENT</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_DEPLOY_ELEMENT</span><span class="k">:-</span><span class="nv">deploy</span><span class="p">-ironic</span><span class="k">}</span>
+
+<span class="c">#TODO(agordeev): replace &#39;ubuntu&#39; with host distro name getting</span>
+<span class="nv">IRONIC_DEPLOY_FLAVOR</span><span class="o">=</span><span class="k">${</span><span class="nv">IRONIC_DEPLOY_FLAVOR</span><span class="k">:-</span><span class="nv">ubuntu</span><span class="p"> </span><span class="nv">$IRONIC_DEPLOY_ELEMENT</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Support entry points installation of console scripts</p>
@@ -442,7 +494,7 @@ is_ironic_enabled</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install_ironic() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_ironic<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_ironic <span class="o">{</span>
     git_clone <span class="nv">$IRONIC_REPO</span> <span class="nv">$IRONIC_DIR</span> <span class="nv">$IRONIC_BRANCH</span>
     setup_develop <span class="nv">$IRONIC_DIR</span>
 <span class="o">}</span>
@@ -450,7 +502,7 @@ is_ironic_enabled</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install_ironicclient() - Collect sources and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_ironicclient<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_ironicclient <span class="o">{</span>
     git_clone <span class="nv">$IRONICCLIENT_REPO</span> <span class="nv">$IRONICCLIENT_DIR</span> <span class="nv">$IRONICCLIENT_BRANCH</span>
     setup_develop <span class="nv">$IRONICCLIENT_DIR</span>
 <span class="o">}</span>
@@ -459,14 +511,14 @@ is_ironic_enabled</p>
 <p>cleanup_ironic() - Remove residual data files, anything left over from previous
 runs that would need to clean up.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_ironic<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>cleanup_ironic <span class="o">{</span>
     sudo rm -rf <span class="nv">$IRONIC_AUTH_CACHE_DIR</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_ironic() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_ironic<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_ironic <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$IRONIC_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$IRONIC_CONF_DIR</span>
     <span class="k">fi</span>
@@ -479,8 +531,8 @@ runs that would need to clean up.</p>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT debug True
     inicomment <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT log_file
     iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT sql_connection <span class="sb">`</span>database_connection_url ironic<span class="sb">`</span>
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT state_path <span class="nv">$IRONIC_STATE_PATH</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
-
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure Ironic conductor, if it was enabled.</p>
 </td><td class=code><div class=highlight><pre>
@@ -494,20 +546,29 @@ runs that would need to clean up.</p>
     <span class="k">if </span>is_service_enabled ir-api; <span class="k">then</span>
 <span class="k">        </span>configure_ironic_api
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Format logging</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>setup_colorized_logging <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$IRONIC_BAREMETAL_BASIC_OPS&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>configure_ironic_auxiliary
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_ironic_api() - Is used by configure_ironic(). Performs
 API specific configuration.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_ironic_api<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_ironic_api <span class="o">{</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT auth_strategy keystone
     iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT policy_file <span class="nv">$IRONIC_POLICY_JSON</span>
-    iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
-    iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_URI</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken admin_user ironic
     iniset <span class="nv">$IRONIC_CONF_FILE</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
@@ -521,17 +582,36 @@ API specific configuration.</p>
 <p>configure_ironic_conductor() - Is used by configure_ironic().
 Sets conductor specific settings.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_ironic_conductor<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_ironic_conductor <span class="o">{</span>
     cp <span class="nv">$IRONIC_DIR</span>/etc/ironic/rootwrap.conf <span class="nv">$IRONIC_ROOTWRAP_CONF</span>
     cp -r <span class="nv">$IRONIC_DIR</span>/etc/ironic/rootwrap.d <span class="nv">$IRONIC_CONF_DIR</span>
+    <span class="nv">IRONIC_ROOTWRAP</span><span class="o">=</span><span class="k">$(</span>get_rootwrap_location ironic<span class="k">)</span>
+    <span class="nv">ROOTWRAP_ISUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$IRONIC_ROOTWRAP $IRONIC_CONF_DIR/rootwrap.conf *&quot;</span>
 
-    iniset <span class="nv">$IRONIC_CONF</span> DEFAULT rootwrap_config <span class="nv">$IRONIC_ROOTWRAP_CONF</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up the rootwrap sudoers for ironic</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD: $ROOTWRAP_ISUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
+    chmod 0440 <span class="nv">$TEMPFILE</span>
+    sudo chown root:root <span class="nv">$TEMPFILE</span>
+    sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/ironic-rootwrap
+
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT rootwrap_config <span class="nv">$IRONIC_ROOTWRAP_CONF</span>
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> DEFAULT enabled_drivers <span class="nv">$IRONIC_ENABLED_DRIVERS</span>
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> conductor api_url http://<span class="nv">$HOST_IP</span>:6385
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> pxe tftp_server <span class="nv">$HOST_IP</span>
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> pxe tftp_root <span class="nv">$IRONIC_TFTPBOOT_DIR</span>
+    iniset <span class="nv">$IRONIC_CONF_FILE</span> pxe tftp_master_path <span class="nv">$IRONIC_TFTPBOOT_DIR</span>/master_images
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$IRONIC_VM_LOG_CONSOLE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$IRONIC_CONF_FILE</span> pxe pxe_append_params <span class="s2">&quot;nofb nomodeset vga=normal console=ttyS0&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>create_ironic_cache_dir() - Part of the init_ironic() process</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>create_ironic_cache_dir<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_ironic_cache_dir <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create cache dir</p>
 </td><td class=code><div class=highlight><pre>
@@ -553,7 +633,7 @@ Sets conductor specific settings.</p>
 <h1>Tenant               User       Roles</h1>
 <p>service              ironic     admin        # if enabled</p>
 </td><td class=code><div class=highlight><pre>
-create_ironic_accounts<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_ironic_accounts <span class="o">{</span>
 
     <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
     <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
@@ -562,28 +642,23 @@ create_ironic_accounts<span class="o">()</span> <span class="o">{</span>
 <p>Ironic</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;ir-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IRONIC_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
-            ironic <span class="se">\</span>
-            --password <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="se">\</span>
-            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --email ironic@example.com <span class="se">\</span>
-            | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        openstack role add <span class="se">\</span>
-            <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
-            --project <span class="nv">$SERVICE_TENANT</span> <span class="se">\</span>
-            --user <span class="nv">$IRONIC_USER</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Get ironic user if exists</p>
+</td><td class=code><div class=highlight><pre>
+
+        <span class="nv">IRONIC_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;ironic&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
+        get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$IRONIC_USER</span> <span class="nv">$SERVICE_TENANT</span>
+
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">IRONIC_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
-                ironic <span class="se">\</span>
-                --type<span class="o">=</span>baremetal <span class="se">\</span>
-                --description<span class="o">=</span><span class="s2">&quot;Ironic baremetal provisioning service&quot;</span> <span class="se">\</span>
-                | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-            openstack endpoint create <span class="se">\</span>
-                <span class="nv">$IRONIC_SERVICE</span> <span class="se">\</span>
-                --region RegionOne <span class="se">\</span>
-                --publicurl <span class="s2">&quot;$IRONIC_SERVICE_PROTOCOL://$IRONIC_HOSTPORT&quot;</span> <span class="se">\</span>
-                --adminurl <span class="s2">&quot;$IRONIC_SERVICE_PROTOCOL://$IRONIC_HOSTPORT&quot;</span> <span class="se">\</span>
-                --internalurl <span class="s2">&quot;$IRONIC_SERVICE_PROTOCOL://$IRONIC_HOSTPORT&quot;</span>
+
+<span class="k">            </span><span class="nv">IRONIC_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;ironic&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;baremetal&quot;</span> <span class="s2">&quot;Ironic baremetal provisioning service&quot;</span><span class="k">)</span>
+            get_or_create_endpoint <span class="nv">$IRONIC_SERVICE</span> <span class="se">\</span>
+                <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$IRONIC_SERVICE_PROTOCOL://$IRONIC_HOSTPORT&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$IRONIC_SERVICE_PROTOCOL://$IRONIC_HOSTPORT&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$IRONIC_SERVICE_PROTOCOL://$IRONIC_HOSTPORT&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
@@ -592,7 +667,7 @@ create_ironic_accounts<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>init_ironic() - Initialize databases, etc.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_ironic<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_ironic <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>(Re)create  ironic database</p>
 </td><td class=code><div class=highlight><pre>
@@ -601,20 +676,15 @@ create_ironic_accounts<span class="o">()</span> <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Migrate ironic database</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$IRONIC_BIN_DIR</span>/ironic-dbsync
+    <span class="nv">$IRONIC_BIN_DIR</span>/ironic-dbsync --config-file<span class="o">=</span><span class="nv">$IRONIC_CONF_FILE</span>
 
     create_ironic_cache_dir
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Create keystone artifacts for Ironic.</p>
-</td><td class=code><div class=highlight><pre>
-    create_ironic_accounts
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>start_ironic() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_ironic<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_ironic <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Start Ironic API server, if enabled.</p>
 </td><td class=code><div class=highlight><pre>
@@ -634,7 +704,7 @@ create_ironic_accounts<span class="o">()</span> <span class="o">{</span>
 <p>start_ironic_api() - Used by start_ironic().
 Starts Ironic API server.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_ironic_api<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_ironic_api <span class="o">{</span>
     screen_it ir-api <span class="s2">&quot;cd $IRONIC_DIR; $IRONIC_BIN_DIR/ironic-api --config-file=$IRONIC_CONF_FILE&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for ir-api ($IRONIC_HOSTPORT) to start...&quot;</span>
     <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget --no-proxy -q -O- http://$IRONIC_HOSTPORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
@@ -646,7 +716,7 @@ Starts Ironic API server.</p>
 <p>start_ironic_conductor() - Used by start_ironic().
 Starts Ironic conductor.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_ironic_conductor<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_ironic_conductor <span class="o">{</span>
     screen_it ir-cond <span class="s2">&quot;cd $IRONIC_DIR; $IRONIC_BIN_DIR/ironic-conductor --config-file=$IRONIC_CONF_FILE&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(romcheg): Find a way to check whether the conductor has started.</p>
@@ -656,7 +726,7 @@ Starts Ironic conductor.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_ironic() - Stop running processes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_ironic<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_ironic <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the Ironic screen windows</p>
 </td><td class=code><div class=highlight><pre>
@@ -664,11 +734,319 @@ Starts Ironic conductor.</p>
 <span class="nb">    </span>screen -S <span class="nv">$SCREEN_NAME</span> -p ir-cond -X <span class="nb">kill</span>
 <span class="o">}</span>
 
+<span class="k">function </span>is_ironic <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span> is_service_enabled ir-cond <span class="o">&amp;&amp;</span> is_service_enabled ir-api <span class="o">)</span>; <span class="k">then</span>
+<span class="k">        return </span>0
+    <span class="k">fi</span>
+<span class="k">    return </span>1
+<span class="o">}</span>
+
+<span class="k">function </span>configure_ironic_dirs <span class="o">{</span>
+    sudo mkdir -p <span class="nv">$IRONIC_DATA_DIR</span>
+    sudo mkdir -p <span class="nv">$IRONIC_STATE_PATH</span>
+    sudo mkdir -p <span class="nv">$IRONIC_TFTPBOOT_DIR</span>
+    sudo chown -R <span class="nv">$STACK_USER</span> <span class="nv">$IRONIC_DATA_DIR</span> <span class="nv">$IRONIC_STATE_PATH</span>
+    sudo chown -R <span class="nv">$STACK_USER</span>:<span class="nv">$LIBVIRT_GROUP</span> <span class="nv">$IRONIC_TFTPBOOT_DIR</span>
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span><span class="nv">PXEBIN</span><span class="o">=</span>/usr/lib/syslinux/pxelinux.0
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span><span class="nv">PXEBIN</span><span class="o">=</span>/usr/share/syslinux/pxelinux.0
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> ! -f <span class="nv">$PXEBIN</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;pxelinux.0 (from SYSLINUX) not found.&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>cp <span class="nv">$PXEBIN</span> <span class="nv">$IRONIC_TFTPBOOT_DIR</span>
+    mkdir -p <span class="nv">$IRONIC_TFTPBOOT_DIR</span>/pxelinux.cfg
+<span class="o">}</span>
+
+<span class="k">function </span>create_bridge_and_vms <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Call libvirt setup scripts in a new shell to ensure any new group membership</p>
+</td><td class=code><div class=highlight><pre>
+    sudo su <span class="nv">$STACK_USER</span> -c <span class="s2">&quot;$IRONIC_SCRIPTS_DIR/setup-network&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$IRONIC_VM_LOG_CONSOLE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> ; <span class="k">then</span>
+<span class="k">        </span><span class="nv">LOG_ARG</span><span class="o">=</span><span class="s2">&quot;$IRONIC_VM_LOG_DIR&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">LOG_ARG</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo su <span class="nv">$STACK_USER</span> -c <span class="s2">&quot;$IRONIC_SCRIPTS_DIR/create-nodes \</span>
+<span class="s2">        $IRONIC_VM_SPECS_CPU $IRONIC_VM_SPECS_RAM $IRONIC_VM_SPECS_DISK \</span>
+<span class="s2">        amd64 $IRONIC_VM_COUNT $IRONIC_VM_NETWORK_BRIDGE $IRONIC_VM_EMULATOR \</span>
+<span class="s2">        $LOG_ARG&quot;</span> &gt;&gt; <span class="nv">$IRONIC_VM_MACS_CSV_FILE</span>
+<span class="o">}</span>
+
+<span class="k">function </span>enroll_vms <span class="o">{</span>
+
+    <span class="nv">CHASSIS_ID</span><span class="o">=</span><span class="k">$(</span>ironic chassis-create -d <span class="s2">&quot;ironic test chassis&quot;</span> | grep <span class="s2">&quot; uuid &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">IRONIC_NET_ID</span><span class="o">=</span><span class="k">$(</span>neutron net-list | grep private | get_field 1<span class="k">)</span>
+    <span class="nb">local </span><span class="nv">idx</span><span class="o">=</span>0
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Restore xtrace</p>
+<p>work around; need to know what netns neutron uses for private network.
+Without knowing how to interconnect the networks, PXE won't work properly
+for fake baremetal instances. The network should be configured prior all
+the instances operation. If we don't do this, the first port creation
+only happens in the middle of fake baremetal instance's spawning by nova,
+so we'll end up with unbootable fake baremetal VM due to broken PXE.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">PORT_ID</span><span class="o">=</span><span class="k">$(</span>neutron port-create private | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+
+    <span class="k">while </span><span class="nb">read </span>MAC; <span class="k">do</span>
+
+<span class="k">        </span><span class="nv">NODE_ID</span><span class="o">=</span><span class="k">$(</span>ironic node-create --chassis_uuid <span class="nv">$CHASSIS_ID</span> --driver pxe_ssh <span class="se">\</span>
+            -i <span class="nv">pxe_deploy_kernel</span><span class="o">=</span><span class="nv">$IRONIC_DEPLOY_KERNEL_ID</span> <span class="se">\</span>
+            -i <span class="nv">pxe_deploy_ramdisk</span><span class="o">=</span><span class="nv">$IRONIC_DEPLOY_RAMDISK_ID</span> <span class="se">\</span>
+            -i <span class="nv">ssh_virt_type</span><span class="o">=</span><span class="nv">$IRONIC_SSH_VIRT_TYPE</span> <span class="se">\</span>
+            -i <span class="nv">ssh_address</span><span class="o">=</span><span class="nv">$IRONIC_VM_SSH_ADDRESS</span> <span class="se">\</span>
+            -i <span class="nv">ssh_port</span><span class="o">=</span><span class="nv">$IRONIC_VM_SSH_PORT</span> <span class="se">\</span>
+            -i <span class="nv">ssh_username</span><span class="o">=</span><span class="nv">$IRONIC_SSH_USERNAME</span> <span class="se">\</span>
+            -i <span class="nv">ssh_key_filename</span><span class="o">=</span><span class="nv">$IRONIC_SSH_KEY_DIR</span>/<span class="nv">$IRONIC_SSH_KEY_FILENAME</span> <span class="se">\</span>
+            -p <span class="nv">cpus</span><span class="o">=</span><span class="nv">$IRONIC_VM_SPECS_CPU</span> <span class="se">\</span>
+            -p <span class="nv">memory_mb</span><span class="o">=</span><span class="nv">$IRONIC_VM_SPECS_RAM</span> <span class="se">\</span>
+            -p <span class="nv">local_gb</span><span class="o">=</span><span class="nv">$IRONIC_VM_SPECS_DISK</span> <span class="se">\</span>
+            -p <span class="nv">cpu_arch</span><span class="o">=</span>x86_64 <span class="se">\</span>
+            | grep <span class="s2">&quot; uuid &quot;</span> | get_field 2<span class="k">)</span>
+
+        ironic port-create --address <span class="nv">$MAC</span> --node_uuid <span class="nv">$NODE_ID</span>
+
+        <span class="nv">idx</span><span class="o">=</span><span class="k">$((</span>idx+1<span class="k">))</span>
+
+    <span class="k">done</span> &lt; <span class="nv">$IRONIC_VM_MACS_CSV_FILE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create the nova flavor</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">adjusted_disk</span><span class="o">=</span><span class="k">$((</span><span class="nv">$IRONIC_VM_SPECS_DISK</span> <span class="o">-</span> <span class="nv">$IRONIC_VM_EPHEMERAL_DISK</span><span class="k">))</span>
+    nova flavor-create --ephemeral <span class="nv">$IRONIC_VM_EPHEMERAL_DISK</span> baremetal auto <span class="nv">$IRONIC_VM_SPECS_RAM</span> <span class="nv">$adjusted_disk</span> <span class="nv">$IRONIC_VM_SPECS_CPU</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(lucasagomes): Remove the 'baremetal:deploy_kernel_id'
+and 'baremetal:deploy_ramdisk_id' parameters
+from the flavor after the completion of
+https://blueprints.launchpad.net/ironic/+spec/add-node-instance-info</p>
+</td><td class=code><div class=highlight><pre>
+    nova flavor-key baremetal <span class="nb">set</span> <span class="s2">&quot;cpu_arch&quot;</span><span class="o">=</span><span class="s2">&quot;x86_64&quot;</span> <span class="s2">&quot;baremetal:deploy_kernel_id&quot;</span><span class="o">=</span><span class="s2">&quot;$IRONIC_DEPLOY_KERNEL_ID&quot;</span> <span class="s2">&quot;baremetal:deploy_ramdisk_id&quot;</span><span class="o">=</span><span class="s2">&quot;$IRONIC_DEPLOY_RAMDISK_ID&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>intentional sleep to make sure the tag has been set to port</p>
+</td><td class=code><div class=highlight><pre>
+    sleep 10
+    <span class="nv">TAPDEV</span><span class="o">=</span><span class="k">$(</span>sudo ip netns <span class="nb">exec </span>qdhcp-<span class="k">${</span><span class="nv">IRONIC_NET_ID</span><span class="k">}</span> ip link list | grep tap | cut -d<span class="s1">&#39;:&#39;</span> -f2 | cut -b2-<span class="k">)</span>
+    <span class="nv">TAG_ID</span><span class="o">=</span><span class="k">$(</span>sudo ovs-vsctl show |grep <span class="k">${</span><span class="nv">TAPDEV</span><span class="k">}</span> -A1 -m1 | grep tag | cut -d<span class="s1">&#39;:&#39;</span> -f2 | cut -b2-<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>make sure veth pair is not existing, otherwise delete its links</p>
+</td><td class=code><div class=highlight><pre>
+    sudo ip link show ovs-tap1 <span class="o">&amp;&amp;</span> sudo ip link delete ovs-tap1
+    sudo ip link show brbm-tap1 <span class="o">&amp;&amp;</span> sudo ip link delete brbm-tap1
+</pre></div></td></tr><tr><td class=docs>
+<p>create veth pair for future interconnection between br-int and brbm</p>
+</td><td class=code><div class=highlight><pre>
+    sudo ip link add brbm-tap1 <span class="nb">type </span>veth peer name ovs-tap1
+    sudo ip link <span class="nb">set </span>dev brbm-tap1 up
+    sudo ip link <span class="nb">set </span>dev ovs-tap1 up
+
+    sudo ovs-vsctl -- --if-exists del-port ovs-tap1 -- add-port br-int ovs-tap1 <span class="nv">tag</span><span class="o">=</span><span class="nv">$TAG_ID</span>
+    sudo ovs-vsctl -- --if-exists del-port brbm-tap1 -- add-port <span class="nv">$IRONIC_VM_NETWORK_BRIDGE</span> brbm-tap1
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove the port needed only for workaround. For additional info read the
+comment at the beginning of this function</p>
+</td><td class=code><div class=highlight><pre>
+    neutron port-delete <span class="nv">$PORT_ID</span>
+<span class="o">}</span>
+
+<span class="k">function </span>configure_iptables <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>enable tftp natting for allowing connections to HOST_IP's tftp server</p>
+</td><td class=code><div class=highlight><pre>
+    sudo modprobe nf_conntrack_tftp
+    sudo modprobe nf_nat_tftp
+</pre></div></td></tr><tr><td class=docs>
+<p>nodes boot from TFTP and callback to the API server listening on $HOST_IP</p>
+</td><td class=code><div class=highlight><pre>
+    sudo iptables -I INPUT -d <span class="nv">$HOST_IP</span> -p udp --dport 69 -j ACCEPT <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>sudo iptables -I INPUT -d <span class="nv">$HOST_IP</span> -p tcp --dport 6385 -j ACCEPT <span class="o">||</span> <span class="nb">true</span>
+<span class="o">}</span>
+
+<span class="k">function </span>configure_tftpd <span class="o">{</span>
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span><span class="nv">PXEBIN</span><span class="o">=</span>/usr/lib/syslinux/pxelinux.0
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span><span class="nv">PXEBIN</span><span class="o">=</span>/usr/share/syslinux/pxelinux.0
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> ! -f <span class="nv">$PXEBIN</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;pxelinux.0 (from SYSLINUX) not found.&quot;</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>stop tftpd and setup serving via xinetd</p>
+</td><td class=code><div class=highlight><pre>
+    stop_service tftpd-hpa <span class="o">||</span> <span class="nb">true</span>
+    <span class="o">[</span> -f /etc/init/tftpd-hpa.conf <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;manual&quot;</span> | sudo tee /etc/init/tftpd-hpa.override
+    sudo cp <span class="nv">$IRONIC_TEMPLATES_DIR</span>/tftpd-xinetd.template /etc/xinetd.d/tftp
+    sudo sed -e <span class="s2">&quot;s|%TFTPBOOT_DIR%|$IRONIC_TFTPBOOT_DIR|g&quot;</span> -i /etc/xinetd.d/tftp
+
+</pre></div></td></tr><tr><td class=docs>
+<p>setup tftp file mapping to satisfy requests at the root (booting) and
+/tftpboot/ sub-dir (as per deploy-ironic elements)</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">echo</span> <span class="s2">&quot;r ^([^/]) $IRONIC_TFTPBOOT_DIR/\1&quot;</span> &gt;<span class="nv">$IRONIC_TFTPBOOT_DIR</span>/map-file
+    <span class="nb">echo</span> <span class="s2">&quot;r ^(/tftpboot/) $IRONIC_TFTPBOOT_DIR/\2&quot;</span> &gt;&gt;<span class="nv">$IRONIC_TFTPBOOT_DIR</span>/map-file
+
+    chmod -R 0755 <span class="nv">$IRONIC_TFTPBOOT_DIR</span>
+    restart_service xinetd
+<span class="o">}</span>
+
+<span class="k">function </span>configure_ironic_ssh_keypair <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Generating ssh key pair for stack user</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$IRONIC_SSH_KEY_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>mkdir -p <span class="nv">$IRONIC_SSH_KEY_DIR</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[[</span> ! -d <span class="nv">$HOME</span>/.ssh <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>mkdir -p <span class="nv">$HOME</span>/.ssh
+        chmod 700 <span class="nv">$HOME</span>/.ssh
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> -e <span class="s1">&#39;n\n&#39;</span> | ssh-keygen -q -t rsa -P <span class="s1">&#39;&#39;</span> -f <span class="nv">$IRONIC_KEY_FILE</span>
+    cat <span class="nv">$IRONIC_KEY_FILE</span>.pub | tee -a <span class="nv">$IRONIC_AUTHORIZED_KEYS_FILE</span>
+<span class="o">}</span>
+
+<span class="k">function </span>ironic_ssh_check <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">KEY_FILE</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">FLOATING_IP</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">PORT</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">DEFAULT_INSTANCE_USER</span><span class="o">=</span><span class="nv">$4</span>
+    <span class="nb">local </span><span class="nv">ACTIVE_TIMEOUT</span><span class="o">=</span><span class="nv">$5</span>
+    <span class="k">if</span> ! timeout <span class="nv">$ACTIVE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! ssh -p $PORT -o StrictHostKeyChecking=no -i $KEY_FILE ${DEFAULT_INSTANCE_USER}@$FLOATING_IP echo success; do sleep 1; done&quot;</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;server didn&#39;t become ssh-able!&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function </span>configure_ironic_auxiliary <span class="o">{</span>
+    configure_ironic_dirs
+    configure_ironic_ssh_keypair
+    ironic_ssh_check <span class="nv">$IRONIC_SSH_KEY_DIR</span>/<span class="nv">$IRONIC_SSH_KEY_FILENAME</span> <span class="nv">$IRONIC_VM_SSH_ADDRESS</span> <span class="nv">$IRONIC_VM_SSH_PORT</span> <span class="nv">$IRONIC_SSH_USERNAME</span> 10
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>build deploy kernel+ramdisk, then upload them to glance
+this function sets IRONIC_DEPLOY_KERNEL_ID and IRONIC_DEPLOY_RAMDISK_ID</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>upload_baremetal_ironic_deploy <span class="o">{</span>
+    <span class="nv">token</span><span class="o">=</span><span class="nv">$1</span>
+
+    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$IRONIC_DEPLOY_KERNEL&quot;</span> -o -z <span class="s2">&quot;$IRONIC_DEPLOY_RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">IRONIC_DEPLOY_KERNEL_PATH</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files/ir-deploy.kernel
+        <span class="nv">IRONIC_DEPLOY_RAMDISK_PATH</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files/ir-deploy.initramfs
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">IRONIC_DEPLOY_KERNEL_PATH</span><span class="o">=</span><span class="nv">$IRONIC_DEPLOY_KERNEL</span>
+        <span class="nv">IRONIC_DEPLOY_RAMDISK_PATH</span><span class="o">=</span><span class="nv">$IRONIC_DEPLOY_RAMDISK</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[</span> ! -e <span class="s2">&quot;$IRONIC_DEPLOY_RAMDISK_PATH&quot;</span> -o ! -e <span class="s2">&quot;$IRONIC_DEPLOY_KERNEL_PATH&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>files don't exist, need to build them</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$IRONIC_BUILD_DEPLOY_RAMDISK&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>we can build them only if we're not offline</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$OFFLINE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+                <span class="nv">$DIB_DIR</span>/bin/ramdisk-image-create <span class="nv">$IRONIC_DEPLOY_FLAVOR</span> <span class="se">\</span>
+                    -o <span class="nv">$TOP_DIR</span>/files/ir-deploy
+            <span class="k">else</span>
+<span class="k">                </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Deploy kernel+ramdisk files don&#39;t exist and cannot be build in OFFLINE mode&quot;</span>
+            <span class="k">fi</span>
+<span class="k">        else</span>
+<span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Deploy kernel+ramdisk files don&#39;t exist and their building was disabled explicitly by IRONIC_BUILD_DEPLOY_RAMDISK&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>load them into glance</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">IRONIC_DEPLOY_KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
+        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image-create <span class="se">\</span>
+        --name <span class="k">$(</span>basename <span class="nv">$IRONIC_DEPLOY_KERNEL_PATH</span><span class="k">)</span> <span class="se">\</span>
+        --is-public True --disk-format<span class="o">=</span>aki <span class="se">\</span>
+        &lt; <span class="nv">$IRONIC_DEPLOY_KERNEL_PATH</span>  | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">IRONIC_DEPLOY_RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
+        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image-create <span class="se">\</span>
+        --name <span class="k">$(</span>basename <span class="nv">$IRONIC_DEPLOY_RAMDISK_PATH</span><span class="k">)</span> <span class="se">\</span>
+        --is-public True --disk-format<span class="o">=</span>ari <span class="se">\</span>
+        &lt; <span class="nv">$IRONIC_DEPLOY_RAMDISK_PATH</span>  | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+<span class="o">}</span>
+
+<span class="k">function </span>prepare_baremetal_basic_ops <span class="o">{</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>install diskimage-builder</p>
+</td><td class=code><div class=highlight><pre>
+    git_clone <span class="nv">$DIB_REPO</span> <span class="nv">$DIB_DIR</span> <span class="nv">$DIB_BRANCH</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>make sure all needed service were enabled</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">for </span>srv in nova glance key neutron; <span class="k">do</span>
+<span class="k">        if</span> ! is_service_enabled <span class="s2">&quot;$srv&quot;</span>; <span class="k">then</span>
+<span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;$srv should be enabled for ironic tests&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    done</span>
+
+<span class="k">    </span><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>keystone token-get | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+    die_if_not_set <span class="nv">$LINENO</span> TOKEN <span class="s2">&quot;Keystone fail to get token&quot;</span>
+
+    echo_summary <span class="s2">&quot;Creating and uploading baremetal images for ironic&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>build and upload separate deploy kernel &amp; ramdisk</p>
+</td><td class=code><div class=highlight><pre>
+    upload_baremetal_ironic_deploy <span class="nv">$TOKEN</span>
+
+    create_bridge_and_vms
+    enroll_vms
+    configure_tftpd
+    configure_iptables
+
+</pre></div></td></tr><tr><td class=docs>
+<p>restart nova-compute to ensure its resource tracking is up to
+date with newly enrolled nodes</p>
+</td><td class=code><div class=highlight><pre>
+    stop_nova_compute <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>start_nova_compute
+<span class="o">}</span>
+
+<span class="k">function </span>cleanup_baremetal_basic_ops <span class="o">{</span>
+    rm -f <span class="nv">$IRONIC_VM_MACS_CSV_FILE</span>
+    <span class="k">if</span> <span class="o">[</span> -f <span class="nv">$IRONIC_KEY_FILE</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">KEY</span><span class="o">=</span><span class="sb">`</span>cat <span class="nv">$IRONIC_KEY_FILE</span>.pub<span class="sb">`</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>remove public key from authorized_keys</p>
+</td><td class=code><div class=highlight><pre>
+        grep -v <span class="s2">&quot;$KEY&quot;</span> <span class="nv">$IRONIC_AUTHORIZED_KEYS_FILE</span> &gt; temp <span class="o">&amp;&amp;</span> mv temp <span class="nv">$IRONIC_AUTHORIZED_KEYS_FILE</span>
+        chmod 0600 <span class="nv">$IRONIC_AUTHORIZED_KEYS_FILE</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo rm -rf <span class="nv">$IRONIC_DATA_DIR</span> <span class="nv">$IRONIC_STATE_PATH</span>
+    sudo su <span class="nv">$STACK_USER</span> -c <span class="s2">&quot;$IRONIC_SCRIPTS_DIR/cleanup-nodes $IRONIC_VM_COUNT $IRONIC_VM_NETWORK_BRIDGE&quot;</span>
+    sudo rm -rf /etc/xinetd.d/tftp /etc/init/tftpd-hpa.override
+    restart_service xinetd
+    sudo iptables -D INPUT -d <span class="nv">$HOST_IP</span> -p udp --dport 69 -j ACCEPT <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>sudo iptables -D INPUT -d <span class="nv">$HOST_IP</span> -p tcp --dport 6385 -j ACCEPT <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>sudo rmmod nf_conntrack_tftp <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>sudo rmmod nf_nat_tftp <span class="o">||</span> <span class="nb">true</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Restore xtrace + pipefail</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$XTRACE</span>
+<span class="nv">$PIPEFAIL</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Tell emacs to use shell-script-mode</p>

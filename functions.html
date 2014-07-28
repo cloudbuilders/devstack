@@ -362,14 +362,11 @@ ul.auto-toc {
 <p>functions - DevStack-specific functions</p>
 <p>The following variables are assumed to be defined by certain functions:</p>
 <ul class="simple">
+<li><tt class="docutils literal">DATABASE_BACKENDS</tt></li>
 <li><tt class="docutils literal">ENABLED_SERVICES</tt></li>
 <li><tt class="docutils literal">FILES</tt></li>
 <li><tt class="docutils literal">GLANCE_HOSTPORT</tt></li>
-<li><tt class="docutils literal">TRACK_DEPENDS</tt></li>
 </ul>
-<div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 9)</p>
-Bullet list ends without a blank line; unexpected unindent.</div>
 <p>Include the common functions</p>
 </td><td class=code><div class=highlight><pre>
 
@@ -382,6 +379,12 @@ Bullet list ends without a blank line; unexpected unindent.</div>
 <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Check if a function already exists</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>function_exists <span class="o">{</span>
+    <span class="nb">declare</span> -f -F <span class="nv">$1</span> &gt; /dev/null
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Checks if installed Apache is &lt;= given version
@@ -413,67 +416,6 @@ clean_tmp</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">pip install <span class="pre">-e</span></tt> the package, which processes the dependencies
-using pip before running <cite>setup.py develop</cite></p>
-<p>Updates the dependencies in project_dir from the
-openstack/requirements global list before installing anything.</p>
-<p>Uses globals <tt class="docutils literal">TRACK_DEPENDS</tt>, <tt class="docutils literal">REQUIREMENTS_DIR</tt>
-setup_develop directory</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>setup_develop<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">project_dir</span><span class="o">=</span><span class="nv">$1</span>
-
-    <span class="nb">echo</span> <span class="s2">&quot;cd $REQUIREMENTS_DIR; $SUDO_CMD python update.py $project_dir&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Don't update repo if local changes exist
-Don't use buggy &quot;git diff --quiet&quot;</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="o">(</span><span class="nb">cd</span> <span class="nv">$project_dir</span> <span class="o">&amp;&amp;</span> git diff --exit-code &gt;/dev/null<span class="o">)</span>
-    <span class="nb">local </span><span class="nv">update_requirements</span><span class="o">=</span><span class="nv">$?</span>
-
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$update_requirements</span> -eq 0 <span class="o">]</span>; <span class="k">then</span>
-        <span class="o">(</span><span class="nb">cd</span> <span class="nv">$REQUIREMENTS_DIR</span>; <span class="se">\</span>
-            <span class="nv">$SUDO_CMD</span> python update.py <span class="nv">$project_dir</span><span class="o">)</span>
-    <span class="k">fi</span>
-
-<span class="k">    </span>setup_develop_no_requirements_update <span class="nv">$project_dir</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>We've just gone and possibly modified the user's source tree in an
-automated way, which is considered bad form if it's a development
-tree because we've screwed up their next git checkin. So undo it.</p>
-<p>However... there are some circumstances, like running in the gate
-where we really really want the overridden version to stick. So provide
-a variable that tells us whether or not we should UNDO the requirements
-changes (this will be set to False in the OpenStack ci gate)</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$UNDO_REQUIREMENTS</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[</span> <span class="nv">$update_requirements</span> -eq 0 <span class="o">]</span>; <span class="k">then</span>
-            <span class="o">(</span><span class="nb">cd</span> <span class="nv">$project_dir</span> <span class="o">&amp;&amp;</span> git reset --hard<span class="o">)</span>
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-<span class="o">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">pip install <span class="pre">-e</span></tt> the package, which processes the dependencies
-using pip before running <cite>setup.py develop</cite>
-Uses globals <tt class="docutils literal">STACK_USER</tt>
-setup_develop_no_requirements_update directory</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>setup_develop_no_requirements_update<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">project_dir</span><span class="o">=</span><span class="nv">$1</span>
-
-    pip_install -e <span class="nv">$project_dir</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>ensure that further actions can do things like setup.py sdist</p>
-</td><td class=code><div class=highlight><pre>
-    safe_chown -R <span class="nv">$STACK_USER</span> <span class="nv">$1</span>/*.egg-info
-<span class="o">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Retrieve an image from a URL and upload into Glance.
 Uses the following variables:</p>
 <ul class="simple">
@@ -482,7 +424,7 @@ Uses the following variables:</p>
 </ul>
 <p>upload_image image-url glance-token</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>upload_image<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>upload_image <span class="o">{</span>
     <span class="nb">local </span><span class="nv">image_url</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">token</span><span class="o">=</span><span class="nv">$2</span>
 
@@ -493,7 +435,7 @@ Uses the following variables:</p>
     <span class="nv">IMAGE_FNAME</span><span class="o">=</span><span class="sb">`</span>basename <span class="s2">&quot;$image_url&quot;</span><span class="sb">`</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="nv">$image_url</span> !<span class="o">=</span> file* <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Downloads the image (uec ami+aki style), then extracts it.</p>
+<p>Downloads the image (uec ami+akistyle), then extracts it.</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $FILES/$IMAGE_FNAME)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>wget -c <span class="nv">$image_url</span> -O <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span>
@@ -510,7 +452,7 @@ Remote files are not considered here.
 <a href="#id1"><span class="problematic" id="id2">*</span></a>nix: <a class="reference external" href="file:///home/user/path/file">file:///home/user/path/file</a>
 windows: <a class="reference external" href="file:///C:/Documents%20and%20Settings/user/path/file">file:///C:/Documents%20and%20Settings/user/path/file</a></p>
 <div class="system-message" id="id1">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 87); <em><a href="#id2">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 54); <em><a href="#id2">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$image_url</span> | sed <span class="s2">&quot;s/^file:\/\///g&quot;</span><span class="k">)</span>
@@ -554,14 +496,14 @@ driver will supply default values.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>vmdk adapter type</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $IMAGE | grep -a -F -m 1 &#39;ddb.adapterType =&#39; $IMAGE)&quot;</span>
+        <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $IMAGE | { grep -a -F -m 1 &#39;ddb.adapterType =&#39; $IMAGE || true; })&quot;</span>
         <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_adapter_type#*\&quot;}&quot;</span>
         <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_adapter_type%?}&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>vmdk disk type</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">vmdk_create_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $IMAGE | grep -a -F -m 1 &#39;createType=&#39; $IMAGE)&quot;</span>
+        <span class="nv">vmdk_create_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $IMAGE | { grep -a -F -m 1 &#39;createType=&#39; $IMAGE || true; })&quot;</span>
         <span class="nv">vmdk_create_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_create_type#*\&quot;}&quot;</span>
         <span class="nv">vmdk_create_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_create_type%\&quot;*}&quot;</span>
 
@@ -574,13 +516,13 @@ driver will supply default values.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Attempt to retrieve the <a href="#id3"><span class="problematic" id="id4">*</span></a>-flat.vmdk</p>
 <div class="system-message" id="id3">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 123); <em><a href="#id4">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 90); <em><a href="#id4">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
-            <span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;$(head -25 $IMAGE | grep -G &#39;RW\|RDONLY [0-9]+ FLAT\|VMFS&#39; $IMAGE)&quot;</span>
+            <span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;$(head -25 $IMAGE | { grep -G &#39;RW\|RDONLY [0-9]+ FLAT\|VMFS&#39; $IMAGE || true; })&quot;</span>
             <span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;${flat_fname#*\&quot;}&quot;</span>
             <span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;${flat_fname%?}&quot;</span>
-            <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$flat_name&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+            <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$flat_fname&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-flat.vmdk&quot;</span>
             <span class="k">fi</span>
 <span class="k">            </span><span class="nv">path_len</span><span class="o">=</span><span class="sb">`</span>expr <span class="k">${#</span><span class="nv">image_url</span><span class="k">}</span> - <span class="k">${#</span><span class="nv">IMAGE_FNAME</span><span class="k">}</span><span class="sb">`</span>
@@ -591,28 +533,17 @@ Inline emphasis start-string without end-string.</div>
 <span class="k">                if</span> <span class="o">[[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$flat_fname</span> <span class="o">||</span> <span class="se">\</span>
                 <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $FILES/$flat_fname)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                    </span>wget -c <span class="nv">$flat_url</span> -O <span class="nv">$FILES</span>/<span class="nv">$flat_fname</span>
-                    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> -ne 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                        </span><span class="nb">echo</span> <span class="s2">&quot;Flat disk not found: $flat_url&quot;</span>
-                        <span class="nv">flat_found</span><span class="o">=</span><span class="nb">false</span>
-<span class="nb">                    </span><span class="k">fi</span>
-<span class="k">                fi</span>
-<span class="k">                if</span> <span class="nv">$flat_found</span>; <span class="k">then</span>
-<span class="k">                    </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${flat_fname}&quot;</span>
                 <span class="k">fi</span>
-<span class="k">            else</span>
+<span class="k">                </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${flat_fname}&quot;</span>
+            <span class="k">else</span>
 <span class="k">                </span><span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$flat_url</span> | sed <span class="s2">&quot;s/^file:\/\///g&quot;</span><span class="k">)</span>
                 <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$IMAGE</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $IMAGE)&quot;</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                    </span><span class="nb">echo</span> <span class="s2">&quot;Flat disk not found: $flat_url&quot;</span>
-                    <span class="nv">flat_found</span><span class="o">=</span><span class="nb">false</span>
-<span class="nb">                </span><span class="k">fi</span>
-<span class="k">                if</span> ! <span class="nv">$flat_found</span>; <span class="k">then</span>
-<span class="k">                    </span><span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$image_url</span> | sed <span class="s2">&quot;s/^file:\/\///g&quot;</span><span class="k">)</span>
+                    <span class="k">return </span>1
                 <span class="k">fi</span>
 <span class="k">            fi</span>
-<span class="k">            if</span> <span class="nv">$flat_found</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${flat_fname}&quot;</span>
-            <span class="k">fi</span>
-<span class="k">            </span><span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;preallocated&quot;</span>
+<span class="k">            </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${flat_fname}&quot;</span>
+            <span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;preallocated&quot;</span>
         <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$vmdk_create_type&quot;</span> <span class="o">=</span> <span class="s2">&quot;streamOptimized&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;streamOptimized&quot;</span>
         <span class="k">elif</span> <span class="o">[[</span> -z <span class="s2">&quot;$vmdk_create_type&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -634,27 +565,20 @@ to retrieve appropriate metadata</p>
 <span class="k">                    if</span> <span class="o">[[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$descriptor_fname</span> <span class="o">||</span> <span class="se">\</span>
                     <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $FILES/$descriptor_fname)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                        </span>wget -c <span class="nv">$descriptor_url</span> -O <span class="nv">$FILES</span>/<span class="nv">$descriptor_fname</span>
-                        <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> -ne 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                            </span>warn <span class="nv">$LINENO</span> <span class="s2">&quot;Descriptor not found $descriptor_url&quot;</span>
-                            <span class="nv">descriptor_found</span><span class="o">=</span><span class="nb">false</span>
-<span class="nb">                        </span><span class="k">fi</span>
-<span class="k">                    fi</span>
+                    <span class="k">fi</span>
 <span class="k">                    </span><span class="nv">descriptor_url</span><span class="o">=</span><span class="s2">&quot;$FILES/$descriptor_fname&quot;</span>
                 <span class="k">else</span>
 <span class="k">                    </span><span class="nv">descriptor_url</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$descriptor_url</span> | sed <span class="s2">&quot;s/^file:\/\///g&quot;</span><span class="k">)</span>
                     <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$descriptor_url</span> <span class="o">||</span> <span class="se">\</span>
                     <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $descriptor_url)&quot;</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                        </span>warn <span class="nv">$LINENO</span> <span class="s2">&quot;Descriptor not found $descriptor_url&quot;</span>
-                        <span class="nv">descriptor_found</span><span class="o">=</span><span class="nb">false</span>
-<span class="nb">                    </span><span class="k">fi</span>
+<span class="k">                        </span><span class="nb">echo</span> <span class="s2">&quot;Descriptor not found: $descriptor_url&quot;</span>
+                        <span class="k">return </span>1
+                    <span class="k">fi</span>
 <span class="k">                fi</span>
-<span class="k">                if</span> <span class="nv">$descriptor_found</span>; <span class="k">then</span>
-<span class="k">                    </span><span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $descriptor_url |&quot;</span><span class="sb">`</span>
-                    <span class="sb">`</span><span class="s2">&quot;grep -a -F -m 1 &#39;ddb.adapterType =&#39; $descriptor_url)&quot;</span>
-                    <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_adapter_type#*\&quot;}&quot;</span>
-                    <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_adapter_type%?}&quot;</span>
-                <span class="k">fi</span>
-<span class="k">            fi</span>
+<span class="k">                </span><span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $descriptor_url | { grep -a -F -m 1 &#39;ddb.adapterType =&#39; $descriptor_url || true; })&quot;</span>
+                <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_adapter_type#*\&quot;}&quot;</span>
+                <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_adapter_type%?}&quot;</span>
+            <span class="k">fi</span>
 <span class="k">            </span><span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;preallocated&quot;</span>
         <span class="k">else</span>
 <span class="k">            </span><span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;preallocated&quot;</span>
@@ -665,7 +589,7 @@ to retrieve appropriate metadata</p>
 of semi-colons for property delimiters but they are not permitted
 characters in NTFS filesystems.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">property_string</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="s2">&quot;$IMAGE_NAME&quot;</span> | grep -oP <span class="s1">&#39;(?&lt;=-)(?!.*-).*[:;].*[:;].*$&#39;</span><span class="sb">`</span>
+        <span class="nv">property_string</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="s2">&quot;$IMAGE_NAME&quot;</span> | <span class="o">{</span> grep -oP <span class="s1">&#39;(?&lt;=-)(?!.*-).*[:;].*[:;].*$&#39;</span> <span class="o">||</span> <span class="nb">true</span>; <span class="o">}</span><span class="sb">`</span>
         <span class="nv">IFS</span><span class="o">=</span><span class="s1">&#39;:;&#39;</span> <span class="nb">read</span> -a props <span class="o">&lt;&lt;&lt;</span> <span class="s2">&quot;$property_string&quot;</span>
         <span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;${props[0]:-$vmdk_disktype}&quot;</span>
         <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${props[1]:-$vmdk_adapter_type}&quot;</span>
@@ -681,7 +605,23 @@ and should not be decompressed prior to loading</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;.vhd.tgz&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.vhd.tgz}&quot;</span>
-        glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format<span class="o">=</span>ovf --disk-format<span class="o">=</span>vhd &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+        <span class="nv">FORCE_VM_MODE</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;cirros&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Cirros VHD image currently only boots in PV mode.
+Nova defaults to PV for all VHD images, but
+the glance setting is needed for booting
+directly from volume.</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="nv">FORCE_VM_MODE</span><span class="o">=</span><span class="s2">&quot;--property vm_mode=xen&quot;</span>
+        <span class="k">fi</span>
+<span class="k">        </span>glance <span class="se">\</span>
+            --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
+            --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+            image-create <span class="se">\</span>
+            --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True <span class="se">\</span>
+            --container-format<span class="o">=</span>ovf --disk-format<span class="o">=</span>vhd <span class="se">\</span>
+            <span class="nv">$FORCE_VM_MODE</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 
@@ -718,7 +658,7 @@ Setting metadata, so PV mode is used.</p>
             <span class="nv">xdir</span><span class="o">=</span><span class="s2">&quot;$FILES/images/$IMAGE_NAME&quot;</span>
             rm -Rf <span class="s2">&quot;$xdir&quot;</span>;
             mkdir <span class="s2">&quot;$xdir&quot;</span>
-            tar -zxf <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> -C <span class="s2">&quot;$xdir&quot;</span>
+            tar -zxf <span class="nv">$IMAGE</span> -C <span class="s2">&quot;$xdir&quot;</span>
             <span class="nv">KERNEL</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-vmlinuz* <span class="s2">&quot;$xdir/&quot;</span>aki-*/image; <span class="k">do</span>
                 <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
             <span class="nv">RAMDISK</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-initrd* <span class="s2">&quot;$xdir/&quot;</span>ari-*/image; <span class="k">do</span>
@@ -759,7 +699,7 @@ Setting metadata, so PV mode is used.</p>
     <span class="k">esac</span>
 
 <span class="k">    if </span>is_arch <span class="s2">&quot;ppc64&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IMG_PROPERTY</span><span class="o">=</span><span class="s2">&quot;--property hw_disk_bus=scsi --property hw_cdrom_bus=scsi&quot;</span>
+<span class="k">        </span><span class="nv">IMG_PROPERTY</span><span class="o">=</span><span class="s2">&quot;--property hw_cdrom_bus=scsi&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CONTAINER_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;bare&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -814,7 +754,7 @@ This is now deprecated usage</p>
 <p>Wait for an HTTP server to start answering requests
 wait_for_service timeout url</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>wait_for_service<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>wait_for_service <span class="o">{</span>
     <span class="nb">local </span><span class="nv">timeout</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">url</span><span class="o">=</span><span class="nv">$2</span>
     timeout <span class="nv">$timeout</span> sh -c <span class="s2">&quot;while ! curl --noproxy &#39;*&#39; -s $url &gt;/dev/null; do sleep 1; done&quot;</span>
@@ -826,7 +766,7 @@ wait_for_service timeout url</p>
 Uses globals <tt class="docutils literal">ENABLED_SERVICES</tt>
 ping_check from-net ip boot-timeout expected</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>ping_check<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>ping_check <span class="o">{</span>
     <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
 <span class="k">        </span>_ping_check_neutron  <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span> <span class="nv">$4</span>
         <span class="k">return</span>
@@ -838,7 +778,7 @@ ping_check from-net ip boot-timeout expected</p>
 <p>ping check for nova
 Uses globals <tt class="docutils literal">MULTI_HOST</tt>, <tt class="docutils literal">PRIVATE_NETWORK</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_ping_check_novanet<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_ping_check_novanet <span class="o">{</span>
     <span class="nb">local </span><span class="nv">from_net</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">ip</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">boot_timeout</span><span class="o">=</span><span class="nv">$3</span>
@@ -865,7 +805,7 @@ Uses globals <tt class="docutils literal">MULTI_HOST</tt>, <tt class="docutils l
 </pre></div></td></tr><tr><td class=docs>
 <p>Get ip of instance</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>get_instance_ip<span class="o">(){</span>
+<span class="k">function </span>get_instance_ip <span class="o">{</span>
     <span class="nb">local </span><span class="nv">vm_id</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">network_name</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">nova_result</span><span class="o">=</span><span class="s2">&quot;$(nova show $vm_id)&quot;</span>
@@ -884,7 +824,7 @@ Uses globals <tt class="docutils literal">MULTI_HOST</tt>, <tt class="docutils l
 </pre></div></td></tr><tr><td class=docs>
 <p>ssh_check net-name key-file floating-ip default-user active-timeout</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>ssh_check<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>ssh_check <span class="o">{</span>
     <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
 <span class="k">        </span>_ssh_check_neutron  <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span> <span class="nv">$4</span> <span class="nv">$5</span>
         <span class="k">return</span>
@@ -892,7 +832,7 @@ Uses globals <tt class="docutils literal">MULTI_HOST</tt>, <tt class="docutils l
 <span class="k">    </span>_ssh_check_novanet <span class="s2">&quot;$1&quot;</span> <span class="nv">$2</span> <span class="nv">$3</span> <span class="nv">$4</span> <span class="nv">$5</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_ssh_check_novanet<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_ssh_check_novanet <span class="o">{</span>
     <span class="nb">local </span><span class="nv">NET_NAME</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">KEY_FILE</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">FLOATING_IP</span><span class="o">=</span><span class="nv">$3</span>
@@ -910,7 +850,7 @@ Uses globals <tt class="docutils literal">MULTI_HOST</tt>, <tt class="docutils l
 or nova.
 get_rootwrap_location module</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>get_rootwrap_location<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>get_rootwrap_location <span class="o">{</span>
     <span class="nb">local </span><span class="nv">module</span><span class="o">=</span><span class="nv">$1</span>
 
     <span class="nb">echo</span> <span class="s2">&quot;$(get_python_exec_prefix)/$module-rootwrap&quot;</span>
@@ -921,7 +861,7 @@ get_rootwrap_location module</p>
 <p>Path permissions sanity check
 check_path_perm_sanity path</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>check_path_perm_sanity<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>check_path_perm_sanity <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Ensure no element of the path has 0700 permissions, which is very
 likely to cause issues for daemons.  Inspired by default 0700
@@ -993,7 +933,7 @@ vercmp_numbers 4.0 4.0</blockquote>
 <p>The above will return &quot;0&quot;, as the versions are equal.</p>
 <p>vercmp_numbers ver1 ver2</p>
 </td><td class=code><div class=highlight><pre>
-vercmp_numbers<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>vercmp_numbers <span class="o">{</span>
     <span class="nb">typeset </span><span class="nv">v1</span><span class="o">=</span><span class="nv">$1</span> <span class="nv">v2</span><span class="o">=</span><span class="nv">$2</span> sep
     <span class="nb">typeset</span> -a ver1 ver2
 
@@ -1012,7 +952,7 @@ non-default value for project and user format variables.
 Defaults are respectively 'project_name' and 'user_name'</p>
 <p>setup_colorized_logging something.conf SOMESECTION</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>setup_colorized_logging<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>setup_colorized_logging <span class="o">{</span>
     <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">conf_section</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">project_var</span><span class="o">=</span><span class="k">${</span><span class="nv">3</span><span class="k">:-</span><span class="s2">&quot;project_name&quot;</span><span class="k">}</span>
@@ -1026,6 +966,22 @@ Defaults are respectively 'project_name' and 'user_name'</p>
     iniset <span class="nv">$conf_file</span> <span class="nv">$conf_section</span> logging_exception_prefix <span class="s2">&quot;%(color)s%(asctime)s.%(msecs)03d TRACE %(name)s [01;35m%(instance)s[00m&quot;</span>
 <span class="o">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>These functions are provided for basic fall-back functionality for
+projects that include parts of devstack (grenade).  stack.sh will
+override these with more specific versions for devstack (with fancy
+spinners, etc).  We never override an existing version</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> ! function_exists echo_summary; <span class="k">then</span>
+<span class="k">    function </span>echo_summary <span class="o">{</span>
+        <span class="nb">echo</span> <span class="nv">$@</span>
+    <span class="o">}</span>
+<span class="k">fi</span>
+<span class="k">if</span> ! function_exists echo_nolog; <span class="k">then</span>
+<span class="k">    function </span>echo_nolog <span class="o">{</span>
+        <span class="nb">echo</span> <span class="nv">$@</span>
+    <span class="o">}</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>

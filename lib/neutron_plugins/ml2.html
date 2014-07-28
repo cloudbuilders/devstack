@@ -362,7 +362,7 @@ ul.auto-toc {
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">ML2_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
@@ -375,7 +375,7 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>Q_AGENT_EXTRA_AGENT_OPTS+<span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
-<span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>Q_AGENT_EXTRA_AGENT_OPTS+<span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span>gre<span class="o">)</span>
 <span class="k">fi</span>
 
@@ -411,7 +411,7 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">ML2_L3_PLUGIN</span><span class="o">=</span><span class="k">${</span><span class="nv">ML2_L3_PLUGIN</span><span class="k">:-</span><span class="nv">neutron</span><span class="p">.services.l3_router.l3_router_plugin.L3RouterPlugin</span><span class="k">}</span>
 
-<span class="k">function </span>populate_ml2_config<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>populate_ml2_config <span class="o">{</span>
     <span class="nv">CONF</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nv">SECTION</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nv">OPTS</span><span class="o">=</span><span class="nv">$3</span>
@@ -427,10 +427,9 @@ Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
     <span class="k">done</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_common <span class="o">{</span>
     <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/neutron/plugins/ml2
     <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>ml2_conf.ini
-    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;neutron_ml2&quot;</span>
     <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.ml2.plugin.Ml2Plugin&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>The ML2 plugin delegates L3 routing/NAT functionality to
@@ -439,17 +438,17 @@ the L3 service plugin which must therefore be specified.</p>
     _neutron_service_plugin_class_add <span class="nv">$ML2_L3_PLUGIN</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_service <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>Q_SRV_EXTRA_OPTS+<span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>This assumes you want a simple configuration, and will overwrite
 Q_SRV_EXTRA_OPTS if set in addition to ENABLE_TENANT_TUNNELS.</p>
 </td><td class=code><div class=highlight><pre>
         Q_SRV_EXTRA_OPTS+<span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span>gre<span class="o">)</span>
         <span class="nv">Q_ML2_PLUGIN_GRE_TYPE_OPTIONS</span><span class="o">=(</span><span class="nv">tunnel_id_ranges</span><span class="o">=</span><span class="nv">$TENANT_TUNNEL_RANGES</span><span class="o">)</span>
-    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_VLANS&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>Q_SRV_EXTRA_OPTS+<span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span>vlan<span class="o">)</span>
     <span class="k">else</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;WARNING - The ml2 plugin is using local tenant networks, with no connectivity between hosts.&quot;</span>
@@ -460,7 +459,7 @@ Q_SRV_EXTRA_OPTS if set in addition to ENABLE_TENANT_TUNNELS.</p>
 VLANs) by first checking if Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS is set.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS&quot;</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$ML2_VLAN_RANGES&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$ML2_VLAN_RANGES&quot;</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">ML2_VLAN_RANGES</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>
             <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$TENANT_VLAN_RANGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nv">ML2_VLAN_RANGES</span><span class="o">=</span><span class="nv">$ML2_VLAN_RANGES</span>:<span class="nv">$TENANT_VLAN_RANGE</span>
@@ -481,15 +480,15 @@ instead use its own config variable to indicate whether security
 groups is enabled, and that will need to be set here instead.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> SECURITYGROUP firewall_driver neutron.agent.not.a.real.FirewallDriver
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.not.a.real.FirewallDriver
     <span class="k">else</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> SECURITYGROUP firewall_driver neutron.agent.firewall.NoopFirewallDriver
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.firewall.NoopFirewallDriver
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Since we enable the tunnel TypeDrivers, also enable a local_ip</p>
 </td><td class=code><div class=highlight><pre>
-    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs local_ip <span class="nv">$HOST_IP</span>
+    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs local_ip <span class="nv">$TUNNEL_ENDPOINT_IP</span>
 
     populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2 <span class="nv">mechanism_drivers</span><span class="o">=</span><span class="nv">$Q_ML2_PLUGIN_MECHANISM_DRIVERS</span>
 
@@ -502,16 +501,22 @@ groups is enabled, and that will need to be set here instead.</p>
     populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_vxlan <span class="nv">$Q_ML2_PLUGIN_VXLAN_TYPE_OPTIONS</span>
 
     populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ml2_type_vlan <span class="nv">$Q_ML2_PLUGIN_VLAN_TYPE_OPTIONS</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_DVR_MODE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;legacy&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> agent <span class="nv">l2_population</span><span class="o">=</span>True
+        populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> agent <span class="nv">tunnel_types</span><span class="o">=</span>vxlan
+        populate_ml2_config /<span class="nv">$Q_PLUGIN_CONF_FILE</span> agent <span class="nv">enable_distributed_routing</span><span class="o">=</span>True
+    <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>has_neutron_plugin_security_group <span class="o">{</span>
     <span class="k">return </span>0
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$MY_XTRACE</span>
+<span class="nv">$ML2_XTRACE</span>
 
 
 </td><td class=code><div class=highlight><pre>

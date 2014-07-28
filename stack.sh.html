@@ -368,11 +368,12 @@ and <strong>Swift</strong></p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>This script allows you to specify configuration options of what git
-repositories to use, enabled services, network configuration and various
-passwords.  If you are crafty you can run the script on multiple nodes using
-shared settings for common resources (mysql, rabbitmq) and build a multi-node
-developer install.</p>
+<p>This script's options can be changed by setting appropriate environment
+variables.  You can configure things like which git repositories to use,
+services to enable, OS images to use, etc.  Default values are located in the
+<tt class="docutils literal">stackrc</tt> file. If you are crafty you can run the script on multiple nodes
+using shared settings for common resources (eg., mysql or rabbitmq) and build
+a multi-node developer install.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -401,6 +402,11 @@ with &quot;unsupported locale setting&quot; errors.</p>
 <span class="nb">unset </span>LANGUAGE
 <span class="nv">LC_ALL</span><span class="o">=</span>C
 <span class="nb">export </span>LC_ALL
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure umask is sane</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">umask </span>022
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the devstack directory</p>
@@ -546,11 +552,21 @@ disable_negated_services
 <p>Warn users who aren't on an explicitly supported distro, but allow them to
 override check and attempt installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>precise|raring|saucy|trusty|7.0|wheezy|sid|testing|jessie|f18|f19|f20|opensuse-12.2|rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>precise|saucy|trusty|7.0|wheezy|sid|testing|jessie|f19|f20|rhel6|rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: this script has not been tested on $DISTRO&quot;</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$FORCE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;If you wish to run this script anyway run with FORCE=yes&quot;</span>
     <span class="k">fi</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Look for obsolete stuff</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span>, <span class="o">=</span>~ ,<span class="s2">&quot;swift&quot;</span>, <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;FATAL: &#39;swift&#39; is not supported as a service name&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;FATAL: Use the actual swift service names to enable them as required:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;FATAL: s-proxy s-object s-container s-account&quot;</span>
+    <span class="nb">exit </span>1
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -575,55 +591,8 @@ Note that this may fail if USE_SCREEN=False</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">VERBOSE</span><span class="o">=</span><span class="k">$(</span>trueorfalse True <span class="nv">$VERBOSE</span><span class="k">)</span>
 
-
 </pre></div></td></tr><tr><td class=docs>
 </div>
-</div>
-<div class="section" id="additional-repos">
-<h1>Additional repos</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Some distros need to add repos beyond the defaults provided by the vendor
-to pick up required packages.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>The Debian Wheezy official repositories do not contain all required packages,
-add gplhost repository.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>Debian<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;deb http://archive.gplhost.com/debian grizzly main&#39;</span> | sudo tee /etc/apt/sources.list.d/gplhost_wheezy-backports.list
-    <span class="nb">echo</span> <span class="s1">&#39;deb http://archive.gplhost.com/debian grizzly-backports main&#39;</span> | sudo tee -a /etc/apt/sources.list.d/gplhost_wheezy-backports.list
-    apt_get update
-    apt_get install --force-yes gplhost-archive-keyring
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Installing Open vSwitch on RHEL6 requires enabling the RDO repo.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">RHEL6_RDO_REPO_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_RDO_REPO_RPM</span><span class="k">:-</span><span class="s2">&quot;http://rdo.fedorapeople.org/openstack-havana/rdo-release-havana.rpm&quot;</span><span class="k">}</span>
-    <span class="nv">RHEL6_RDO_REPO_ID</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_RDO_REPO_ID</span><span class="k">:-</span><span class="s2">&quot;openstack-havana&quot;</span><span class="k">}</span>
-    <span class="k">if</span> ! yum repolist enabled <span class="nv">$RHEL6_RDO_REPO_ID</span> | grep -q <span class="nv">$RHEL6_RDO_REPO_ID</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;RDO repo not detected; installing&quot;</span>
-        yum_install <span class="nv">$RHEL6_RDO_REPO_RPM</span> <span class="o">||</span> <span class="se">\</span>
-            die <span class="nv">$LINENO</span> <span class="s2">&quot;Error installing RDO repo, cannot continue&quot;</span>
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>RHEL6 requires EPEL for many Open Stack dependencies</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">RHEL6_EPEL_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_EPEL_RPM</span><span class="k">:-</span><span class="s2">&quot;http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm&quot;</span><span class="k">}</span>
-    <span class="k">if</span> ! yum repolist enabled epel | grep -q <span class="s1">&#39;epel&#39;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;EPEL not detected; installing&quot;</span>
-        yum_install <span class="k">${</span><span class="nv">RHEL6_EPEL_RPM</span><span class="k">}</span> <span class="o">||</span> <span class="se">\</span>
-            die <span class="nv">$LINENO</span> <span class="s2">&quot;Error installing EPEL repo, cannot continue&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
 <div class="section" id="root-access">
 <h2>root Access</h2>
 </td><td class=code><div class=highlight><pre>
@@ -665,10 +634,72 @@ sudo grep -q <span class="s2">&quot;^#includedir.*/etc/sudoers.d&quot;</span> /e
 see them by forcing PATH</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> <span class="s2">&quot;Defaults:$STACK_USER secure_path=/sbin:/usr/sbin:/usr/bin:/bin:/usr/local/sbin:/usr/local/bin&quot;</span> &gt;&gt; <span class="nv">$TEMPFILE</span>
+<span class="nb">echo</span> <span class="s2">&quot;Defaults:$STACK_USER !requiretty&quot;</span> &gt;&gt; <span class="nv">$TEMPFILE</span>
 chmod 0440 <span class="nv">$TEMPFILE</span>
 sudo chown root:root <span class="nv">$TEMPFILE</span>
 sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/50_stack_sh
 
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="additional-repos">
+<h2>Additional repos</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>For debian/ubuntu make apt attempt to retry network ops on it's own</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;APT::Acquire::Retries &quot;20&quot;;&#39;</span> | sudo tee /etc/apt/apt.conf.d/80retry
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Some distros need to add repos beyond the defaults provided by the vendor
+to pick up required packages.</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Installing Open vSwitch on RHEL requires enabling the RDO repo.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">RHEL6_RDO_REPO_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_RDO_REPO_RPM</span><span class="k">:-</span><span class="s2">&quot;http://rdo.fedorapeople.org/openstack-icehouse/rdo-release-icehouse.rpm&quot;</span><span class="k">}</span>
+    <span class="nv">RHEL6_RDO_REPO_ID</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_RDO_REPO_ID</span><span class="k">:-</span><span class="s2">&quot;openstack-icehouse&quot;</span><span class="k">}</span>
+    <span class="k">if</span> ! sudo yum repolist enabled <span class="nv">$RHEL6_RDO_REPO_ID</span> | grep -q <span class="nv">$RHEL6_RDO_REPO_ID</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;RDO repo not detected; installing&quot;</span>
+        yum_install <span class="nv">$RHEL6_RDO_REPO_RPM</span> <span class="o">||</span> <span class="se">\</span>
+            die <span class="nv">$LINENO</span> <span class="s2">&quot;Error installing RDO repo, cannot continue&quot;</span>
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>RHEL requires EPEL for many Open Stack dependencies</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">EPEL_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL7_EPEL_RPM</span><span class="k">:-</span><span class="s2">&quot;http://dl.fedoraproject.org/pub/epel/beta/7/x86_64/epel-release-7-0.2.noarch.rpm&quot;</span><span class="k">}</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">EPEL_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_EPEL_RPM</span><span class="k">:-</span><span class="s2">&quot;http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm&quot;</span><span class="k">}</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> ! sudo yum repolist enabled epel | grep -q <span class="s1">&#39;epel&#39;</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;EPEL not detected; installing&quot;</span>
+        yum_install <span class="k">${</span><span class="nv">EPEL_RPM</span><span class="k">}</span> <span class="o">||</span> <span class="se">\</span>
+            die <span class="nv">$LINENO</span> <span class="s2">&quot;Error installing EPEL repo, cannot continue&quot;</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>... and also optional to be enabled</p>
+</td><td class=code><div class=highlight><pre>
+    is_package_installed yum-utils <span class="o">||</span> install_package yum-utils
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">OPTIONAL_REPO</span><span class="o">=</span>rhel-7-server-optional-rpms
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">OPTIONAL_REPO</span><span class="o">=</span>rhel-6-server-optional-rpms
+    <span class="k">fi</span>
+<span class="k">    </span>sudo yum-config-manager --enable <span class="k">${</span><span class="nv">OPTIONAL_REPO</span><span class="k">}</span>
+
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="filesystem-setup">
+<h2>Filesystem setup</h2>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create the destination directory and ensure it is writable by the user
@@ -693,6 +724,20 @@ correctly.  Make sure it exists in /etc/hosts so that is always true.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Destination path for service data</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
+sudo mkdir -p <span class="nv">$DATA_DIR</span>
+safe_chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DATA_DIR</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="common-configuration">
+<h2>Common Configuration</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Set <tt class="docutils literal">OFFLINE</tt> to <tt class="docutils literal">True</tt> to configure <tt class="docutils literal">stack.sh</tt> to run cleanly without
 Internet access. <tt class="docutils literal">stack.sh</tt> must have been previously run with Internet
 access to install prerequisites and fetch repositories.</p>
@@ -712,21 +757,6 @@ operation.</p>
 <span class="nv">ENABLE_DEBUG_LOG_LEVEL</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Destination path for service data</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
-sudo mkdir -p <span class="nv">$DATA_DIR</span>
-safe_chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DATA_DIR</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
-<div class="section" id="common-configuration">
-<h1>Common Configuration</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Set fixed and floating range here so we can make sure not to use addresses
 from either range when attempting to guess the IP to use for the host.
 Note that setting FIXED_RANGE may be necessary when running DevStack
@@ -738,18 +768,13 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 
 <span class="nv">HOST_IP</span><span class="o">=</span><span class="k">$(</span>get_default_host_ip <span class="nv">$FIXED_RANGE</span> <span class="nv">$FLOATING_RANGE</span> <span class="s2">&quot;$HOST_IP_IFACE&quot;</span> <span class="s2">&quot;$HOST_IP&quot;</span><span class="k">)</span>
 <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Could not determine host ip address. Either localrc specified dhcp on ${HOST_IP_IFACE} or defaulted&quot;</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Could not determine host ip address.  See local.conf for suggestions on setting HOST_IP.&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Allow the use of an alternate hostname (such as localhost/127.0.0.1) for service endpoints.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Allow the use of an alternate protocol (such as https) for service endpoints</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">http</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure services to use syslog instead of writing to individual log files</p>
@@ -759,15 +784,9 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 <span class="nv">SYSLOG_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSLOG_PORT</span><span class="k">:-</span><span class="nv">516</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Enable sysstat logging</p>
+<p>for DSTAT logging</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SYSSTAT_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSSTAT_FILE</span><span class="k">:-</span><span class="s2">&quot;sysstat.dat&quot;</span><span class="k">}</span>
-<span class="nv">SYSSTAT_INTERVAL</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSSTAT_INTERVAL</span><span class="k">:-</span><span class="s2">&quot;1&quot;</span><span class="k">}</span>
-
 <span class="nv">DSTAT_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">DSTAT_FILE</span><span class="k">:-</span><span class="s2">&quot;dstat.txt&quot;</span><span class="k">}</span>
-
-<span class="nv">PIDSTAT_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">PIDSTAT_FILE</span><span class="k">:-</span><span class="s2">&quot;pidstat.txt&quot;</span><span class="k">}</span>
-<span class="nv">PIDSTAT_INTERVAL</span><span class="o">=</span><span class="k">${</span><span class="nv">PIDSTAT_INTERVAL</span><span class="k">:-</span><span class="s2">&quot;5&quot;</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Use color for logging output (only available if syslog is not used)</p>
@@ -787,6 +806,7 @@ rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 </div>
 <div class="section" id="configure-projects">
 <h1>Configure Projects</h1>
@@ -895,7 +915,7 @@ the required password.  Prompt user for a password and write to localrc.</p>
 <span class="nb">            echo</span> <span class="s2">&quot;Invalid chars in password.  Try again:&quot;</span>
         <span class="k">done</span>
 <span class="k">        if</span> <span class="o">[</span> ! <span class="nv">$pw</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">pw</span><span class="o">=</span><span class="sb">`</span>openssl rand -hex 10<span class="sb">`</span>
+<span class="k">            </span><span class="nv">pw</span><span class="o">=</span><span class="k">$(</span>cat /dev/urandom | tr -cd <span class="s1">&#39;a-f0-9&#39;</span> | head -c 20<span class="k">)</span>
         <span class="k">fi</span>
 <span class="k">        </span><span class="nb">eval</span> <span class="s2">&quot;$var=$pw&quot;</span>
         <span class="nb">echo</span> <span class="s2">&quot;$var=$pw&quot;</span> &gt;&gt; <span class="nv">$localrc</span>
@@ -928,7 +948,7 @@ initialize_database_backends <span class="o">&amp;&amp;</span> <span class="nb">
 <p>Rabbit connection info</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
-<span class="k">    </span><span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">localhost</span><span class="k">}</span>
+<span class="k">    </span><span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
     read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR RABBIT.&quot;</span>
 <span class="k">fi</span>
 
@@ -994,7 +1014,7 @@ can never change.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Draw a spinner so the user knows something is happening</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>spinner<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>spinner <span class="o">{</span>
     <span class="nb">local </span><span class="nv">delay</span><span class="o">=</span>0.75
     <span class="nb">local </span><span class="nv">spinstr</span><span class="o">=</span><span class="s1">&#39;/-\|&#39;</span>
     <span class="nb">printf</span> <span class="s2">&quot;...&quot;</span> &gt;&amp;3
@@ -1007,17 +1027,21 @@ can never change.</p>
     <span class="k">done</span>
 <span class="o">}</span>
 
+<span class="k">function </span>kill_spinner <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[</span> ! -z <span class="s2">&quot;$LAST_SPINNER_PID&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">kill</span> &gt;/dev/null 2&gt;&amp;1 <span class="nv">$LAST_SPINNER_PID</span>
+        <span class="nb">printf</span> <span class="s2">&quot;\b\b\bdone\n&quot;</span> &gt;&amp;3
+    <span class="k">fi</span>
+<span class="o">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Echo text to the log file, summary log file and stdout
 echo_summary &quot;something to say&quot;</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>echo_summary<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>echo_summary <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> -t 3 <span class="o">&amp;&amp;</span> <span class="s2">&quot;$VERBOSE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">kill</span> &gt;/dev/null 2&gt;&amp;1 <span class="nv">$LAST_SPINNER_PID</span>
-        <span class="k">if</span> <span class="o">[</span> ! -z <span class="s2">&quot;$LAST_SPINNER_PID&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nb">printf</span> <span class="s2">&quot;\b\b\bdone\n&quot;</span> &gt;&amp;3
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nb">echo</span> -n -e <span class="nv">$@</span> &gt;&amp;6
+<span class="k">        </span>kill_spinner
+        <span class="nb">echo</span> -n -e <span class="nv">$@</span> &gt;&amp;6
         spinner &amp;
         <span class="nv">LAST_SPINNER_PID</span><span class="o">=</span><span class="nv">$!</span>
     <span class="k">else</span>
@@ -1029,9 +1053,17 @@ echo_summary &quot;something to say&quot;</p>
 <p>Echo text only to stdout, no log files
 echo_nolog &quot;something not for the logs&quot;</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>echo_nolog<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>echo_nolog <span class="o">{</span>
     <span class="nb">echo</span> <span class="nv">$@</span> &gt;&amp;3
 <span class="o">}</span>
+
+<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>poor old python2.6 doesn't have argparse by default, which
+outfilter.py uses</p>
+</td><td class=code><div class=highlight><pre>
+    is_package_installed python-argparse <span class="o">||</span> install_package python-argparse
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up logging for <tt class="docutils literal">stack.sh</tt>
@@ -1063,35 +1095,28 @@ we added on earlier runs.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Copy stdout to fd 3</p>
+<p>Set fd 3 to a copy of stdout. So we can set fd 1 without losing
+stdout later.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">exec </span>3&gt;&amp;1
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Redirect stdout/stderr to tee to write the log file</p>
+<p>Set fd 1 and 2 to write the log file</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> awk <span class="s1">&#39;</span>
-<span class="s1">                {</span>
-<span class="s1">                    cmd =&quot;date +\&quot;%Y-%m-%d %H:%M:%S \&quot;&quot;</span>
-<span class="s1">                    cmd | getline now</span>
-<span class="s1">                    close(&quot;date +\&quot;%Y-%m-%d %H:%M:%S \&quot;&quot;)</span>
-<span class="s1">                    sub(/^/, now)</span>
-<span class="s1">                    print</span>
-<span class="s1">                    fflush()</span>
-<span class="s1">                }&#39;</span> | tee <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
+        <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -v -o <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
 </pre></div></td></tr><tr><td class=docs>
-<p>Set up a second fd for output</p>
+<p>Set fd 6 to summary log file</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${SUMFILE}&quot;</span> <span class="o">)</span>
+        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -o <span class="s2">&quot;${SUMFILE}&quot;</span> <span class="o">)</span>
     <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set fd 1 and 2 to primary logfile</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>1&gt; <span class="s2">&quot;${LOGFILE}&quot;</span> 2&gt;&amp;1
+        <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -o <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
 </pre></div></td></tr><tr><td class=docs>
 <p>Set fd 6 to summary logfile and stdout</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${SUMFILE}&quot;</span> &gt;&amp;3 <span class="o">)</span>
+        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -v -o <span class="s2">&quot;${SUMFILE}&quot;</span> &gt;&amp;3 <span class="o">)</span>
     <span class="k">fi</span>
 
 <span class="k">    </span>echo_summary <span class="s2">&quot;stack.sh log $LOGFILE&quot;</span>
@@ -1103,7 +1128,8 @@ we added on earlier runs.</p>
 <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up output redirection without log files
-Copy stdout to fd 3</p>
+Set fd 3 to a copy of stdout. So we can set fd 1 without losing
+stdout later.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">exec </span>3&gt;&amp;1
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1115,7 +1141,7 @@ Copy stdout to fd 3</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Always send summary fd to original stdout</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">exec </span>6&gt;&amp;3
+    <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -v &gt;&amp;3 <span class="o">)</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1151,25 +1177,49 @@ Logs are kept for as long specified in <tt class="docutils literal">LOGDAYS</tt>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill background processes on exit</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">trap </span>clean EXIT
-clean<span class="o">()</span> <span class="o">{</span>
+<span class="nb">trap </span>exit_trap EXIT
+<span class="k">function </span>exit_trap <span class="o">{</span>
     <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
-    <span class="nb">kill</span> &gt;/dev/null 2&gt;&amp;1 <span class="k">$(</span><span class="nb">jobs</span> -p<span class="k">)</span>
-    <span class="nb">exit</span> <span class="nv">$r</span>
-<span class="o">}</span>
+    <span class="nb">jobs</span><span class="o">=</span><span class="k">$(</span><span class="nb">jobs</span> -p<span class="k">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Only do the kill when we're logging through a process substitution,
+which currently is only to verbose logfile</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$jobs</span> <span class="o">&amp;&amp;</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$VERBOSE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;exit_trap: cleaning up child processes&quot;</span>
+        <span class="nb">kill </span>2&gt;&amp;1 <span class="nv">$jobs</span>
+    <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Kill the last spinner process</p>
+</td><td class=code><div class=highlight><pre>
+    kill_spinner
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$r</span> -ne 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Error on exit&quot;</span>
+        ./tools/worlddump.py -d <span class="nv">$LOGDIR</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Exit on any errors so that errors don't compound</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">trap </span>failed ERR
-failed<span class="o">()</span> <span class="o">{</span>
+<span class="nb">trap </span>err_trap ERR
+<span class="k">function </span>err_trap <span class="o">{</span>
     <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
-    <span class="nb">kill</span> &gt;/dev/null 2&gt;&amp;1 <span class="k">$(</span><span class="nb">jobs</span> -p<span class="k">)</span>
     <span class="nb">set</span> +o xtrace
-    <span class="o">[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed: full log in $LOGFILE&quot;</span>
-    <span class="nb">exit</span> <span class="nv">$r</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed: full log in $LOGFILE&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
 <span class="o">}</span>
+
+
+<span class="nb">set</span> -o errexit
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Print the commands being run so that we can see the command that triggers
@@ -1204,9 +1254,25 @@ echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Do the ugly hacks for borken packages and distros</p>
+<p>Do the ugly hacks for broken packages and distros</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$TOP_DIR</span>/tools/fixup_stuff.sh
+
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="extras-pre-install">
+<h2>Extras Pre-install</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Phase: pre-install</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
+        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> stack pre-install
+    <span class="k">done</span>
+<span class="k">fi</span>
+
 
 install_rpc_backend
 
@@ -1234,6 +1300,7 @@ install_rpc_backend
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="check-out-and-install-source">
 <h2>Check Out and Install Source</h2>
 </td><td class=code><div class=highlight><pre>
@@ -1274,12 +1341,19 @@ install_novaclient
 <span class="k">    </span>install_heatclient
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Install middleware</p>
+</td><td class=code><div class=highlight><pre>
+install_keystonemiddleware
+
 git_clone <span class="nv">$OPENSTACKCLIENT_REPO</span> <span class="nv">$OPENSTACKCLIENT_DIR</span> <span class="nv">$OPENSTACKCLIENT_BRANCH</span>
 setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
 
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">    </span>install_keystone
-    configure_keystone
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$KEYSTONE_AUTH_HOST&quot;</span> <span class="o">==</span> <span class="s2">&quot;$SERVICE_HOST&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>install_keystone
+        configure_keystone
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
@@ -1328,6 +1402,10 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
 
 <span class="k">if </span>is_service_enabled horizon; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
+<p>django openstack_auth</p>
+</td><td class=code><div class=highlight><pre>
+    install_django_openstack_auth
+</pre></div></td></tr><tr><td class=docs>
 <p>dashboard</p>
 </td><td class=code><div class=highlight><pre>
     install_horizon
@@ -1339,7 +1417,6 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
     install_ceilometer
     echo_summary <span class="s2">&quot;Configuring Ceilometer&quot;</span>
     configure_ceilometer
-    configure_ceilometerclient
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
@@ -1503,56 +1580,21 @@ should be exported so clients can validate their connections.</p>
 </td><td class=code><div class=highlight><pre>
 init_service_check
 
-
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="sysstat">
-<h2>Sysstat</h2>
+<div class="section" id="dstat">
+<h2>Dstat</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>If enabled, systat has to start early to track OpenStack service startup.</p>
+<p>A better kind of sysstat, with the top process per time slice</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled sysstat; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>what we want to measure
--u : cpu statitics
--q : load
--b : io load rates
--w : process creation and context switch rates</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">SYSSTAT_OPTS</span><span class="o">=</span><span class="s2">&quot;-u -q -b -w&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen_it sysstat <span class="s2">&quot;cd $TOP_DIR; ./tools/sar_filter.py $SYSSTAT_OPTS -o $SCREEN_LOGDIR/$SYSSTAT_FILE $SYSSTAT_INTERVAL&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span>screen_it sysstat <span class="s2">&quot;./tools/sar_filter.py $SYSSTAT_OPTS $SYSSTAT_INTERVAL&quot;</span>
-    <span class="k">fi</span>
+<span class="nv">DSTAT_OPTS</span><span class="o">=</span><span class="s2">&quot;-tcmndrylp --top-cpu-adv&quot;</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>screen_it dstat <span class="s2">&quot;cd $TOP_DIR; dstat $DSTAT_OPTS | tee $SCREEN_LOGDIR/$DSTAT_FILE&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span>screen_it dstat <span class="s2">&quot;dstat $DSTAT_OPTS&quot;</span>
 <span class="k">fi</span>
-
-<span class="k">if </span>is_service_enabled dstat; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Per-process stats</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">DSTAT_OPTS</span><span class="o">=</span><span class="s2">&quot;-tcndylp --top-cpu-adv&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen_it dstat <span class="s2">&quot;cd $TOP_DIR; dstat $DSTAT_OPTS | tee $SCREEN_LOGDIR/$DSTAT_FILE&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span>screen_it dstat <span class="s2">&quot;dstat $DSTAT_OPTS&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-<span class="k">if </span>is_service_enabled pidstat; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Per-process stats</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">PIDSTAT_OPTS</span><span class="o">=</span><span class="s2">&quot;-l -p ALL -T ALL&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen_it pidstat <span class="s2">&quot;cd $TOP_DIR; pidstat $PIDSTAT_OPTS $PIDSTAT_INTERVAL &gt; $SCREEN_LOGDIR/$PIDSTAT_FILE&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span>screen_it pidstat <span class="s2">&quot;pidstat $PIDSTAT_OPTS $PIDSTAT_INTERVAL&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -1568,13 +1610,16 @@ init_service_check
 
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Keystone&quot;</span>
-    init_keystone
-    start_keystone
+
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$KEYSTONE_AUTH_HOST&quot;</span> <span class="o">==</span> <span class="s2">&quot;$SERVICE_HOST&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>init_keystone
+        start_keystone
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up a temporary admin URI for Keystone</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_AUTH_HOST</span>:<span class="nv">$KEYSTONE_AUTH_PORT</span>/v2.0
+    <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$KEYSTONE_AUTH_URI</span>/v2.0
 
     <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 <span class="k">        </span><span class="nb">export </span><span class="nv">OS_CACERT</span><span class="o">=</span><span class="nv">$INT_CA_DIR</span>/ca-chain.pem
@@ -1585,17 +1630,14 @@ init_service_check
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Do the keystone-specific bits from keystone_data.sh</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">export </span><span class="nv">OS_SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span>
-    <span class="nb">export </span><span class="nv">OS_SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Add temporarily to make openstackclient work</p>
+<p>Setup OpenStackclient token-flow auth</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">export </span><span class="nv">OS_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span>
     <span class="nb">export </span><span class="nv">OS_URL</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span>
+
     create_keystone_accounts
     create_nova_accounts
+    create_glance_accounts
     create_cinder_accounts
     create_neutron_accounts
 
@@ -1603,29 +1645,27 @@ init_service_check
 <span class="k">        </span>create_ceilometer_accounts
     <span class="k">fi</span>
 
-<span class="k">    if </span>is_service_enabled swift <span class="o">||</span> is_service_enabled s-proxy; <span class="k">then</span>
+<span class="k">    if </span>is_service_enabled swift; <span class="k">then</span>
 <span class="k">        </span>create_swift_accounts
     <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">keystone_data.sh</tt> creates services, admin and demo users, and roles.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">ADMIN_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span> <span class="nv">SERVICE_TENANT_NAME</span><span class="o">=</span><span class="nv">$SERVICE_TENANT_NAME</span> <span class="nv">SERVICE_PASSWORD</span><span class="o">=</span><span class="nv">$SERVICE_PASSWORD</span> <span class="se">\</span>
-    <span class="nv">SERVICE_TOKEN</span><span class="o">=</span><span class="nv">$SERVICE_TOKEN</span> <span class="nv">SERVICE_ENDPOINT</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span> <span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="nv">$SERVICE_HOST</span> <span class="se">\</span>
-    <span class="nv">S3_SERVICE_PORT</span><span class="o">=</span><span class="nv">$S3_SERVICE_PORT</span> <span class="nv">KEYSTONE_CATALOG_BACKEND</span><span class="o">=</span><span class="nv">$KEYSTONE_CATALOG_BACKEND</span> <span class="se">\</span>
-    <span class="nv">DEVSTACK_DIR</span><span class="o">=</span><span class="nv">$TOP_DIR</span> <span class="nv">ENABLED_SERVICES</span><span class="o">=</span><span class="nv">$ENABLED_SERVICES</span> <span class="nv">HEAT_API_CFN_PORT</span><span class="o">=</span><span class="nv">$HEAT_API_CFN_PORT</span> <span class="se">\</span>
-    <span class="nv">HEAT_API_PORT</span><span class="o">=</span><span class="nv">$HEAT_API_PORT</span> <span class="se">\</span>
-        bash -x <span class="nv">$FILES</span>/keystone_data.sh
+<span class="k">    if </span>is_service_enabled heat; <span class="k">then</span>
+<span class="k">        </span>create_heat_accounts
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Set up auth creds now that keystone is bootstrapped</p>
+<p>Begone token-flow auth</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">unset </span>OS_TOKEN OS_URL
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up password-flow auth creds now that keystone is bootstrapped</p>
+</td><td class=code><div class=highlight><pre>
     <span class="nb">export </span><span class="nv">OS_AUTH_URL</span><span class="o">=</span><span class="nv">$SERVICE_ENDPOINT</span>
     <span class="nb">export </span><span class="nv">OS_TENANT_NAME</span><span class="o">=</span>admin
     <span class="nb">export </span><span class="nv">OS_USERNAME</span><span class="o">=</span>admin
     <span class="nb">export </span><span class="nv">OS_PASSWORD</span><span class="o">=</span><span class="nv">$ADMIN_PASSWORD</span>
-    <span class="nb">unset </span>OS_SERVICE_TOKEN OS_SERVICE_ENDPOINT
+    <span class="nb">export </span><span class="nv">OS_REGION_NAME</span><span class="o">=</span><span class="nv">$REGION_NAME</span>
 <span class="k">fi</span>
 
 
@@ -1706,9 +1746,13 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 <span class="nb">    </span><span class="k">fi</span>
 
 <span class="k">    </span>clean_iptables
-    rm -rf <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
-    sudo mkdir -p <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
-    safe_chown -R <span class="k">${</span><span class="nv">USER</span><span class="k">}</span> <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
+
+    <span class="k">if </span>is_service_enabled n-net; <span class="k">then</span>
+<span class="k">        </span>rm -rf <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
+        sudo mkdir -p <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
+        safe_chown -R <span class="k">${</span><span class="nv">STACK_USER</span><span class="k">}</span> <span class="k">${</span><span class="nv">NOVA_STATE_PATH</span><span class="k">}</span>/networks
+    <span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Force IP forwarding on, just in case</p>
 </td><td class=code><div class=highlight><pre>
@@ -1769,9 +1813,6 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Preparing for nova baremetal&quot;</span>
     prepare_baremetal_toolchain
     configure_baremetal_nova_dirs
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$BM_USE_FAKE_ENV&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>create_fake_baremetal_env
-    <span class="k">fi</span>
 <span class="k">fi</span>
 
 
@@ -1890,15 +1931,9 @@ See <a class="reference external" href="https://help.ubuntu.com/community/CloudI
 <p>Create an access key and secret key for nova ec2 register image</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key <span class="o">&amp;&amp;</span> is_service_enabled swift3 <span class="o">&amp;&amp;</span> is_service_enabled nova; <span class="k">then</span>
-<span class="k">    </span><span class="nv">NOVA_USER_ID</span><span class="o">=</span><span class="k">$(</span>keystone user-list | grep <span class="s1">&#39; nova &#39;</span> | get_field 1<span class="k">)</span>
-    die_if_not_set <span class="nv">$LINENO</span> NOVA_USER_ID <span class="s2">&quot;Failure retrieving NOVA_USER_ID for nova&quot;</span>
-    <span class="nv">NOVA_TENANT_ID</span><span class="o">=</span><span class="k">$(</span>keystone tenant-list | grep <span class="s2">&quot; $SERVICE_TENANT_NAME &quot;</span> | get_field 1<span class="k">)</span>
-    die_if_not_set <span class="nv">$LINENO</span> NOVA_TENANT_ID <span class="s2">&quot;Failure retrieving NOVA_TENANT_ID for $SERVICE_TENANT_NAME&quot;</span>
-    <span class="nv">CREDS</span><span class="o">=</span><span class="k">$(</span>keystone ec2-credentials-create --user-id <span class="nv">$NOVA_USER_ID</span> --tenant-id <span class="nv">$NOVA_TENANT_ID</span><span class="k">)</span>
-    <span class="nv">ACCESS_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ access / { print $4 }&#39;</span><span class="k">)</span>
-    <span class="nv">SECRET_KEY</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$CREDS&quot;</span> | awk <span class="s1">&#39;/ secret / { print $4 }&#39;</span><span class="k">)</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_access_key <span class="s2">&quot;$ACCESS_KEY&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_secret_key <span class="s2">&quot;$SECRET_KEY&quot;</span>
+<span class="k">    </span><span class="nb">eval</span> <span class="k">$(</span>openstack ec2 credentials create --user nova --project <span class="nv">$SERVICE_TENANT_NAME</span> -f shell -c access -c secret<span class="k">)</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_access_key <span class="s2">&quot;$access&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_secret_key <span class="s2">&quot;$secret&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_affix_tenant <span class="s2">&quot;True&quot;</span>
 <span class="k">fi</span>
 
@@ -1915,7 +1950,7 @@ See <a class="reference external" href="https://help.ubuntu.com/community/CloudI
 
 <span class="k">if </span>is_service_enabled zeromq; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting zermomq receiver&quot;</span>
-    screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-rpc-zmq-receiver&quot;</span>
+    screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $OSLO_BIN_DIR/oslo-messaging-zmq-receiver&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1970,6 +2005,7 @@ See <a class="reference external" href="https://help.ubuntu.com/community/CloudI
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Cinder&quot;</span>
     start_cinder
+    create_volume_types
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Ceilometer&quot;</span>
@@ -2165,7 +2201,7 @@ to access the site using your browser.</p>
 <p>If Keystone is present you can point <tt class="docutils literal">nova</tt> cli to this server</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Keystone is serving at $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v2.0/&quot;</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Keystone is serving at $KEYSTONE_SERVICE_URI/v2.0/&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Examples on using novaclient command line is in exercise.sh&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;The default users are: admin and demo&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;The password: $ADMIN_PASSWORD&quot;</span>
@@ -2184,80 +2220,74 @@ to access the site using your browser.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Specific warning for deprecated configs</p>
+<p>TODO(dtroyer): Remove Q_AGENT_EXTRA_AGENT_OPTS after stable/juno branch is cut</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_AGENT_EXTRA_AGENT_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    echo_summary <span class="s2">&quot;WARNING: EXTRA_OPTS is used&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You are using EXTRA_OPTS to pass configuration into nova.conf.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a nova.conf section in local.conf:&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;</span>
-<span class="s2">[[post-config|\$NOVA_CONF]]</span>
-<span class="s2">[DEFAULT]</span>
-<span class="s2">&quot;</span>
-    <span class="k">for </span>I in <span class="s2">&quot;${EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Replace the first '=' with ' ' for iniset syntax</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
-    <span class="k">done</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_BAREMETAL_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    echo_summary <span class="s2">&quot;WARNING: EXTRA_OPTS is used&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You are using EXTRA_OPTS to pass configuration into nova.conf.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a nova.conf section in local.conf:&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;</span>
-<span class="s2">[[post-config|\$NOVA_CONF]]</span>
-<span class="s2">[baremetal]</span>
-<span class="s2">&quot;</span>
-    <span class="k">for </span>I in <span class="s2">&quot;${EXTRA_BAREMETAL_OPTS[@]}&quot;</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Replace the first '=' with ' ' for iniset syntax</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
-    <span class="k">done</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_DHCP_EXTRA_DEFAULT_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    echo_summary <span class="s2">&quot;WARNING: Q_DHCP_EXTRA_DEFAULT_OPTS is used&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_DHCP_EXTRA_DEFAULT_OPTS to pass configuration into $Q_DHCP_CONF_FILE.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $Q_DHCP_CONF_FILE section in local.conf:&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;</span>
-<span class="s2">[[post-config|\$Q_DHCP_CONF_FILE]]</span>
-<span class="s2">[DEFAULT]</span>
-<span class="s2">&quot;</span>
-    <span class="k">for </span>I in <span class="s2">&quot;${Q_DHCP_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Replace the first '=' with ' ' for iniset syntax</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
-    <span class="k">done</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_SRV_EXTRA_DEFAULT_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    echo_summary <span class="s2">&quot;WARNING: Q_SRV_EXTRA_DEFAULT_OPTS is used&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_SRV_EXTRA_DEFAULT_OPTS to pass configuration into $NEUTRON_CONF.&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: Q_AGENT_EXTRA_AGENT_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_AGENT_EXTRA_AGENT_OPTS to pass configuration into $NEUTRON_CONF.&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $NEUTRON_CONF section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Q_AGENT_EXTRA_AGENT_OPTS will be removed early in the &#39;K&#39; development cycle&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;</span>
-<span class="s2">[[post-config|\$NEUTRON_CONF]]</span>
+<span class="s2">[[post-config|/\$Q_PLUGIN_CONF_FILE]]</span>
 <span class="s2">[DEFAULT]</span>
 <span class="s2">&quot;</span>
-    <span class="k">for </span>I in <span class="s2">&quot;${Q_SRV_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_AGENT_EXTRA_AGENT_OPTS[@]}&quot;</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Replace the first '=' with ' ' for iniset syntax</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
     <span class="k">done</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(dtroyer): Remove Q_AGENT_EXTRA_SRV_OPTS after stable/juno branch is cut</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_AGENT_EXTRA_SRV_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: Q_AGENT_EXTRA_SRV_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_AGENT_EXTRA_SRV_OPTS to pass configuration into $NEUTRON_CONF.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $NEUTRON_CONF section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Q_AGENT_EXTRA_AGENT_OPTS will be removed early in the &#39;K&#39; development cycle&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;</span>
+<span class="s2">[[post-config|/\$Q_PLUGIN_CONF_FILE]]</span>
+<span class="s2">[DEFAULT]</span>
+<span class="s2">&quot;</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_AGENT_EXTRA_SRV_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+    <span class="k">done</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(dtroyer): Remove CINDER_MULTI_LVM_BACKEND after stable/juno branch is cut</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: CINDER_MULTI_LVM_BACKEND is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using CINDER_MULTI_LVM_BACKEND to configure Cinder&#39;s multiple LVM backends&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in local.conf to use CINDER_ENABLED_BACKENDS.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;CINDER_ENABLED_BACKENDS will be removed early in the &#39;K&#39; development cycle&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;</span>
+<span class="s2">[[local|localrc]]</span>
+<span class="s2">CINDER_ENABLED_BACKENDS=lvm:lvmdriver-1,lvm:lvmdriver-2</span>
+<span class="s2">&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Indicate how long this took to run (bash maintained variable <tt class="docutils literal">SECONDS</tt>)</p>
 </td><td class=code><div class=highlight><pre>
 echo_summary <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Restore/close logging file descriptors</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">exec </span>1&gt;&amp;3
+<span class="nb">exec </span>2&gt;&amp;3
+<span class="nb">exec </span>3&gt;&amp;-
+<span class="nb">exec </span>6&gt;&amp;-
 
 
 </td><td class=code><div class=highlight><pre>

@@ -362,46 +362,52 @@ ul.auto-toc {
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">BS_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/ovs_base
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_thirdparty/bigswitch_floodlight     <span class="c"># for third party service specific configuration values</span>
 
-<span class="k">function </span>neutron_plugin_create_nova_conf<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_create_nova_conf <span class="o">{</span>
     :
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_install_agent_packages<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_install_agent_packages <span class="o">{</span>
     _neutron_ovs_base_install_agent_packages
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_common<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_common <span class="o">{</span>
     <span class="nv">Q_PLUGIN_CONF_PATH</span><span class="o">=</span>etc/neutron/plugins/bigswitch
     <span class="nv">Q_PLUGIN_CONF_FILENAME</span><span class="o">=</span>restproxy.ini
-    <span class="nv">Q_DB_NAME</span><span class="o">=</span><span class="s2">&quot;restproxy_neutron&quot;</span>
     <span class="nv">Q_PLUGIN_CLASS</span><span class="o">=</span><span class="s2">&quot;neutron.plugins.bigswitch.plugin.NeutronRestProxyV2&quot;</span>
     <span class="nv">BS_FL_CONTROLLERS_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">BS_FL_CONTROLLERS_PORT</span><span class="k">:-</span><span class="nv">localhost</span><span class="p">:</span><span class="nv">80</span><span class="k">}</span>
     <span class="nv">BS_FL_CONTROLLER_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">BS_FL_CONTROLLER_TIMEOUT</span><span class="k">:-</span><span class="nv">10</span><span class="k">}</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_debug_command<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_debug_command <span class="o">{</span>
     _neutron_ovs_base_configure_debug_command
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_dhcp_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_dhcp_agent <span class="o">{</span>
     :
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_l3_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_l3_agent <span class="o">{</span>
     _neutron_ovs_base_configure_l3_agent
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_plugin_agent<span class="o">()</span> <span class="o">{</span>
-    :
+<span class="k">function </span>neutron_plugin_configure_plugin_agent <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up integration bridge</p>
+</td><td class=code><div class=highlight><pre>
+    _neutron_ovs_base_setup_bridge <span class="nv">$OVS_BRIDGE</span>
+    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> restproxyagent integration_bridge <span class="nv">$OVS_BRIDGE</span>
+    <span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$NEUTRON_DIR/neutron/plugins/bigswitch/agent/restproxy_agent.py&quot;</span>
+
+    _neutron_ovs_base_configure_firewall_driver
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_service<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_service <span class="o">{</span>
     iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> restproxy servers <span class="nv">$BS_FL_CONTROLLERS_PORT</span>
     iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> restproxy servertimeout <span class="nv">$BS_FL_CONTROLLER_TIMEOUT</span>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$BS_FL_VIF_DRIVER&quot;</span> <span class="o">=</span> <span class="s2">&quot;ivs&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -409,7 +415,7 @@ ul.auto-toc {
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_setup_interface_driver<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_setup_interface_driver <span class="o">{</span>
     <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$BS_FL_VIF_DRIVER&quot;</span> <span class="o">=</span> <span class="s2">&quot;ivs&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$conf_file</span> DEFAULT interface_driver neutron.agent.linux.interface.IVSInterfaceDriver
@@ -419,21 +425,21 @@ ul.auto-toc {
 <span class="o">}</span>
 
 
-<span class="k">function </span>has_neutron_plugin_security_group<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>has_neutron_plugin_security_group <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>1 means False here</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">return </span>1
+    <span class="k">return </span>0
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_check_adv_test_requirements<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_check_adv_test_requirements <span class="o">{</span>
     is_service_enabled q-agt <span class="o">&amp;&amp;</span> is_service_enabled q-dhcp <span class="o">&amp;&amp;</span> <span class="k">return </span>0
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$MY_XTRACE</span>
+<span class="nv">$BS_XTRACE</span>
 
 
 </td><td class=code><div class=highlight><pre>

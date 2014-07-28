@@ -377,8 +377,7 @@ ul.auto-toc {
 
 <span class="nv">ACCOUNT_DIR</span><span class="o">=</span>./accrc
 
-display_help<span class="o">()</span>
-<span class="o">{</span>
+<span class="k">function </span>display_help <span class="o">{</span>
 cat <span class="s">&lt;&lt;EOF</span>
 
 <span class="s">usage: $0 &lt;options..&gt;</span>
@@ -401,7 +400,7 @@ cat <span class="s">&lt;&lt;EOF</span>
 <span class="s">-P include password to the rc files; with -A it assume all users password is the same</span>
 <span class="s">-A try with all user</span>
 <span class="s">-u &lt;username&gt; create files just for the specified user</span>
-<span class="s">-C &lt;tanent_name&gt; create user and tenant, the specifid tenant will be the user&#39;s tenant</span>
+<span class="s">-C &lt;tenant_name&gt; create user and tenant, the specifid tenant will be the user&#39;s tenant</span>
 <span class="s">-r &lt;name&gt; when combined with -C and the (-u) user exists it will be the user&#39;s tenant role in the (-C)tenant (default: Member)</span>
 <span class="s">-p &lt;userpass&gt; password for the user</span>
 <span class="s">--os-username &lt;username&gt;</span>
@@ -420,10 +419,8 @@ cat <span class="s">&lt;&lt;EOF</span>
 <span class="s">EOF</span>
 <span class="o">}</span>
 
-<span class="k">if</span> ! <span class="nv">options</span><span class="o">=</span><span class="k">$(</span>getopt -o hPAp:u:r:C: -l os-username:,os-password:,os-tenant-name:,os-tenant-id:,os-auth-url:,target-dir:,skip-tenant:,os-cacert:,help,debug -- <span class="s2">&quot;$@&quot;</span><span class="k">)</span>
-<span class="k">then</span>
-    <span class="c">#parse error</span>
-    display_help
+<span class="k">if</span> ! <span class="nv">options</span><span class="o">=</span><span class="k">$(</span>getopt -o hPAp:u:r:C: -l os-username:,os-password:,os-tenant-name:,os-tenant-id:,os-auth-url:,target-dir:,skip-tenant:,os-cacert:,help,debug -- <span class="s2">&quot;$@&quot;</span><span class="k">)</span>; <span class="k">then</span>
+<span class="k">    </span>display_help
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 <span class="nb">eval set</span> -- <span class="nv">$options</span>
@@ -432,9 +429,9 @@ cat <span class="s">&lt;&lt;EOF</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>The services users usually in the service tenant.
 rc files for service users, is out of scope.
-Supporting different tanent for services is out of scope.</p>
+Supporting different tenant for services is out of scope.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">SKIP_TENANT</span><span class="o">=</span><span class="s2">&quot;,service,&quot;</span> <span class="c"># tenant names are between commas(,)</span>
+<span class="nv">SKIP_TENANT</span><span class="o">=</span><span class="s2">&quot;service&quot;</span>
 <span class="nv">MODE</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 <span class="nv">ROLE</span><span class="o">=</span>Member
 <span class="nv">USER_NAME</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
@@ -497,15 +494,15 @@ Supporting different tanent for services is out of scope.</p>
 
 <span class="nb">export</span> -n SERVICE_TOKEN SERVICE_ENDPOINT OS_SERVICE_TOKEN OS_SERVICE_ENDPOINT
 
-<span class="nv">EC2_URL</span><span class="o">=</span>http://localhost:8773/service/Cloud
-<span class="nv">S3_URL</span><span class="o">=</span>http://localhost:3333
+<span class="nv">EC2_URL</span><span class="o">=</span><span class="k">$(</span>openstack endpoint show -f value -c publicurl ec2 <span class="o">||</span> <span class="nb">true</span><span class="k">)</span>
+<span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$EC2_URL</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">EC2_URL</span><span class="o">=</span>http://localhost:8773/services/Cloud
+<span class="k">fi</span>
 
-<span class="nv">ec2</span><span class="o">=</span><span class="sb">`</span>keystone endpoint-get --service ec2 | awk <span class="s1">&#39;/\|[[:space:]]*ec2.publicURL/ {print $4}&#39;</span><span class="sb">`</span>
-<span class="o">[</span> -n <span class="s2">&quot;$ec2&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">EC2_URL</span><span class="o">=</span><span class="nv">$ec2</span>
-
-<span class="nv">s3</span><span class="o">=</span><span class="sb">`</span>keystone endpoint-get --service s3 | awk <span class="s1">&#39;/\|[[:space:]]*s3.publicURL/ {print $4}&#39;</span><span class="sb">`</span>
-<span class="o">[</span> -n <span class="s2">&quot;$s3&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nv">S3_URL</span><span class="o">=</span><span class="nv">$s3</span>
-
+<span class="nv">S3_URL</span><span class="o">=</span><span class="k">$(</span>openstack endpoint show -f value -c publicurl s3 <span class="o">||</span> <span class="nb">true</span><span class="k">)</span>
+<span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$S3_URL</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">S3_URL</span><span class="o">=</span>http://localhost:3333
+<span class="k">fi</span>
 
 mkdir -p <span class="s2">&quot;$ACCOUNT_DIR&quot;</span>
 <span class="nv">ACCOUNT_DIR</span><span class="o">=</span><span class="sb">`</span>readlink -f <span class="s2">&quot;$ACCOUNT_DIR&quot;</span><span class="sb">`</span>
@@ -521,7 +518,7 @@ mkdir -p <span class="s2">&quot;$ACCOUNT_DIR&quot;</span>
 <span class="k">fi</span>
 
 
-<span class="k">function </span>add_entry<span class="o">(){</span>
+<span class="k">function </span>add_entry <span class="o">{</span>
     <span class="nb">local </span><span class="nv">user_id</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">user_name</span><span class="o">=</span><span class="nv">$2</span>
     <span class="nb">local </span><span class="nv">tenant_id</span><span class="o">=</span><span class="nv">$3</span>
@@ -531,13 +528,13 @@ mkdir -p <span class="s2">&quot;$ACCOUNT_DIR&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>The admin user can see all user's secret AWS keys, it does not looks good</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">local </span><span class="nv">line</span><span class="o">=</span><span class="sb">`</span>keystone ec2-credentials-list --user_id <span class="nv">$user_id</span> | grep -E <span class="s2">&quot;^\\|[[:space:]]*($tenant_name|$tenant_id)[[:space:]]*\\|&quot;</span> | head -n 1<span class="sb">`</span>
+    <span class="nb">local </span><span class="nv">line</span><span class="o">=</span><span class="sb">`</span>openstack ec2 credentials list --user <span class="nv">$user_id</span> | grep <span class="s2">&quot; $tenant_id &quot;</span><span class="sb">`</span>
     <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$line&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>keystone ec2-credentials-create --user-id <span class="nv">$user_id</span> --tenant-id <span class="nv">$tenant_id</span> 1&gt;&amp;2
-        <span class="nv">line</span><span class="o">=</span><span class="sb">`</span>keystone ec2-credentials-list --user_id <span class="nv">$user_id</span> | grep -E <span class="s2">&quot;^\\|[[:space:]]*($tenant_name|$tenant_id)[[:space:]]*\\|&quot;</span> | head -n 1<span class="sb">`</span>
+<span class="k">        </span>openstack ec2 credentials create --user <span class="nv">$user_id</span> --project <span class="nv">$tenant_id</span> 1&gt;&amp;2
+        <span class="nv">line</span><span class="o">=</span><span class="sb">`</span>openstack ec2 credentials list --user <span class="nv">$user_id</span> | grep <span class="s2">&quot; $tenant_id &quot;</span><span class="sb">`</span>
     <span class="k">fi</span>
 <span class="k">    </span><span class="nb">local </span>ec2_access_key ec2_secret_key
-    <span class="nb">read </span>ec2_access_key ec2_secret_key <span class="o">&lt;&lt;&lt;</span>  <span class="sb">`</span><span class="nb">echo</span> <span class="nv">$line</span> | awk <span class="s1">&#39;{print $4 &quot; &quot; $6 }&#39;</span><span class="sb">`</span>
+    <span class="nb">read </span>ec2_access_key ec2_secret_key <span class="o">&lt;&lt;&lt;</span>  <span class="sb">`</span><span class="nb">echo</span> <span class="nv">$line</span> | awk <span class="s1">&#39;{print $2 &quot; &quot; $4 }&#39;</span><span class="sb">`</span>
     mkdir -p <span class="s2">&quot;$ACCOUNT_DIR/$tenant_name&quot;</span>
     <span class="nb">local </span><span class="nv">rcfile</span><span class="o">=</span><span class="s2">&quot;$ACCOUNT_DIR/$tenant_name/$user_name&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -591,51 +588,45 @@ The Serial does not seams correctly marked either</p>
 <span class="o">}</span>
 
 <span class="c">#admin users expected</span>
-<span class="k">function </span>create_or_get_tenant<span class="o">(){</span>
-    <span class="nb">local </span><span class="nv">tenant_name</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">tenant_id</span><span class="o">=</span><span class="sb">`</span>keystone tenant-list | awk <span class="s1">&#39;/\|[[:space:]]*&#39;</span><span class="s2">&quot;$tenant_name&quot;</span><span class="s1">&#39;[[:space:]]*\|.*\|/ {print $2}&#39;</span><span class="sb">`</span>
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$tenant_id&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="nv">$tenant_id</span>
-    <span class="k">else</span>
-<span class="k">        </span>keystone tenant-create --name <span class="s2">&quot;$tenant_name&quot;</span> | awk <span class="s1">&#39;/\|[[:space:]]*id[[:space:]]*\|.*\|/ {print $4}&#39;</span>
+<span class="k">function </span>create_or_get_project <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">name</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span>id
+    <span class="nb">eval</span> <span class="k">$(</span>openstack project show -f shell -c id <span class="nv">$name</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$id</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">eval</span> <span class="k">$(</span>openstack project create -f shell -c id <span class="nv">$name</span><span class="k">)</span>
     <span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="nv">$id</span>
 <span class="o">}</span>
 
-<span class="k">function </span>create_or_get_role<span class="o">(){</span>
-    <span class="nb">local </span><span class="nv">role_name</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">role_id</span><span class="o">=</span><span class="sb">`</span>keystone role-list| awk <span class="s1">&#39;/\|[[:space:]]*&#39;</span><span class="s2">&quot;$role_name&quot;</span><span class="s1">&#39;[[:space:]]*\|/ {print $2}&#39;</span><span class="sb">`</span>
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$role_id&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="nv">$role_id</span>
-    <span class="k">else</span>
-<span class="k">        </span>keystone role-create --name <span class="s2">&quot;$role_name&quot;</span> |awk <span class="s1">&#39;/\|[[:space:]]*id[[:space:]]*\|.*\|/ {print $4}&#39;</span>
+<span class="k">function </span>create_or_get_role <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">name</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span>id
+    <span class="nb">eval</span> <span class="k">$(</span>openstack role show -f shell -c id <span class="nv">$name</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$id</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">eval</span> <span class="k">$(</span>openstack role create -f shell -c id <span class="nv">$name</span><span class="k">)</span>
     <span class="k">fi</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="nv">$id</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>you can source this file</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>get_user_id<span class="o">(){</span>
-    <span class="nb">local </span><span class="nv">user_name</span><span class="o">=</span><span class="nv">$1</span>
-    keystone user-list | awk <span class="s1">&#39;/^\|[^|]*\|[[:space:]]*&#39;</span><span class="s2">&quot;$user_name&quot;</span><span class="s1">&#39;[[:space:]]*\|.*\|/ {print $2}&#39;</span>
+<span class="k">function </span>get_user_id <span class="o">{</span>
+    openstack user list | grep <span class="s2">&quot; $1 &quot;</span> | cut -d <span class="s2">&quot; &quot;</span> -f2
 <span class="o">}</span>
 
 <span class="k">if</span> <span class="o">[</span> <span class="nv">$MODE</span> !<span class="o">=</span> <span class="s2">&quot;create&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>OpenStack USER ID = $user_id</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>tenant_id_at_name in <span class="sb">`</span>keystone tenant-list | awk <span class="s1">&#39;BEGIN {IGNORECASE = 1} /true[[:space:]]*\|$/ {print  $2 &quot;@&quot; $4}&#39;</span><span class="sb">`</span>; <span class="k">do</span>
-<span class="k">        </span><span class="nb">read </span>tenant_id tenant_name <span class="o">&lt;&lt;&lt;</span> <span class="sb">`</span><span class="nb">echo</span> <span class="s2">&quot;$tenant_id_at_name&quot;</span> | sed <span class="s1">&#39;s/@/ /&#39;</span><span class="sb">`</span>
-        <span class="k">if </span><span class="nb">echo</span> <span class="nv">$SKIP_TENANT</span>| grep -q <span class="s2">&quot;,$tenant_name,&quot;</span>; <span class="k">then</span>
-<span class="k">            continue</span>;
-        <span class="k">fi</span>
-<span class="k">        for </span>user_id_at_name in <span class="sb">`</span>keystone user-list --tenant-id <span class="nv">$tenant_id</span> | awk <span class="s1">&#39;BEGIN {IGNORECASE = 1} /true[[:space:]]*\|[^|]*\|$/ {print  $2 &quot;@&quot; $4}&#39;</span><span class="sb">`</span>; <span class="k">do</span>
-<span class="k">            </span><span class="nb">read </span>user_id user_name <span class="o">&lt;&lt;&lt;</span> <span class="sb">`</span><span class="nb">echo</span> <span class="s2">&quot;$user_id_at_name&quot;</span> | sed <span class="s1">&#39;s/@/ /&#39;</span><span class="sb">`</span>
-            <span class="k">if</span> <span class="o">[</span> <span class="nv">$MODE</span> <span class="o">=</span> one -a <span class="s2">&quot;$user_name&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$USER_NAME&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+    openstack project list --long --quote none -f csv | grep <span class="s1">&#39;,True&#39;</span> | grep -v <span class="s2">&quot;${SKIP_TENANT}&quot;</span> | <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span>, <span class="nb">read </span>tenant_id tenant_name desc enabled; <span class="k">do</span>
+<span class="k">        </span>openstack user list --project <span class="nv">$tenant_id</span> --long --quote none -f csv | grep <span class="s1">&#39;,True&#39;</span> | <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span>, <span class="nb">read </span>user_id user_name project email enabled; <span class="k">do</span>
+<span class="k">            if</span> <span class="o">[</span> <span class="nv">$MODE</span> <span class="o">=</span> one -a <span class="s2">&quot;$user_name&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$USER_NAME&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">                continue</span>;
             <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Openstack Tenant ID = $tenant_id</p>
+<p>OpenStack Tenant ID = $tenant_id</p>
 </td><td class=code><div class=highlight><pre>
             <span class="nb">eval </span><span class="nv">SPECIFIC_UPASSWORD</span><span class="o">=</span><span class="s2">&quot;\$${USER_NAME^^}_PASSWORD&quot;</span>
             <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$SPECIFIC_UPASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
@@ -646,18 +637,16 @@ The Serial does not seams correctly marked either</p>
 <span class="k">    done</span>
 <span class="k">else</span>
 <span class="k">    </span><span class="nv">tenant_name</span><span class="o">=</span><span class="nv">$TENANT</span>
-    <span class="nv">tenant_id</span><span class="o">=</span><span class="sb">`</span>create_or_get_tenant <span class="s2">&quot;$TENANT&quot;</span><span class="sb">`</span>
+    <span class="nv">tenant_id</span><span class="o">=</span><span class="k">$(</span>create_or_get_project <span class="s2">&quot;$TENANT&quot;</span><span class="k">)</span>
     <span class="nv">user_name</span><span class="o">=</span><span class="nv">$USER_NAME</span>
     <span class="nv">user_id</span><span class="o">=</span><span class="sb">`</span>get_user_id <span class="nv">$user_name</span><span class="sb">`</span>
     <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$user_id&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-        <span class="c">#new user</span>
-        <span class="nv">user_id</span><span class="o">=</span><span class="sb">`</span>keystone user-create --name <span class="s2">&quot;$user_name&quot;</span> --tenant-id <span class="s2">&quot;$tenant_id&quot;</span> --pass <span class="s2">&quot;$USER_PASS&quot;</span> --email <span class="s2">&quot;$user_name@example.com&quot;</span> | awk <span class="s1">&#39;/\|[[:space:]]*id[[:space:]]*\|.*\|/ {print $4}&#39;</span><span class="sb">`</span>
-        <span class="c">#The password is in the cmd line. It is not a good thing</span>
+<span class="k">        </span><span class="nb">eval</span> <span class="k">$(</span>openstack user create <span class="s2">&quot;$user_name&quot;</span> --project <span class="s2">&quot;$tenant_id&quot;</span> --password <span class="s2">&quot;$USER_PASS&quot;</span> --email <span class="s2">&quot;$user_name@example.com&quot;</span> -f shell -c id<span class="k">)</span>
+        <span class="nv">user_id</span><span class="o">=</span><span class="nv">$id</span>
         add_entry <span class="s2">&quot;$user_id&quot;</span> <span class="s2">&quot;$user_name&quot;</span> <span class="s2">&quot;$tenant_id&quot;</span> <span class="s2">&quot;$tenant_name&quot;</span> <span class="s2">&quot;$USER_PASS&quot;</span>
     <span class="k">else</span>
-        <span class="c">#new role</span>
-        <span class="nv">role_id</span><span class="o">=</span><span class="sb">`</span>create_or_get_role <span class="s2">&quot;$ROLE&quot;</span><span class="sb">`</span>
-        keystone user-role-add --user-id <span class="s2">&quot;$user_id&quot;</span> --tenant-id <span class="s2">&quot;$tenant_id&quot;</span> --role-id <span class="s2">&quot;$role_id&quot;</span>
+<span class="k">        </span><span class="nv">role_id</span><span class="o">=</span><span class="k">$(</span>create_or_get_role <span class="s2">&quot;$ROLE&quot;</span><span class="k">)</span>
+        openstack role add <span class="s2">&quot;$role_id&quot;</span> --user <span class="s2">&quot;$user_id&quot;</span> --project <span class="s2">&quot;$tenant_id&quot;</span>
         add_entry <span class="s2">&quot;$user_id&quot;</span> <span class="s2">&quot;$user_name&quot;</span> <span class="s2">&quot;$tenant_id&quot;</span> <span class="s2">&quot;$tenant_name&quot;</span> <span class="s2">&quot;$USER_PASS&quot;</span>
     <span class="k">fi</span>
 <span class="k">fi</span>
@@ -669,7 +658,7 @@ The Serial does not seams correctly marked either</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>looks like I can't ask for all tenant related to a specified  user</p>
+<p>looks like I can't ask for all tenant related to a specified user</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Checks for a specific password defined for an user.
 Example for an username johndoe:</p>

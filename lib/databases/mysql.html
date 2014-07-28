@@ -392,12 +392,17 @@ register_database mysql
 <p>Get ruthless with mysql</p>
 </td><td class=code><div class=highlight><pre>
         stop_service <span class="nv">$MYSQL</span>
-        sudo aptitude purge -y ~nmysql-server
+        apt_get purge -y mysql*
         sudo rm -rf /var/lib/mysql
+        sudo rm -rf /etc/mysql
         <span class="k">return</span>
 <span class="k">    elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span><span class="nv">MYSQL</span><span class="o">=</span>mysqld
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">MYSQL</span><span class="o">=</span>mariadb
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">MYSQL</span><span class="o">=</span>mysqld
+        <span class="k">fi</span>
+<span class="k">    elif </span>is_suse; <span class="k">then</span>
 <span class="k">        </span><span class="nv">MYSQL</span><span class="o">=</span>mysql
     <span class="k">else</span>
 <span class="k">        return</span>
@@ -413,14 +418,19 @@ register_database mysql
 <span class="o">}</span>
 
 <span class="k">function </span>configure_database_mysql <span class="o">{</span>
+    <span class="nb">local </span>slow_log
     echo_summary <span class="s2">&quot;Configuring and starting MySQL&quot;</span>
 
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/mysql/my.cnf
         <span class="nv">MYSQL</span><span class="o">=</span>mysql
     <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">MYSQL</span><span class="o">=</span>mariadb
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">MYSQL</span><span class="o">=</span>mysqld
+        <span class="k">fi</span>
 <span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/my.cnf
-        <span class="nv">MYSQL</span><span class="o">=</span>mysqld
     <span class="k">elif </span>is_suse; <span class="k">then</span>
 <span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/my.cnf
         <span class="nv">MYSQL</span><span class="o">=</span>mysql
@@ -456,49 +466,36 @@ did that with debconf before installing the package.</p>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Change ‘bind-address’ from localhost (127.0.0.1) to any (0.0.0.0)</p>
+<p>Change ‘bind-address’ from localhost (127.0.0.1) to any (0.0.0.0) and
+set default db type to InnoDB</p>
 </td><td class=code><div class=highlight><pre>
-    sudo sed -i <span class="s1">&#39;/^bind-address/s/127.0.0.1/0.0.0.0/g&#39;</span> <span class="nv">$MY_CONF</span>
+    sudo bash -c <span class="s2">&quot;source $TOP_DIR/functions &amp;&amp; \</span>
+<span class="s2">        iniset $MY_CONF mysqld bind-address 0.0.0.0 &amp;&amp; \</span>
+<span class="s2">        iniset $MY_CONF mysqld sql_mode STRICT_ALL_TABLES &amp;&amp; \</span>
+<span class="s2">        iniset $MY_CONF mysqld default-storage-engine InnoDB&quot;</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Set default db type to InnoDB</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>sudo grep -q <span class="s2">&quot;default-storage-engine&quot;</span> <span class="nv">$MY_CONF</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Change it</p>
-</td><td class=code><div class=highlight><pre>
-        sudo bash -c <span class="s2">&quot;source $TOP_DIR/functions; iniset $MY_CONF mysqld default-storage-engine InnoDB&quot;</span>
-    <span class="k">else</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Add it</p>
-</td><td class=code><div class=highlight><pre>
-        sudo sed -i -e <span class="s2">&quot;/^\[mysqld\]/ a \</span>
-<span class="s2">default-storage-engine = InnoDB&quot;</span> <span class="nv">$MY_CONF</span>
-    <span class="k">fi</span>
 
-<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$DATABASE_QUERY_LOGGING&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$DATABASE_QUERY_LOGGING&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>echo_summary <span class="s2">&quot;Enabling MySQL query logging&quot;</span>
+        <span class="k">if </span>is_fedora <span class="o">&amp;&amp;</span> ! <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">slow_log</span><span class="o">=</span>/var/log/mariadb/mariadb-slow.log
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">slow_log</span><span class="o">=</span>/var/log/mysql/mysql-slow.log
+        <span class="k">fi</span>
+<span class="k">        </span>sudo sed -e <span class="s1">&#39;/log.slow.queries/d&#39;</span> <span class="se">\</span>
+            -e <span class="s1">&#39;/long.query.time/d&#39;</span> <span class="se">\</span>
+            -e <span class="s1">&#39;/log.queries.not.using.indexes/d&#39;</span> <span class="se">\</span>
+            -i <span class="nv">$MY_CONF</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Turn on slow query log</p>
+<p>Turn on slow query log, log all queries (any query taking longer than
+0 seconds) and log all non-indexed queries</p>
 </td><td class=code><div class=highlight><pre>
-        sudo sed -i <span class="s1">&#39;/log.slow.queries/d&#39;</span> <span class="nv">$MY_CONF</span>
-        sudo sed -i -e <span class="s2">&quot;/^\[mysqld\]/ a \</span>
-<span class="s2">            log-slow-queries = /var/log/mysql/mysql-slow.log&quot;</span> <span class="nv">$MY_CONF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Log all queries (any query taking longer than 0 seconds)</p>
-</td><td class=code><div class=highlight><pre>
-        sudo sed -i <span class="s1">&#39;/long.query.time/d&#39;</span> <span class="nv">$MY_CONF</span>
-        sudo sed -i -e <span class="s2">&quot;/^\[mysqld\]/ a \</span>
-<span class="s2">            long-query-time = 0&quot;</span> <span class="nv">$MY_CONF</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Log all non-indexed queries</p>
-</td><td class=code><div class=highlight><pre>
-        sudo sed -i <span class="s1">&#39;/log.queries.not.using.indexes/d&#39;</span> <span class="nv">$MY_CONF</span>
-        sudo sed -i -e <span class="s2">&quot;/^\[mysqld\]/ a \</span>
-<span class="s2">            log-queries-not-using-indexes&quot;</span> <span class="nv">$MY_CONF</span>
+        sudo bash -c <span class="s2">&quot;source $TOP_DIR/functions &amp;&amp; \</span>
+<span class="s2">            iniset $MY_CONF mysqld slow-query-log 1 &amp;&amp; \</span>
+<span class="s2">            iniset $MY_CONF mysqld slow-query-log-file $slow_log &amp;&amp; \</span>
+<span class="s2">            iniset $MY_CONF mysqld long-query-time 0 &amp;&amp; \</span>
+<span class="s2">            iniset $MY_CONF mysqld log-queries-not-using-indexes 1&quot;</span>
 
     <span class="k">fi</span>
 
@@ -536,8 +533,12 @@ of having to specify the username/password each time.</p>
 <p>Install mysql-server</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_ubuntu <span class="o">||</span> is_fedora; <span class="k">then</span>
-<span class="k">        </span>install_package mysql-server
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>install_package mariadb-server
+        <span class="k">else</span>
+<span class="k">            </span>install_package mysql-server
+        <span class="k">fi</span>
+<span class="k">    elif </span>is_suse; <span class="k">then</span>
 <span class="k">        if</span> ! is_package_installed mariadb; <span class="k">then</span>
 <span class="k">            </span>install_package mysql-community-server
         <span class="k">fi</span>

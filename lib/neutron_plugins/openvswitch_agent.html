@@ -362,16 +362,16 @@ ul.auto-toc {
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">PLUGIN_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">OVSA_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron_plugins/ovs_base
 
-<span class="k">function </span>neutron_plugin_create_nova_conf<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_create_nova_conf <span class="o">{</span>
     _neutron_ovs_base_configure_nova_vif_driver
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_vif_driver nova.virt.xenapi.vif.XenAPIOpenVswitchDriver
-        iniset <span class="nv">$NOVA_CONF</span> DEFAULT xenapi_ovs_integration_bridge <span class="nv">$XEN_INTEGRATION_BRIDGE</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">==</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> xenserver vif_driver nova.virt.xenapi.vif.XenAPIOpenVswitchDriver
+        iniset <span class="nv">$NOVA_CONF</span> xenserver ovs_integration_bridge <span class="nv">$XEN_INTEGRATION_BRIDGE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Disable nova's firewall so that it does not conflict with neutron</p>
 </td><td class=code><div class=highlight><pre>
@@ -379,24 +379,24 @@ ul.auto-toc {
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_install_agent_packages<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_install_agent_packages <span class="o">{</span>
     _neutron_ovs_base_install_agent_packages
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_debug_command<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_debug_command <span class="o">{</span>
     _neutron_ovs_base_configure_debug_command
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_dhcp_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_dhcp_agent <span class="o">{</span>
     iniset <span class="nv">$Q_DHCP_CONF_FILE</span> DEFAULT dhcp_agent_manager neutron.agent.dhcp_agent.DhcpAgentWithStateReport
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_l3_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_l3_agent <span class="o">{</span>
     _neutron_ovs_base_configure_l3_agent
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT l3_agent_manager neutron.agent.l3_agent.L3NATAgentWithStateReport
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_configure_plugin_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_configure_plugin_agent <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Setup integration bridge</p>
 </td><td class=code><div class=highlight><pre>
@@ -406,7 +406,7 @@ ul.auto-toc {
 </pre></div></td></tr><tr><td class=docs>
 <p>Setup agent for tunneling</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_ENABLE_TUNNELING&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_ENABLE_TUNNELING&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Verify tunnels are supported
 REVISIT - also check kernel module support for GRE and patch ports</p>
@@ -416,7 +416,7 @@ REVISIT - also check kernel module support for GRE and patch ports</p>
 <span class="k">            </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;You are running OVS version $OVS_VERSION. OVS 1.4+ is required for tunneling between multiple hosts.&quot;</span>
         <span class="k">fi</span>
 <span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs enable_tunneling True
-        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs local_ip <span class="nv">$HOST_IP</span>
+        iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> ovs local_ip <span class="nv">$TUNNEL_ENDPOINT_IP</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -424,7 +424,7 @@ REVISIT - also check kernel module support for GRE and patch ports</p>
 <tt class="docutils literal">OVS_VLAN_RANGES</tt> and <tt class="docutils literal">OVS_BRIDGE_MAPPINGS</tt> in <tt class="docutils literal">localrc</tt> for more
 complex physical network configurations.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_BRIDGE_MAPPINGS&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_PHYSICAL_BRIDGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_BRIDGE_MAPPINGS&quot;</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$PHYSICAL_NETWORK&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$OVS_PHYSICAL_BRIDGE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">OVS_BRIDGE_MAPPINGS</span><span class="o">=</span><span class="nv">$PHYSICAL_NETWORK</span>:<span class="nv">$OVS_PHYSICAL_BRIDGE</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -437,7 +437,7 @@ complex physical network configurations.</p>
     <span class="k">fi</span>
 <span class="k">    </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$NEUTRON_BIN_DIR/neutron-openvswitch-agent&quot;</span>
 
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">==</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Make a copy of our config for domU</p>
 </td><td class=code><div class=highlight><pre>
@@ -522,19 +522,19 @@ For Example: <tt class="docutils literal"><span class="pre">Q_AGENT_EXTRA_SRV_OP
     <span class="k">done</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_setup_interface_driver<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_setup_interface_driver <span class="o">{</span>
     <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
     iniset <span class="nv">$conf_file</span> DEFAULT interface_driver neutron.agent.linux.interface.OVSInterfaceDriver
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_plugin_check_adv_test_requirements<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_plugin_check_adv_test_requirements <span class="o">{</span>
     is_service_enabled q-agt <span class="o">&amp;&amp;</span> is_service_enabled q-dhcp <span class="o">&amp;&amp;</span> <span class="k">return </span>0
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$PLUGIN_XTRACE</span>
+<span class="nv">$OVSA_XTRACE</span>
 
 
 </td><td class=code><div class=highlight><pre>

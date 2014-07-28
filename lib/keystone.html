@@ -411,7 +411,19 @@ Dependencies:</p>
 <span class="nv">KEYSTONE_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/keystone</span><span class="k">}</span>
 <span class="nv">KEYSTONE_WSGI_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_WSGI_DIR</span><span class="k">:-</span><span class="p">/var/www/keystone</span><span class="k">}</span>
 
+<span class="nv">KEYSTONEMIDDLEWARE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/keystonemiddleware
 <span class="nv">KEYSTONECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-keystoneclient
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up additional extensions, such as oauth1, federation
+Example of KEYSTONE_EXTENSIONS=oauth1,federation</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_EXTENSIONS</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_EXTENSIONS</span><span class="k">:-}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Toggle for deploying Keystone under HTTPD + mod_wsgi</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_USE_MOD_WSGI</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_USE_MOD_WSGI</span><span class="k">:-${</span><span class="nv">ENABLE_HTTPD_MOD_WSGI_SERVICES</span><span class="k">}}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Select the backend for Keystone's service catalog</p>
@@ -436,9 +448,9 @@ Dependencies:</p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Select Keystone's token format
-Choose from 'UUID' and 'PKI'</p>
+Choose from 'UUID', 'PKI', or 'PKIZ'</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">KEYSTONE_TOKEN_FORMAT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_TOKEN_FORMAT</span><span class="k">:-</span><span class="nv">PKI</span><span class="k">}</span>
+<span class="nv">KEYSTONE_TOKEN_FORMAT</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="k">${</span><span class="nv">KEYSTONE_TOKEN_FORMAT</span><span class="k">}</span> | tr <span class="s1">&#39;[:upper:]&#39;</span> <span class="s1">&#39;[:lower:]&#39;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set Keystone interface configuration</p>
@@ -456,6 +468,10 @@ Choose from 'UUID' and 'PKI'</p>
 <span class="nv">KEYSTONE_SERVICE_PORT_INT</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PORT_INT</span><span class="k">:-</span><span class="nv">5001</span><span class="k">}</span>
 <span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">$SERVICE_PROTOCOL</span><span class="k">}</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Bind hosts</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_ADMIN_BIND_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_ADMIN_BIND_HOST</span><span class="k">:-</span><span class="nv">$KEYSTONE_SERVICE_HOST</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the tenant for service accounts in Keystone</p>
 </td><td class=code><div class=highlight><pre>
@@ -479,6 +495,11 @@ Choose from 'UUID' and 'PKI'</p>
     <span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;https&quot;</span>
 <span class="k">fi</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>complete URIs</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">KEYSTONE_AUTH_URI</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_AUTH_PROTOCOL</span><span class="k">}</span>://<span class="k">${</span><span class="nv">KEYSTONE_AUTH_HOST</span><span class="k">}</span>:<span class="k">${</span><span class="nv">KEYSTONE_AUTH_PORT</span><span class="k">}</span>
+<span class="nv">KEYSTONE_SERVICE_URI</span><span class="o">=</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PROTOCOL</span><span class="k">}</span>://<span class="k">${</span><span class="nv">KEYSTONE_SERVICE_HOST</span><span class="k">}</span>:<span class="k">${</span><span class="nv">KEYSTONE_SERVICE_PORT</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -487,7 +508,7 @@ Choose from 'UUID' and 'PKI'</p>
 <p>cleanup_keystone() - Remove residual data files, anything left over from previous
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_keystone<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>cleanup_keystone <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>kill instances (nova)
 delete image files (glance)
@@ -499,17 +520,20 @@ This function intentionally left blank</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>_cleanup_keystone_apache_wsgi() - Remove wsgi files, disable and remove apache vhost file</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_cleanup_keystone_apache_wsgi<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_cleanup_keystone_apache_wsgi <span class="o">{</span>
     sudo rm -f <span class="nv">$KEYSTONE_WSGI_DIR</span>/*.wsgi
     disable_apache_site keystone
-    sudo rm -f /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/keystone
+    sudo rm -f <span class="k">$(</span>apache_site_config_for keystone<span class="k">)</span>
+    restart_apache_server
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>_config_keystone_apache_wsgi() - Set WSGI config files of Keystone</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>_config_keystone_apache_wsgi<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_config_keystone_apache_wsgi <span class="o">{</span>
     sudo mkdir -p <span class="nv">$KEYSTONE_WSGI_DIR</span>
+
+    <span class="nb">local </span><span class="nv">keystone_apache_conf</span><span class="o">=</span><span class="k">$(</span>apache_site_config_for keystone<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>copy proxy vhost and wsgi file</p>
@@ -517,7 +541,7 @@ This function intentionally left blank</p>
     sudo cp <span class="nv">$KEYSTONE_DIR</span>/httpd/keystone.py <span class="nv">$KEYSTONE_WSGI_DIR</span>/main
     sudo cp <span class="nv">$KEYSTONE_DIR</span>/httpd/keystone.py <span class="nv">$KEYSTONE_WSGI_DIR</span>/admin
 
-    sudo cp <span class="nv">$FILES</span>/apache-keystone.template /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/keystone
+    sudo cp <span class="nv">$FILES</span>/apache-keystone.template <span class="nv">$keystone_apache_conf</span>
     sudo sed -e <span class="s2">&quot;</span>
 <span class="s2">        s|%PUBLICPORT%|$KEYSTONE_SERVICE_PORT|g;</span>
 <span class="s2">        s|%ADMINPORT%|$KEYSTONE_AUTH_PORT|g;</span>
@@ -525,14 +549,14 @@ This function intentionally left blank</p>
 <span class="s2">        s|%PUBLICWSGI%|$KEYSTONE_WSGI_DIR/main|g;</span>
 <span class="s2">        s|%ADMINWSGI%|$KEYSTONE_WSGI_DIR/admin|g;</span>
 <span class="s2">        s|%USER%|$STACK_USER|g</span>
-<span class="s2">    &quot;</span> -i /etc/<span class="nv">$APACHE_NAME</span>/<span class="nv">$APACHE_CONF_DIR</span>/keystone
+<span class="s2">    &quot;</span> -i <span class="nv">$keystone_apache_conf</span>
     enable_apache_site keystone
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>configure_keystone() - Set config files, create data dirs, etc</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_keystone<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_keystone <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$KEYSTONE_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$KEYSTONE_CONF_DIR</span>
     <span class="k">fi</span>
@@ -554,6 +578,8 @@ This function intentionally left blank</p>
 </td><td class=code><div class=highlight><pre>
         <span class="nv">KEYSTONE_PASTE_INI</span><span class="o">=</span><span class="s2">&quot;$KEYSTONE_CONF&quot;</span>
     <span class="k">fi</span>
+
+<span class="k">    </span>configure_keystone_extensions
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Rewrite stock <tt class="docutils literal">keystone.conf</tt></p>
@@ -591,11 +617,19 @@ This function intentionally left blank</p>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Configure rabbitmq credentials</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT rabbit_password <span class="nv">$RABBIT_PASSWORD</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT rabbit_host <span class="nv">$RABBIT_HOST</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Set the URL advertised in the <tt class="docutils literal">versions</tt> structure returned by the '/' route</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT public_endpoint <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:%(public_port)s/&quot;</span>
     iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_endpoint <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:%(admin_port)s/&quot;</span>
-    iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_bind_host <span class="s2">&quot;$KEYSTONE_SERVICE_HOST&quot;</span>
+    iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_bind_host <span class="s2">&quot;$KEYSTONE_ADMIN_BIND_HOST&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Register SSL certificates if provided</p>
@@ -618,8 +652,8 @@ This function intentionally left blank</p>
 
 <span class="k">    </span>iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT admin_token <span class="s2">&quot;$SERVICE_TOKEN&quot;</span>
 
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;UUID&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> token provider keystone.token.providers.uuid.Provider
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> token provider keystone.token.providers.<span class="nv">$KEYSTONE_TOKEN_FORMAT</span>.Provider
     <span class="k">fi</span>
 
 <span class="k">    </span>iniset <span class="nv">$KEYSTONE_CONF</span> database connection <span class="sb">`</span>database_connection_url keystone<span class="sb">`</span>
@@ -684,13 +718,44 @@ This function intentionally left blank</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Format logging</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$LOG_COLOR&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$KEYSTONE_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>  ; <span class="k">then</span>
 <span class="k">        </span>setup_colorized_logging <span class="nv">$KEYSTONE_CONF</span> DEFAULT
     <span class="k">fi</span>
 
-<span class="k">    if </span>is_apache_enabled_service key; <span class="k">then</span>
-<span class="k">        </span>_config_keystone_apache_wsgi
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$KEYSTONE_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT debug <span class="s2">&quot;True&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Eliminate the %(asctime)s.%(msecs)03d from the log format strings</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT logging_context_format_string <span class="s2">&quot;%(process)d %(levelname)s %(name)s [%(request_id)s %(user_identity)s] %(instance)s%(message)s&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT logging_default_format_string <span class="s2">&quot;%(process)d %(levelname)s %(name)s [-] %(instance)s%(message)s&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT logging_debug_format_suffix <span class="s2">&quot;%(funcName)s %(pathname)s:%(lineno)d&quot;</span>
+        iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT logging_exception_prefix <span class="s2">&quot;%(process)d TRACE %(name)s %(instance)s&quot;</span>
+        _config_keystone_apache_wsgi
     <span class="k">fi</span>
+
+<span class="k">    </span>iniset <span class="nv">$KEYSTONE_CONF</span> DEFAULT max_token_size 16384
+<span class="o">}</span>
+
+<span class="k">function </span>configure_keystone_extensions <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Add keystone extension into keystone v3 application pipeline</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">local </span>extension_value
+    <span class="nb">local </span>api_v3
+    <span class="nb">local </span>extension
+    <span class="nb">local </span>api_v3_extension
+    <span class="k">for </span>extension_value in <span class="k">${</span><span class="nv">KEYSTONE_EXTENSIONS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[[</span> -z <span class="s2">&quot;${extension_value}&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            continue</span>
+<span class="k">        fi</span>
+<span class="k">        </span><span class="nv">api_v3</span><span class="o">=</span><span class="k">$(</span>iniget <span class="nv">$KEYSTONE_PASTE_INI</span> pipeline:api_v3 pipeline<span class="k">)</span>
+        <span class="nv">extension</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$api_v3</span> | sed -ne <span class="s2">&quot;/${extension_value}/ p;&quot;</span> <span class="k">)</span>
+        <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$extension</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">api_v3_extension</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$api_v3</span> | sed -ne <span class="s2">&quot;s/service_v3/${extension_value}_extension service_v3/p;&quot;</span> <span class="k">)</span>
+            iniset <span class="nv">$KEYSTONE_PASTE_INI</span> pipeline:api_v3 pipeline <span class="s2">&quot;$api_v3_extension&quot;</span>
+        <span class="k">fi</span>
+<span class="k">    done</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -701,9 +766,11 @@ This function intentionally left blank</p>
 </div>
 <div class="section" id="tenant-user-roles">
 <h1>Tenant               User       Roles</h1>
-<p>service              --         --
+<p>admin                admin      admin
+service              --         --
+--                   --         service
+--                   --         ResellerAdmin
 --                   --         Member
-admin                admin      admin
 demo                 admin      admin
 demo                 demo       Member, anotherrole
 invisible_to_admin   demo       Member</p>
@@ -712,89 +779,76 @@ invisible_to_admin   demo       Member</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Migrated from keystone_data.sh</p>
 </td><td class=code><div class=highlight><pre>
-create_keystone_accounts<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_keystone_accounts <span class="o">{</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>admin</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ADMIN_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project create <span class="se">\</span>
-        admin <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">ADMIN_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
-        admin <span class="se">\</span>
-        --project <span class="s2">&quot;$ADMIN_TENANT&quot;</span> <span class="se">\</span>
-        --email admin@example.com <span class="se">\</span>
-        --password <span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role create <span class="se">\</span>
-        admin <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    openstack role add <span class="se">\</span>
-        <span class="nv">$ADMIN_ROLE</span> <span class="se">\</span>
-        --project <span class="nv">$ADMIN_TENANT</span> <span class="se">\</span>
-        --user <span class="nv">$ADMIN_USER</span>
+    <span class="nv">ADMIN_TENANT</span><span class="o">=</span><span class="k">$(</span>get_or_create_project <span class="s2">&quot;admin&quot;</span><span class="k">)</span>
+    <span class="nv">ADMIN_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;admin&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="s2">&quot;$ADMIN_TENANT&quot;</span><span class="k">)</span>
+    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>get_or_create_role <span class="s2">&quot;admin&quot;</span><span class="k">)</span>
+    get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$ADMIN_USER</span> <span class="nv">$ADMIN_TENANT</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>service</p>
+<p>Create service project/role</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project create <span class="se">\</span>
-        <span class="nv">$SERVICE_TENANT_NAME</span> <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    get_or_create_project <span class="s2">&quot;$SERVICE_TENANT_NAME&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Service role, so service users do not have to be admins</p>
+</td><td class=code><div class=highlight><pre>
+    get_or_create_role service
+
+</pre></div></td></tr><tr><td class=docs>
+<p>The ResellerAdmin role is used by Nova and Ceilometer so we need to keep it.
+The admin role in swift allows a user to act as an admin for their tenant,
+but ResellerAdmin is needed for a user to act as any tenant. The name of this
+role is also configurable in swift-proxy.conf</p>
+</td><td class=code><div class=highlight><pre>
+    get_or_create_role ResellerAdmin
 
 </pre></div></td></tr><tr><td class=docs>
 <p>The Member role is used by Horizon and Swift so we need to keep it:</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">MEMBER_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role create <span class="se">\</span>
-        Member <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">MEMBER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_or_create_role <span class="s2">&quot;Member&quot;</span><span class="k">)</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>ANOTHER_ROLE demonstrates that an arbitrary role may be created and used
 TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ANOTHER_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role create <span class="se">\</span>
-        anotherrole <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+
+    <span class="nv">ANOTHER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_or_create_role <span class="s2">&quot;anotherrole&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>invisible tenant - admin can't see this one</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">INVIS_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project create <span class="se">\</span>
-        invisible_to_admin <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">INVIS_TENANT</span><span class="o">=</span><span class="k">$(</span>get_or_create_project <span class="s2">&quot;invisible_to_admin&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>demo</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">DEMO_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project create <span class="se">\</span>
-        demo <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">DEMO_USER</span><span class="o">=</span><span class="k">$(</span>openstack user create <span class="se">\</span>
-        demo <span class="se">\</span>
-        --project <span class="nv">$DEMO_TENANT</span> <span class="se">\</span>
-        --email demo@example.com <span class="se">\</span>
-        --password <span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="se">\</span>
-        | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
+    <span class="nv">DEMO_TENANT</span><span class="o">=</span><span class="k">$(</span>get_or_create_project <span class="s2">&quot;demo&quot;</span><span class="k">)</span>
+    <span class="nv">DEMO_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;demo&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$ADMIN_PASSWORD&quot;</span> <span class="s2">&quot;$DEMO_TENANT&quot;</span> <span class="s2">&quot;demo@example.com&quot;</span><span class="k">)</span>
 
-    openstack role add --project <span class="nv">$DEMO_TENANT</span> --user <span class="nv">$DEMO_USER</span> <span class="nv">$MEMBER_ROLE</span>
-    openstack role add --project <span class="nv">$DEMO_TENANT</span> --user <span class="nv">$ADMIN_USER</span> <span class="nv">$ADMIN_ROLE</span>
-    openstack role add --project <span class="nv">$DEMO_TENANT</span> --user <span class="nv">$DEMO_USER</span> <span class="nv">$ANOTHER_ROLE</span>
-    openstack role add --project <span class="nv">$INVIS_TENANT</span> --user <span class="nv">$DEMO_USER</span> <span class="nv">$MEMBER_ROLE</span>
+    get_or_add_user_role <span class="nv">$MEMBER_ROLE</span> <span class="nv">$DEMO_USER</span> <span class="nv">$DEMO_TENANT</span>
+    get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$ADMIN_USER</span> <span class="nv">$DEMO_TENANT</span>
+    get_or_add_user_role <span class="nv">$ANOTHER_ROLE</span> <span class="nv">$DEMO_USER</span> <span class="nv">$DEMO_TENANT</span>
+    get_or_add_user_role <span class="nv">$MEMBER_ROLE</span> <span class="nv">$DEMO_USER</span> <span class="nv">$INVIS_TENANT</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keystone</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">KEYSTONE_SERVICE</span><span class="o">=</span><span class="k">$(</span>openstack service create <span class="se">\</span>
-            keystone <span class="se">\</span>
-            --type identity <span class="se">\</span>
-            --description <span class="s2">&quot;Keystone Identity Service&quot;</span> <span class="se">\</span>
-            | grep <span class="s2">&quot; id &quot;</span> | get_field 2<span class="k">)</span>
-        openstack endpoint create <span class="se">\</span>
-            <span class="nv">$KEYSTONE_SERVICE</span> <span class="se">\</span>
-            --region RegionOne <span class="se">\</span>
-            --publicurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v$IDENTITY_API_VERSION&quot;</span> <span class="se">\</span>
-            --adminurl <span class="s2">&quot;$KEYSTONE_AUTH_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_AUTH_PORT/v$IDENTITY_API_VERSION&quot;</span> <span class="se">\</span>
-            --internalurl <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v$IDENTITY_API_VERSION&quot;</span>
+
+<span class="k">        </span><span class="nv">KEYSTONE_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;keystone&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;identity&quot;</span> <span class="s2">&quot;Keystone Identity Service&quot;</span><span class="k">)</span>
+        get_or_create_endpoint <span class="nv">$KEYSTONE_SERVICE</span> <span class="se">\</span>
+            <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v$IDENTITY_API_VERSION&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$KEYSTONE_AUTH_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_AUTH_PORT/v$IDENTITY_API_VERSION&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/v$IDENTITY_API_VERSION&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -802,7 +856,7 @@ TODO(sleepsonthefloor): show how this can be used for rbac in the future!</p>
 <p>Configure the API version for the OpenStack projects.
 configure_API_version conf_file version</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>configure_API_version<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>configure_API_version <span class="o">{</span>
     <span class="nb">local </span><span class="nv">conf_file</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">api_version</span><span class="o">=</span><span class="nv">$2</span>
     iniset <span class="nv">$conf_file</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v<span class="nv">$api_version</span>
@@ -811,7 +865,7 @@ configure_API_version conf_file version</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>init_keystone() - Initialize databases, etc.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>init_keystone<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_keystone <span class="o">{</span>
     <span class="k">if </span>is_service_enabled ldap; <span class="k">then</span>
 <span class="k">        </span>init_ldap
     <span class="k">fi</span>
@@ -826,7 +880,15 @@ configure_API_version conf_file version</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage db_sync
 
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span> <span class="o">==</span> <span class="s2">&quot;PKI&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="nb">local </span>extension_value
+    <span class="k">for </span>extension_value in <span class="k">${</span><span class="nv">KEYSTONE_EXTENSIONS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">        if</span> <span class="o">[[</span> -z <span class="s2">&quot;${extension_value}&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            continue</span>
+<span class="k">        fi</span>
+        <span class="nv">$KEYSTONE_DIR</span>/bin/keystone-manage db_sync --extension <span class="s2">&quot;${extension_value}&quot;</span>
+    <span class="k">done</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_TOKEN_FORMAT&quot;</span> !<span class="o">=</span> <span class="s2">&quot;uuid&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up certificates</p>
 </td><td class=code><div class=highlight><pre>
@@ -845,16 +907,24 @@ configure_API_version conf_file version</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>install_keystoneclient() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_keystoneclient<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_keystoneclient <span class="o">{</span>
     git_clone <span class="nv">$KEYSTONECLIENT_REPO</span> <span class="nv">$KEYSTONECLIENT_DIR</span> <span class="nv">$KEYSTONECLIENT_BRANCH</span>
     setup_develop <span class="nv">$KEYSTONECLIENT_DIR</span>
     sudo install -D -m 0644 -o <span class="nv">$STACK_USER</span> <span class="o">{</span><span class="nv">$KEYSTONECLIENT_DIR</span>/tools/,/etc/bash_completion.d/<span class="o">}</span>keystone.bash_completion
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>install_keystonemiddleware() - Collect source and prepare</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_keystonemiddleware <span class="o">{</span>
+    git_clone <span class="nv">$KEYSTONEMIDDLEWARE_REPO</span> <span class="nv">$KEYSTONEMIDDLEWARE_DIR</span> <span class="nv">$KEYSTONEMIDDLEWARE_BRANCH</span>
+    setup_install <span class="nv">$KEYSTONEMIDDLEWARE_DIR</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>install_keystone() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>install_keystone<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_keystone <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>only install ldap if the service has been enabled</p>
 </td><td class=code><div class=highlight><pre>
@@ -876,7 +946,7 @@ and .rpm circles.</p>
 <span class="k">    fi</span>
 <span class="k">    </span>git_clone <span class="nv">$KEYSTONE_REPO</span> <span class="nv">$KEYSTONE_DIR</span> <span class="nv">$KEYSTONE_BRANCH</span>
     setup_develop <span class="nv">$KEYSTONE_DIR</span>
-    <span class="k">if </span>is_apache_enabled_service key; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$KEYSTONE_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>install_apache_wsgi
     <span class="k">fi</span>
 <span class="o">}</span>
@@ -884,7 +954,7 @@ and .rpm circles.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>start_keystone() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>start_keystone<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_keystone <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Get right service port for testing</p>
 </td><td class=code><div class=highlight><pre>
@@ -893,7 +963,7 @@ and .rpm circles.</p>
 <span class="k">        </span><span class="nv">service_port</span><span class="o">=</span><span class="nv">$KEYSTONE_SERVICE_PORT_INT</span>
     <span class="k">fi</span>
 
-<span class="k">    if </span>is_apache_enabled_service key; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$KEYSTONE_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>restart_apache_server
         screen_it key <span class="s2">&quot;cd $KEYSTONE_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/keystone&quot;</span>
     <span class="k">else</span>
@@ -904,7 +974,12 @@ and .rpm circles.</p>
     <span class="k">fi</span>
 
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Waiting for keystone to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! curl --noproxy &#39;*&#39; -s $KEYSTONE_AUTH_PROTOCOL://$SERVICE_HOST:$service_port/v$IDENTITY_API_VERSION/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Check that the keystone service is running. Even if the tls tunnel
+should be enabled, make sure the internal port is checked using
+unencryted traffic at this point.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! curl --noproxy &#39;*&#39; -k -s http://$KEYSTONE_SERVICE_HOST:$service_port/v$IDENTITY_API_VERSION/ &gt;/dev/null; do sleep 1; done&quot;</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;keystone did not start&quot;</span>
     <span class="k">fi</span>
 
@@ -920,13 +995,20 @@ and .rpm circles.</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_keystone() - Stop running processes</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>stop_keystone<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_keystone <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the Keystone screen window</p>
 </td><td class=code><div class=highlight><pre>
     screen_stop key
+</pre></div></td></tr><tr><td class=docs>
+<p>Cleanup the WSGI files and VHOST</p>
+</td><td class=code><div class=highlight><pre>
+    _cleanup_keystone_apache_wsgi
 <span class="o">}</span>
 
+<span class="k">function </span>is_keystone_enabled <span class="o">{</span>
+    <span class="k">return </span>is_service_enabled key
+<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>

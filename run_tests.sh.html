@@ -373,18 +373,66 @@ under the License.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
+<span class="nv">PASSES</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="nv">FAILURES</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Check the return code and add the test to PASSES or FAILURES as appropriate
+pass_fail &lt;result&gt; &lt;expected&gt; &lt;name&gt;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>pass_fail <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">result</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">expected</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">test_name</span><span class="o">=</span><span class="nv">$3</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$result</span> -ne <span class="nv">$expected</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">FAILURES</span><span class="o">=</span><span class="s2">&quot;$FAILURES $test_name&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">PASSES</span><span class="o">=</span><span class="s2">&quot;$PASSES $test_name&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
 <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$@</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nv">FILES</span><span class="o">=</span><span class="nv">$@</span>
 <span class="k">else</span>
 <span class="k">    </span><span class="nv">LIBS</span><span class="o">=</span><span class="sb">`</span>find lib -type f | grep -v <span class="se">\.</span>md<span class="sb">`</span>
     <span class="nv">SCRIPTS</span><span class="o">=</span><span class="sb">`</span>find . -type f -name <span class="se">\*\.</span>sh<span class="sb">`</span>
-    <span class="nv">EXTRA</span><span class="o">=</span><span class="s2">&quot;functions&quot;</span>
+    <span class="nv">EXTRA</span><span class="o">=</span><span class="s2">&quot;functions functions-common stackrc openrc exerciserc eucarc&quot;</span>
     <span class="nv">FILES</span><span class="o">=</span><span class="s2">&quot;$SCRIPTS $LIBS $EXTRA&quot;</span>
 <span class="k">fi</span>
 
 <span class="nb">echo</span> <span class="s2">&quot;Running bash8...&quot;</span>
 
-./tools/bash8.py <span class="nv">$FILES</span>
+./tools/bash8.py -v <span class="nv">$FILES</span>
+pass_fail <span class="nv">$?</span> 0 bash8
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Test that no one is trying to land crazy refs as branches</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nb">echo</span> <span class="s2">&quot;Ensuring we don&#39;t have crazy refs&quot;</span>
+
+<span class="nv">REFS</span><span class="o">=</span><span class="sb">`</span>grep BRANCH stackrc | grep -v -- <span class="s1">&#39;-master&#39;</span><span class="sb">`</span>
+<span class="nv">rc</span><span class="o">=</span><span class="nv">$?</span>
+pass_fail <span class="nv">$rc</span> 1 crazy-refs
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$rc</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Branch defaults must be master. Found:&quot;</span>
+    <span class="nb">echo</span> <span class="nv">$REFS</span>
+<span class="k">fi</span>
+
+<span class="nb">echo</span> <span class="s2">&quot;=====================================================================&quot;</span>
+<span class="k">for </span>script in <span class="nv">$PASSES</span>; <span class="k">do</span>
+<span class="k">    </span><span class="nb">echo </span>PASS <span class="nv">$script</span>
+<span class="k">done</span>
+<span class="k">for </span>script in <span class="nv">$FAILURES</span>; <span class="k">do</span>
+<span class="k">    </span><span class="nb">echo </span>FAILED <span class="nv">$script</span>
+<span class="k">done</span>
+<span class="nb">echo</span> <span class="s2">&quot;=====================================================================&quot;</span>
+
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$FAILURES&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">exit </span>1
+<span class="k">fi</span>
 
 
 </td><td class=code><div class=highlight><pre>

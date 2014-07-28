@@ -362,27 +362,27 @@ ul.auto-toc {
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">OVSB_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
 <span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
 <span class="nv">PUBLIC_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-ex</span><span class="k">}</span>
 
-<span class="k">function </span>is_neutron_ovs_base_plugin<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>is_neutron_ovs_base_plugin <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Yes, we use OVS.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">return </span>0
 <span class="o">}</span>
 
-<span class="k">function </span>_neutron_ovs_base_setup_bridge<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_ovs_base_setup_bridge <span class="o">{</span>
     <span class="nb">local </span><span class="nv">bridge</span><span class="o">=</span><span class="nv">$1</span>
     neutron-ovs-cleanup
     sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$bridge</span>
     sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$bridge</span> bridge-id <span class="nv">$bridge</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_ovs_base_cleanup<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>neutron_ovs_base_cleanup <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>remove all OVS ports that look like Neutron created ports</p>
 </td><td class=code><div class=highlight><pre>
@@ -398,33 +398,39 @@ ul.auto-toc {
     <span class="k">done</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_neutron_ovs_base_install_agent_packages<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span>kernel_version
+<span class="k">function </span>_neutron_ovs_base_install_ubuntu_dkms <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Install deps
-FIXME add to <tt class="docutils literal">files/apts/neutron</tt>, but don't install if not needed!</p>
+<p>install Dynamic Kernel Module Support packages if needed</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span><span class="nv">kernel_version</span><span class="o">=</span><span class="sb">`</span>cat /proc/version | cut -d <span class="s2">&quot; &quot;</span> -f3<span class="sb">`</span>
-        install_package make fakeroot dkms openvswitch-switch openvswitch-datapath-dkms linux-headers-<span class="nv">$kernel_version</span>
-    <span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span>install_package openvswitch
+    <span class="nb">local </span><span class="nv">kernel_version</span><span class="o">=</span><span class="k">$(</span>uname -r<span class="k">)</span>
+    <span class="nb">local </span><span class="nv">kernel_major_minor</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$kernel_version</span> | cut -d. -f1-2<span class="sb">`</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Ensure that the service is started</p>
+<p>From kernel 3.13 on, openvswitch-datapath-dkms is not needed</p>
 </td><td class=code><div class=highlight><pre>
-        restart_service openvswitch
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>install_package openvswitch
-        restart_service openvswitch-switch
-        restart_service openvswitch-controller
+    <span class="k">if</span> <span class="o">[</span> <span class="sb">`</span>vercmp_numbers <span class="s2">&quot;$kernel_major_minor&quot;</span> <span class="s2">&quot;3.13&quot;</span><span class="sb">`</span> -lt <span class="s2">&quot;0&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>install_package <span class="s2">&quot;dkms openvswitch-datapath-dkms linux-headers-$kernel_version&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_neutron_ovs_base_configure_debug_command<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_ovs_base_install_agent_packages <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install deps</p>
+</td><td class=code><div class=highlight><pre>
+    install_package <span class="k">$(</span>get_packages <span class="s2">&quot;openvswitch&quot;</span><span class="k">)</span>
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>_neutron_ovs_base_install_ubuntu_dkms
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span>restart_service openvswitch
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        </span>restart_service openvswitch-switch
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function </span>_neutron_ovs_base_configure_debug_command <span class="o">{</span>
     iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_neutron_ovs_base_configure_firewall_driver<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_ovs_base_configure_firewall_driver <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver
     <span class="k">else</span>
@@ -432,26 +438,29 @@ FIXME add to <tt class="docutils literal">files/apts/neutron</tt>, but don't ins
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_neutron_ovs_base_configure_l3_agent<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_ovs_base_configure_l3_agent <span class="o">{</span>
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
 
     neutron-ovs-cleanup
-    sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$PUBLIC_BRIDGE</span>
-    sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$PUBLIC_BRIDGE</span> bridge-id <span class="nv">$PUBLIC_BRIDGE</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>--no-wait causes a race condition if $PUBLIC_BRIDGE is not up when ip addr flush is called</p>
+</td><td class=code><div class=highlight><pre>
+    sudo ovs-vsctl -- --may-exist add-br <span class="nv">$PUBLIC_BRIDGE</span>
+    sudo ovs-vsctl br-set-external-id <span class="nv">$PUBLIC_BRIDGE</span> bridge-id <span class="nv">$PUBLIC_BRIDGE</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>ensure no IP is configured on the public bridge</p>
 </td><td class=code><div class=highlight><pre>
     sudo ip addr flush dev <span class="nv">$PUBLIC_BRIDGE</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_neutron_ovs_base_configure_nova_vif_driver<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>_neutron_ovs_base_configure_nova_vif_driver <span class="o">{</span>
     :
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$MY_XTRACE</span>
+<span class="nv">$OVSB_XTRACE</span>
 
 
 </td><td class=code><div class=highlight><pre>

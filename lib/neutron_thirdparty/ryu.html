@@ -362,7 +362,7 @@ ul.auto-toc {
 <p>Save trace setting</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nv">MY_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+<span class="nv">RYU3_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
 <span class="nb">set</span> +o xtrace
 
 
@@ -388,19 +388,11 @@ ul.auto-toc {
 </td><td class=code><div class=highlight><pre>
 <span class="nv">RYU_APPS</span><span class="o">=</span><span class="k">${</span><span class="nv">RYU_APPS</span><span class="k">:-</span><span class="nv">ryu</span><span class="p">.app.simple_isolation,ryu.app.rest</span><span class="k">}</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>configure_ryu can be called multiple times as neutron_pluing/ryu may call
-this function for neutron-ryu-agent</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">_RYU_CONFIGURED</span><span class="o">=</span><span class="k">${</span><span class="nv">_RYU_CONFIGURED</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-<span class="k">function </span>configure_ryu<span class="o">()</span> <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$_RYU_CONFIGURED&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>setup_develop <span class="nv">$RYU_DIR</span>
-        <span class="nv">_RYU_CONFIGURED</span><span class="o">=</span>True
-    <span class="k">fi</span>
+<span class="k">function </span>configure_ryu <span class="o">{</span>
+    :
 <span class="o">}</span>
 
-<span class="k">function </span>init_ryu<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>init_ryu <span class="o">{</span>
     <span class="nv">RYU_CONF_DIR</span><span class="o">=</span>/etc/ryu
     <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$RYU_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$RYU_CONF_DIR</span>
@@ -436,29 +428,31 @@ Make this function idempotent and avoid cloning same repo many times
 with RECLONE=yes</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">_RYU_INSTALLED</span><span class="o">=</span><span class="k">${</span><span class="nv">_RYU_INSTALLED</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
-<span class="k">function </span>install_ryu<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>install_ryu <span class="o">{</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$_RYU_INSTALLED&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>git_clone <span class="nv">$RYU_REPO</span> <span class="nv">$RYU_DIR</span> <span class="nv">$RYU_BRANCH</span>
+        <span class="nb">export </span><span class="nv">PYTHONPATH</span><span class="o">=</span><span class="nv">$RYU_DIR</span>:<span class="nv">$PYTHONPATH</span>
+        pip_install <span class="k">$(</span>cat <span class="nv">$RYU_DIR</span>/tools/pip-requires<span class="k">)</span>
         <span class="nv">_RYU_INSTALLED</span><span class="o">=</span>True
     <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="k">function </span>start_ryu<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>start_ryu <span class="o">{</span>
     screen_it ryu <span class="s2">&quot;cd $RYU_DIR &amp;&amp; $RYU_DIR/bin/ryu-manager --config-file $RYU_CONF&quot;</span>
 <span class="o">}</span>
 
-<span class="k">function </span>stop_ryu<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>stop_ryu <span class="o">{</span>
     :
 <span class="o">}</span>
 
-<span class="k">function </span>check_ryu<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>check_ryu <span class="o">{</span>
     :
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$MY_XTRACE</span>
+<span class="nv">$RYU3_XTRACE</span>
 
 
 </td><td class=code><div class=highlight><pre>

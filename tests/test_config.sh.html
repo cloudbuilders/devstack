@@ -380,7 +380,7 @@ ul.auto-toc {
 <p>check_result() tests and reports the result values
 check_result &quot;actual&quot; &quot;expected&quot;</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">function </span>check_result<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>check_result <span class="o">{</span>
     <span class="nb">local </span><span class="nv">actual</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">expected</span><span class="o">=</span><span class="nv">$2</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$actual&quot;</span> <span class="o">==</span> <span class="s2">&quot;$expected&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -394,7 +394,7 @@ check_result &quot;actual&quot; &quot;expected&quot;</p>
 <span class="s2">type=new</span>
 <span class="s2">multi = foo2&quot;</span>
 
-<span class="k">function </span>create_test1c<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_test1c <span class="o">{</span>
     cat &gt;test1c.conf <span class="s">&lt;&lt;EOF</span>
 <span class="s">[eee]</span>
 <span class="s"># DIVIDER</span>
@@ -402,12 +402,23 @@ check_result &quot;actual&quot; &quot;expected&quot;</p>
 <span class="s">EOF</span>
 <span class="o">}</span>
 
-<span class="k">function </span>create_test2a<span class="o">()</span> <span class="o">{</span>
+<span class="k">function </span>create_test2a <span class="o">{</span>
     cat &gt;test2a.conf <span class="s">&lt;&lt;EOF</span>
 <span class="s">[ddd]</span>
 <span class="s"># DIVIDER</span>
 <span class="s">type=original</span>
 <span class="s">EOF</span>
+<span class="o">}</span>
+
+<span class="k">function </span>setup_test4 <span class="o">{</span>
+    mkdir -p <span class="nb">test</span>-etc
+    cat &gt;test-etc/test4.conf <span class="s">&lt;&lt;EOF</span>
+<span class="s">[fff]</span>
+<span class="s"># DIVIDER</span>
+<span class="s">type=original</span>
+<span class="s">EOF</span>
+    <span class="nv">TEST4_DIR</span><span class="o">=</span><span class="s2">&quot;test-etc&quot;</span>
+    <span class="nv">TEST4_FILE</span><span class="o">=</span><span class="s2">&quot;test4.conf&quot;</span>
 <span class="o">}</span>
 
 cat &gt;test.conf <span class="s">&lt;&lt;EOF</span>
@@ -444,8 +455,11 @@ cat &gt;test.conf <span class="s">&lt;&lt;EOF</span>
 <span class="s">attribute=value</span>
 <span class="s"> </span>
 <span class="s"># DIVIDER</span>
-<span class="s">EOF</span>
 
+<span class="s">[[test4|\$TEST4_DIR/\$TEST4_FILE]]</span>
+<span class="s">[fff]</span>
+<span class="s">type=new</span>
+<span class="s">EOF</span>
 
 <span class="nb">echo</span> -n <span class="s2">&quot;get_meta_section_files: test0 doesn&#39;t exist: &quot;</span>
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>get_meta_section_files test.conf test0<span class="k">)</span>
@@ -479,7 +493,7 @@ check_result <span class="s2">&quot;$VAL&quot;</span> <span class="s2">&quot;&qu
 check_result <span class="s2">&quot;$VAL&quot;</span> <span class="s2">&quot;$TEST_1C_ADD&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>comment an option</p>
+<p>original comment</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> -n <span class="s2">&quot;get_meta_section: test2a single section: &quot;</span>
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>get_meta_section test.conf test2 test2a.conf<span class="k">)</span>
@@ -490,14 +504,14 @@ check_result <span class="s2">&quot;$VAL&quot;</span> <span class="s2">&quot;$TE
 check_result <span class="s2">&quot;$VAL&quot;</span> <span class="s2">&quot;$EXPECT_VAL&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>the commented option should not change</p>
+<p>comment an option</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> -n <span class="s2">&quot;get_meta_section: test2z.conf not in test2: &quot;</span>
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>get_meta_section test.conf test2 test2z.conf<span class="k">)</span>
 check_result <span class="s2">&quot;$VAL&quot;</span> <span class="s2">&quot;&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>new comment</p>
+<p>the commented option should not change</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nb">echo</span> -n <span class="s2">&quot;get_meta_section: nofile doesn&#39;t exist: &quot;</span>
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>get_meta_section nofile.ini test1<span class="k">)</span>
@@ -512,7 +526,7 @@ create_test1c
 merge_config_file test.conf test1 test1c.conf
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>cat test1c.conf<span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>the above line has a single space</p>
+<p>new comment</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">EXPECT_VAL</span><span class="o">=</span><span class="s2">&quot;[eee]</span>
 <span class="s2">multi = foo2</span>
@@ -525,7 +539,7 @@ create_test2a
 merge_config_file test.conf test2 test2a.conf
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>cat test2a.conf<span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Get a section from a group that doesn't exist</p>
+<p>the above line has a single space</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">EXPECT_VAL</span><span class="o">=</span><span class="s2">&quot;[ddd]</span>
 <span class="s2">additional = true</span>
@@ -538,7 +552,7 @@ rm test2a.conf
 merge_config_file test.conf test2 test2a.conf
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>cat test2a.conf<span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Get a single section from a group with multiple files</p>
+<p>Get a section from a group that doesn't exist</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">EXPECT_VAL</span><span class="o">=</span><span class="s2">&quot;</span>
 <span class="s2">[ddd]</span>
@@ -551,7 +565,7 @@ rm test2a.conf
 merge_config_group test.conf test2
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>cat test2a.conf<span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>Get a single section from a group with a single file</p>
+<p>Get a single section from a group with multiple files</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">EXPECT_VAL</span><span class="o">=</span><span class="s2">&quot;</span>
 <span class="s2">[ddd]</span>
@@ -573,21 +587,43 @@ rm -f <span class="nb">test</span>-space.conf
 merge_config_file test.conf test3 <span class="nb">test</span>-space.conf
 <span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>cat <span class="nb">test</span>-space.conf<span class="k">)</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>new comment</p>
+<p>Get a single section from a group with a single file</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">EXPECT_VAL</span><span class="o">=</span><span class="s2">&quot;</span>
 <span class="s2">[DEFAULT]</span>
 <span class="s2">attribute = value&quot;</span>
 check_result <span class="s2">&quot;$VAL&quot;</span> <span class="s2">&quot;$EXPECT_VAL&quot;</span>
 
+<span class="nb">echo</span> -n <span class="s2">&quot;merge_config_group test4 variable filename: &quot;</span>
+setup_test4
+merge_config_group test.conf test4
+<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>cat <span class="nb">test</span>-etc/test4.conf<span class="k">)</span>
+<span class="nv">EXPECT_VAL</span><span class="o">=</span><span class="s2">&quot;[fff]</span>
+<span class="s2"># DIVIDER</span>
+<span class="s2">type=new&quot;</span>
+check_result <span class="s2">&quot;$VAL&quot;</span> <span class="s2">&quot;$EXPECT_VAL&quot;</span>
+
+<span class="nb">echo</span> -n <span class="s2">&quot;merge_config_group test4 variable filename (not exist): &quot;</span>
+setup_test4
+rm <span class="nb">test</span>-etc/test4.conf
+merge_config_group test.conf test4
+<span class="nv">VAL</span><span class="o">=</span><span class="k">$(</span>cat <span class="nb">test</span>-etc/test4.conf<span class="k">)</span>
+<span class="nv">EXPECT_VAL</span><span class="o">=</span><span class="s2">&quot;</span>
+<span class="s2">[fff]</span>
+<span class="s2">type = new&quot;</span>
+check_result <span class="s2">&quot;$VAL&quot;</span> <span class="s2">&quot;$EXPECT_VAL&quot;</span>
+
 rm -f test.conf test1c.conf test2a.conf <span class="nb">test</span>-space.conf
+rm -rf <span class="nb">test</span>-etc
 
 
 </td><td class=code><div class=highlight><pre>
 </pre></div></td></tr><tr><td class=docs>
-<p>Get a single section that doesn't exist from a group</p>
+<p>new comment</p>
 </td><td class=code><div class=highlight><pre>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Get a single section that doesn't exist from a group</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Get a section from a conf file that doesn't exist</p>
 </pre></div></td></tr><tr><td class=docs>
@@ -604,6 +640,8 @@ rm -f test.conf test1c.conf test2a.conf <span class="nb">test</span>-space.conf
 <p>iniset adds a blank line if it creates the file...</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>iniset adds a blank line if it creates the file...</p>
+</pre></div></td></tr><tr><td class=docs>
+<p>original comment</p>
 </pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
