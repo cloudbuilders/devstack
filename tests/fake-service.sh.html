@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>on_exit.sh</title>
+    <title>fake-service.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>on_exit.sh</h1></th>
+        <th class=docs><h1>fake-service.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,32 +359,31 @@ ul.auto-toc {
 <div class="document">
 
 
-</pre></div></td></tr><tr><td class=docs>
+<p>fake-service.sh - a fake service for start/stop testing</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
-<span class="nb">set</span> -e
-<span class="nb">set</span> -o xtrace
+<span class="nv">LOG</span><span class="o">=</span>/tmp/fake-service.log
+<span class="nv">TIMESTAMP_FORMAT</span><span class="o">=</span><span class="k">${</span><span class="nv">TIMESTAMP_FORMAT</span><span class="k">:-</span><span class="s2">&quot;%F-%H%M%S&quot;</span><span class="k">}</span>
 
-<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;${on_exit_hooks:-}&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="nv">on_exit_hooks</span><span class="o">=()</span>
-<span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>duplicate output</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">exec </span>1&gt; &gt;<span class="o">(</span>tee -a <span class="k">${</span><span class="nv">LOG</span><span class="k">}</span><span class="o">)</span>
 
-on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="k">for </span>i in <span class="k">$(</span>seq <span class="k">$((${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span> <span class="o">-</span> <span class="m">1</span><span class="k">))</span> -1 0<span class="k">)</span>; <span class="k">do</span>
-<span class="nb">eval</span> <span class="s2">&quot;${on_exit_hooks[$i]}&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+<span class="nb">echo</span> <span class="s2">&quot;Starting fake-service&quot;</span>
+<span class="k">while </span><span class="nb">true</span>; <span class="k">do</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;$(date +${TIMESTAMP_FORMAT}) [$$]&quot;</span>
+    sleep 3
 <span class="k">done</span>
-<span class="o">}</span>
 
-add_on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="nb">local </span><span class="nv">n</span><span class="o">=</span><span class="k">${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span>
-on_exit_hooks<span class="o">[</span><span class="nv">$n</span><span class="o">]=</span><span class="s2">&quot;$*&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$n</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="nb">trap </span>on_exit EXIT
-<span class="k">fi</span>
-<span class="o">}</span>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>

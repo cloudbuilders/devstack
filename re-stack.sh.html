@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>stack.sh</title>
+    <title>re-stack.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>stack.sh</h1></th>
+        <th class=docs><h1>re-stack.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -413,6 +413,71 @@ with &quot;unsupported locale setting&quot; errors.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="sanity-checks">
+<h1>Sanity Checks</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean up last environment var cache</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$TOP_DIR</span>/.stackenv <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>rm <span class="nv">$TOP_DIR</span>/.stackenv
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p><tt class="docutils literal">stack.sh</tt> keeps the list of <tt class="docutils literal">apt</tt> and <tt class="docutils literal">rpm</tt> dependencies and config
+templates and other useful files in the <tt class="docutils literal">files</tt> subdirectory</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$FILES</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>log_error <span class="nv">$LINENO</span> <span class="s2">&quot;missing devstack/files&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p><tt class="docutils literal">stack.sh</tt> keeps function libraries here
+Make sure <tt class="docutils literal">$TOP_DIR/lib</tt> directory is present</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$TOP_DIR</span>/lib <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>log_error <span class="nv">$LINENO</span> <span class="s2">&quot;missing devstack/lib&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Check if run as root
+OpenStack is designed to be run as a non-root user; Horizon will fail to run
+as <strong>root</strong> since Apache will not serve content from <strong>root</strong> user).
+<tt class="docutils literal">stack.sh</tt> must not be run as <strong>root</strong>.  It aborts and suggests one course of
+action to create a suitable user account.</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$EUID</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are running this script as root.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Cut it out.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Really.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;If you need an account to run DevStack, do this (as root, heh) to create $STACK_USER:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$TOP_DIR/tools/create-stack-user.sh&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Check to see if we are already running DevStack
+Note that this may fail if USE_SCREEN=False</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span><span class="nb">type</span> -p screen &gt;/dev/null <span class="o">&amp;&amp;</span> screen -ls | egrep -q <span class="s2">&quot;[0-9].$SCREEN_NAME&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are already running a stack.sh session.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;To rejoin this session type &#39;screen -x stack&#39;.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;To destroy this session, type &#39;./unstack.sh&#39;.&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="prepare-the-environment">
+<h1>Prepare the environment</h1>
+</td><td class=code><div class=highlight><pre>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
@@ -430,8 +495,20 @@ and <tt class="docutils literal">DISTRO</tt></p>
 </td><td class=code><div class=highlight><pre>
 GetDistro
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Warn users who aren't on an explicitly supported distro, but allow them to
+override check and attempt installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>precise|saucy|trusty|7.0|wheezy|sid|testing|jessie|f19|f20|rhel6|rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: this script has not been tested on $DISTRO&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$FORCE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;If you wish to run this script anyway run with FORCE=yes&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="global-settings">
 <h1>Global Settings</h1>
 </td><td class=code><div class=highlight><pre>
@@ -490,56 +567,15 @@ repositories, branches to configure, and other configuration defaults.
 
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="local-settings">
-<h2>Local Settings</h2>
+<h1>Local Settings</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Make sure the proxy config is visible to sub-processes</p>
 </td><td class=code><div class=highlight><pre>
 export_proxy_variables
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Destination path for installation <tt class="docutils literal">DEST</tt></p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="sanity-check">
-<h2>Sanity Check</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean up last environment var cache</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$TOP_DIR</span>/.stackenv <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>rm <span class="nv">$TOP_DIR</span>/.stackenv
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">stack.sh</tt> keeps the list of <tt class="docutils literal">apt</tt> and <tt class="docutils literal">rpm</tt> dependencies and config
-templates and other useful files in the <tt class="docutils literal">files</tt> subdirectory</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
-<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$FILES</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>log_error <span class="nv">$LINENO</span> <span class="s2">&quot;missing devstack/files&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">stack.sh</tt> keeps function libraries here
-Make sure <tt class="docutils literal">$TOP_DIR/lib</tt> directory is present</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$TOP_DIR</span>/lib <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>log_error <span class="nv">$LINENO</span> <span class="s2">&quot;missing devstack/lib&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Import common services (database, message queue) configuration</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/rpc_backend
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Remove services which were negated in ENABLED_SERVICES
@@ -549,69 +585,21 @@ calling disable_service().</p>
 disable_negated_services
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Warn users who aren't on an explicitly supported distro, but allow them to
-override check and attempt installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>precise|saucy|trusty|7.0|wheezy|sid|testing|jessie|f19|f20|rhel6|rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: this script has not been tested on $DISTRO&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$FORCE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;If you wish to run this script anyway run with FORCE=yes&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Look for obsolete stuff</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> ,<span class="k">${</span><span class="nv">ENABLED_SERVICES</span><span class="k">}</span>, <span class="o">=</span>~ ,<span class="s2">&quot;swift&quot;</span>, <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;FATAL: &#39;swift&#39; is not supported as a service name&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;FATAL: Use the actual swift service names to enable them as required:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;FATAL: Use the actual swift service names to enable tham as required:&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;FATAL: s-proxy s-object s-container s-account&quot;</span>
     <span class="nb">exit </span>1
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Make sure we only have one rpc backend enabled,
-and the specified rpc backend is available on your platform.</p>
-</td><td class=code><div class=highlight><pre>
-check_rpc_backend
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Check to see if we are already running DevStack
-Note that this may fail if USE_SCREEN=False</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span><span class="nb">type</span> -p screen &gt;/dev/null <span class="o">&amp;&amp;</span> screen -ls | egrep -q <span class="s2">&quot;[0-9].$SCREEN_NAME&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are already running a stack.sh session.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;To rejoin this session type &#39;screen -x stack&#39;.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;To destroy this session, type &#39;./unstack.sh&#39;.&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up logging level</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">VERBOSE</span><span class="o">=</span><span class="k">$(</span>trueorfalse True <span class="nv">$VERBOSE</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="root-access">
-<h2>root Access</h2>
+<div class="section" id="configure-sudo">
+<h1>Configure sudo</h1>
 </td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>OpenStack is designed to be run as a non-root user; Horizon will fail to run
-as <strong>root</strong> since Apache will not serve content from <strong>root</strong> user).
-<tt class="docutils literal">stack.sh</tt> must not be run as <strong>root</strong>.  It aborts and suggests one course of
-action to create a suitable user account.</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$EUID</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are running this script as root.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Cut it out.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Really.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;If you need an account to run DevStack, do this (as root, heh) to create $STACK_USER:&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$TOP_DIR/tools/create-stack-user.sh&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>We're not <strong>root</strong>, make sure <tt class="docutils literal">sudo</tt> is available</p>
@@ -639,23 +627,35 @@ chmod 0440 <span class="nv">$TEMPFILE</span>
 sudo chown root:root <span class="nv">$TEMPFILE</span>
 sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/50_stack_sh
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="additional-repos">
-<h2>Additional repos</h2>
+<div class="section" id="configure-distro-repositories">
+<h1>Configure Distro Repositories</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>For debian/ubuntu make apt attempt to retry network ops on it's own</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;APT::Acquire::Retries &quot;20&quot;;&#39;</span> | sudo tee /etc/apt/apt.conf.d/80retry
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;APT::Acquire::Retries &quot;20&quot;;&#39;</span> | sudo tee /etc/apt/apt.conf.d/80retry &gt;/dev/null
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Some distros need to add repos beyond the defaults provided by the vendor
 to pick up required packages.</p>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>The Debian Wheezy official repositories do not contain all required packages,
+add gplhost repository.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$os_VENDOR&quot;</span> <span class="o">=</span>~ <span class="o">(</span>Debian<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;deb http://archive.gplhost.com/debian grizzly main&#39;</span> | sudo tee /etc/apt/sources.list.d/gplhost_wheezy-backports.list
+    <span class="nb">echo</span> <span class="s1">&#39;deb http://archive.gplhost.com/debian grizzly-backports main&#39;</span> | sudo tee -a /etc/apt/sources.list.d/gplhost_wheezy-backports.list
+    apt_get update
+    apt_get install --force-yes gplhost-archive-keyring
+<span class="k">fi</span>
 
 <span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -695,11 +695,17 @@ to pick up required packages.</p>
 
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="filesystem-setup">
-<h2>Filesystem setup</h2>
+<div class="section" id="configure-target-directories">
+<h1>Configure Target Directories</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Destination path for installation <tt class="docutils literal">DEST</tt></p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create the destination directory and ensure it is writable by the user
@@ -715,7 +721,15 @@ safe_chmod 0755 <span class="nv">$DEST</span>
 check_path_perm_sanity <span class="k">${</span><span class="nv">DEST</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Certain services such as rabbitmq require that the local hostname resolves
+<p>Destination path for service data</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
+sudo mkdir -p <span class="nv">$DATA_DIR</span>
+safe_chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DATA_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure proper hostname
+Certain services such as rabbitmq require that the local hostname resolves
 correctly.  Make sure it exists in /etc/hosts so that is always true.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">LOCAL_HOSTNAME</span><span class="o">=</span><span class="sb">`</span>hostname -s<span class="sb">`</span>
@@ -723,18 +737,233 @@ correctly.  Make sure it exists in /etc/hosts so that is always true.</p>
 <span class="k">    </span>sudo sed -i <span class="s2">&quot;s/\(^127.0.0.1.*\)/\1 $LOCAL_HOSTNAME/&quot;</span> /etc/hosts
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Destination path for service data</p>
+</div>
+<div class="section" id="configure-logging">
+<h1>Configure Logging</h1>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
-sudo mkdir -p <span class="nv">$DATA_DIR</span>
-safe_chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DATA_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up logging level</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">VERBOSE</span><span class="o">=</span><span class="k">$(</span>trueorfalse True <span class="nv">$VERBOSE</span><span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Draw a spinner so the user knows something is happening</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>spinner <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">delay</span><span class="o">=</span>0.75
+    <span class="nb">local </span><span class="nv">spinstr</span><span class="o">=</span><span class="s1">&#39;/-\|&#39;</span>
+    <span class="nb">printf</span> <span class="s2">&quot;...&quot;</span> &gt;&amp;3
+    <span class="k">while</span> <span class="o">[</span> <span class="nb">true</span> <span class="o">]</span>; <span class="k">do</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">temp</span><span class="o">=</span><span class="k">${</span><span class="nv">spinstr</span><span class="p">#?</span><span class="k">}</span>
+        <span class="nb">printf</span> <span class="s2">&quot;[%c]&quot;</span> <span class="s2">&quot;$spinstr&quot;</span> &gt;&amp;3
+        <span class="nb">local </span><span class="nv">spinstr</span><span class="o">=</span><span class="nv">$temp</span><span class="k">${</span><span class="nv">spinstr</span><span class="p">%</span><span class="s2">&quot;$temp&quot;</span><span class="k">}</span>
+        sleep <span class="nv">$delay</span>
+        <span class="nb">printf</span> <span class="s2">&quot;\b\b\b&quot;</span> &gt;&amp;3
+    <span class="k">done</span>
+<span class="o">}</span>
+
+<span class="k">function </span>kill_spinner <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[</span> ! -z <span class="s2">&quot;$LAST_SPINNER_PID&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">kill</span> &gt;/dev/null 2&gt;&amp;1 <span class="nv">$LAST_SPINNER_PID</span>
+        <span class="nb">printf</span> <span class="s2">&quot;\b\b\bdone\n&quot;</span> &gt;&amp;3
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Echo text to the log file, summary log file and stdout
+echo_summary &quot;something to say&quot;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>echo_summary <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> -t 3 <span class="o">&amp;&amp;</span> <span class="s2">&quot;$VERBOSE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>kill_spinner
+        <span class="nb">echo</span> -n -e <span class="nv">$@</span> &gt;&amp;6
+        spinner &amp;
+        <span class="nv">LAST_SPINNER_PID</span><span class="o">=</span><span class="nv">$!</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> -e <span class="nv">$@</span> &gt;&amp;6
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Echo text only to stdout, no log files
+echo_nolog &quot;something not for the logs&quot;</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>echo_nolog <span class="o">{</span>
+    <span class="nb">echo</span> <span class="nv">$@</span> &gt;&amp;3
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up logging for <tt class="docutils literal">stack.sh</tt>
+Set <tt class="docutils literal">LOGFILE</tt> to turn on logging
+Append '.xxxxxxxx' to the given name to maintain history
+where 'xxxxxxxx' is a representation of the date the file was created</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">TIMESTAMP_FORMAT</span><span class="o">=</span><span class="k">${</span><span class="nv">TIMESTAMP_FORMAT</span><span class="k">:-</span><span class="s2">&quot;%F-%H%M%S&quot;</span><span class="k">}</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">||</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">LOGDAYS</span><span class="o">=</span><span class="k">${</span><span class="nv">LOGDAYS</span><span class="k">:-</span><span class="nv">7</span><span class="k">}</span>
+    <span class="nv">CURRENT_LOG_TIME</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+$TIMESTAMP_FORMAT&quot;</span><span class="k">)</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>First clean up old log files.  Use the user-specified <tt class="docutils literal">LOGFILE</tt>
+as the template to search for, appending '.*' to match the date
+we added on earlier runs.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">LOGDIR</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
+    <span class="nv">LOGFILENAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
+    mkdir -p <span class="nv">$LOGDIR</span>
+    find <span class="nv">$LOGDIR</span> -maxdepth 1 -name <span class="nv">$LOGFILENAME</span>.<span class="se">\*</span> -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
+    <span class="nv">LOGFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>
+    <span class="nv">SUMFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.summary
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Redirect output according to config</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fd 3 to a copy of stdout. So we can set fd 1 without losing
+stdout later.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>3&gt;&amp;1
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fd 1 and 2 to write the log file</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -v -o <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fd 6 to summary log file</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -o <span class="s2">&quot;${SUMFILE}&quot;</span> <span class="o">)</span>
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fd 1 and 2 to primary logfile</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -o <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fd 6 to summary logfile and stdout</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -v -o <span class="s2">&quot;${SUMFILE}&quot;</span> &gt;&amp;3 <span class="o">)</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span>echo_summary <span class="s2">&quot;stack.sh log $LOGFILE&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Specified logfile name always links to the most recent log</p>
+</td><td class=code><div class=highlight><pre>
+    ln -sf <span class="nv">$LOGFILE</span> <span class="nv">$LOGDIR</span>/<span class="nv">$LOGFILENAME</span>
+    ln -sf <span class="nv">$SUMFILE</span> <span class="nv">$LOGDIR</span>/<span class="nv">$LOGFILENAME</span>.summary
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up output redirection without log files
+Set fd 3 to a copy of stdout. So we can set fd 1 without losing
+stdout later.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>3&gt;&amp;1
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Throw away stdout and stderr</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>1&gt;/dev/null 2&gt;&amp;1
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Always send summary fd to original stdout</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -v &gt;&amp;3 <span class="o">)</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up logging of screen windows
+Set <tt class="docutils literal">SCREEN_LOGDIR</tt> to turn on logging of screen windows to the
+directory specified in <tt class="docutils literal">SCREEN_LOGDIR</tt>, we will log to the the file
+<tt class="docutils literal"><span class="pre">screen-$SERVICE_NAME-$TIMESTAMP.log</span></tt> in that dir and have a link
+<tt class="docutils literal"><span class="pre">screen-$SERVICE_NAME.log</span></tt> to the latest log file.
+Logs are kept for as long specified in <tt class="docutils literal">LOGDAYS</tt>.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>We make sure the directory is created.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> -d <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>We cleanup the old logs</p>
+</td><td class=code><div class=highlight><pre>
+        find <span class="nv">$SCREEN_LOGDIR</span> -maxdepth 1 -name screen-<span class="se">\*</span>.log -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
+    <span class="k">else</span>
+<span class="k">        </span>mkdir -p <span class="nv">$SCREEN_LOGDIR</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="configure-error-traps">
+<h1>Configure Error Traps</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Kill background processes on exit</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">trap </span>exit_trap EXIT
+<span class="k">function </span>exit_trap <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nb">jobs</span><span class="o">=</span><span class="k">$(</span><span class="nb">jobs</span> -p<span class="k">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Only do the kill when we're logging through a process substitution,
+which currently is only to verbose logfile</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$jobs</span> <span class="o">&amp;&amp;</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$VERBOSE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;exit_trap: cleaning up child processes&quot;</span>
+        <span class="nb">kill </span>2&gt;&amp;1 <span class="nv">$jobs</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Kill the last spinner process</p>
+</td><td class=code><div class=highlight><pre>
+    kill_spinner
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$r</span> -ne 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Error on exit&quot;</span>
+        ./tools/worlddump.py -d <span class="nv">$LOGDIR</span>
+    <span class="k">fi</span>
+
+<span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Exit on any errors so that errors don't compound</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">trap </span>err_trap ERR
+<span class="k">function </span>err_trap <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nb">set</span> +o xtrace
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed: full log in $LOGFILE&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Begin trapping error exit codes</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o errexit
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Print the commands being run so that we can see the command that triggers
+an error.  It is also useful for following along as the install occurs.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">set</span> -o xtrace
 
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="common-configuration">
-<h2>Common Configuration</h2>
+<h1>Common Configuration</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -777,6 +1006,11 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 <span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Allow the use of an alternate protocol (such as https) for service endpoints</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">http</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Configure services to use syslog instead of writing to individual log files</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SYSLOG</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$SYSLOG</span><span class="sb">`</span>
@@ -804,12 +1038,22 @@ in an OpenStack cloud that uses either of these address ranges internally.</p>
 <span class="nv">SSL_BUNDLE_FILE</span><span class="o">=</span><span class="s2">&quot;$DATA_DIR/ca-bundle.pem&quot;</span>
 rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Import common services (database, message queue) configuration</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/rpc_backend
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
+<p>Make sure we only have one rpc backend enabled,
+and the specified rpc backend is available on your platform.</p>
+</td><td class=code><div class=highlight><pre>
+check_rpc_backend
+
+
+</pre></div></td></tr><tr><td class=docs>
 <div class="section" id="configure-projects">
-<h1>Configure Projects</h1>
+<h2>Configure Projects</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -841,8 +1085,10 @@ rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ldap
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
 <div class="section" id="extras-source">
-<h2>Extras Source</h2>
+<h1>Extras Source</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -862,7 +1108,7 @@ rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="interactive-configuration">
-<h2>Interactive Configuration</h2>
+<h1>Interactive Configuration</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1006,233 +1252,8 @@ can never change.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="configure-logging">
-<h2>Configure logging</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Draw a spinner so the user knows something is happening</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>spinner <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">delay</span><span class="o">=</span>0.75
-    <span class="nb">local </span><span class="nv">spinstr</span><span class="o">=</span><span class="s1">&#39;/-\|&#39;</span>
-    <span class="nb">printf</span> <span class="s2">&quot;...&quot;</span> &gt;&amp;3
-    <span class="k">while</span> <span class="o">[</span> <span class="nb">true</span> <span class="o">]</span>; <span class="k">do</span>
-<span class="k">        </span><span class="nb">local </span><span class="nv">temp</span><span class="o">=</span><span class="k">${</span><span class="nv">spinstr</span><span class="p">#?</span><span class="k">}</span>
-        <span class="nb">printf</span> <span class="s2">&quot;[%c]&quot;</span> <span class="s2">&quot;$spinstr&quot;</span> &gt;&amp;3
-        <span class="nb">local </span><span class="nv">spinstr</span><span class="o">=</span><span class="nv">$temp</span><span class="k">${</span><span class="nv">spinstr</span><span class="p">%</span><span class="s2">&quot;$temp&quot;</span><span class="k">}</span>
-        sleep <span class="nv">$delay</span>
-        <span class="nb">printf</span> <span class="s2">&quot;\b\b\b&quot;</span> &gt;&amp;3
-    <span class="k">done</span>
-<span class="o">}</span>
-
-<span class="k">function </span>kill_spinner <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[</span> ! -z <span class="s2">&quot;$LAST_SPINNER_PID&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">kill</span> &gt;/dev/null 2&gt;&amp;1 <span class="nv">$LAST_SPINNER_PID</span>
-        <span class="nb">printf</span> <span class="s2">&quot;\b\b\bdone\n&quot;</span> &gt;&amp;3
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Echo text to the log file, summary log file and stdout
-echo_summary &quot;something to say&quot;</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>echo_summary <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> -t 3 <span class="o">&amp;&amp;</span> <span class="s2">&quot;$VERBOSE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>kill_spinner
-        <span class="nb">echo</span> -n -e <span class="nv">$@</span> &gt;&amp;6
-        spinner &amp;
-        <span class="nv">LAST_SPINNER_PID</span><span class="o">=</span><span class="nv">$!</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nb">echo</span> -e <span class="nv">$@</span> &gt;&amp;6
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Echo text only to stdout, no log files
-echo_nolog &quot;something not for the logs&quot;</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>echo_nolog <span class="o">{</span>
-    <span class="nb">echo</span> <span class="nv">$@</span> &gt;&amp;3
-<span class="o">}</span>
-
-<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>poor old python2.6 doesn't have argparse by default, which
-outfilter.py uses</p>
-</td><td class=code><div class=highlight><pre>
-    is_package_installed python-argparse <span class="o">||</span> install_package python-argparse
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up logging for <tt class="docutils literal">stack.sh</tt>
-Set <tt class="docutils literal">LOGFILE</tt> to turn on logging
-Append '.xxxxxxxx' to the given name to maintain history
-where 'xxxxxxxx' is a representation of the date the file was created</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">TIMESTAMP_FORMAT</span><span class="o">=</span><span class="k">${</span><span class="nv">TIMESTAMP_FORMAT</span><span class="k">:-</span><span class="s2">&quot;%F-%H%M%S&quot;</span><span class="k">}</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">||</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">LOGDAYS</span><span class="o">=</span><span class="k">${</span><span class="nv">LOGDAYS</span><span class="k">:-</span><span class="nv">7</span><span class="k">}</span>
-    <span class="nv">CURRENT_LOG_TIME</span><span class="o">=</span><span class="k">$(</span>date <span class="s2">&quot;+$TIMESTAMP_FORMAT&quot;</span><span class="k">)</span>
-<span class="k">fi</span>
-
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>First clean up old log files.  Use the user-specified <tt class="docutils literal">LOGFILE</tt>
-as the template to search for, appending '.*' to match the date
-we added on earlier runs.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">LOGDIR</span><span class="o">=</span><span class="k">$(</span>dirname <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
-    <span class="nv">LOGFILENAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$LOGFILE&quot;</span><span class="k">)</span>
-    mkdir -p <span class="nv">$LOGDIR</span>
-    find <span class="nv">$LOGDIR</span> -maxdepth 1 -name <span class="nv">$LOGFILENAME</span>.<span class="se">\*</span> -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
-    <span class="nv">LOGFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>
-    <span class="nv">SUMFILE</span><span class="o">=</span><span class="nv">$LOGFILE</span>.<span class="k">${</span><span class="nv">CURRENT_LOG_TIME</span><span class="k">}</span>.summary
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Redirect output according to config</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set fd 3 to a copy of stdout. So we can set fd 1 without losing
-stdout later.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">exec </span>3&gt;&amp;1
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set fd 1 and 2 to write the log file</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -v -o <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
-</pre></div></td></tr><tr><td class=docs>
-<p>Set fd 6 to summary log file</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -o <span class="s2">&quot;${SUMFILE}&quot;</span> <span class="o">)</span>
-    <span class="k">else</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set fd 1 and 2 to primary logfile</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -o <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
-</pre></div></td></tr><tr><td class=docs>
-<p>Set fd 6 to summary logfile and stdout</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -v -o <span class="s2">&quot;${SUMFILE}&quot;</span> &gt;&amp;3 <span class="o">)</span>
-    <span class="k">fi</span>
-
-<span class="k">    </span>echo_summary <span class="s2">&quot;stack.sh log $LOGFILE&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Specified logfile name always links to the most recent log</p>
-</td><td class=code><div class=highlight><pre>
-    ln -sf <span class="nv">$LOGFILE</span> <span class="nv">$LOGDIR</span>/<span class="nv">$LOGFILENAME</span>
-    ln -sf <span class="nv">$SUMFILE</span> <span class="nv">$LOGDIR</span>/<span class="nv">$LOGFILENAME</span>.summary
-<span class="k">else</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up output redirection without log files
-Set fd 3 to a copy of stdout. So we can set fd 1 without losing
-stdout later.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">exec </span>3&gt;&amp;1
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Throw away stdout and stderr</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">exec </span>1&gt;/dev/null 2&gt;&amp;1
-    <span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Always send summary fd to original stdout</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> <span class="nv">$TOP_DIR</span>/tools/outfilter.py -v &gt;&amp;3 <span class="o">)</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up logging of screen windows
-Set <tt class="docutils literal">SCREEN_LOGDIR</tt> to turn on logging of screen windows to the
-directory specified in <tt class="docutils literal">SCREEN_LOGDIR</tt>, we will log to the the file
-<tt class="docutils literal"><span class="pre">screen-$SERVICE_NAME-$TIMESTAMP.log</span></tt> in that dir and have a link
-<tt class="docutils literal"><span class="pre">screen-$SERVICE_NAME.log</span></tt> to the latest log file.
-Logs are kept for as long specified in <tt class="docutils literal">LOGDAYS</tt>.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>We make sure the directory is created.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -d <span class="s2">&quot;$SCREEN_LOGDIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>We cleanup the old logs</p>
-</td><td class=code><div class=highlight><pre>
-        find <span class="nv">$SCREEN_LOGDIR</span> -maxdepth 1 -name screen-<span class="se">\*</span>.log -mtime +<span class="nv">$LOGDAYS</span> -exec rm <span class="o">{}</span> <span class="se">\;</span>
-    <span class="k">else</span>
-<span class="k">        </span>mkdir -p <span class="nv">$SCREEN_LOGDIR</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="set-up-script-execution">
-<h2>Set Up Script Execution</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Kill background processes on exit</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">trap </span>exit_trap EXIT
-<span class="k">function </span>exit_trap <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
-    <span class="nb">jobs</span><span class="o">=</span><span class="k">$(</span><span class="nb">jobs</span> -p<span class="k">)</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Only do the kill when we're logging through a process substitution,
-which currently is only to verbose logfile</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$jobs</span> <span class="o">&amp;&amp;</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$VERBOSE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;exit_trap: cleaning up child processes&quot;</span>
-        <span class="nb">kill </span>2&gt;&amp;1 <span class="nv">$jobs</span>
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Kill the last spinner process</p>
-</td><td class=code><div class=highlight><pre>
-    kill_spinner
-
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$r</span> -ne 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Error on exit&quot;</span>
-        ./tools/worlddump.py -d <span class="nv">$LOGDIR</span>
-    <span class="k">fi</span>
-
-<span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
-<span class="o">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Exit on any errors so that errors don't compound</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">trap </span>err_trap ERR
-<span class="k">function </span>err_trap <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
-    <span class="nb">set</span> +o xtrace
-    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed: full log in $LOGFILE&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed&quot;</span>
-    <span class="k">fi</span>
-<span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
-<span class="o">}</span>
-
-
-<span class="nb">set</span> -o errexit
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Print the commands being run so that we can see the command that triggers
-an error.  It is also useful for following along as the install occurs.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">set</span> -o xtrace
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
 <div class="section" id="install-packages">
-<h1>Install Packages</h1>
+<h2>Install Packages</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1250,29 +1271,13 @@ echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span
 <p>Configure an appropriate python environment</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nv">PYPI_ALTERNATIVE_URL</span><span class="o">=</span><span class="nv">$PYPI_ALTERNATIVE_URL</span> <span class="nv">$TOP_DIR</span>/tools/install_pip.sh
+    <span class="nv">$TOP_DIR</span>/tools/install_pip.sh
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Do the ugly hacks for broken packages and distros</p>
+<p>Do the ugly hacks for borken packages and distros</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">$TOP_DIR</span>/tools/fixup_stuff.sh
-
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="extras-pre-install">
-<h2>Extras Pre-install</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Phase: pre-install</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
-        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> stack pre-install
-    <span class="k">done</span>
-<span class="k">fi</span>
-
 
 install_rpc_backend
 
@@ -1301,8 +1306,9 @@ install_rpc_backend
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
+</div>
 <div class="section" id="check-out-and-install-source">
-<h2>Check Out and Install Source</h2>
+<h1>Check Out and Install Source</h1>
 </td><td class=code><div class=highlight><pre>
 
 echo_summary <span class="s2">&quot;Installing OpenStack project source&quot;</span>
@@ -1417,6 +1423,7 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
     install_ceilometer
     echo_summary <span class="s2">&quot;Configuring Ceilometer&quot;</span>
     configure_ceilometer
+    configure_ceilometerclient
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
@@ -1439,7 +1446,7 @@ don't be naive and add to existing line!</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="extras-install">
-<h2>Extras Install</h2>
+<h1>Extras Install</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1465,7 +1472,7 @@ don't be naive and add to existing line!</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="syslog">
-<h2>Syslog</h2>
+<h1>Syslog</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$SYSLOG</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1511,7 +1518,7 @@ don't be naive and add to existing line!</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="finalize-queue-installation">
-<h2>Finalize queue installation</h2>
+<h1>Finalize queue installation</h1>
 </td><td class=code><div class=highlight><pre>
 restart_rpc_backend
 
@@ -1519,7 +1526,7 @@ restart_rpc_backend
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="export-certicate-authority-bundle">
-<h2>Export Certicate Authority Bundle</h2>
+<h1>Export Certicate Authority Bundle</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1535,7 +1542,7 @@ should be exported so clients can validate their connections.</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="configure-database">
-<h2>Configure database</h2>
+<h1>Configure database</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
@@ -1546,7 +1553,7 @@ should be exported so clients can validate their connections.</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="configure-screen">
-<h2>Configure screen</h2>
+<h1>Configure screen</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">USE_SCREEN</span><span class="o">=</span><span class="k">$(</span>trueorfalse True <span class="nv">$USE_SCREEN</span><span class="k">)</span>
@@ -1583,7 +1590,7 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="dstat">
-<h2>Dstat</h2>
+<h1>Dstat</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1597,15 +1604,15 @@ init_service_check
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
 <div class="section" id="start-services">
-<h1>Start Services</h1>
+<h2>Start Services</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
 <div class="section" id="keystone">
-<h2>Keystone</h2>
+<h1>Keystone</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
@@ -1672,7 +1679,7 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="horizon">
-<h2>Horizon</h2>
+<h1>Horizon</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1689,7 +1696,7 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="glance">
-<h2>Glance</h2>
+<h1>Glance</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
@@ -1701,7 +1708,7 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="neutron">
-<h2>Neutron</h2>
+<h1>Neutron</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
@@ -1730,7 +1737,7 @@ a part of the OpenStack project. Configure and start them.</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="nova">
-<h2>Nova</h2>
+<h1>Nova</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled n-net q-dhcp; <span class="k">then</span>
@@ -1763,7 +1770,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="storage-service">
-<h2>Storage Service</h2>
+<h1>Storage Service</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
@@ -1775,7 +1782,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="volume-service">
-<h2>Volume Service</h2>
+<h1>Volume Service</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
@@ -1787,7 +1794,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="compute-service">
-<h2>Compute Service</h2>
+<h1>Compute Service</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
@@ -1817,10 +1824,8 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
 <div class="section" id="extras-configuration">
-<h1>Extras Configuration</h1>
+<h2>Extras Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1836,7 +1841,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="local-configuration">
-<h1>Local Configuration</h1>
+<h2>Local Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1849,7 +1854,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="launch-services">
-<h1>Launch Services</h1>
+<h2>Launch Services</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1875,7 +1880,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="install-images">
-<h1>Install Images</h1>
+<h2>Install Images</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2005,7 +2010,6 @@ See <a class="reference external" href="https://help.ubuntu.com/community/CloudI
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Cinder&quot;</span>
     start_cinder
-    create_volume_types
 <span class="k">fi</span>
 <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting Ceilometer&quot;</span>
@@ -2030,7 +2034,7 @@ See <a class="reference external" href="https://help.ubuntu.com/community/CloudI
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="create-account-rc-files">
-<h1>Create account rc files</h1>
+<h2>Create account rc files</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2100,7 +2104,7 @@ are loaded into glance, though just knowing the IDs is sufficient here</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="id1">
-<h1>Local Configuration</h1>
+<h2>Local Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2113,7 +2117,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf extra
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="run-extras">
-<h1>Run extras</h1>
+<h2>Run extras</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2128,7 +2132,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf extra
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="id2">
-<h1>Local Configuration</h1>
+<h2>Local Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2141,7 +2145,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-extra
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="run-local-script">
-<h1>Run local script</h1>
+<h2>Run local script</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2161,7 +2165,7 @@ service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="fin">
-<h1>Fin</h1>
+<h2>Fin</h2>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">set</span> +o xtrace
@@ -2181,8 +2185,10 @@ service_check
 
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
 <div class="section" id="using-the-cloud">
-<h2>Using the cloud</h2>
+<h1>Using the cloud</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
@@ -2217,6 +2223,49 @@ to access the site using your browser.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$DEPRECATED_TEXT&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;WARNING: $DEPRECATED_TEXT&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(dtroyer): Remove EXTRA_OPTS after stable/icehouse branch is cut
+Specific warning for deprecated configs</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: EXTRA_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using EXTRA_OPTS to pass configuration into nova.conf.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a nova.conf section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;EXTRA_OPTS will be removed early in the Juno development cycle&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;</span>
+<span class="s2">[[post-config|\$NOVA_CONF]]</span>
+<span class="s2">[DEFAULT]</span>
+<span class="s2">&quot;</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${EXTRA_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+    <span class="k">done</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(dtroyer): Remove EXTRA_BAREMETAL_OPTS after stable/icehouse branch is cut</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$EXTRA_BAREMETAL_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: EXTRA_BAREMETAL_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using EXTRA_BAREMETAL_OPTS to pass configuration into nova.conf.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a nova.conf section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;EXTRA_BAREMETAL_OPTS will be removed early in the Juno development cycle&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;</span>
+<span class="s2">[[post-config|\$NOVA_CONF]]</span>
+<span class="s2">[baremetal]</span>
+<span class="s2">&quot;</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${EXTRA_BAREMETAL_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+    <span class="k">done</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2262,18 +2311,45 @@ to access the site using your browser.</p>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>TODO(dtroyer): Remove CINDER_MULTI_LVM_BACKEND after stable/juno branch is cut</p>
+<p>TODO(dtroyer): Remove Q_DHCP_EXTRA_DEFAULT_OPTS after stable/icehouse branch is cut</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_DHCP_EXTRA_DEFAULT_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    echo_summary <span class="s2">&quot;WARNING: CINDER_MULTI_LVM_BACKEND is used&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You are using CINDER_MULTI_LVM_BACKEND to configure Cinder&#39;s multiple LVM backends&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in local.conf to use CINDER_ENABLED_BACKENDS.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;CINDER_ENABLED_BACKENDS will be removed early in the &#39;K&#39; development cycle&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: Q_DHCP_EXTRA_DEFAULT_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_DHCP_EXTRA_DEFAULT_OPTS to pass configuration into $Q_DHCP_CONF_FILE.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $Q_DHCP_CONF_FILE section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Q_DHCP_EXTRA_DEFAULT_OPTS will be removed early in the Juno development cycle&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;</span>
-<span class="s2">[[local|localrc]]</span>
-<span class="s2">CINDER_ENABLED_BACKENDS=lvm:lvmdriver-1,lvm:lvmdriver-2</span>
+<span class="s2">[[post-config|/\$Q_DHCP_CONF_FILE]]</span>
+<span class="s2">[DEFAULT]</span>
 <span class="s2">&quot;</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_DHCP_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+    <span class="k">done</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(dtroyer): Remove Q_SRV_EXTRA_DEFAULT_OPTS after stable/icehouse branch is cut</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_SRV_EXTRA_DEFAULT_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+    echo_summary <span class="s2">&quot;WARNING: Q_SRV_EXTRA_DEFAULT_OPTS is used&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_SRV_EXTRA_DEFAULT_OPTS to pass configuration into $NEUTRON_CONF.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $NEUTRON_CONF section in local.conf:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Q_SRV_EXTRA_DEFAULT_OPTS will be removed early in the Juno development cycle&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;</span>
+<span class="s2">[[post-config|\$NEUTRON_CONF]]</span>
+<span class="s2">[DEFAULT]</span>
+<span class="s2">&quot;</span>
+    <span class="k">for </span>I in <span class="s2">&quot;${Q_SRV_EXTRA_DEFAULT_OPTS[@]}&quot;</span>; <span class="k">do</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Replace the first '=' with ' ' for iniset syntax</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+    <span class="k">done</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2296,7 +2372,6 @@ echo_summary <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
 </div>
 </div>
 </body>

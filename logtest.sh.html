@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>ovs_base</title>
+    <title>logtest.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>ovs_base</h1></th>
+        <th class=docs><h1>logtest.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -22,7 +22,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
-<title>common functions for ovs based plugin</title>
+<title></title>
 <style type="text/css">
 
 /*
@@ -356,115 +356,154 @@ ul.auto-toc {
 </style>
 </head>
 <body>
-<div class="document" id="common-functions-for-ovs-based-plugin">
-<h1 class="title">common functions for ovs based plugin</h1>
+<div class="document">
 
-<p>Save trace setting</p>
+
+<p>Test stack.sh logging scenarios</p>
 </td><td class=code><div class=highlight><pre>
+<span class="c">#!/bin/bash</span>
 
-<span class="nv">OVSB_XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
-<span class="nb">set</span> +o xtrace
+<span class="nb">source </span>functions
 
-<span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-int</span><span class="k">}</span>
-<span class="nv">PUBLIC_BRIDGE</span><span class="o">=</span><span class="k">${</span><span class="nv">PUBLIC_BRIDGE</span><span class="k">:-</span><span class="nv">br</span><span class="p">-ex</span><span class="k">}</span>
-<span class="nv">OVS_DATAPATH_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_DATAPATH_TYPE</span><span class="k">:-</span><span class="s2">&quot;&quot;</span><span class="k">}</span>
+<span class="nv">SCREEN_LOGDIR</span><span class="o">=</span>.
+<span class="nv">CURRENT_LOG_TIME</span><span class="o">=</span>now
 
-<span class="k">function </span>is_neutron_ovs_base_plugin <span class="o">{</span>
+<span class="nv">LOGFILE</span><span class="o">=</span><span class="k">${</span><span class="nv">LOGFILE</span><span class="k">:-</span><span class="nv">test</span><span class="p">.log</span><span class="k">}</span>
+<span class="nv">SUMFILE</span><span class="o">=</span>sum.log
+<span class="nv">VERBOSE</span><span class="o">=</span><span class="k">${</span><span class="nv">VERBOSE</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
-<p>Yes, we use OVS.</p>
+<p>Kill background processes on exit</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">return </span>0
-<span class="o">}</span>
-
-<span class="k">function </span>_neutron_ovs_base_setup_bridge <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">bridge</span><span class="o">=</span><span class="nv">$1</span>
-    neutron-ovs-cleanup
-    sudo ovs-vsctl --no-wait -- --may-exist add-br <span class="nv">$bridge</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$OVS_DATAPATH_TYPE</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>sudo ovs-vsctl <span class="nb">set </span>Bridge <span class="nv">$bridge</span> <span class="nv">datapath_type</span><span class="o">=</span><span class="k">${</span><span class="nv">OVS_DATAPATH_TYPE</span><span class="k">}</span>
+<span class="nb">trap </span>exit_trap EXIT
+<span class="k">function </span>exit_trap <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nb">jobs</span><span class="o">=</span><span class="k">$(</span><span class="nb">jobs</span> -p<span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="nv">$jobs</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;exit_trap: cleaning up child processes&quot;</span>
+        <span class="nb">kill </span>2&gt;&amp;1 <span class="nv">$jobs</span>
     <span class="k">fi</span>
-<span class="k">    </span>sudo ovs-vsctl --no-wait br-set-external-id <span class="nv">$bridge</span> bridge-id <span class="nv">$bridge</span>
+<span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
 <span class="o">}</span>
 
-<span class="k">function </span>neutron_ovs_base_cleanup <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>remove all OVS ports that look like Neutron created ports</p>
+<p>Exit on any errors so that errors don't compound</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>port in <span class="k">$(</span>sudo ovs-vsctl list port | grep -o -e tap<span class="o">[</span>0-9a-f<span class="se">\-</span><span class="o">]</span>* -e q<span class="o">[</span>rg<span class="o">]</span>-<span class="o">[</span>0-9a-f<span class="se">\-</span><span class="o">]</span>*<span class="k">)</span>; <span class="k">do</span>
-<span class="k">        </span>sudo ovs-vsctl del-port <span class="k">${</span><span class="nv">port</span><span class="k">}</span>
-    <span class="k">done</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>remove all OVS bridges created by Neutron</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">for </span>bridge in <span class="k">$(</span>sudo ovs-vsctl list-br | grep -o -e <span class="k">${</span><span class="nv">OVS_BRIDGE</span><span class="k">}</span> -e <span class="k">${</span><span class="nv">PUBLIC_BRIDGE</span><span class="k">})</span>; <span class="k">do</span>
-<span class="k">        </span>sudo ovs-vsctl del-br <span class="k">${</span><span class="nv">bridge</span><span class="k">}</span>
-    <span class="k">done</span>
-<span class="o">}</span>
-
-<span class="k">function </span>_neutron_ovs_base_install_ubuntu_dkms <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>install Dynamic Kernel Module Support packages if needed</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nb">local </span><span class="nv">kernel_version</span><span class="o">=</span><span class="k">$(</span>uname -r<span class="k">)</span>
-    <span class="nb">local </span><span class="nv">kernel_major_minor</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$kernel_version</span> | cut -d. -f1-2<span class="sb">`</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>From kernel 3.13 on, openvswitch-datapath-dkms is not needed</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> <span class="sb">`</span>vercmp_numbers <span class="s2">&quot;$kernel_major_minor&quot;</span> <span class="s2">&quot;3.13&quot;</span><span class="sb">`</span> -lt <span class="s2">&quot;0&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>install_package <span class="s2">&quot;dkms openvswitch-datapath-dkms linux-headers-$kernel_version&quot;</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-<span class="k">function </span>_neutron_ovs_base_install_agent_packages <span class="o">{</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Install deps</p>
-</td><td class=code><div class=highlight><pre>
-    install_package <span class="k">$(</span>get_packages <span class="s2">&quot;openvswitch&quot;</span><span class="k">)</span>
-    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span>_neutron_ovs_base_install_ubuntu_dkms
-    <span class="k">elif </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span>restart_service openvswitch
-    <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>restart_service openvswitch-switch
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-<span class="k">function </span>_neutron_ovs_base_configure_debug_command <span class="o">{</span>
-    iniset <span class="nv">$NEUTRON_TEST_CONFIG_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
-<span class="o">}</span>
-
-<span class="k">function </span>_neutron_ovs_base_configure_firewall_driver <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver
+<span class="nb">trap </span>err_trap ERR
+<span class="k">function </span>err_trap <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nb">set</span> +o xtrace
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed: full log in $LOGFILE&quot;</span>
     <span class="k">else</span>
-<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.firewall.NoopFirewallDriver
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed&quot;</span>
     <span class="k">fi</span>
+<span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
 <span class="o">}</span>
 
-<span class="k">function </span>_neutron_ovs_base_configure_l3_agent <span class="o">{</span>
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
 
-    neutron-ovs-cleanup
-</pre></div></td></tr><tr><td class=docs>
-<p>--no-wait causes a race condition if $PUBLIC_BRIDGE is not up when ip addr flush is called</p>
-</td><td class=code><div class=highlight><pre>
-    sudo ovs-vsctl -- --may-exist add-br <span class="nv">$PUBLIC_BRIDGE</span>
-    sudo ovs-vsctl br-set-external-id <span class="nv">$PUBLIC_BRIDGE</span> bridge-id <span class="nv">$PUBLIC_BRIDGE</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>ensure no IP is configured on the public bridge</p>
-</td><td class=code><div class=highlight><pre>
-    sudo ip addr flush dev <span class="nv">$PUBLIC_BRIDGE</span>
-<span class="o">}</span>
-
-<span class="k">function </span>_neutron_ovs_base_configure_nova_vif_driver <span class="o">{</span>
-    :
-<span class="o">}</span>
+<span class="nb">echo</span> <span class="s2">&quot;Before&quot;</span>
+ls -l /proc/self/fd
+<span class="nb">echo</span> -e <span class="s2">&quot;\n\n&quot;</span>
+sleep 1
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Restore xtrace</p>
+<p>set up file handles like stack.sh</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$OVSB_XTRACE</span>
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Copy stdout to fd 3</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>3&gt;&amp;1
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Redirect stdout/stderr to tee to write the log file</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> awk -v <span class="nv">logfile</span><span class="o">=</span><span class="k">${</span><span class="nv">LOGFILE</span><span class="k">}</span> <span class="s1">&#39;</span>
+<span class="s1">                /((set \+o$)|xtrace)/ { next }</span>
+<span class="s1">                {</span>
+<span class="s1">                    cmd =&quot;date +\&quot;%Y-%m-%d %H:%M:%S.%3N | \&quot;&quot;</span>
+<span class="s1">                    cmd | getline now</span>
+<span class="s1">                    close(&quot;date +\&quot;%Y-%m-%d %H:%M:%S.%3N | \&quot;&quot;)</span>
+<span class="s1">                    sub(/^/, now)</span>
+<span class="s1">                    print</span>
+<span class="s1">                    print &gt; logfile</span>
+<span class="s1">                    fflush(&quot;&quot;)</span>
+<span class="s1">                }&#39;</span> <span class="o">)</span> 2&gt;&amp;1
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up a second fd for output</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${SUMFILE}&quot;</span> <span class="o">)</span>
+    <span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fd 1 and 2 to primary logfile</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>1&gt; <span class="s2">&quot;${LOGFILE}&quot;</span> 2&gt;&amp;1
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fd 6 to summary logfile and stdout</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>6&gt; &gt;<span class="o">(</span> tee <span class="s2">&quot;${SUMFILE}&quot;</span> &gt;&amp;3 <span class="o">)</span>
+    <span class="k">fi</span>
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up output redirection without log files
+Copy stdout to fd 3</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>3&gt;&amp;1
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Throw away stdout and stderr</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">exec </span>1&gt;/dev/null 2&gt;&amp;1
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Always send summary fd to original stdout</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>6&gt;&amp;3
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>try stuff here</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="nb">echo</span> <span class="s2">&quot;Testing&quot;</span>
+
+run_process testx.sh
+
+<span class="nb">echo</span> -e <span class="s2">&quot;\n\n&quot;</span>
+sleep 1
+
+</pre></div></td></tr><tr><td class=docs>
+<p>tear down redirection</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">exec </span>1&gt;&amp;3
+</pre></div></td></tr><tr><td class=docs>
+<p>Force all output to stdout and logs now</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>1&gt; &gt;<span class="o">(</span> tee -a <span class="s2">&quot;${LOGFILE}&quot;</span> <span class="o">)</span> 2&gt;&amp;1
+<span class="k">else</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Force all output to stdout now</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>1&gt;&amp;3
+<span class="k">fi</span>
+
+<span class="c">#echo -e &quot;\nAfter:&quot;</span>
+<span class="c">#ls -l /proc/self/fd</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean up totally</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">exec </span>1&gt;&amp;3
+<span class="nb">exec </span>2&gt;&amp;3
+<span class="nb">exec </span>3&gt;&amp;-
+<span class="nb">exec </span>6&gt;&amp;-
+
+<span class="c">#echo -e &quot;\nClean:&quot;</span>
+<span class="c">#ls -l /proc/self/fd</span>
 
 
 </td><td class=code><div class=highlight><pre>

@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>on_exit.sh</title>
+    <title>60-ceph.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>on_exit.sh</h1></th>
+        <th class=docs><h1>60-ceph.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,32 +359,63 @@ ul.auto-toc {
 <div class="document">
 
 
+<p>ceph.sh - DevStack extras script to install Ceph</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if </span>is_service_enabled ceph; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;source&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Initial source</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceph
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;stack&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$2&quot;</span> <span class="o">==</span> <span class="s2">&quot;pre-install&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>echo_summary <span class="s2">&quot;Installing Ceph&quot;</span>
+        install_ceph
+        echo_summary <span class="s2">&quot;Configuring Ceph&quot;</span>
+        configure_ceph
+</pre></div></td></tr><tr><td class=docs>
+<p>NOTE (leseb): Do everything here because we need to have Ceph started before the main
+OpenStack components. Ceph OSD must start here otherwise we can't upload any images.</p>
+</td><td class=code><div class=highlight><pre>
+        echo_summary <span class="s2">&quot;Initializing Ceph&quot;</span>
+        init_ceph
+        start_ceph
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;stack&quot;</span> <span class="o">&amp;&amp;</span> <span class="s2">&quot;$2&quot;</span> <span class="o">==</span> <span class="s2">&quot;post-config&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        if </span>is_service_enabled glance; <span class="k">then</span>
+<span class="k">            </span>echo_summary <span class="s2">&quot;Configuring Glance for Ceph&quot;</span>
+            configure_ceph_glance
+        <span class="k">fi</span>
+<span class="k">        if </span>is_service_enabled nova; <span class="k">then</span>
+<span class="k">            </span>echo_summary <span class="s2">&quot;Configuring Nova for Ceph&quot;</span>
+            configure_ceph_nova
+        <span class="k">fi</span>
+<span class="k">        if </span>is_service_enabled cinder; <span class="k">then</span>
+<span class="k">            </span>echo_summary <span class="s2">&quot;Configuring Cinder for Ceph&quot;</span>
+            configure_ceph_cinder
+</pre></div></td></tr><tr><td class=docs>
+<p>NOTE (leseb): the part below is a requirement from Cinder in order to attach volumes
+so we should run the following within the if statement.</p>
+</td><td class=code><div class=highlight><pre>
+            echo_summary <span class="s2">&quot;Configuring libvirt secret&quot;</span>
+            import_libvirt_secret_ceph
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;unstack&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>stop_ceph
+        cleanup_ceph
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;clean&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>cleanup_ceph
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/bin/bash</span>
-
-<span class="nb">set</span> -e
-<span class="nb">set</span> -o xtrace
-
-<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;${on_exit_hooks:-}&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="nv">on_exit_hooks</span><span class="o">=()</span>
-<span class="k">fi</span>
-
-on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="k">for </span>i in <span class="k">$(</span>seq <span class="k">$((${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span> <span class="o">-</span> <span class="m">1</span><span class="k">))</span> -1 0<span class="k">)</span>; <span class="k">do</span>
-<span class="nb">eval</span> <span class="s2">&quot;${on_exit_hooks[$i]}&quot;</span>
-<span class="k">done</span>
-<span class="o">}</span>
-
-add_on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="nb">local </span><span class="nv">n</span><span class="o">=</span><span class="k">${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span>
-on_exit_hooks<span class="o">[</span><span class="nv">$n</span><span class="o">]=</span><span class="s2">&quot;$*&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$n</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="nb">trap </span>on_exit EXIT
-<span class="k">fi</span>
-<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>

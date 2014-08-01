@@ -600,7 +600,7 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Destroy old instances</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">instances</span><span class="o">=</span><span class="sb">`</span>sudo virsh list --all | grep <span class="nv">$INSTANCE_NAME_PREFIX</span> | sed <span class="s2">&quot;s/.*\($INSTANCE_NAME_PREFIX[0-9a-fA-F]*\).*/\1/g&quot;</span><span class="sb">`</span>
+        <span class="nb">local </span><span class="nv">instances</span><span class="o">=</span><span class="sb">`</span>sudo virsh list --all | grep <span class="nv">$INSTANCE_NAME_PREFIX</span> | sed <span class="s2">&quot;s/.*\($INSTANCE_NAME_PREFIX[0-9a-fA-F]*\).*/\1/g&quot;</span><span class="sb">`</span>
         <span class="k">if</span> <span class="o">[</span> ! <span class="s2">&quot;$instances&quot;</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="nv">$instances</span> | xargs -n1 sudo virsh destroy <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">            echo</span> <span class="nv">$instances</span> | xargs -n1 sudo virsh undefine --managed-save <span class="o">||</span> <span class="nb">true</span>
@@ -609,7 +609,8 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Logout and delete iscsi sessions</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">tgts</span><span class="o">=</span><span class="k">$(</span>sudo iscsiadm --mode node | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | cut -d <span class="s1">&#39; &#39;</span> -f2<span class="k">)</span>
+        <span class="nb">local </span><span class="nv">tgts</span><span class="o">=</span><span class="k">$(</span>sudo iscsiadm --mode node | grep <span class="nv">$VOLUME_NAME_PREFIX</span> | cut -d <span class="s1">&#39; &#39;</span> -f2<span class="k">)</span>
+        <span class="nb">local </span>target
         <span class="k">for </span>target in <span class="nv">$tgts</span>; <span class="k">do</span>
 <span class="k">            </span>sudo iscsiadm --mode node -T <span class="nv">$target</span> --logout <span class="o">||</span> <span class="nb">true</span>
 <span class="nb">        </span><span class="k">done</span>
@@ -666,16 +667,16 @@ Wipe any existing rootwrap.d files first</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Specify rootwrap.conf as first parameter to nova-rootwrap</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ROOTWRAP_SUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP $NOVA_CONF_DIR/rootwrap.conf *&quot;</span>
+    <span class="nb">local </span><span class="nv">rootwrap_sudoer_cmd</span><span class="o">=</span><span class="s2">&quot;$NOVA_ROOTWRAP $NOVA_CONF_DIR/rootwrap.conf *&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up the rootwrap sudoers for nova</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD: $ROOTWRAP_SUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
-    chmod 0440 <span class="nv">$TEMPFILE</span>
-    sudo chown root:root <span class="nv">$TEMPFILE</span>
-    sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/nova-rootwrap
+    <span class="nb">local </span><span class="nv">tempfile</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD: $rootwrap_sudoer_cmd&quot;</span> &gt;<span class="nv">$tempfile</span>
+    chmod 0440 <span class="nv">$tempfile</span>
+    sudo chown root:root <span class="nv">$tempfile</span>
+    sudo mv <span class="nv">$tempfile</span> /etc/sudoers.d/nova-rootwrap
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -740,7 +741,7 @@ to simulate multiple systems.</p>
             <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;lxc&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">                    if</span> <span class="o">[[</span> ! <span class="s2">&quot;$DISTRO&quot;</span> &gt; natty <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                        </span><span class="nv">cgline</span><span class="o">=</span><span class="s2">&quot;none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0&quot;</span>
+<span class="k">                        </span><span class="nb">local </span><span class="nv">cgline</span><span class="o">=</span><span class="s2">&quot;none /cgroup cgroup cpuacct,memory,devices,cpu,freezer,blkio 0 0&quot;</span>
                         sudo mkdir -p /cgroup
                         <span class="k">if</span> ! grep -q cgroup /etc/fstab; <span class="k">then</span>
 <span class="k">                            </span><span class="nb">echo</span> <span class="s2">&quot;$cgline&quot;</span> | sudo tee -a /etc/fstab
@@ -814,31 +815,31 @@ SERVICE_TENANT_NAME  nova         ResellerAdmin (if Swift is enabled)</p>
 </td><td class=code><div class=highlight><pre>
 create_nova_accounts<span class="o">()</span> <span class="o">{</span>
 
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">service_tenant</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">admin_role</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Nova</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;n-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 
-<span class="k">        </span><span class="nv">NOVA_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;nova&quot;</span> <span class="se">\</span>
-            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
-        get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$NOVA_USER</span> <span class="nv">$SERVICE_TENANT</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">nova_user</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;nova&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$service_tenant</span><span class="k">)</span>
+        get_or_add_user_role <span class="nv">$admin_role</span> <span class="nv">$nova_user</span> <span class="nv">$service_tenant</span>
 
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 
-<span class="k">            </span><span class="nv">NOVA_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;nova&quot;</span> <span class="se">\</span>
+<span class="k">            </span><span class="nb">local </span><span class="nv">nova_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;nova&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;compute&quot;</span> <span class="s2">&quot;Nova Compute Service&quot;</span><span class="k">)</span>
-            get_or_create_endpoint <span class="nv">$NOVA_SERVICE</span> <span class="se">\</span>
+            get_or_create_endpoint <span class="nv">$nova_service</span> <span class="se">\</span>
                 <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span>
 
-            <span class="nv">NOVA_V3_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;novav3&quot;</span> <span class="se">\</span>
+            <span class="nb">local </span><span class="nv">nova_v3_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;novav3&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;computev3&quot;</span> <span class="s2">&quot;Nova Compute Service V3&quot;</span><span class="k">)</span>
-            get_or_create_endpoint <span class="nv">$NOVA_V3_SERVICE</span> <span class="se">\</span>
+            get_or_create_endpoint <span class="nv">$nova_v3_service</span> <span class="se">\</span>
                 <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span> <span class="se">\</span>
@@ -863,9 +864,9 @@ swift through the s3 api.</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;sql&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 
-<span class="k">            </span><span class="nv">EC2_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;ec2&quot;</span> <span class="se">\</span>
+<span class="k">            </span><span class="nb">local </span><span class="nv">ec2_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;ec2&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;ec2&quot;</span> <span class="s2">&quot;EC2 Compatibility Layer&quot;</span><span class="k">)</span>
-            get_or_create_endpoint <span class="nv">$EC2_SERVICE</span> <span class="se">\</span>
+            get_or_create_endpoint <span class="nv">$ec2_service</span> <span class="se">\</span>
                 <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Admin&quot;</span> <span class="se">\</span>
@@ -879,8 +880,8 @@ swift through the s3 api.</p>
     <span class="k">if </span>is_service_enabled n-obj swift3; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 
-<span class="k">            </span><span class="nv">S3_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;s3&quot;</span> <span class="s2">&quot;s3&quot;</span> <span class="s2">&quot;S3&quot;</span><span class="k">)</span>
-            get_or_create_endpoint <span class="nv">$S3_SERVICE</span> <span class="se">\</span>
+<span class="k">            </span><span class="nb">local </span><span class="nv">s3_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;s3&quot;</span> <span class="s2">&quot;s3&quot;</span> <span class="s2">&quot;S3&quot;</span><span class="k">)</span>
+            get_or_create_endpoint <span class="nv">$s3_service</span> <span class="se">\</span>
                 <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;http://$SERVICE_HOST:$S3_SERVICE_PORT&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;http://$SERVICE_HOST:$S3_SERVICE_PORT&quot;</span> <span class="se">\</span>
@@ -1231,7 +1232,8 @@ Use 'sg' to execute nova-compute as a member of the <strong>$LIBVIRT_GROUP</stro
 </td><td class=code><div class=highlight><pre>
         screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg $LIBVIRT_GROUP &#39;$NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf&#39;&quot;</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;fake&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        for </span>i in <span class="sb">`</span>seq 1 <span class="nv">$NUMBER_FAKE_NOVA_COMPUTE</span><span class="sb">`</span>; <span class="k">do</span>
+<span class="k">        </span><span class="nb">local </span>i
+        <span class="k">for </span>i in <span class="sb">`</span>seq 1 <span class="nv">$NUMBER_FAKE_NOVA_COMPUTE</span><span class="sb">`</span>; <span class="k">do</span>
 <span class="k">            </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf --config-file &lt;(echo -e &#39;[DEFAULT]\nhost=${HOSTNAME}${i}&#39;)&quot;</span>
         <span class="k">done</span>
 <span class="k">    else</span>

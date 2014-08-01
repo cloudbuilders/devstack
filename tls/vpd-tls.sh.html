@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>on_exit.sh</title>
+    <title>vpd-tls.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>on_exit.sh</h1></th>
+        <th class=docs><h1>vpd-tls.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,32 +359,45 @@ ul.auto-toc {
 <div class="document">
 
 
-</pre></div></td></tr><tr><td class=docs>
+<p>vpd-tls.sh - Proxy vpd01</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
-<span class="nb">set</span> -e
+<span class="nv">BIP</span><span class="o">=</span>192.168.9.111
+<span class="nv">FIP</span><span class="o">=</span>127.0.0.1
+
+<span class="nv">PORTS</span><span class="o">=</span><span class="s2">&quot;5000 35357&quot;</span>
+
+<span class="nv">ENABLE_TLS</span><span class="o">=</span>True
+<span class="nv">DATA_DIR</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>/data
+
+<span class="nv">ROOT_CA_DIR</span><span class="o">=</span><span class="nv">$DATA_DIR</span>/root
+<span class="nv">INT_CA_DIR</span><span class="o">=</span><span class="nv">$DATA_DIR</span>/int
+
+<span class="nv">OPENSSL_CONF</span><span class="o">=</span>/usr/local/etc/openssl/openssl.cnf
+<span class="nv">OPENSSL</span><span class="o">=</span>/usr/local/Cellar/openssl/1.0.1c/bin/openssl
+
+<span class="nb">source </span>functions
+<span class="nb">source </span>lib/tls
+
+</pre></div></td></tr><tr><td class=docs>
+<p>add tls.devstack.org to /etc/hosts - be smart!!!</p>
+</td><td class=code><div class=highlight><pre>
+
+configure_CA
+init_CA
+
 <span class="nb">set</span> -o xtrace
-
-<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;${on_exit_hooks:-}&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="nv">on_exit_hooks</span><span class="o">=()</span>
-<span class="k">fi</span>
-
-on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="k">for </span>i in <span class="k">$(</span>seq <span class="k">$((${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span> <span class="o">-</span> <span class="m">1</span><span class="k">))</span> -1 0<span class="k">)</span>; <span class="k">do</span>
-<span class="nb">eval</span> <span class="s2">&quot;${on_exit_hooks[$i]}&quot;</span>
+<span class="k">for </span>i in <span class="nv">$PORTS</span>; <span class="k">do</span>
+<span class="k">    </span>stud --tls -f <span class="nv">$FIP</span>,<span class="nv">$i</span> -b <span class="nv">$BIP</span>,<span class="nv">$i</span> <span class="nv">$DEVSTACK_CERT</span> &amp;
 <span class="k">done</span>
-<span class="o">}</span>
 
-add_on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="nb">local </span><span class="nv">n</span><span class="o">=</span><span class="k">${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span>
-on_exit_hooks<span class="o">[</span><span class="nv">$n</span><span class="o">]=</span><span class="s2">&quot;$*&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$n</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="nb">trap </span>on_exit EXIT
-<span class="k">fi</span>
-<span class="o">}</span>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>

@@ -983,6 +983,48 @@ spinners, etc).  We never override an existing version</p>
     <span class="o">}</span>
 <span class="k">fi</span>
 
+
+</pre></div></td></tr><tr><td class=docs>
+<p>create_disk - Create backing disk</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>create_disk <span class="o">{</span>
+    <span class="nb">local </span>node_number
+    <span class="nb">local </span><span class="nv">disk_image</span><span class="o">=</span><span class="k">${</span><span class="nv">1</span><span class="k">}</span>
+    <span class="nb">local </span><span class="nv">storage_data_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">2</span><span class="k">}</span>
+    <span class="nb">local </span><span class="nv">loopback_disk_size</span><span class="o">=</span><span class="k">${</span><span class="nv">3</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Create a loopback disk and format it to XFS.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[[</span> -e <span class="k">${</span><span class="nv">disk_image</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        if </span>egrep -q <span class="k">${</span><span class="nv">storage_data_dir</span><span class="k">}</span> /proc/mounts; <span class="k">then</span>
+<span class="k">            </span>sudo umount <span class="k">${</span><span class="nv">storage_data_dir</span><span class="k">}</span>/drives/sdb1
+            sudo rm -f <span class="k">${</span><span class="nv">disk_image</span><span class="k">}</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
+<span class="k">    </span>sudo mkdir -p <span class="k">${</span><span class="nv">storage_data_dir</span><span class="k">}</span>/drives/images
+
+    sudo truncate -s <span class="k">${</span><span class="nv">loopback_disk_size</span><span class="k">}</span> <span class="k">${</span><span class="nv">disk_image</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Make a fresh XFS filesystem. Use bigger inodes so xattr can fit in
+a single inode. Keeping the default inode size (256) will result in multiple
+inodes being used to store xattr. Retrieving the xattr will be slower
+since we have to read multiple inodes. This statement is true for both
+Swift and Ceph.</p>
+</td><td class=code><div class=highlight><pre>
+    sudo mkfs.xfs -f -i <span class="nv">size</span><span class="o">=</span>1024 <span class="k">${</span><span class="nv">disk_image</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Mount the disk with mount options to make it as efficient as possible</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> ! egrep -q <span class="k">${</span><span class="nv">storage_data_dir</span><span class="k">}</span> /proc/mounts; <span class="k">then</span>
+<span class="k">        </span>sudo mount -t xfs -o loop,noatime,nodiratime,nobarrier,logbufs<span class="o">=</span>8  <span class="se">\</span>
+            <span class="k">${</span><span class="nv">disk_image</span><span class="k">}</span> <span class="k">${</span><span class="nv">storage_data_dir</span><span class="k">}</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Restore xtrace</p>
 </td><td class=code><div class=highlight><pre>

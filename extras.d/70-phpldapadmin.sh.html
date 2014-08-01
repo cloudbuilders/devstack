@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>on_exit.sh</title>
+    <title>70-phpldapadmin.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>on_exit.sh</h1></th>
+        <th class=docs><h1>70-phpldapadmin.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,32 +359,50 @@ ul.auto-toc {
 <div class="document">
 
 
+<p>phpldapadmin.sh - DevStack extras script</p>
+</td><td class=code><div class=highlight><pre>
+
+
+<span class="k">if </span>is_service_enabled ldap; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;source&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Initial source</p>
+</td><td class=code><div class=highlight><pre>
+        :
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;stack&quot;</span>  <span class="o">&amp;&amp;</span> <span class="s2">&quot;$2&quot;</span> <span class="o">==</span> <span class="s2">&quot;post-config&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>echo_summary <span class="s2">&quot;Configuring PHPLDAPAdmin&quot;</span>
+        install_package phpldapadmin
+        sudo sed -i -e <span class="s2">&quot;</span>
+<span class="s2">            s|&#39;host&#39;,&#39;127.0.0.1&#39;|&#39;host&#39;,&#39;ldap://localhost&#39;|</span>
+<span class="s2">            s|&#39;base&#39;,array(&#39;dc=example,dc=com&#39;)|&#39;base&#39;,array(&#39;$LDAP_BASE_DN&#39;)|</span>
+<span class="s2">            s|&#39;bind_id&#39;,&#39;cn=admin,dc=example,dc=com&#39;|&#39;bind_id&#39;,&#39;$LDAP_MANAGER_DN&#39;|</span>
+<span class="s2">            s|&#39;bind_pass&#39;,&#39;secret&#39;|&#39;bind_pass&#39;,&#39;secrete&#39;|</span>
+<span class="s2">        &quot;</span> /etc/phpldapadmin/config.php
+        restart_service apache2
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;unstack&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>no-op</p>
+</td><td class=code><div class=highlight><pre>
+        :
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;clean&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>no-op</p>
+</td><td class=code><div class=highlight><pre>
+        :
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
 </pre></div></td></tr><tr><td class=docs>
 </td><td class=code><div class=highlight><pre>
-<span class="c">#!/bin/bash</span>
-
-<span class="nb">set</span> -e
-<span class="nb">set</span> -o xtrace
-
-<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;${on_exit_hooks:-}&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="nv">on_exit_hooks</span><span class="o">=()</span>
-<span class="k">fi</span>
-
-on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="k">for </span>i in <span class="k">$(</span>seq <span class="k">$((${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span> <span class="o">-</span> <span class="m">1</span><span class="k">))</span> -1 0<span class="k">)</span>; <span class="k">do</span>
-<span class="nb">eval</span> <span class="s2">&quot;${on_exit_hooks[$i]}&quot;</span>
-<span class="k">done</span>
-<span class="o">}</span>
-
-add_on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="nb">local </span><span class="nv">n</span><span class="o">=</span><span class="k">${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span>
-on_exit_hooks<span class="o">[</span><span class="nv">$n</span><span class="o">]=</span><span class="s2">&quot;$*&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$n</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="nb">trap </span>on_exit EXIT
-<span class="k">fi</span>
-<span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>

@@ -957,6 +957,7 @@ is_ubuntu</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>get_release_name_from_branch <span class="o">{</span>
     <span class="nb">local </span><span class="nv">branch</span><span class="o">=</span><span class="nv">$1</span>
+
     <span class="k">if</span> <span class="o">[[</span> <span class="nv">$branch</span> <span class="o">=</span>~ <span class="s2">&quot;stable/&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="k">${</span><span class="nv">branch</span><span class="p">#*/</span><span class="k">}</span>
     <span class="k">else</span>
@@ -968,82 +969,83 @@ is_ubuntu</p>
 <p>git clone only if directory doesn't exist already.  Since <tt class="docutils literal">DEST</tt> might not
 be owned by the installation user, we create the directory and change the
 ownership to the proper user.
-Set global RECLONE=yes to simulate a clone when dest-dir exists
-Set global ERROR_ON_CLONE=True to abort execution with an error if the git repo
+Set global <tt class="docutils literal">RECLONE=yes</tt> to simulate a clone when dest-dir exists
+Set global <tt class="docutils literal">ERROR_ON_CLONE=True</tt> to abort execution with an error if the git repo
 does not exist (default is False, meaning the repo will be cloned).
-Uses global <tt class="docutils literal">OFFLINE</tt>
+Uses globals <tt class="docutils literal">ERROR_ON_CLONE</tt>, <tt class="docutils literal">OFFLINE</tt>, <tt class="docutils literal">RECLONE</tt>
 git_clone remote dest-dir branch</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>git_clone <span class="o">{</span>
-    <span class="nv">GIT_REMOTE</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nv">GIT_DEST</span><span class="o">=</span><span class="nv">$2</span>
-    <span class="nv">GIT_REF</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">git_remote</span><span class="o">=</span><span class="nv">$1</span>
+    <span class="nb">local </span><span class="nv">git_dest</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nb">local </span><span class="nv">git_ref</span><span class="o">=</span><span class="nv">$3</span>
+    <span class="nb">local </span><span class="nv">orig_dir</span><span class="o">=</span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>
+
     <span class="nv">RECLONE</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$RECLONE</span><span class="k">)</span>
-    <span class="nb">local </span><span class="nv">orig_dir</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$OFFLINE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Running in offline mode, clones already exist&quot;</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>print out the results so we know what change was used in the logs</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">cd</span> <span class="nv">$GIT_DEST</span>
+        <span class="nb">cd</span> <span class="nv">$git_dest</span>
         git show --oneline | head -1
         <span class="nb">cd</span> <span class="nv">$orig_dir</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 
-<span class="k">    if </span><span class="nb">echo</span> <span class="nv">$GIT_REF</span> | egrep -q <span class="s2">&quot;^refs&quot;</span>; <span class="k">then</span>
+<span class="k">    if </span><span class="nb">echo</span> <span class="nv">$git_ref</span> | egrep -q <span class="s2">&quot;^refs&quot;</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>If our branch name is a gerrit style refs/changes/...</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$GIT_DEST</span> <span class="o">]]</span>; <span class="k">then</span>
+        <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$git_dest</span> <span class="o">]]</span>; <span class="k">then</span>
             <span class="o">[[</span> <span class="s2">&quot;$ERROR_ON_CLONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="se">\</span>
                 die <span class="nv">$LINENO</span> <span class="s2">&quot;Cloning not allowed in this configuration&quot;</span>
-            git_timed clone <span class="nv">$GIT_REMOTE</span> <span class="nv">$GIT_DEST</span>
+            git_timed clone <span class="nv">$git_remote</span> <span class="nv">$git_dest</span>
         <span class="k">fi</span>
-<span class="k">        </span><span class="nb">cd</span> <span class="nv">$GIT_DEST</span>
-        git_timed fetch <span class="nv">$GIT_REMOTE</span> <span class="nv">$GIT_REF</span> <span class="o">&amp;&amp;</span> git checkout FETCH_HEAD
+<span class="k">        </span><span class="nb">cd</span> <span class="nv">$git_dest</span>
+        git_timed fetch <span class="nv">$git_remote</span> <span class="nv">$git_ref</span> <span class="o">&amp;&amp;</span> git checkout FETCH_HEAD
     <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>do a full clone only if the directory doesn't exist</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$GIT_DEST</span> <span class="o">]]</span>; <span class="k">then</span>
+        <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$git_dest</span> <span class="o">]]</span>; <span class="k">then</span>
             <span class="o">[[</span> <span class="s2">&quot;$ERROR_ON_CLONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="se">\</span>
                 die <span class="nv">$LINENO</span> <span class="s2">&quot;Cloning not allowed in this configuration&quot;</span>
-            git_timed clone <span class="nv">$GIT_REMOTE</span> <span class="nv">$GIT_DEST</span>
-            <span class="nb">cd</span> <span class="nv">$GIT_DEST</span>
+            git_timed clone <span class="nv">$git_remote</span> <span class="nv">$git_dest</span>
+            <span class="nb">cd</span> <span class="nv">$git_dest</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>This checkout syntax works for both branches and tags</p>
 </td><td class=code><div class=highlight><pre>
-            git checkout <span class="nv">$GIT_REF</span>
+            git checkout <span class="nv">$git_ref</span>
         <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$RECLONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>if it does exist then simulate what clone does if asked to RECLONE</p>
 </td><td class=code><div class=highlight><pre>
-            <span class="nb">cd</span> <span class="nv">$GIT_DEST</span>
+            <span class="nb">cd</span> <span class="nv">$git_dest</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>set the url to pull from and fetch</p>
 </td><td class=code><div class=highlight><pre>
-            git remote <span class="nb">set</span>-url origin <span class="nv">$GIT_REMOTE</span>
+            git remote <span class="nb">set</span>-url origin <span class="nv">$git_remote</span>
             git_timed fetch origin
 </pre></div></td></tr><tr><td class=docs>
 <p>remove the existing ignored files (like pyc) as they cause breakage
 (due to the py files having older timestamps than our pyc, so python
 thinks the pyc files are correct using them)</p>
 </td><td class=code><div class=highlight><pre>
-            find <span class="nv">$GIT_DEST</span> -name <span class="s1">&#39;*.pyc&#39;</span> -delete
+            find <span class="nv">$git_dest</span> -name <span class="s1">&#39;*.pyc&#39;</span> -delete
 
 </pre></div></td></tr><tr><td class=docs>
-<p>handle GIT_REF accordingly to type (tag, branch)</p>
+<p>handle git_ref accordingly to type (tag, branch)</p>
 </td><td class=code><div class=highlight><pre>
-            <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;`git show-ref refs/tags/$GIT_REF`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span>git_update_tag <span class="nv">$GIT_REF</span>
-            <span class="k">elif</span> <span class="o">[[</span> -n <span class="s2">&quot;`git show-ref refs/heads/$GIT_REF`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span>git_update_branch <span class="nv">$GIT_REF</span>
-            <span class="k">elif</span> <span class="o">[[</span> -n <span class="s2">&quot;`git show-ref refs/remotes/origin/$GIT_REF`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span>git_update_remote_branch <span class="nv">$GIT_REF</span>
+            <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;`git show-ref refs/tags/$git_ref`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>git_update_tag <span class="nv">$git_ref</span>
+            <span class="k">elif</span> <span class="o">[[</span> -n <span class="s2">&quot;`git show-ref refs/heads/$git_ref`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>git_update_branch <span class="nv">$git_ref</span>
+            <span class="k">elif</span> <span class="o">[[</span> -n <span class="s2">&quot;`git show-ref refs/remotes/origin/$git_ref`&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span>git_update_remote_branch <span class="nv">$git_ref</span>
             <span class="k">else</span>
-<span class="k">                </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;$GIT_REF is neither branch nor tag&quot;</span>
+<span class="k">                </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;$git_ref is neither branch nor tag&quot;</span>
             <span class="k">fi</span>
 
 <span class="k">        fi</span>
@@ -1052,7 +1054,7 @@ thinks the pyc files are correct using them)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>print out the results so we know what change was used in the logs</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nb">cd</span> <span class="nv">$GIT_DEST</span>
+    <span class="nb">cd</span> <span class="nv">$git_dest</span>
     git show --oneline | head -1
     <span class="nb">cd</span> <span class="nv">$orig_dir</span>
 <span class="o">}</span>
@@ -1097,15 +1099,14 @@ timeout; otherwise assume fatal failure</p>
 git_update_branch ref</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>git_update_branch <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">git_branch</span><span class="o">=</span><span class="nv">$1</span>
 
-    <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$1</span>
-
-    git checkout -f origin/<span class="nv">$GIT_BRANCH</span>
+    git checkout -f origin/<span class="nv">$git_branch</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>a local branch might not exist</p>
 </td><td class=code><div class=highlight><pre>
-    git branch -D <span class="nv">$GIT_BRANCH</span> <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>git checkout -b <span class="nv">$GIT_BRANCH</span>
+    git branch -D <span class="nv">$git_branch</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span>git checkout -b <span class="nv">$git_branch</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1113,10 +1114,9 @@ git_update_branch ref</p>
 git_update_remote_branch ref</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>git_update_remote_branch <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">git_branch</span><span class="o">=</span><span class="nv">$1</span>
 
-    <span class="nv">GIT_BRANCH</span><span class="o">=</span><span class="nv">$1</span>
-
-    git checkout -b <span class="nv">$GIT_BRANCH</span> -t origin/<span class="nv">$GIT_BRANCH</span>
+    git checkout -b <span class="nv">$git_branch</span> -t origin/<span class="nv">$git_branch</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1125,15 +1125,14 @@ as working copy will be in a detached mode
 git_update_tag ref</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>git_update_tag <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">git_tag</span><span class="o">=</span><span class="nv">$1</span>
 
-    <span class="nv">GIT_TAG</span><span class="o">=</span><span class="nv">$1</span>
-
-    git tag -d <span class="nv">$GIT_TAG</span>
+    git tag -d <span class="nv">$git_tag</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>fetching given tag only</p>
 </td><td class=code><div class=highlight><pre>
-    git_timed fetch origin tag <span class="nv">$GIT_TAG</span>
-    git checkout -f <span class="nv">$GIT_TAG</span>
+    git_timed fetch origin tag <span class="nv">$git_tag</span>
+    git checkout -f <span class="nv">$git_tag</span>
 <span class="o">}</span>
 
 

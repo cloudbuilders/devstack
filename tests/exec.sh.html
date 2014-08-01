@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-eqiv='content-type' content='text/html;charset=utf-8'>
-    <title>on_exit.sh</title>
+    <title>exec.sh</title>
     <link rel=stylesheet href="http://jashkenas.github.com/docco/resources/docco.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <table cellspacing=0 cellpadding=0>
     <thead>
       <tr>
-        <th class=docs><h1>on_exit.sh</h1></th>
+        <th class=docs><h1>exec.sh</h1></th>
         <th class=code></th>
       </tr>
     </thead>
@@ -359,32 +359,117 @@ ul.auto-toc {
 <div class="document">
 
 
-</pre></div></td></tr><tr><td class=docs>
+<p>tests/exec.sh - Test DevStack screen_it() and screen_stop()</p>
 </td><td class=code><div class=highlight><pre>
 <span class="c">#!/bin/bash</span>
 
-<span class="nb">set</span> -e
-<span class="nb">set</span> -o xtrace
-
-<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;${on_exit_hooks:-}&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="nv">on_exit_hooks</span><span class="o">=()</span>
+<span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$1</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;$0 start|stop&quot;</span>
+    <span class="nb">exit </span>1
 <span class="k">fi</span>
 
-on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="k">for </span>i in <span class="k">$(</span>seq <span class="k">$((${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span> <span class="o">-</span> <span class="m">1</span><span class="k">))</span> -1 0<span class="k">)</span>; <span class="k">do</span>
-<span class="nb">eval</span> <span class="s2">&quot;${on_exit_hooks[$i]}&quot;</span>
-<span class="k">done</span>
+<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span>/.. <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
+
+<span class="nv">USE_SCREEN</span><span class="o">=</span><span class="k">${</span><span class="nv">USE_SCREEN</span><span class="k">:-</span><span class="nv">True</span><span class="k">}</span>
+
+<span class="nv">ENABLED_SERVICES</span><span class="o">=</span>fake-service
+<span class="nv">SCREEN_LOGDIR</span><span class="o">=</span>/tmp
+<span class="nv">SCREEN_NAME</span><span class="o">=</span><span class="nb">test</span>
+<span class="nv">SERVICE_DIR</span><span class="o">=</span>/tmp
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Kill background processes on exit</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">trap </span>clean EXIT
+clean<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nb">jobs</span> -p
+    <span class="nb">kill</span> &gt;/dev/null 2&gt;&amp;1 <span class="k">$(</span><span class="nb">jobs</span> -p<span class="k">)</span>
+    <span class="nb">exit</span> <span class="nv">$r</span>
 <span class="o">}</span>
 
-add_on_exit<span class="o">()</span>
-<span class="o">{</span>
-<span class="nb">local </span><span class="nv">n</span><span class="o">=</span><span class="k">${#</span><span class="nv">on_exit_hooks</span><span class="p">[*]</span><span class="k">}</span>
-on_exit_hooks<span class="o">[</span><span class="nv">$n</span><span class="o">]=</span><span class="s2">&quot;$*&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$n</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="nb">trap </span>on_exit EXIT
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Exit on any errors so that errors don't compound</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">trap </span>failed ERR
+failed<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">r</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nb">jobs</span> -p
+    <span class="nb">kill</span> &gt;/dev/null 2&gt;&amp;1 <span class="k">$(</span><span class="nb">jobs</span> -p<span class="k">)</span>
+    <span class="nb">set</span> +o xtrace
+    <span class="o">[</span> -n <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;${0##*/} failed: full log in $LOGFILE&quot;</span>
+    <span class="nb">exit</span> <span class="nv">$r</span>
+<span class="o">}</span>
+
+<span class="k">function </span>setup_screen<span class="o">()</span> <span class="o">{</span>
+<span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$SERVICE_DIR</span>/<span class="nv">$SCREEN_NAME</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>mkdir -p <span class="nv">$SERVICE_DIR</span>/<span class="nv">$SCREEN_NAME</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$USE_SCREEN&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Create a new named screen to run processes in</p>
+</td><td class=code><div class=highlight><pre>
+    screen -d -m -S <span class="nv">$SCREEN_NAME</span> -t shell -s /bin/bash
+    sleep 1
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set a reasonable status bar</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;$SCREEN_HARDSTATUS&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">SCREEN_HARDSTATUS</span><span class="o">=</span><span class="s1">&#39;%{= .} %-Lw%{= .}%&gt; %n%f %t*%{= .}%+Lw%&lt; %-=%{g}(%{d}%H/%l%{g})&#39;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>screen -r <span class="nv">$SCREEN_NAME</span> -X hardstatus alwayslastline <span class="s2">&quot;$SCREEN_HARDSTATUS&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clear screen rc file</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SCREENRC</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/tests/<span class="nv">$SCREEN_NAME</span>-screenrc
+<span class="k">if</span> <span class="o">[[</span> -e <span class="nv">$SCREENRC</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> -n &gt; <span class="nv">$SCREENRC</span>
 <span class="k">fi</span>
 <span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Mimic logging
+Set up output redirection without log files
+Copy stdout to fd 3</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>3&gt;&amp;1
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VERBOSE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Throw away stdout and stderr</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="c">#exec 1&gt;/dev/null 2&gt;&amp;1</span>
+        :
+    <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Always send summary fd to original stdout</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">exec </span>6&gt;&amp;3
+
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;start&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Start service [$$]&quot;</span>
+    setup_screen
+    screen_it fake-service <span class="s2">&quot;$TOP_DIR/tests/fake-service.sh&quot;</span>
+<span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$1&quot;</span> <span class="o">==</span> <span class="s2">&quot;stop&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Stop service [$$]&quot;</span>
+    screen_stop fake-service
+<span class="k">else</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;Unknown command&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+
+</td><td class=code><div class=highlight><pre>
+</pre></div></td></tr><tr><td class=docs>
+</pre></div></td></tr><tr><td class=docs>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
