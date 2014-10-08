@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title>Neutron Modular Layer 2 plugin</title>
 <style type="text/css">
 
@@ -367,16 +367,16 @@ ul.auto-toc {
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Enable this to simply and quickly enable tunneling with ML2.
-Select either 'gre', 'vxlan', or '(gre vxlan)'</p>
+Select either 'gre', 'vxlan', or 'gre,vxlan'</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_TENANT_NETWORK_TYPE</span><span class="k">:-}</span>
+<span class="nv">Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">Q_ML2_TENANT_NETWORK_TYPE</span><span class="k">:-</span><span class="s2">&quot;vxlan&quot;</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>This has to be set here since the agent will set this in the config file</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>Q_AGENT_EXTRA_AGENT_OPTS+<span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;gre&quot;</span> <span class="o">||</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> <span class="o">==</span> <span class="s2">&quot;vxlan&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nv">Q_TUNNEL_TYPES</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span>
 <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>Q_AGENT_EXTRA_AGENT_OPTS+<span class="o">=(</span><span class="nv">tunnel_types</span><span class="o">=</span>gre<span class="o">)</span>
+<span class="k">    </span><span class="nv">Q_TUNNEL_TYPES</span><span class="o">=</span>gre
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -439,7 +439,7 @@ the L3 service plugin which must therefore be specified.</p>
 <span class="o">}</span>
 
 <span class="k">function </span>neutron_plugin_configure_service <span class="o">{</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_ML2_TENANT_NETWORK_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;local&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>Q_SRV_EXTRA_OPTS+<span class="o">=(</span><span class="nv">tenant_network_types</span><span class="o">=</span><span class="nv">$Q_ML2_TENANT_NETWORK_TYPE</span><span class="o">)</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLE_TENANT_TUNNELS&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>

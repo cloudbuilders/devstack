@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -413,9 +413,17 @@ Dependencies:</p>
 <span class="nv">NOVA_CONF_DIR</span><span class="o">=</span>/etc/nova
 <span class="nv">NOVA_CONF</span><span class="o">=</span><span class="nv">$NOVA_CONF_DIR</span>/nova.conf
 <span class="nv">NOVA_CELLS_CONF</span><span class="o">=</span><span class="nv">$NOVA_CONF_DIR</span>/nova-cells.conf
+<span class="nv">NOVA_FAKE_CONF</span><span class="o">=</span><span class="nv">$NOVA_CONF_DIR</span>/nova-fake.conf
 <span class="nv">NOVA_CELLS_DB</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_CELLS_DB</span><span class="k">:-</span><span class="nv">nova_cell</span><span class="k">}</span>
 
 <span class="nv">NOVA_API_PASTE_INI</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_API_PASTE_INI</span><span class="k">:-</span><span class="nv">$NOVA_CONF_DIR</span><span class="p">/api-paste.ini</span><span class="k">}</span>
+
+<span class="k">if </span>is_ssl_enabled_service <span class="s2">&quot;nova&quot;</span> <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">    </span><span class="nv">NOVA_SERVICE_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;https&quot;</span>
+    <span class="nv">EC2_SERVICE_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;https&quot;</span>
+<span class="k">else</span>
+<span class="k">    </span><span class="nv">EC2_SERVICE_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;http&quot;</span>
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Public facing bits</p>
@@ -424,6 +432,8 @@ Dependencies:</p>
 <span class="nv">NOVA_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8774</span><span class="k">}</span>
 <span class="nv">NOVA_SERVICE_PORT_INT</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_SERVICE_PORT_INT</span><span class="k">:-</span><span class="nv">18774</span><span class="k">}</span>
 <span class="nv">NOVA_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">NOVA_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">$SERVICE_PROTOCOL</span><span class="k">}</span>
+<span class="nv">EC2_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8773</span><span class="k">}</span>
+<span class="nv">EC2_SERVICE_PORT_INT</span><span class="o">=</span><span class="k">${</span><span class="nv">EC2_SERVICE_PORT_INT</span><span class="k">:-</span><span class="nv">18773</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Support entry points installation of console scripts</p>
@@ -438,12 +448,6 @@ Dependencies:</p>
 <p>Set the paths of certain binaries</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">NOVA_ROOTWRAP</span><span class="o">=</span><span class="k">$(</span>get_rootwrap_location nova<span class="k">)</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Allow rate limiting to be turned off for testing, like for Tempest
-NOTE: Set API_RATE_LIMIT=&quot;False&quot; to turn OFF rate limiting</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">API_RATE_LIMIT</span><span class="o">=</span><span class="k">${</span><span class="nv">API_RATE_LIMIT</span><span class="k">:-</span><span class="s2">&quot;True&quot;</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Option to enable/disable config drive
@@ -477,6 +481,12 @@ always using 'eth0' which doesn't exist on new Linux distros at all.</p>
     | sed <span class="s1">&#39;s/://&#39;</span> <span class="se">\</span>
     | grep ^<span class="o">[</span>ep<span class="o">]</span> <span class="se">\</span>
     | head -1<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>$NOVA_VNC_ENABLED can be used to forcibly enable vnc configuration.
+In multi-node setups allows compute hosts to not run n-novnc.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">NOVA_VNC_ENABLED</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$NOVA_VNC_ENABLED</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
@@ -837,13 +847,13 @@ create_nova_accounts<span class="o">()</span> <span class="o">{</span>
                 <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span>
 
-            <span class="nb">local </span><span class="nv">nova_v3_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;novav3&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;computev3&quot;</span> <span class="s2">&quot;Nova Compute Service V3&quot;</span><span class="k">)</span>
-            get_or_create_endpoint <span class="nv">$nova_v3_service</span> <span class="se">\</span>
+            <span class="nb">local </span><span class="nv">nova_v21_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;novav21&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;computev21&quot;</span> <span class="s2">&quot;Nova Compute Service V2.1&quot;</span><span class="k">)</span>
+            get_or_create_endpoint <span class="nv">$nova_v21_service</span> <span class="se">\</span>
                 <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v3&quot;</span>
+                <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2.1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2.1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$NOVA_SERVICE_PROTOCOL://$NOVA_SERVICE_HOST:$NOVA_SERVICE_PORT/v2.1/\$(tenant_id)s&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
@@ -868,9 +878,9 @@ swift through the s3 api.</p>
                 <span class="s2">&quot;ec2&quot;</span> <span class="s2">&quot;EC2 Compatibility Layer&quot;</span><span class="k">)</span>
             get_or_create_endpoint <span class="nv">$ec2_service</span> <span class="se">\</span>
                 <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Admin&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>
+                <span class="s2">&quot;$EC2_SERVICE_PROTOCOL://$SERVICE_HOST:8773/services/Cloud&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$EC2_SERVICE_PROTOCOL://$SERVICE_HOST:8773/services/Admin&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$EC2_SERVICE_PROTOCOL://$SERVICE_HOST:8773/services/Cloud&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
@@ -905,14 +915,13 @@ swift through the s3 api.</p>
     rm -f <span class="nv">$NOVA_CONF</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT verbose <span class="s2">&quot;True&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT debug <span class="s2">&quot;$ENABLE_DEBUG_LOG_LEVEL&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT auth_strategy <span class="s2">&quot;keystone&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT allow_resize_to_same_host <span class="s2">&quot;True&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT allow_migrate_to_same_host <span class="s2">&quot;True&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT api_paste_config <span class="s2">&quot;$NOVA_API_PASTE_INI&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT rootwrap_config <span class="s2">&quot;$NOVA_CONF_DIR/rootwrap.conf&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_driver <span class="s2">&quot;$SCHEDULER&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT dhcpbridge_flagfile <span class="s2">&quot;$NOVA_CONF&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT force_dhcp_release <span class="s2">&quot;True&quot;</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT fixed_range <span class="s2">&quot;&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT default_floating_pool <span class="s2">&quot;$PUBLIC_NETWORK_NAME&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_host <span class="s2">&quot;$SERVICE_HOST&quot;</span>
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT s3_port <span class="s2">&quot;$S3_SERVICE_PORT&quot;</span>
@@ -944,20 +953,19 @@ install things in /usr/bin</p>
             iniset <span class="nv">$NOVA_CONF</span> DEFAULT osapi_compute_listen_port <span class="s2">&quot;$NOVA_SERVICE_PORT_INT&quot;</span>
         <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Add keystone authtoken configuration</p>
-</td><td class=code><div class=highlight><pre>
-
-        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
-        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
-        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken admin_user nova
-        iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+<span class="k">        </span>configure_auth_token_middleware <span class="nv">$NOVA_CONF</span> nova <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
     <span class="k">fi</span>
 
-<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> keystone_authtoken signing_dir <span class="nv">$NOVA_AUTH_CACHE_DIR</span>
+<span class="k">    if </span>is_service_enabled cinder; <span class="k">then</span>
+<span class="k">        if </span>is_ssl_enabled_service <span class="s2">&quot;cinder&quot;</span> <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">            </span><span class="nv">CINDER_SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_SERVICE_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+            <span class="nv">CINDER_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8776</span><span class="k">}</span>
+            iniset <span class="nv">$NOVA_CONF</span> cinder endpoint_template <span class="s2">&quot;https://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/%(project_id)s&quot;</span>
+            iniset <span class="nv">$NOVA_CONF</span> cinder ca_certificates_file <span class="nv">$SSL_BUNDLE_FILE</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 
-    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$NOVA_STATE_PATH&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[</span> -n <span class="s2">&quot;$NOVA_STATE_PATH&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT state_path <span class="s2">&quot;$NOVA_STATE_PATH&quot;</span>
         iniset <span class="nv">$NOVA_CONF</span> DEFAULT lock_path <span class="s2">&quot;$NOVA_STATE_PATH&quot;</span>
     <span class="k">fi</span>
@@ -970,9 +978,6 @@ install things in /usr/bin</p>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$SYSLOG&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT use_syslog <span class="s2">&quot;True&quot;</span>
-    <span class="k">fi</span>
-<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$API_RATE_LIMIT&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT api_rate_limit <span class="s2">&quot;False&quot;</span>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$FORCE_CONFIG_DRIVE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT force_config_drive <span class="s2">&quot;$FORCE_CONFIG_DRIVE&quot;</span>
@@ -1008,7 +1013,7 @@ These settings don't hurt anything if n-xvnc and n-novnc are disabled</p>
         iniset <span class="nv">$NOVA_CONF</span> spice html5proxy_base_url <span class="s2">&quot;$SPICEHTML5PROXY_URL&quot;</span>
     <span class="k">fi</span>
 
-<span class="k">    if </span>is_service_enabled n-novnc <span class="o">||</span> is_service_enabled n-xvnc; <span class="k">then</span>
+<span class="k">    if </span>is_service_enabled n-novnc <span class="o">||</span> is_service_enabled n-xvnc <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$NOVA_VNC_ENABLED&quot;</span> !<span class="o">=</span> False <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Address on which instance vncservers will listen on compute hosts.
 For multi-host, this should be the management ip of the compute host.</p>
@@ -1037,8 +1042,33 @@ For multi-host, this should be the management ip of the compute host.</p>
 <span class="nb">    </span><span class="k">fi</span>
 
 <span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_dmz_host <span class="s2">&quot;$EC2_DMZ_HOST&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT keystone_ec2_url <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/v2.0/ec2tokens
     iniset_rpc_backend nova <span class="nv">$NOVA_CONF</span> DEFAULT
-    iniset <span class="nv">$NOVA_CONF</span> glance api_servers <span class="s2">&quot;$GLANCE_HOSTPORT&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> glance api_servers <span class="s2">&quot;${GLANCE_SERVICE_PROTOCOL}://${GLANCE_HOSTPORT}&quot;</span>
+
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT osapi_compute_workers <span class="s2">&quot;$API_WORKERS&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_workers <span class="s2">&quot;$API_WORKERS&quot;</span>
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT metadata_workers <span class="s2">&quot;$API_WORKERS&quot;</span>
+
+    <span class="k">if </span>is_ssl_enabled_service glance <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT glance_protocol https
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Register SSL certificates if provided</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_ssl_enabled_service nova; <span class="k">then</span>
+<span class="k">        </span>ensure_certificates NOVA
+
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT ssl_cert_file <span class="s2">&quot;$NOVA_SSL_CERT&quot;</span>
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT ssl_key_file <span class="s2">&quot;$NOVA_SSL_KEY&quot;</span>
+
+        iniset <span class="nv">$NOVA_CONF</span> DEFAULT enabled_ssl_apis <span class="s2">&quot;$NOVA_ENABLED_APIS&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$NOVA_CONF</span> DEFAULT ec2_listen_port <span class="nv">$EC2_SERVICE_PORT_INT</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 <span class="k">function </span>init_nova_cells <span class="o">{</span>
@@ -1197,13 +1227,15 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 <p>Get right service port for testing</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nb">local </span><span class="nv">service_port</span><span class="o">=</span><span class="nv">$NOVA_SERVICE_PORT</span>
+    <span class="nb">local </span><span class="nv">service_protocol</span><span class="o">=</span><span class="nv">$NOVA_SERVICE_PROTOCOL</span>
     <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 <span class="k">        </span><span class="nv">service_port</span><span class="o">=</span><span class="nv">$NOVA_SERVICE_PORT_INT</span>
+        <span class="nv">service_protocol</span><span class="o">=</span><span class="s2">&quot;http&quot;</span>
     <span class="k">fi</span>
 
-<span class="k">    </span>screen_it n-api <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api&quot;</span>
+<span class="k">    </span>run_process n-api <span class="s2">&quot;$NOVA_BIN_DIR/nova-api&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for nova-api to start...&quot;</span>
-    <span class="k">if</span> ! wait_for_service <span class="nv">$SERVICE_TIMEOUT</span> http://<span class="nv">$SERVICE_HOST</span>:<span class="nv">$service_port</span>; <span class="k">then</span>
+    <span class="k">if</span> ! wait_for_service <span class="nv">$SERVICE_TIMEOUT</span> <span class="nv">$service_protocol</span>://<span class="nv">$SERVICE_HOST</span>:<span class="nv">$service_port</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;nova-api did not start&quot;</span>
     <span class="k">fi</span>
 
@@ -1212,6 +1244,7 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
 <span class="k">        </span>start_tls_proxy <span class="s1">&#39;*&#39;</span> <span class="nv">$NOVA_SERVICE_PORT</span> <span class="nv">$NOVA_SERVICE_HOST</span> <span class="nv">$NOVA_SERVICE_PORT_INT</span> &amp;
+        start_tls_proxy <span class="s1">&#39;*&#39;</span> <span class="nv">$EC2_SERVICE_PORT</span> <span class="nv">$NOVA_SERVICE_HOST</span> <span class="nv">$EC2_SERVICE_PORT_INT</span> &amp;
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -1228,19 +1261,27 @@ use latin1 by default, and then upgrades the database to utf8 (see the
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>The group <strong>$LIBVIRT_GROUP</strong> is added to the current user in this script.
-Use 'sg' to execute nova-compute as a member of the <strong>$LIBVIRT_GROUP</strong> group.</p>
+sg' will be used in run_process to execute nova-compute as a member of the
+<strong>$LIBVIRT_GROUP</strong> group.</p>
 </td><td class=code><div class=highlight><pre>
-        screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; sg $LIBVIRT_GROUP &#39;$NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf&#39;&quot;</span>
+        run_process n-cpu <span class="s2">&quot;$NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf&quot;</span> <span class="nv">$LIBVIRT_GROUP</span>
     <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;fake&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">local </span>i
         <span class="k">for </span>i in <span class="sb">`</span>seq 1 <span class="nv">$NUMBER_FAKE_NOVA_COMPUTE</span><span class="sb">`</span>; <span class="k">do</span>
-<span class="k">            </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf --config-file &lt;(echo -e &#39;[DEFAULT]\nhost=${HOSTNAME}${i}&#39;)&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Avoid process redirection of fake host configurations by
+creating or modifying real configurations. Each fake
+gets its own configuration and own log file.</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="nb">local </span><span class="nv">fake_conf</span><span class="o">=</span><span class="s2">&quot;${NOVA_FAKE_CONF}-${i}&quot;</span>
+            iniset <span class="nv">$fake_conf</span> DEFAULT nhost <span class="s2">&quot;${HOSTNAME}${i}&quot;</span>
+            run_process <span class="s2">&quot;n-cpu-${i}&quot;</span> <span class="s2">&quot;$NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf --config-file $fake_conf&quot;</span>
         <span class="k">done</span>
 <span class="k">    else</span>
 <span class="k">        if </span>is_service_enabled n-cpu <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span>start_nova_hypervisor
         <span class="k">fi</span>
-<span class="k">        </span>screen_it n-cpu <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf&quot;</span>
+<span class="k">        </span>run_process n-cpu <span class="s2">&quot;$NOVA_BIN_DIR/nova-compute --config-file $compute_cell_conf&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -1256,28 +1297,28 @@ Use 'sg' to execute nova-compute as a member of the <strong>$LIBVIRT_GROUP</stro
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">screen_it</tt> checks <tt class="docutils literal">is_service_enabled</tt>, it is not needed here</p>
+<p><tt class="docutils literal">run_process</tt> checks <tt class="docutils literal">is_service_enabled</tt>, it is not needed here</p>
 </td><td class=code><div class=highlight><pre>
-    screen_it n-cond <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-conductor --config-file $compute_cell_conf&quot;</span>
-    screen_it n-cell-region <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $api_cell_conf&quot;</span>
-    screen_it n-cell-child <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cells --config-file $compute_cell_conf&quot;</span>
+    run_process n-cond <span class="s2">&quot;$NOVA_BIN_DIR/nova-conductor --config-file $compute_cell_conf&quot;</span>
+    run_process n-cell-region <span class="s2">&quot;$NOVA_BIN_DIR/nova-cells --config-file $api_cell_conf&quot;</span>
+    run_process n-cell-child <span class="s2">&quot;$NOVA_BIN_DIR/nova-cells --config-file $compute_cell_conf&quot;</span>
 
-    screen_it n-crt <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-cert --config-file $api_cell_conf&quot;</span>
-    screen_it n-net <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-network --config-file $compute_cell_conf&quot;</span>
-    screen_it n-sch <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-scheduler --config-file $compute_cell_conf&quot;</span>
-    screen_it n-api-meta <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-api-metadata --config-file $compute_cell_conf&quot;</span>
+    run_process n-crt <span class="s2">&quot;$NOVA_BIN_DIR/nova-cert --config-file $api_cell_conf&quot;</span>
+    run_process n-net <span class="s2">&quot;$NOVA_BIN_DIR/nova-network --config-file $compute_cell_conf&quot;</span>
+    run_process n-sch <span class="s2">&quot;$NOVA_BIN_DIR/nova-scheduler --config-file $compute_cell_conf&quot;</span>
+    run_process n-api-meta <span class="s2">&quot;$NOVA_BIN_DIR/nova-api-metadata --config-file $compute_cell_conf&quot;</span>
 
-    screen_it n-novnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-novncproxy --config-file $api_cell_conf --web $NOVNC_WEB_DIR&quot;</span>
-    screen_it n-xvnc <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-xvpvncproxy --config-file $api_cell_conf&quot;</span>
-    screen_it n-spice <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-spicehtml5proxy --config-file $api_cell_conf --web $SPICE_WEB_DIR&quot;</span>
-    screen_it n-cauth <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-consoleauth --config-file $api_cell_conf&quot;</span>
+    run_process n-novnc <span class="s2">&quot;$NOVA_BIN_DIR/nova-novncproxy --config-file $api_cell_conf --web $NOVNC_WEB_DIR&quot;</span>
+    run_process n-xvnc <span class="s2">&quot;$NOVA_BIN_DIR/nova-xvpvncproxy --config-file $api_cell_conf&quot;</span>
+    run_process n-spice <span class="s2">&quot;$NOVA_BIN_DIR/nova-spicehtml5proxy --config-file $api_cell_conf --web $SPICE_WEB_DIR&quot;</span>
+    run_process n-cauth <span class="s2">&quot;$NOVA_BIN_DIR/nova-consoleauth --config-file $api_cell_conf&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Starting the nova-objectstore only if swift3 service is not enabled.
 Swift will act as s3 objectstore.</p>
 </td><td class=code><div class=highlight><pre>
     is_service_enabled swift3 <span class="o">||</span> <span class="se">\</span>
-        screen_it n-obj <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $NOVA_BIN_DIR/nova-objectstore --config-file $api_cell_conf&quot;</span>
+        run_process n-obj <span class="s2">&quot;$NOVA_BIN_DIR/nova-objectstore --config-file $api_cell_conf&quot;</span>
 <span class="o">}</span>
 
 <span class="k">function </span>start_nova <span class="o">{</span>
@@ -1286,7 +1327,7 @@ Swift will act as s3 objectstore.</p>
 <span class="o">}</span>
 
 <span class="k">function </span>stop_nova_compute <span class="o">{</span>
-    screen_stop n-cpu
+    stop_process n-cpu
     <span class="k">if </span>is_service_enabled n-cpu <span class="o">&amp;&amp;</span> <span class="o">[[</span> -r <span class="nv">$NOVA_PLUGINS</span>/hypervisor-<span class="nv">$VIRT_DRIVER</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>stop_nova_hypervisor
     <span class="k">fi</span>
@@ -1299,7 +1340,7 @@ Some services are listed here twice since more than one instance
 of a service may be running in certain configs.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">for </span>serv in n-api n-crt n-net n-sch n-novnc n-xvnc n-cauth n-spice n-cond n-cell n-cell n-api-meta n-obj; <span class="k">do</span>
-<span class="k">        </span>screen_stop <span class="nv">$serv</span>
+<span class="k">        </span>stop_process <span class="nv">$serv</span>
     <span class="k">done</span>
 <span class="o">}</span>
 

@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -415,11 +415,12 @@ register_database postgresql
 <span class="o">}</span>
 
 <span class="k">function </span>configure_database_postgresql <span class="o">{</span>
+    <span class="nb">local </span>pg_conf pg_dir pg_hba root_roles
     echo_summary <span class="s2">&quot;Configuring and starting PostgreSQL&quot;</span>
     <span class="k">if </span>is_fedora; <span class="k">then</span>
-<span class="k">        </span><span class="nv">PG_HBA</span><span class="o">=</span>/var/lib/pgsql/data/pg_hba.conf
-        <span class="nv">PG_CONF</span><span class="o">=</span>/var/lib/pgsql/data/postgresql.conf
-        <span class="k">if</span> ! sudo <span class="o">[</span> -e <span class="nv">$PG_HBA</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">pg_hba</span><span class="o">=</span>/var/lib/pgsql/data/pg_hba.conf
+        <span class="nv">pg_conf</span><span class="o">=</span>/var/lib/pgsql/data/postgresql.conf
+        <span class="k">if</span> ! sudo <span class="o">[</span> -e <span class="nv">$pg_hba</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">            if</span> ! <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span>sudo postgresql-setup initdb
             <span class="k">else</span>
@@ -427,35 +428,35 @@ register_database postgresql
             <span class="k">fi</span>
 <span class="k">        fi</span>
 <span class="k">    elif </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span><span class="nv">PG_DIR</span><span class="o">=</span><span class="sb">`</span>find /etc/postgresql -name pg_hba.conf|xargs dirname<span class="sb">`</span>
-        <span class="nv">PG_HBA</span><span class="o">=</span><span class="nv">$PG_DIR</span>/pg_hba.conf
-        <span class="nv">PG_CONF</span><span class="o">=</span><span class="nv">$PG_DIR</span>/postgresql.conf
+<span class="k">        </span><span class="nv">pg_dir</span><span class="o">=</span><span class="sb">`</span>find /etc/postgresql -name pg_hba.conf|xargs dirname<span class="sb">`</span>
+        <span class="nv">pg_hba</span><span class="o">=</span><span class="nv">$pg_dir</span>/pg_hba.conf
+        <span class="nv">pg_conf</span><span class="o">=</span><span class="nv">$pg_dir</span>/postgresql.conf
     <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span><span class="nv">PG_HBA</span><span class="o">=</span>/var/lib/pgsql/data/pg_hba.conf
-        <span class="nv">PG_CONF</span><span class="o">=</span>/var/lib/pgsql/data/postgresql.conf
+<span class="k">        </span><span class="nv">pg_hba</span><span class="o">=</span>/var/lib/pgsql/data/pg_hba.conf
+        <span class="nv">pg_conf</span><span class="o">=</span>/var/lib/pgsql/data/postgresql.conf
 </pre></div></td></tr><tr><td class=docs>
 <p>initdb is called when postgresql is first started</p>
 </td><td class=code><div class=highlight><pre>
-        sudo <span class="o">[</span> -e <span class="nv">$PG_HBA</span> <span class="o">]</span> <span class="o">||</span> start_service postgresql
+        sudo <span class="o">[</span> -e <span class="nv">$pg_hba</span> <span class="o">]</span> <span class="o">||</span> start_service postgresql
     <span class="k">else</span>
 <span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;postgresql configuration&quot;</span>
     <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Listen on all addresses</p>
 </td><td class=code><div class=highlight><pre>
-    sudo sed -i <span class="s2">&quot;/listen_addresses/s/.*/listen_addresses = &#39;*&#39;/&quot;</span> <span class="nv">$PG_CONF</span>
+    sudo sed -i <span class="s2">&quot;/listen_addresses/s/.*/listen_addresses = &#39;*&#39;/&quot;</span> <span class="nv">$pg_conf</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set max_connections</p>
 </td><td class=code><div class=highlight><pre>
-    sudo sed -i <span class="s2">&quot;/max_connections/s/.*/max_connections = $MAX_DB_CONNECTIONS/&quot;</span> <span class="nv">$PG_CONF</span>
+    sudo sed -i <span class="s2">&quot;/max_connections/s/.*/max_connections = $MAX_DB_CONNECTIONS/&quot;</span> <span class="nv">$pg_conf</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Do password auth from all IPv4 clients</p>
 </td><td class=code><div class=highlight><pre>
-    sudo sed -i <span class="s2">&quot;/^host/s/all\s\+127.0.0.1\/32\s\+ident/$DATABASE_USER\t0.0.0.0\/0\tpassword/&quot;</span> <span class="nv">$PG_HBA</span>
+    sudo sed -i <span class="s2">&quot;/^host/s/all\s\+127.0.0.1\/32\s\+ident/$DATABASE_USER\t0.0.0.0\/0\tpassword/&quot;</span> <span class="nv">$pg_hba</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Do password auth for all IPv6 clients</p>
 </td><td class=code><div class=highlight><pre>
-    sudo sed -i <span class="s2">&quot;/^host/s/all\s\+::1\/128\s\+ident/$DATABASE_USER\t::0\/0\tpassword/&quot;</span> <span class="nv">$PG_HBA</span>
+    sudo sed -i <span class="s2">&quot;/^host/s/all\s\+::1\/128\s\+ident/$DATABASE_USER\t::0\/0\tpassword/&quot;</span> <span class="nv">$pg_hba</span>
     restart_service postgresql
 
 </pre></div></td></tr><tr><td class=docs>
@@ -471,14 +472,14 @@ register_database postgresql
 
 <span class="k">function </span>install_database_postgresql <span class="o">{</span>
     echo_summary <span class="s2">&quot;Installing postgresql&quot;</span>
-    <span class="nv">PGPASS</span><span class="o">=</span><span class="nv">$HOME</span>/.pgpass
-    <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$PGPASS</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>cat <span class="s">&lt;&lt;EOF &gt; $PGPASS</span>
+    <span class="nb">local </span><span class="nv">pgpass</span><span class="o">=</span><span class="nv">$HOME</span>/.pgpass
+    <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$pgpass</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>cat <span class="s">&lt;&lt;EOF &gt; $pgpass</span>
 <span class="s">*:*:*:$DATABASE_USER:$DATABASE_PASSWORD</span>
 <span class="s">EOF</span>
-        chmod 0600 <span class="nv">$PGPASS</span>
+        chmod 0600 <span class="nv">$pgpass</span>
     <span class="k">else</span>
-<span class="k">        </span>sed -i <span class="s2">&quot;s/:root:\w\+/:root:$DATABASE_PASSWORD/&quot;</span> <span class="nv">$PGPASS</span>
+<span class="k">        </span>sed -i <span class="s2">&quot;s/:root:\w\+/:root:$DATABASE_PASSWORD/&quot;</span> <span class="nv">$pgpass</span>
     <span class="k">fi</span>
 <span class="k">    if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span>install_package postgresql

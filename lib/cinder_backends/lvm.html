@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -515,6 +515,7 @@ configure_cinder_backend_lvm $name</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Clean out existing volumes</p>
 </td><td class=code><div class=highlight><pre>
+    <span class="nb">local </span>lv
     <span class="k">for </span>lv in <span class="k">$(</span>sudo lvs --noheadings -o lv_name <span class="nv">$vg</span> 2&gt;/dev/null<span class="k">)</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>lv_prefix prefixes the LVs we want</p>
@@ -542,9 +543,9 @@ of the backing file</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>if the backing physical device is a loop device, it was probably setup by devstack</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">VG_DEV</span><span class="o">=</span><span class="k">$(</span>sudo losetup -j <span class="nv">$backing_file</span> | awk -F<span class="s1">&#39;:&#39;</span> <span class="s1">&#39;/backing-file/ { print $1}&#39;</span><span class="k">)</span>
-        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$VG_DEV&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> -e <span class="s2">&quot;$VG_DEV&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>sudo losetup -d <span class="nv">$VG_DEV</span>
+        <span class="nb">local </span><span class="nv">vg_dev</span><span class="o">=</span><span class="k">$(</span>sudo losetup -j <span class="nv">$backing_file</span> | awk -F<span class="s1">&#39;:&#39;</span> <span class="s1">&#39;/backing-file/ { print $1}&#39;</span><span class="k">)</span>
+        <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$vg_dev&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> -e <span class="s2">&quot;$vg_dev&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>sudo losetup -d <span class="nv">$vg_dev</span>
             rm -f <span class="nv">$backing_file</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
@@ -576,13 +577,13 @@ the <tt class="docutils literal">DATA_DIR</tt>.</p>
 <p>Only create if the file doesn't already exists</p>
 </td><td class=code><div class=highlight><pre>
             <span class="o">[[</span> -f <span class="nv">$backing_file</span> <span class="o">]]</span> <span class="o">||</span> truncate -s <span class="nv">$VOLUME_BACKING_FILE_SIZE</span> <span class="nv">$backing_file</span>
-            <span class="nv">DEV</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$backing_file</span><span class="sb">`</span>
+            <span class="nb">local </span><span class="nv">vg_dev</span><span class="o">=</span><span class="sb">`</span>sudo losetup -f --show <span class="nv">$backing_file</span><span class="sb">`</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Only create if the loopback device doesn't contain $VOLUME_GROUP</p>
 </td><td class=code><div class=highlight><pre>
             <span class="k">if</span> ! sudo vgs <span class="nv">$vg_name</span>; <span class="k">then</span>
-<span class="k">                </span>sudo vgcreate <span class="nv">$vg_name</span> <span class="nv">$DEV</span>
+<span class="k">                </span>sudo vgcreate <span class="nv">$vg_name</span> <span class="nv">$vg_dev</span>
             <span class="k">fi</span>
 <span class="k">        else</span>
 <span class="k">            </span>sudo vgcreate <span class="nv">$vg_name</span> <span class="nv">$VOLUME_BACKING_DEVICE</span>

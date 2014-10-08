@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -387,35 +387,6 @@ ul.auto-toc {
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Checks if installed Apache is &lt;= given version
-$1 = x.y.z (version string of Apache)</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>check_apache_version <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">cmd</span><span class="o">=</span><span class="s2">&quot;apachectl&quot;</span>
-    <span class="k">if</span> ! <span class="o">[[</span> -x <span class="k">$(</span>which apachectl 2&gt;/dev/null<span class="k">)</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">cmd</span><span class="o">=</span><span class="s2">&quot;/usr/sbin/apachectl&quot;</span>
-    <span class="k">fi</span>
-
-<span class="k">    </span><span class="nb">local </span><span class="nv">version</span><span class="o">=</span><span class="k">$(</span><span class="nv">$cmd</span> -v | grep version | grep -Po <span class="s1">&#39;Apache/\K[^ ]*&#39;</span><span class="k">)</span>
-    expr <span class="s2">&quot;$version&quot;</span> <span class="s1">&#39;&gt;=&#39;</span> <span class="nv">$1</span> &gt; /dev/null
-<span class="o">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Cleanup anything from /tmp on unstack
-clean_tmp</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>cleanup_tmp <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">tmp_dir</span><span class="o">=</span><span class="k">${</span><span class="nv">TMPDIR</span><span class="k">:-</span><span class="p">/tmp</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>see comments in pip_install</p>
-</td><td class=code><div class=highlight><pre>
-    sudo rm -rf <span class="k">${</span><span class="nv">tmp_dir</span><span class="k">}</span>/pip-build.*
-<span class="o">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Retrieve an image from a URL and upload into Glance.
 Uses the following variables:</p>
 <ul class="simple">
@@ -428,23 +399,25 @@ Uses the following variables:</p>
     <span class="nb">local </span><span class="nv">image_url</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">token</span><span class="o">=</span><span class="nv">$2</span>
 
+    <span class="nb">local </span>image image_fname image_name
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a directory for the downloaded image tarballs.</p>
 </td><td class=code><div class=highlight><pre>
     mkdir -p <span class="nv">$FILES</span>/images
-    <span class="nv">IMAGE_FNAME</span><span class="o">=</span><span class="sb">`</span>basename <span class="s2">&quot;$image_url&quot;</span><span class="sb">`</span>
+    <span class="nv">image_fname</span><span class="o">=</span><span class="sb">`</span>basename <span class="s2">&quot;$image_url&quot;</span><span class="sb">`</span>
     <span class="k">if</span> <span class="o">[[</span> <span class="nv">$image_url</span> !<span class="o">=</span> file* <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Downloads the image (uec ami+akistyle), then extracts it.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $FILES/$IMAGE_FNAME)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>wget -c <span class="nv">$image_url</span> -O <span class="nv">$FILES</span>/<span class="nv">$IMAGE_FNAME</span>
+        <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$FILES</span>/<span class="nv">$image_fname</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $FILES/$image_fname)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>wget -c <span class="nv">$image_url</span> -O <span class="nv">$FILES</span>/<span class="nv">$image_fname</span>
             <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> -ne 0 <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span><span class="nb">echo</span> <span class="s2">&quot;Not found: $image_url&quot;</span>
                 <span class="k">return</span>
 <span class="k">            fi</span>
 <span class="k">        fi</span>
-<span class="k">        </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${IMAGE_FNAME}&quot;</span>
+<span class="k">        </span><span class="nv">image</span><span class="o">=</span><span class="s2">&quot;$FILES/${image_fname}&quot;</span>
     <span class="k">else</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>File based URL (RFC 1738): <a class="reference external" href="file://host/path">file://host/path</a>
@@ -452,11 +425,11 @@ Remote files are not considered here.
 <a href="#id1"><span class="problematic" id="id2">*</span></a>nix: <a class="reference external" href="file:///home/user/path/file">file:///home/user/path/file</a>
 windows: <a class="reference external" href="file:///C:/Documents%20and%20Settings/user/path/file">file:///C:/Documents%20and%20Settings/user/path/file</a></p>
 <div class="system-message" id="id1">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 54); <em><a href="#id2">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 40); <em><a href="#id2">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$image_url</span> | sed <span class="s2">&quot;s/^file:\/\///g&quot;</span><span class="k">)</span>
-        <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$IMAGE</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $IMAGE)&quot;</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+        <span class="nv">image</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$image_url</span> | sed <span class="s2">&quot;s/^file:\/\///g&quot;</span><span class="k">)</span>
+        <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$image</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $image)&quot;</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;Not found: $image_url&quot;</span>
             <span class="k">return</span>
 <span class="k">        fi</span>
@@ -466,8 +439,8 @@ Inline emphasis start-string without end-string.</div>
 <p>OpenVZ-format images are provided as .tar.gz, but not decompressed prior to loading</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;openvz&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span>
-        glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format ami --disk-format ami &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+<span class="k">        </span><span class="nv">image_name</span><span class="o">=</span><span class="s2">&quot;${image_fname%.tar.gz}&quot;</span>
+        openstack --os-token <span class="nv">$token</span> --os-url <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span> image create <span class="s2">&quot;$image_name&quot;</span> --public --container-format ami --disk-format ami &lt; <span class="s2">&quot;${image}&quot;</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 
@@ -475,7 +448,7 @@ Inline emphasis start-string without end-string.</div>
 <p>vmdk format images</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;.vmdk&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.vmdk}&quot;</span>
+<span class="k">        </span><span class="nv">image_name</span><span class="o">=</span><span class="s2">&quot;${image_fname%.vmdk}&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Before we can upload vmdk type images to glance, we need to know it's
@@ -489,21 +462,21 @@ vmdk filename, which is expected in the following format:</p>
 driver will supply default values.</p>
 </td><td class=code><div class=highlight><pre>
 
-        <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="nv">vmdk_net_adapter</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="nb">local </span><span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="nb">local </span><span class="nv">vmdk_net_adapter</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="nb">local </span>path_len
 
 </pre></div></td></tr><tr><td class=docs>
 <p>vmdk adapter type</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $IMAGE | { grep -a -F -m 1 &#39;ddb.adapterType =&#39; $IMAGE || true; })&quot;</span>
+        <span class="nb">local </span><span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $image | { grep -a -F -m 1 &#39;ddb.adapterType =&#39; $image || true; })&quot;</span>
         <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_adapter_type#*\&quot;}&quot;</span>
         <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_adapter_type%?}&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>vmdk disk type</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">vmdk_create_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $IMAGE | { grep -a -F -m 1 &#39;createType=&#39; $IMAGE || true; })&quot;</span>
+        <span class="nb">local </span><span class="nv">vmdk_create_type</span><span class="o">=</span><span class="s2">&quot;$(head -25 $image | { grep -a -F -m 1 &#39;createType=&#39; $image || true; })&quot;</span>
         <span class="nv">vmdk_create_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_create_type#*\&quot;}&quot;</span>
         <span class="nv">vmdk_create_type</span><span class="o">=</span><span class="s2">&quot;${vmdk_create_type%\&quot;*}&quot;</span>
 
@@ -511,22 +484,21 @@ driver will supply default values.</p>
                                     <span class="sb">`</span><span class="s2">&quot;should use a descriptor-data pair.&quot;</span>
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$vmdk_create_type&quot;</span> <span class="o">=</span> <span class="s2">&quot;monolithicSparse&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;sparse&quot;</span>
-        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$vmdk_create_type&quot;</span> <span class="o">=</span> <span class="s2">&quot;monolithicFlat&quot;</span> <span class="o">||</span> <span class="se">\</span>
-        <span class="s2">&quot;$vmdk_create_type&quot;</span> <span class="o">=</span> <span class="s2">&quot;vmfs&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+        <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$vmdk_create_type&quot;</span> <span class="o">=</span> <span class="s2">&quot;monolithicFlat&quot;</span> <span class="o">||</span> <span class="s2">&quot;$vmdk_create_type&quot;</span> <span class="o">=</span> <span class="s2">&quot;vmfs&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Attempt to retrieve the <a href="#id3"><span class="problematic" id="id4">*</span></a>-flat.vmdk</p>
 <div class="system-message" id="id3">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 90); <em><a href="#id4">backlink</a></em></p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 76); <em><a href="#id4">backlink</a></em></p>
 Inline emphasis start-string without end-string.</div>
 </td><td class=code><div class=highlight><pre>
-            <span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;$(head -25 $IMAGE | { grep -G &#39;RW\|RDONLY [0-9]+ FLAT\|VMFS&#39; $IMAGE || true; })&quot;</span>
+            <span class="nb">local </span><span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;$(head -25 $image | { grep -G &#39;RW\|RDONLY [0-9]+ FLAT\|VMFS&#39; $image || true; })&quot;</span>
             <span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;${flat_fname#*\&quot;}&quot;</span>
             <span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;${flat_fname%?}&quot;</span>
             <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$flat_fname&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;$IMAGE_NAME-flat.vmdk&quot;</span>
+<span class="k">                </span><span class="nv">flat_fname</span><span class="o">=</span><span class="s2">&quot;$image_name-flat.vmdk&quot;</span>
             <span class="k">fi</span>
-<span class="k">            </span><span class="nv">path_len</span><span class="o">=</span><span class="sb">`</span>expr <span class="k">${#</span><span class="nv">image_url</span><span class="k">}</span> - <span class="k">${#</span><span class="nv">IMAGE_FNAME</span><span class="k">}</span><span class="sb">`</span>
-            <span class="nv">flat_url</span><span class="o">=</span><span class="s2">&quot;${image_url:0:$path_len}$flat_fname&quot;</span>
+<span class="k">            </span><span class="nv">path_len</span><span class="o">=</span><span class="sb">`</span>expr <span class="k">${#</span><span class="nv">image_url</span><span class="k">}</span> - <span class="k">${#</span><span class="nv">image_fname</span><span class="k">}</span><span class="sb">`</span>
+            <span class="nb">local </span><span class="nv">flat_url</span><span class="o">=</span><span class="s2">&quot;${image_url:0:$path_len}$flat_fname&quot;</span>
             warn <span class="nv">$LINENO</span> <span class="s2">&quot;$descriptor_data_pair_msg&quot;</span><span class="sb">`</span>
                             <span class="sb">`</span><span class="s2">&quot; Attempt to retrieve the *-flat.vmdk: $flat_url&quot;</span>
             <span class="k">if</span> <span class="o">[[</span> <span class="nv">$flat_url</span> !<span class="o">=</span> file* <span class="o">]]</span>; <span class="k">then</span>
@@ -534,15 +506,15 @@ Inline emphasis start-string without end-string.</div>
                 <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $FILES/$flat_fname)&quot;</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                    </span>wget -c <span class="nv">$flat_url</span> -O <span class="nv">$FILES</span>/<span class="nv">$flat_fname</span>
                 <span class="k">fi</span>
-<span class="k">                </span><span class="nv">IMAGE</span><span class="o">=</span><span class="s2">&quot;$FILES/${flat_fname}&quot;</span>
+<span class="k">                </span><span class="nv">image</span><span class="o">=</span><span class="s2">&quot;$FILES/${flat_fname}&quot;</span>
             <span class="k">else</span>
-<span class="k">                </span><span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$flat_url</span> | sed <span class="s2">&quot;s/^file:\/\///g&quot;</span><span class="k">)</span>
-                <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$IMAGE</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $IMAGE)&quot;</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">image</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$flat_url</span> | sed <span class="s2">&quot;s/^file:\/\///g&quot;</span><span class="k">)</span>
+                <span class="k">if</span> <span class="o">[[</span> ! -f <span class="nv">$image</span> <span class="o">||</span> <span class="s2">&quot;$(stat -c &quot;</span>%s<span class="s2">&quot; $image)&quot;</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                    </span><span class="nb">echo</span> <span class="s2">&quot;Flat disk not found: $flat_url&quot;</span>
                     <span class="k">return </span>1
                 <span class="k">fi</span>
 <span class="k">            fi</span>
-<span class="k">            </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${flat_fname}&quot;</span>
+<span class="k">            </span><span class="nv">image_name</span><span class="o">=</span><span class="s2">&quot;${flat_fname}&quot;</span>
             <span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;preallocated&quot;</span>
         <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$vmdk_create_type&quot;</span> <span class="o">=</span> <span class="s2">&quot;streamOptimized&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">            </span><span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;streamOptimized&quot;</span>
@@ -551,14 +523,14 @@ Inline emphasis start-string without end-string.</div>
 <p><em>-flat.vmdk provided: attempt to retrieve the descriptor (</em>.vmdk)
 to retrieve appropriate metadata</p>
 </td><td class=code><div class=highlight><pre>
-            <span class="k">if</span> <span class="o">[[</span> <span class="k">${</span><span class="nv">IMAGE_NAME</span><span class="p">: -5</span><span class="k">}</span> !<span class="o">=</span> <span class="s2">&quot;-flat&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+            <span class="k">if</span> <span class="o">[[</span> <span class="k">${</span><span class="nv">image_name</span><span class="p">: -5</span><span class="k">}</span> !<span class="o">=</span> <span class="s2">&quot;-flat&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">                </span>warn <span class="nv">$LINENO</span> <span class="s2">&quot;Expected filename suffix: &#39;-flat&#39;.&quot;</span><span class="sb">`</span>
-                            <span class="sb">`</span><span class="s2">&quot; Filename provided: ${IMAGE_NAME}&quot;</span>
+                            <span class="sb">`</span><span class="s2">&quot; Filename provided: ${image_name}&quot;</span>
             <span class="k">else</span>
-<span class="k">                </span><span class="nv">descriptor_fname</span><span class="o">=</span><span class="s2">&quot;${IMAGE_NAME:0:${#IMAGE_NAME} - 5}.vmdk&quot;</span>
-                <span class="nv">path_len</span><span class="o">=</span><span class="sb">`</span>expr <span class="k">${#</span><span class="nv">image_url</span><span class="k">}</span> - <span class="k">${#</span><span class="nv">IMAGE_FNAME</span><span class="k">}</span><span class="sb">`</span>
-                <span class="nv">flat_path</span><span class="o">=</span><span class="s2">&quot;${image_url:0:$path_len}&quot;</span>
-                <span class="nv">descriptor_url</span><span class="o">=</span><span class="nv">$flat_path$descriptor_fname</span>
+<span class="k">                </span><span class="nv">descriptor_fname</span><span class="o">=</span><span class="s2">&quot;${image_name:0:${#image_name} - 5}.vmdk&quot;</span>
+                <span class="nv">path_len</span><span class="o">=</span><span class="sb">`</span>expr <span class="k">${#</span><span class="nv">image_url</span><span class="k">}</span> - <span class="k">${#</span><span class="nv">image_fname</span><span class="k">}</span><span class="sb">`</span>
+                <span class="nb">local </span><span class="nv">flat_path</span><span class="o">=</span><span class="s2">&quot;${image_url:0:$path_len}&quot;</span>
+                <span class="nb">local </span><span class="nv">descriptor_url</span><span class="o">=</span><span class="nv">$flat_path$descriptor_fname</span>
                 warn <span class="nv">$LINENO</span> <span class="s2">&quot;$descriptor_data_pair_msg&quot;</span><span class="sb">`</span>
                                 <span class="sb">`</span><span class="s2">&quot; Attempt to retrieve the descriptor *.vmdk: $descriptor_url&quot;</span>
                 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$flat_path</span> !<span class="o">=</span> file* <span class="o">]]</span>; <span class="k">then</span>
@@ -589,13 +561,13 @@ to retrieve appropriate metadata</p>
 of semi-colons for property delimiters but they are not permitted
 characters in NTFS filesystems.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">property_string</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="s2">&quot;$IMAGE_NAME&quot;</span> | <span class="o">{</span> grep -oP <span class="s1">&#39;(?&lt;=-)(?!.*-).*[:;].*[:;].*$&#39;</span> <span class="o">||</span> <span class="nb">true</span>; <span class="o">}</span><span class="sb">`</span>
+        <span class="nv">property_string</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="s2">&quot;$image_name&quot;</span> | <span class="o">{</span> grep -oP <span class="s1">&#39;(?&lt;=-)(?!.*-).*[:;].*[:;].*$&#39;</span> <span class="o">||</span> <span class="nb">true</span>; <span class="o">}</span><span class="sb">`</span>
         <span class="nv">IFS</span><span class="o">=</span><span class="s1">&#39;:;&#39;</span> <span class="nb">read</span> -a props <span class="o">&lt;&lt;&lt;</span> <span class="s2">&quot;$property_string&quot;</span>
         <span class="nv">vmdk_disktype</span><span class="o">=</span><span class="s2">&quot;${props[0]:-$vmdk_disktype}&quot;</span>
         <span class="nv">vmdk_adapter_type</span><span class="o">=</span><span class="s2">&quot;${props[1]:-$vmdk_adapter_type}&quot;</span>
         <span class="nv">vmdk_net_adapter</span><span class="o">=</span><span class="s2">&quot;${props[2]:-$vmdk_net_adapter}&quot;</span>
 
-        glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True --container-format bare --disk-format vmdk --property <span class="nv">vmware_disktype</span><span class="o">=</span><span class="s2">&quot;$vmdk_disktype&quot;</span> --property <span class="nv">vmware_adaptertype</span><span class="o">=</span><span class="s2">&quot;$vmdk_adapter_type&quot;</span> --property <span class="nv">hw_vif_model</span><span class="o">=</span><span class="s2">&quot;$vmdk_net_adapter&quot;</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+        openstack --os-token <span class="nv">$token</span> --os-url <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span> image create <span class="s2">&quot;$image_name&quot;</span> --public --container-format bare --disk-format vmdk --property <span class="nv">vmware_disktype</span><span class="o">=</span><span class="s2">&quot;$vmdk_disktype&quot;</span> --property <span class="nv">vmware_adaptertype</span><span class="o">=</span><span class="s2">&quot;$vmdk_adapter_type&quot;</span> --property <span class="nv">hw_vif_model</span><span class="o">=</span><span class="s2">&quot;$vmdk_net_adapter&quot;</span> &lt; <span class="s2">&quot;${image}&quot;</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 
@@ -604,24 +576,24 @@ characters in NTFS filesystems.</p>
 and should not be decompressed prior to loading</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;.vhd.tgz&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.vhd.tgz}&quot;</span>
-        <span class="nv">FORCE_VM_MODE</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;cirros&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">image_name</span><span class="o">=</span><span class="s2">&quot;${image_fname%.vhd.tgz}&quot;</span>
+        <span class="nb">local </span><span class="nv">force_vm_mode</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_name&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;cirros&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Cirros VHD image currently only boots in PV mode.
 Nova defaults to PV for all VHD images, but
 the glance setting is needed for booting
 directly from volume.</p>
 </td><td class=code><div class=highlight><pre>
-            <span class="nv">FORCE_VM_MODE</span><span class="o">=</span><span class="s2">&quot;--property vm_mode=xen&quot;</span>
+            <span class="nv">force_vm_mode</span><span class="o">=</span><span class="s2">&quot;--property vm_mode=xen&quot;</span>
         <span class="k">fi</span>
-<span class="k">        </span>glance <span class="se">\</span>
-            --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-            --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-            image-create <span class="se">\</span>
-            --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True <span class="se">\</span>
+<span class="k">        </span>openstack <span class="se">\</span>
+            --os-token <span class="nv">$token</span> <span class="se">\</span>
+            --os-url <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+            image create <span class="se">\</span>
+            <span class="s2">&quot;$image_name&quot;</span> --public <span class="se">\</span>
             --container-format<span class="o">=</span>ovf --disk-format<span class="o">=</span>vhd <span class="se">\</span>
-            <span class="nv">$FORCE_VM_MODE</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+            <span class="nv">$force_vm_mode</span> &lt; <span class="s2">&quot;${image}&quot;</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 
@@ -631,82 +603,92 @@ and should not be decompressed prior to loading.
 Setting metadata, so PV mode is used.</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$image_url&quot;</span> <span class="o">=</span>~ <span class="s1">&#39;.xen-raw.tgz&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.xen-raw.tgz}&quot;</span>
-        glance <span class="se">\</span>
-            --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-            --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-            image-create <span class="se">\</span>
-            --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> --is-public<span class="o">=</span>True <span class="se">\</span>
+<span class="k">        </span><span class="nv">image_name</span><span class="o">=</span><span class="s2">&quot;${image_fname%.xen-raw.tgz}&quot;</span>
+        openstack <span class="se">\</span>
+            --os-token <span class="nv">$token</span> <span class="se">\</span>
+            --os-url <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+            image create <span class="se">\</span>
+            <span class="s2">&quot;$image_name&quot;</span> --public <span class="se">\</span>
             --container-format<span class="o">=</span>tgz --disk-format<span class="o">=</span>raw <span class="se">\</span>
-            --property <span class="nv">vm_mode</span><span class="o">=</span>xen &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+            --property <span class="nv">vm_mode</span><span class="o">=</span>xen &lt; <span class="s2">&quot;${image}&quot;</span>
         <span class="k">return</span>
 <span class="k">    fi</span>
 
-<span class="k">    </span><span class="nv">KERNEL</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="nv">RAMDISK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="nv">DISK_FORMAT</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="nv">UNPACK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">case</span> <span class="s2">&quot;$IMAGE_FNAME&quot;</span> in
+<span class="k">    </span><span class="nb">local </span><span class="nv">kernel</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nb">local </span><span class="nv">ramdisk</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nb">local </span><span class="nv">disk_format</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nb">local </span><span class="nv">container_format</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nb">local </span><span class="nv">unpack</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="nb">local </span><span class="nv">img_property</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+    <span class="k">case</span> <span class="s2">&quot;$image_fname&quot;</span> in
         *.tar.gz|*.tgz<span class="o">)</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Extract ami and aki files</p>
 </td><td class=code><div class=highlight><pre>
-            <span class="o">[</span> <span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$IMAGE_FNAME&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>
-                <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.tar.gz}&quot;</span> <span class="o">||</span>
-                <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="s2">&quot;${IMAGE_FNAME%.tgz}&quot;</span>
-            <span class="nv">xdir</span><span class="o">=</span><span class="s2">&quot;$FILES/images/$IMAGE_NAME&quot;</span>
+            <span class="o">[</span> <span class="s2">&quot;${image_fname%.tar.gz}&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$image_fname&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span>
+                <span class="nv">image_name</span><span class="o">=</span><span class="s2">&quot;${image_fname%.tar.gz}&quot;</span> <span class="o">||</span>
+                <span class="nv">image_name</span><span class="o">=</span><span class="s2">&quot;${image_fname%.tgz}&quot;</span>
+            <span class="nb">local </span><span class="nv">xdir</span><span class="o">=</span><span class="s2">&quot;$FILES/images/$image_name&quot;</span>
             rm -Rf <span class="s2">&quot;$xdir&quot;</span>;
             mkdir <span class="s2">&quot;$xdir&quot;</span>
-            tar -zxf <span class="nv">$IMAGE</span> -C <span class="s2">&quot;$xdir&quot;</span>
-            <span class="nv">KERNEL</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-vmlinuz* <span class="s2">&quot;$xdir/&quot;</span>aki-*/image; <span class="k">do</span>
+            tar -zxf <span class="nv">$image</span> -C <span class="s2">&quot;$xdir&quot;</span>
+            <span class="nv">kernel</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-vmlinuz* <span class="s2">&quot;$xdir/&quot;</span>aki-*/image; <span class="k">do</span>
                 <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
-            <span class="nv">RAMDISK</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-initrd* <span class="s2">&quot;$xdir/&quot;</span>ari-*/image; <span class="k">do</span>
+            <span class="nv">ramdisk</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*-initrd* <span class="s2">&quot;$xdir/&quot;</span>ari-*/image; <span class="k">do</span>
                 <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
-            <span class="nv">IMAGE</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*.img <span class="s2">&quot;$xdir/&quot;</span>ami-*/image; <span class="k">do</span>
+            <span class="nv">image</span><span class="o">=</span><span class="k">$(for </span>f in <span class="s2">&quot;$xdir/&quot;</span>*.img <span class="s2">&quot;$xdir/&quot;</span>ami-*/image; <span class="k">do</span>
                 <span class="o">[</span> -f <span class="s2">&quot;$f&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;$f&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>; <span class="k">done</span>; <span class="nb">true</span><span class="k">)</span>
-            <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
+            <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$image_name&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">image_name</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$image&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
             <span class="k">fi</span>
             ;;
         *.img<span class="o">)</span>
-            <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
-            <span class="nv">format</span><span class="o">=</span><span class="k">$(</span>qemu-img info <span class="k">${</span><span class="nv">IMAGE</span><span class="k">}</span> | awk <span class="s1">&#39;/^file format/ { print $3; exit }&#39;</span><span class="k">)</span>
+            <span class="nv">image_name</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$image&quot;</span> <span class="s2">&quot;.img&quot;</span><span class="k">)</span>
+            <span class="nb">local </span><span class="nv">format</span><span class="o">=</span><span class="k">$(</span>qemu-img info <span class="k">${</span><span class="nv">image</span><span class="k">}</span> | awk <span class="s1">&#39;/^file format/ { print $3; exit }&#39;</span><span class="k">)</span>
             <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;,qcow2,raw,vdi,vmdk,vpc,&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;,$format,&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">DISK_FORMAT</span><span class="o">=</span><span class="nv">$format</span>
+<span class="k">                </span><span class="nv">disk_format</span><span class="o">=</span><span class="nv">$format</span>
             <span class="k">else</span>
-<span class="k">                </span><span class="nv">DISK_FORMAT</span><span class="o">=</span>raw
+<span class="k">                </span><span class="nv">disk_format</span><span class="o">=</span>raw
             <span class="k">fi</span>
-<span class="k">            </span><span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
+<span class="k">            </span><span class="nv">container_format</span><span class="o">=</span>bare
             ;;
         *.img.gz<span class="o">)</span>
-            <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.img.gz&quot;</span><span class="k">)</span>
-            <span class="nv">DISK_FORMAT</span><span class="o">=</span>raw
-            <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
-            <span class="nv">UNPACK</span><span class="o">=</span>zcat
+            <span class="nv">image_name</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$image&quot;</span> <span class="s2">&quot;.img.gz&quot;</span><span class="k">)</span>
+            <span class="nv">disk_format</span><span class="o">=</span>raw
+            <span class="nv">container_format</span><span class="o">=</span>bare
+            <span class="nv">unpack</span><span class="o">=</span>zcat
             ;;
         *.qcow2<span class="o">)</span>
-            <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.qcow2&quot;</span><span class="k">)</span>
-            <span class="nv">DISK_FORMAT</span><span class="o">=</span>qcow2
-            <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
+            <span class="nv">image_name</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$image&quot;</span> <span class="s2">&quot;.qcow2&quot;</span><span class="k">)</span>
+            <span class="nv">disk_format</span><span class="o">=</span>qcow2
+            <span class="nv">container_format</span><span class="o">=</span>bare
             ;;
         *.iso<span class="o">)</span>
-            <span class="nv">IMAGE_NAME</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$IMAGE&quot;</span> <span class="s2">&quot;.iso&quot;</span><span class="k">)</span>
-            <span class="nv">DISK_FORMAT</span><span class="o">=</span>iso
-            <span class="nv">CONTAINER_FORMAT</span><span class="o">=</span>bare
+            <span class="nv">image_name</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$image&quot;</span> <span class="s2">&quot;.iso&quot;</span><span class="k">)</span>
+            <span class="nv">disk_format</span><span class="o">=</span>iso
+            <span class="nv">container_format</span><span class="o">=</span>bare
             ;;
-        *<span class="o">)</span> <span class="nb">echo</span> <span class="s2">&quot;Do not know what to do with $IMAGE_FNAME&quot;</span>; <span class="nb">false</span>;;
+        *.vhd|*.vhdx|*.vhd.gz|*.vhdx.gz<span class="o">)</span>
+            <span class="nb">local </span><span class="nv">extension</span><span class="o">=</span><span class="s2">&quot;${image_fname#*.}&quot;</span>
+            <span class="nv">image_name</span><span class="o">=</span><span class="k">$(</span>basename <span class="s2">&quot;$image&quot;</span> <span class="s2">&quot;.$extension&quot;</span><span class="k">)</span>
+            <span class="nv">disk_format</span><span class="o">=</span>vhd
+            <span class="nv">container_format</span><span class="o">=</span>bare
+            <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;${image_fname##*.}&quot;</span> <span class="o">==</span> <span class="s2">&quot;gz&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">unpack</span><span class="o">=</span>zcat
+            <span class="k">fi</span>
+            ;;
+        *<span class="o">)</span> <span class="nb">echo</span> <span class="s2">&quot;Do not know what to do with $image_fname&quot;</span>; <span class="nb">false</span>;;
     <span class="k">esac</span>
 
 <span class="k">    if </span>is_arch <span class="s2">&quot;ppc64&quot;</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">IMG_PROPERTY</span><span class="o">=</span><span class="s2">&quot;--property hw_cdrom_bus=scsi&quot;</span>
+<span class="k">        </span><span class="nv">img_property</span><span class="o">=</span><span class="s2">&quot;--property hw_cdrom_bus=scsi&quot;</span>
     <span class="k">fi</span>
 
-<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CONTAINER_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;bare&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[</span> <span class="s2">&quot;$UNPACK&quot;</span> <span class="o">=</span> <span class="s2">&quot;zcat&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="nv">$IMG_PROPERTY</span> --is-public True --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${IMAGE}&quot;</span><span class="o">)</span>
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$container_format&quot;</span> <span class="o">=</span> <span class="s2">&quot;bare&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        if</span> <span class="o">[</span> <span class="s2">&quot;$unpack&quot;</span> <span class="o">=</span> <span class="s2">&quot;zcat&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span>openstack --os-token <span class="nv">$token</span> --os-url <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span> image create <span class="s2">&quot;$image_name&quot;</span> <span class="nv">$img_property</span> --public --container-format<span class="o">=</span><span class="nv">$container_format</span> --disk-format <span class="nv">$disk_format</span> &lt; &lt;<span class="o">(</span>zcat --force <span class="s2">&quot;${image}&quot;</span><span class="o">)</span>
         <span class="k">else</span>
-<span class="k">            </span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME&quot;</span> <span class="nv">$IMG_PROPERTY</span> --is-public True --container-format<span class="o">=</span><span class="nv">$CONTAINER_FORMAT</span> --disk-format <span class="nv">$DISK_FORMAT</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+<span class="k">            </span>openstack --os-token <span class="nv">$token</span> --os-url <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span> image create <span class="s2">&quot;$image_name&quot;</span> <span class="nv">$img_property</span> --public --container-format<span class="o">=</span><span class="nv">$container_format</span> --disk-format <span class="nv">$disk_format</span> &lt; <span class="s2">&quot;${image}&quot;</span>
         <span class="k">fi</span>
 <span class="k">    else</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -714,14 +696,14 @@ Setting metadata, so PV mode is used.</p>
 We parse the results of the first upload to get the glance ID of the
 kernel for use when uploading the root filesystem.</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>; <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
-        <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$KERNEL&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> <span class="nv">$IMG_PROPERTY</span> --is-public True --container-format aki --disk-format aki &lt; <span class="s2">&quot;$KERNEL&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+        <span class="nb">local </span><span class="nv">kernel_id</span><span class="o">=</span><span class="s2">&quot;&quot;</span> <span class="nv">ramdisk_id</span><span class="o">=</span><span class="s2">&quot;&quot;</span>;
+        <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$kernel&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">kernel_id</span><span class="o">=</span><span class="k">$(</span>openstack --os-token <span class="nv">$token</span> --os-url <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span> image create <span class="s2">&quot;$image_name-kernel&quot;</span> <span class="nv">$img_property</span> --public --container-format aki --disk-format aki &lt; <span class="s2">&quot;$kernel&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
         <span class="k">fi</span>
-<span class="k">        if</span> <span class="o">[</span> -n <span class="s2">&quot;$RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> <span class="nv">$IMG_PROPERTY</span> --is-public True --container-format ari --disk-format ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
+<span class="k">        if</span> <span class="o">[</span> -n <span class="s2">&quot;$ramdisk&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">ramdisk_id</span><span class="o">=</span><span class="k">$(</span>openstack --os-token <span class="nv">$token</span> --os-url <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span> image create <span class="s2">&quot;$image_name-ramdisk&quot;</span> <span class="nv">$img_property</span> --public --container-format ari --disk-format ari &lt; <span class="s2">&quot;$ramdisk&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
         <span class="k">fi</span>
-<span class="k">        </span>glance --os-auth-token <span class="nv">$token</span> --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> image-create --name <span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> <span class="nv">$IMG_PROPERTY</span> --is-public True --container-format ami --disk-format ami <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+--property kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="k">${</span><span class="nv">RAMDISK_ID</span><span class="p">:+--property ramdisk_id=</span><span class="nv">$RAMDISK_ID</span><span class="k">}</span> &lt; <span class="s2">&quot;${IMAGE}&quot;</span>
+<span class="k">        </span>openstack --os-token <span class="nv">$token</span> --os-url <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span> image create <span class="s2">&quot;${image_name%.img}&quot;</span> <span class="nv">$img_property</span> --public --container-format ami --disk-format ami <span class="k">${</span><span class="nv">kernel_id</span><span class="p">:+--property kernel_id=</span><span class="nv">$kernel_id</span><span class="k">}</span> <span class="k">${</span><span class="nv">ramdisk_id</span><span class="p">:+--property ramdisk_id=</span><span class="nv">$ramdisk_id</span><span class="k">}</span> &lt; <span class="s2">&quot;${image}&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -757,7 +739,7 @@ wait_for_service timeout url</p>
 <span class="k">function </span>wait_for_service <span class="o">{</span>
     <span class="nb">local </span><span class="nv">timeout</span><span class="o">=</span><span class="nv">$1</span>
     <span class="nb">local </span><span class="nv">url</span><span class="o">=</span><span class="nv">$2</span>
-    timeout <span class="nv">$timeout</span> sh -c <span class="s2">&quot;while ! curl --noproxy &#39;*&#39; -s $url &gt;/dev/null; do sleep 1; done&quot;</span>
+    timeout <span class="nv">$timeout</span> sh -c <span class="s2">&quot;while ! curl -k --noproxy &#39;*&#39; -s $url &gt;/dev/null; do sleep 1; done&quot;</span>
 <span class="o">}</span>
 
 

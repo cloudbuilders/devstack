@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -417,11 +417,18 @@ Dependencies:</p>
 <span class="nv">TEMPEST_CONFIG_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_CONFIG_DIR</span><span class="k">:-</span><span class="nv">$TEMPEST_DIR</span><span class="p">/etc</span><span class="k">}</span>
 <span class="nv">TEMPEST_CONFIG</span><span class="o">=</span><span class="nv">$TEMPEST_CONFIG_DIR</span>/tempest.conf
 <span class="nv">TEMPEST_STATE_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">TEMPEST_STATE_PATH</span><span class="p">:=</span><span class="nv">$DATA_DIR</span><span class="p">/tempest</span><span class="k">}</span>
+<span class="nv">TEMPEST_LIB_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/tempest-lib
 
 <span class="nv">NOVA_SOURCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/nova
 
 <span class="nv">BUILD_INTERVAL</span><span class="o">=</span>1
-<span class="nv">BUILD_TIMEOUT</span><span class="o">=</span>196
+
+</pre></div></td></tr><tr><td class=docs>
+<p>This is the timeout that tempest will wait for a VM to change state,
+spawn, delete, etc.
+The default is set to 196 seconds.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">BUILD_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">BUILD_TIMEOUT</span><span class="k">:-</span><span class="nv">196</span><span class="k">}</span>
 
 
 <span class="nv">BOTO_MATERIALS_PATH</span><span class="o">=</span><span class="s2">&quot;$FILES/images/s3-materials/cirros-${CIRROS_VERSION}&quot;</span>
@@ -490,6 +497,10 @@ if there is more than one returned...
             <span class="nv">image_uuid_alt</span><span class="o">=</span><span class="s2">&quot;$IMAGE_UUID&quot;</span>
         <span class="k">fi</span>
 <span class="k">        </span>images+<span class="o">=(</span><span class="nv">$IMAGE_UUID</span><span class="o">)</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(stevemar): update this command to use openstackclient's <cite>openstack image list</cite>
+when it supports listing by status.</p>
+</td><td class=code><div class=highlight><pre>
     <span class="k">done</span> &lt; &lt;<span class="o">(</span>glance image-list --status<span class="o">=</span>active | awk -F<span class="s1">&#39;|&#39;</span> <span class="s1">&#39;!/^(+--)|ID|aki|ari/ { print $3,$2 }&#39;</span><span class="o">)</span>
 
     <span class="k">case</span> <span class="s2">&quot;${#images[*]}&quot;</span> in
@@ -691,11 +702,12 @@ doing an HTTP fetch over the wide internet for this test</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Compute Features</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled api_v3 <span class="k">${</span><span class="nv">TEMPEST_NOVA_API_V3</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
     iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled resize True
     iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled live_migration <span class="k">${</span><span class="nv">LIVE_MIGRATION_AVAILABLE</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
     iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled change_password False
     iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled block_migration_for_live_migration <span class="k">${</span><span class="nv">USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION</span><span class="k">:-</span><span class="nv">False</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled api_extensions <span class="k">${</span><span class="nv">COMPUTE_API_EXTENSIONS</span><span class="k">:-</span><span class="s2">&quot;all&quot;</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-disabled api_extensions <span class="k">${</span><span class="nv">DISABLE_COMPUTE_API_EXTENSIONS</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Compute admin</p>
@@ -712,11 +724,13 @@ doing an HTTP fetch over the wide internet for this test</p>
     iniset <span class="nv">$TEMPEST_CONFIG</span> network default_network <span class="s2">&quot;$FIXED_RANGE&quot;</span>
     iniset <span class="nv">$TEMPEST_CONFIG</span> network-feature-enabled ipv6 <span class="s2">&quot;$IPV6_ENABLED&quot;</span>
     iniset <span class="nv">$TEMPEST_CONFIG</span> network-feature-enabled ipv6_subnet_attributes <span class="s2">&quot;$IPV6_SUBNET_ATTRIBUTES_ENABLED&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> network-feature-enabled api_extensions <span class="k">${</span><span class="nv">NETWORK_API_EXTENSIONS</span><span class="k">:-</span><span class="s2">&quot;all&quot;</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> network-feature-disabled api_extensions <span class="k">${</span><span class="nv">DISABLE_NETWORK_API_EXTENSIONS</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>boto</p>
 </td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONFIG</span> boto ec2_url <span class="s2">&quot;http://$SERVICE_HOST:8773/services/Cloud&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> boto ec2_url <span class="s2">&quot;$EC2_SERVICE_PROTOCOL://$SERVICE_HOST:8773/services/Cloud&quot;</span>
     iniset <span class="nv">$TEMPEST_CONFIG</span> boto s3_url <span class="s2">&quot;http://$SERVICE_HOST:${S3_SERVICE_PORT:-3333}&quot;</span>
     iniset <span class="nv">$TEMPEST_CONFIG</span> boto s3_materials_path <span class="s2">&quot;$BOTO_MATERIALS_PATH&quot;</span>
     iniset <span class="nv">$TEMPEST_CONFIG</span> boto ari_manifest cirros-<span class="k">${</span><span class="nv">CIRROS_VERSION</span><span class="k">}</span>-<span class="k">${</span><span class="nv">CIRROS_ARCH</span><span class="k">}</span>-initrd.manifest.xml
@@ -765,8 +779,16 @@ Once Tempest retires support for icehouse this flag can be removed.</p>
     iniset <span class="nv">$TEMPEST_CONFIG</span> telemetry too_slow_to_test <span class="s2">&quot;False&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Object storage</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> object-storage-feature-enabled discoverable_apis <span class="k">${</span><span class="nv">OBJECT_STORAGE_API_EXTENSIONS</span><span class="k">:-</span><span class="s2">&quot;all&quot;</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> object-storage-feature-disabled discoverable_apis <span class="k">${</span><span class="nv">OBJECT_STORAGE_DISABLE_API_EXTENSIONS</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Volume</p>
 </td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> volume-feature-enabled api_extensions <span class="k">${</span><span class="nv">VOLUME_API_EXTENSIONS</span><span class="k">:-</span><span class="s2">&quot;all&quot;</span><span class="k">}</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> volume-feature-disabled api_extensions <span class="k">${</span><span class="nv">DISABLE_VOLUME_API_EXTENSIONS</span><span class="k">}</span>
     <span class="k">if</span> ! is_service_enabled c-bak; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$TEMPEST_CONFIG</span> volume-feature-enabled backup False
     <span class="k">fi</span>
@@ -778,7 +800,7 @@ Once Tempest retires support for icehouse this flag can be removed.</p>
     <span class="k">fi</span>
 
 <span class="k">    if</span> <span class="o">[</span> <span class="nv">$TEMPEST_VOLUME_DRIVER</span> !<span class="o">=</span> <span class="s2">&quot;default&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONFIG</span> volume vendor_name <span class="nv">$TEMPEST_VOLUME_VENDOR</span>
+<span class="k">        </span>iniset <span class="nv">$TEMPEST_CONFIG</span> volume vendor_name <span class="s2">&quot;$TEMPEST_VOLUME_VENDOR&quot;</span>
         iniset <span class="nv">$TEMPEST_CONFIG</span> volume storage_protocol <span class="nv">$TEMPEST_STORAGE_PROTOCOL</span>
     <span class="k">fi</span>
 
@@ -794,15 +816,20 @@ Once Tempest retires support for icehouse this flag can be removed.</p>
     iniset <span class="nv">$TEMPEST_CONFIG</span> cli cli_dir <span class="nv">$NOVA_BIN_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Networking</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$TEMPEST_CONFIG</span> network-feature-enabled api_extensions <span class="s2">&quot;${NETWORK_API_EXTENSIONS:-all}&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Baremetal</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s2">&quot;ironic&quot;</span> <span class="o">]</span> ; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$TEMPEST_CONFIG</span> baremetal driver_enabled True
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled change_password False
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled console_output False
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled interface_attach False
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled live_migration False
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled pause False
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled rescue False
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled resize False
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled shelve False
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled snapshot False
+        iniset <span class="nv">$TEMPEST_CONFIG</span> compute-feature-enabled <span class="nb">suspend </span>False
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -849,11 +876,20 @@ between two regular users in separate tenants</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>install_tempest_lib() - Collect source, prepare, and install tempest-lib</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_tempest_lib <span class="o">{</span>
+    git_clone <span class="nv">$TEMPEST_LIB_REPO</span> <span class="nv">$TEMPEST_LIB_DIR</span> <span class="nv">$TEMPEST_LIB_BRANCH</span>
+    setup_develop <span class="nv">$TEMPEST_LIB_DIR</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>install_tempest() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_tempest <span class="o">{</span>
+    install_tempest_lib
     git_clone <span class="nv">$TEMPEST_REPO</span> <span class="nv">$TEMPEST_DIR</span> <span class="nv">$TEMPEST_BRANCH</span>
-    pip_install <span class="s2">&quot;tox&lt;1.7&quot;</span>
+    pip_install tox
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -874,6 +910,7 @@ between two regular users in separate tenants</p>
     <span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$kernel&quot;</span> -a -f <span class="s2">&quot;$ramdisk&quot;</span> -a -f <span class="s2">&quot;$disk_image&quot;</span> -a  <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;openvz&quot;</span> <span class="se">\</span>
         -a <span class="se">\(</span> <span class="s2">&quot;$LIBVIRT_TYPE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;lxc&quot;</span> -o <span class="s2">&quot;$VIRT_DRIVER&quot;</span> !<span class="o">=</span> <span class="s2">&quot;libvirt&quot;</span> <span class="se">\)</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Prepare aki/ari/ami Images&quot;</span>
+        mkdir -p <span class="nv">$BOTO_MATERIALS_PATH</span>
         <span class="o">(</span> <span class="c">#new namespace</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>tenant:demo ; user: demo</p>

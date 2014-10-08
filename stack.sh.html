@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -409,9 +409,66 @@ with &quot;unsupported locale setting&quot; errors.</p>
 <span class="nb">umask </span>022
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Not all distros have sbin in PATH for regular users.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:/usr/local/sbin:/usr/sbin:/sbin
+
+</pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the devstack directory</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="sanity-checks">
+<h1>Sanity Checks</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean up last environment var cache</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$TOP_DIR</span>/.stackenv <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span>rm <span class="nv">$TOP_DIR</span>/.stackenv
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p><tt class="docutils literal">stack.sh</tt> keeps the list of <tt class="docutils literal">apt</tt> and <tt class="docutils literal">rpm</tt> dependencies and config
+templates and other useful files in the <tt class="docutils literal">files</tt> subdirectory</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$FILES</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;missing devstack/files&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p><tt class="docutils literal">stack.sh</tt> keeps function libraries here
+Make sure <tt class="docutils literal">$TOP_DIR/lib</tt> directory is present</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$TOP_DIR</span>/lib <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;missing devstack/lib&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Check if run as root
+OpenStack is designed to be run as a non-root user; Horizon will fail to run
+as <strong>root</strong> since Apache will not serve content from <strong>root</strong> user).
+<tt class="docutils literal">stack.sh</tt> must not be run as <strong>root</strong>.  It aborts and suggests one course of
+action to create a suitable user account.</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$EUID</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are running this script as root.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Cut it out.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Really.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;If you need an account to run DevStack, do this (as root, heh) to create a non-root account:&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$TOP_DIR/tools/create-stack-user.sh&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="prepare-the-environment">
+<h1>Prepare the environment</h1>
+</td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
@@ -430,8 +487,20 @@ and <tt class="docutils literal">DISTRO</tt></p>
 </td><td class=code><div class=highlight><pre>
 GetDistro
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Warn users who aren't on an explicitly supported distro, but allow them to
+override check and attempt installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>precise|trusty|7.0|wheezy|sid|testing|jessie|f19|f20|rhel6|rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: this script has not been tested on $DISTRO&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$FORCE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;If you wish to run this script anyway run with FORCE=yes&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="global-settings">
 <h1>Global Settings</h1>
 </td><td class=code><div class=highlight><pre>
@@ -459,6 +528,7 @@ rm -f <span class="nv">$TOP_DIR</span>/.localrc.auto
 <span class="k">    done</span>
 <span class="k">fi</span>
 
+
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> is customizable by setting environment variables.  Override a
 default setting via export:</p>
@@ -484,14 +554,26 @@ repositories, branches to configure, and other configuration defaults.
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> ! -r <span class="nv">$TOP_DIR</span>/stackrc <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>log_error <span class="nv">$LINENO</span> <span class="s2">&quot;missing $TOP_DIR/stackrc - did you grab more than just stack.sh?&quot;</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;missing $TOP_DIR/stackrc - did you grab more than just stack.sh?&quot;</span>
 <span class="k">fi</span>
 <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/stackrc
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Check to see if we are already running DevStack
+Note that this may fail if USE_SCREEN=False</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span><span class="nb">type</span> -p screen &gt; /dev/null <span class="o">&amp;&amp;</span> screen -ls | egrep -q <span class="s2">&quot;[0-9]\.$SCREEN_NAME&quot;</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are already running a stack.sh session.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;To rejoin this session type &#39;screen -x stack&#39;.&quot;</span>
+    <span class="nb">echo</span> <span class="s2">&quot;To destroy this session, type &#39;./unstack.sh&#39;.&quot;</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
 <div class="section" id="local-settings">
-<h2>Local Settings</h2>
+<h1>Local Settings</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -500,64 +582,11 @@ repositories, branches to configure, and other configuration defaults.
 export_proxy_variables
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Destination path for installation <tt class="docutils literal">DEST</tt></p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="sanity-check">
-<h2>Sanity Check</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Clean up last environment var cache</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$TOP_DIR</span>/.stackenv <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>rm <span class="nv">$TOP_DIR</span>/.stackenv
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">stack.sh</tt> keeps the list of <tt class="docutils literal">apt</tt> and <tt class="docutils literal">rpm</tt> dependencies and config
-templates and other useful files in the <tt class="docutils literal">files</tt> subdirectory</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
-<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$FILES</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>log_error <span class="nv">$LINENO</span> <span class="s2">&quot;missing devstack/files&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p><tt class="docutils literal">stack.sh</tt> keeps function libraries here
-Make sure <tt class="docutils literal">$TOP_DIR/lib</tt> directory is present</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[</span> ! -d <span class="nv">$TOP_DIR</span>/lib <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>log_error <span class="nv">$LINENO</span> <span class="s2">&quot;missing devstack/lib&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Import common services (database, message queue) configuration</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/rpc_backend
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Remove services which were negated in ENABLED_SERVICES
 using the &quot;-&quot; prefix (e.g., &quot;-rabbit&quot;) instead of
 calling disable_service().</p>
 </td><td class=code><div class=highlight><pre>
 disable_negated_services
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Warn users who aren't on an explicitly supported distro, but allow them to
-override check and attempt installation with <tt class="docutils literal">FORCE=yes ./stack</tt></p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> ! <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>precise|saucy|trusty|7.0|wheezy|sid|testing|jessie|f19|f20|rhel6|rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;WARNING: this script has not been tested on $DISTRO&quot;</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$FORCE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;If you wish to run this script anyway run with FORCE=yes&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Look for obsolete stuff</p>
@@ -570,48 +599,10 @@ override check and attempt installation with <tt class="docutils literal">FORCE=
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Make sure we only have one rpc backend enabled,
-and the specified rpc backend is available on your platform.</p>
-</td><td class=code><div class=highlight><pre>
-check_rpc_backend
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Check to see if we are already running DevStack
-Note that this may fail if USE_SCREEN=False</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span><span class="nb">type</span> -p screen &gt;/dev/null <span class="o">&amp;&amp;</span> screen -ls | egrep -q <span class="s2">&quot;[0-9].$SCREEN_NAME&quot;</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are already running a stack.sh session.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;To rejoin this session type &#39;screen -x stack&#39;.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;To destroy this session, type &#39;./unstack.sh&#39;.&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set up logging level</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">VERBOSE</span><span class="o">=</span><span class="k">$(</span>trueorfalse True <span class="nv">$VERBOSE</span><span class="k">)</span>
-
-</pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="root-access">
-<h2>root Access</h2>
+<div class="section" id="configure-sudo">
+<h1>Configure sudo</h1>
 </td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>OpenStack is designed to be run as a non-root user; Horizon will fail to run
-as <strong>root</strong> since Apache will not serve content from <strong>root</strong> user).
-<tt class="docutils literal">stack.sh</tt> must not be run as <strong>root</strong>.  It aborts and suggests one course of
-action to create a suitable user account.</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$EUID</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;You are running this script as root.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Cut it out.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Really.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;If you need an account to run DevStack, do this (as root, heh) to create $STACK_USER:&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$TOP_DIR/tools/create-stack-user.sh&quot;</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>We're not <strong>root</strong>, make sure <tt class="docutils literal">sudo</tt> is available</p>
@@ -639,17 +630,28 @@ chmod 0440 <span class="nv">$TEMPFILE</span>
 sudo chown root:root <span class="nv">$TEMPFILE</span>
 sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/50_stack_sh
 
+
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="additional-repos">
-<h2>Additional repos</h2>
+<div class="section" id="configure-distro-repositories">
+<h1>Configure Distro Repositories</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>For debian/ubuntu make apt attempt to retry network ops on it's own</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;APT::Acquire::Retries &quot;20&quot;;&#39;</span> | sudo tee /etc/apt/apt.conf.d/80retry
+<span class="k">    </span><span class="nb">echo</span> <span class="s1">&#39;APT::Acquire::Retries &quot;20&quot;;&#39;</span> | sudo tee /etc/apt/apt.conf.d/80retry  &gt;/dev/null
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>upstream Rackspace centos7 images have an issue where cloud-init is
+installed via pip because there were not official packages when the
+image was created (fix in the works).  Remove all pip packages
+before we do anything else</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span> <span class="s2">&quot;rhel7&quot;</span> <span class="o">&amp;&amp;</span> is_rackspace <span class="o">]]</span>; <span class="k">then</span>
+    <span class="o">(</span>sudo pip freeze | xargs sudo pip uninstall -y<span class="o">)</span> <span class="o">||</span> <span class="nb">true</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -657,7 +659,7 @@ sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/50_stack_sh
 to pick up required packages.</p>
 </td><td class=code><div class=highlight><pre>
 
-<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">==</span> <span class="s2">&quot;rhel6&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Installing Open vSwitch on RHEL requires enabling the RDO repo.</p>
 </td><td class=code><div class=highlight><pre>
@@ -668,12 +670,15 @@ to pick up required packages.</p>
         yum_install <span class="nv">$RHEL6_RDO_REPO_RPM</span> <span class="o">||</span> <span class="se">\</span>
             die <span class="nv">$LINENO</span> <span class="s2">&quot;Error installing RDO repo, cannot continue&quot;</span>
     <span class="k">fi</span>
+<span class="k">fi</span>
+
+<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="o">(</span> <span class="nv">$DISTRO</span> <span class="o">==</span> <span class="s2">&quot;rhel6&quot;</span> <span class="o">||</span> <span class="nv">$DISTRO</span> <span class="o">==</span> <span class="s2">&quot;rhel7&quot;</span> <span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>RHEL requires EPEL for many Open Stack dependencies</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">EPEL_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL7_EPEL_RPM</span><span class="k">:-</span><span class="s2">&quot;http://dl.fedoraproject.org/pub/epel/beta/7/x86_64/epel-release-7-0.2.noarch.rpm&quot;</span><span class="k">}</span>
-    <span class="k">else</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">==</span> <span class="s2">&quot;rhel7&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">EPEL_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL7_EPEL_RPM</span><span class="k">:-</span><span class="s2">&quot;http://dl.fedoraproject.org/pub/epel/beta/7/x86_64/epel-release-7-1.noarch.rpm&quot;</span><span class="k">}</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">==</span> <span class="s2">&quot;rhel6&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">EPEL_RPM</span><span class="o">=</span><span class="k">${</span><span class="nv">RHEL6_EPEL_RPM</span><span class="k">:-</span><span class="s2">&quot;http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm&quot;</span><span class="k">}</span>
     <span class="k">fi</span>
 <span class="k">    if</span> ! sudo yum repolist enabled epel | grep -q <span class="s1">&#39;epel&#39;</span>; <span class="k">then</span>
@@ -686,20 +691,25 @@ to pick up required packages.</p>
 <p>... and also optional to be enabled</p>
 </td><td class=code><div class=highlight><pre>
     is_package_installed yum-utils <span class="o">||</span> install_package yum-utils
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">==</span> <span class="s2">&quot;rhel7&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">OPTIONAL_REPO</span><span class="o">=</span>rhel-7-server-optional-rpms
-    <span class="k">else</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">==</span> <span class="s2">&quot;rhel6&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">OPTIONAL_REPO</span><span class="o">=</span>rhel-6-server-optional-rpms
     <span class="k">fi</span>
 <span class="k">    </span>sudo yum-config-manager --enable <span class="k">${</span><span class="nv">OPTIONAL_REPO</span><span class="k">}</span>
-
 <span class="k">fi</span>
+
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="filesystem-setup">
-<h2>Filesystem setup</h2>
+<div class="section" id="configure-target-directories">
+<h1>Configure Target Directories</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Destination path for installation <tt class="docutils literal">DEST</tt></p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DEST</span><span class="o">=</span><span class="k">${</span><span class="nv">DEST</span><span class="k">:-</span><span class="p">/opt/stack</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create the destination directory and ensure it is writable by the user
@@ -715,7 +725,15 @@ safe_chmod 0755 <span class="nv">$DEST</span>
 check_path_perm_sanity <span class="k">${</span><span class="nv">DEST</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Certain services such as rabbitmq require that the local hostname resolves
+<p>Destination path for service data</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
+sudo mkdir -p <span class="nv">$DATA_DIR</span>
+safe_chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DATA_DIR</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure proper hostname
+Certain services such as rabbitmq require that the local hostname resolves
 correctly.  Make sure it exists in /etc/hosts so that is always true.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">LOCAL_HOSTNAME</span><span class="o">=</span><span class="sb">`</span>hostname -s<span class="sb">`</span>
@@ -723,293 +741,17 @@ correctly.  Make sure it exists in /etc/hosts so that is always true.</p>
 <span class="k">    </span>sudo sed -i <span class="s2">&quot;s/\(^127.0.0.1.*\)/\1 $LOCAL_HOSTNAME/&quot;</span> /etc/hosts
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Destination path for service data</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">DATA_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DATA_DIR</span><span class="k">:-${</span><span class="nv">DEST</span><span class="k">}</span><span class="p">/data</span><span class="k">}</span>
-sudo mkdir -p <span class="nv">$DATA_DIR</span>
-safe_chown -R <span class="nv">$STACK_USER</span> <span class="nv">$DATA_DIR</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="common-configuration">
-<h2>Common Configuration</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set <tt class="docutils literal">OFFLINE</tt> to <tt class="docutils literal">True</tt> to configure <tt class="docutils literal">stack.sh</tt> to run cleanly without
-Internet access. <tt class="docutils literal">stack.sh</tt> must have been previously run with Internet
-access to install prerequisites and fetch repositories.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">OFFLINE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$OFFLINE</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set <tt class="docutils literal">ERROR_ON_CLONE</tt> to <tt class="docutils literal">True</tt> to configure <tt class="docutils literal">stack.sh</tt> to exit if
-the destination git repository does not exist during the <tt class="docutils literal">git_clone</tt>
-operation.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">ERROR_ON_CLONE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$ERROR_ON_CLONE</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Whether to enable the debug log level in OpenStack services</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">ENABLE_DEBUG_LOG_LEVEL</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set fixed and floating range here so we can make sure not to use addresses
-from either range when attempting to guess the IP to use for the host.
-Note that setting FIXED_RANGE may be necessary when running DevStack
-in an OpenStack cloud that uses either of these address ranges internally.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.0/24</span><span class="k">}</span>
-<span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
-<span class="nv">FIXED_NETWORK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_NETWORK_SIZE</span><span class="k">:-</span><span class="nv">256</span><span class="k">}</span>
-
-<span class="nv">HOST_IP</span><span class="o">=</span><span class="k">$(</span>get_default_host_ip <span class="nv">$FIXED_RANGE</span> <span class="nv">$FLOATING_RANGE</span> <span class="s2">&quot;$HOST_IP_IFACE&quot;</span> <span class="s2">&quot;$HOST_IP&quot;</span><span class="k">)</span>
-<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Could not determine host ip address.  See local.conf for suggestions on setting HOST_IP.&quot;</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Allow the use of an alternate hostname (such as localhost/127.0.0.1) for service endpoints.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Configure services to use syslog instead of writing to individual log files</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SYSLOG</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$SYSLOG</span><span class="sb">`</span>
-<span class="nv">SYSLOG_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSLOG_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
-<span class="nv">SYSLOG_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSLOG_PORT</span><span class="k">:-</span><span class="nv">516</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>for DSTAT logging</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">DSTAT_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">DSTAT_FILE</span><span class="k">:-</span><span class="s2">&quot;dstat.txt&quot;</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Use color for logging output (only available if syslog is not used)</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">LOG_COLOR</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$LOG_COLOR</span><span class="sb">`</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Service startup timeout</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SERVICE_TIMEOUT</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_TIMEOUT</span><span class="k">:-</span><span class="nv">60</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Reset the bundle of CA certificates</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">SSL_BUNDLE_FILE</span><span class="o">=</span><span class="s2">&quot;$DATA_DIR/ca-bundle.pem&quot;</span>
-rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
-<div class="section" id="configure-projects">
-<h1>Configure Projects</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Import apache functions</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/apache
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Import TLS functions</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tls
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Source project function libraries</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/infra
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/oslo
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/stackforge
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/nova
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/swift
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/baremetal
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ldap
-
-</pre></div></td></tr><tr><td class=docs>
-<div class="section" id="extras-source">
-<h2>Extras Source</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Phase: source</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
-        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> <span class="nb">source</span>
-<span class="nb">    </span><span class="k">done</span>
-<span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set the destination directories for other OpenStack projects</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">OPENSTACKCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-openstackclient
-
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="interactive-configuration">
-<h2>Interactive Configuration</h2>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Do all interactive config up front before the logging spew begins</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Generic helper to configure passwords</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">function </span>read_password <span class="o">{</span>
-    <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
-    <span class="nb">set</span> +o xtrace
-    <span class="nv">var</span><span class="o">=</span><span class="nv">$1</span>; <span class="nv">msg</span><span class="o">=</span><span class="nv">$2</span>
-    <span class="nv">pw</span><span class="o">=</span><span class="k">${</span><span class="p">!var</span><span class="k">}</span>
-
-    <span class="k">if</span> <span class="o">[[</span> -f <span class="nv">$RC_DIR</span>/localrc <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">localrc</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/localrc
-    <span class="k">else</span>
-<span class="k">        </span><span class="nv">localrc</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/.localrc.auto
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>If the password is not defined yet, proceed to prompt user for a password.</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if</span> <span class="o">[</span> ! <span class="nv">$pw</span> <span class="o">]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>If there is no localrc file, create one</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$localrc</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span>touch <span class="nv">$localrc</span>
-        <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Presumably if we got this far it can only be that our localrc is missing
-the required password.  Prompt user for a password and write to localrc.</p>
-</td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="s1">&#39;&#39;</span>
-        <span class="nb">echo</span> <span class="s1">&#39;################################################################################&#39;</span>
-        <span class="nb">echo</span> <span class="nv">$msg</span>
-        <span class="nb">echo</span> <span class="s1">&#39;################################################################################&#39;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;This value will be written to your localrc file so you don&#39;t have to enter it &quot;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;again.  Use only alphanumeric characters.&quot;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;If you leave this blank, a random default value will be used.&quot;</span>
-        <span class="nv">pw</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
-        <span class="k">while </span><span class="nb">true</span>; <span class="k">do</span>
-<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;Enter a password now:&quot;</span>
-            <span class="nb">read</span> -e <span class="nv">$var</span>
-            <span class="nv">pw</span><span class="o">=</span><span class="k">${</span><span class="p">!var</span><span class="k">}</span>
-            <span class="o">[[</span> <span class="s2">&quot;$pw&quot;</span> <span class="o">=</span> <span class="s2">&quot;`echo $pw | tr -cd [:alnum:]`&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>
-<span class="nb">            echo</span> <span class="s2">&quot;Invalid chars in password.  Try again:&quot;</span>
-        <span class="k">done</span>
-<span class="k">        if</span> <span class="o">[</span> ! <span class="nv">$pw</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">pw</span><span class="o">=</span><span class="k">$(</span>cat /dev/urandom | tr -cd <span class="s1">&#39;a-f0-9&#39;</span> | head -c 20<span class="k">)</span>
-        <span class="k">fi</span>
-<span class="k">        </span><span class="nb">eval</span> <span class="s2">&quot;$var=$pw&quot;</span>
-        <span class="nb">echo</span> <span class="s2">&quot;$var=$pw&quot;</span> &gt;&gt; <span class="nv">$localrc</span>
-    <span class="k">fi</span>
-    <span class="nv">$XTRACE</span>
-<span class="o">}</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Database Configuration</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>To select between database backends, add the following to <tt class="docutils literal">localrc</tt>:</p>
-<blockquote>
-disable_service mysql
-enable_service postgresql</blockquote>
-<p>The available database backends are listed in <tt class="docutils literal">DATABASE_BACKENDS</tt> after
-<tt class="docutils literal">lib/database</tt> is sourced. <tt class="docutils literal">mysql</tt> is the default.</p>
-</td><td class=code><div class=highlight><pre>
-
-initialize_database_backends <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;Using $DATABASE_TYPE database backend&quot;</span> <span class="o">||</span> <span class="nb">echo</span> <span class="s2">&quot;No database enabled&quot;</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Queue Configuration</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Rabbit connection info</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
-<span class="k">    </span><span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
-    read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR RABBIT.&quot;</span>
-<span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Keystone</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if </span>is_service_enabled key; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>The <tt class="docutils literal">SERVICE_TOKEN</tt> is used to bootstrap the Keystone database.  It is
-just a string and is not a 'real' Keystone token.</p>
-</td><td class=code><div class=highlight><pre>
-    read_password SERVICE_TOKEN <span class="s2">&quot;ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN TOKEN.&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Services authenticate to Identity with servicename/<tt class="docutils literal">SERVICE_PASSWORD</tt></p>
-</td><td class=code><div class=highlight><pre>
-    read_password SERVICE_PASSWORD <span class="s2">&quot;ENTER A SERVICE_PASSWORD TO USE FOR THE SERVICE AUTHENTICATION.&quot;</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Horizon currently truncates usernames and passwords at 20 characters</p>
-</td><td class=code><div class=highlight><pre>
-    read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS).&quot;</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Keystone can now optionally install OpenLDAP by enabling the <tt class="docutils literal">ldap</tt>
-service in <tt class="docutils literal">localrc</tt> (e.g. <tt class="docutils literal">enable_service ldap</tt>).
-To clean out the Keystone contents in OpenLDAP set <tt class="docutils literal">KEYSTONE_CLEAR_LDAP</tt>
-to <tt class="docutils literal">yes</tt> (e.g. <tt class="docutils literal">KEYSTONE_CLEAR_LDAP=yes</tt>) in <tt class="docutils literal">localrc</tt>.  To enable the
-Keystone Identity Driver (<tt class="docutils literal">keystone.identity.backends.ldap.Identity</tt>)
-set <tt class="docutils literal">KEYSTONE_IDENTITY_BACKEND</tt> to <tt class="docutils literal">ldap</tt> (e.g.
-<tt class="docutils literal">KEYSTONE_IDENTITY_BACKEND=ldap</tt>) in <tt class="docutils literal">localrc</tt>.</p>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>only request ldap password if the service is enabled</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled ldap; <span class="k">then</span>
-<span class="k">        </span>read_password LDAP_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR LDAP&quot;</span>
-    <span class="k">fi</span>
-<span class="k">fi</span>
-
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Swift</p>
-</td><td class=code><div class=highlight><pre>
-
-<span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>We only ask for Swift Hash if we have enabled swift service.
-<tt class="docutils literal">SWIFT_HASH</tt> is a random unique string for a swift cluster that
-can never change.</p>
-</td><td class=code><div class=highlight><pre>
-    read_password SWIFT_HASH <span class="s2">&quot;ENTER A RANDOM SWIFT HASH.&quot;</span>
-<span class="k">fi</span>
-
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="configure-logging">
-<h2>Configure logging</h2>
+<h1>Configure Logging</h1>
 </td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set up logging level</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">VERBOSE</span><span class="o">=</span><span class="k">$(</span>trueorfalse True <span class="nv">$VERBOSE</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Draw a spinner so the user knows something is happening</p>
@@ -1057,7 +799,7 @@ echo_nolog &quot;something not for the logs&quot;</p>
     <span class="nb">echo</span> <span class="nv">$@</span> &gt;&amp;3
 <span class="o">}</span>
 
-<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">if</span> <span class="o">[[</span> is_fedora <span class="o">&amp;&amp;</span> <span class="nv">$DISTRO</span> <span class="o">==</span> <span class="s2">&quot;rhel6&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>poor old python2.6 doesn't have argparse by default, which
 outfilter.py uses</p>
@@ -1170,8 +912,8 @@ Logs are kept for as long specified in <tt class="docutils literal">LOGDAYS</tt>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
-<div class="section" id="set-up-script-execution">
-<h2>Set Up Script Execution</h2>
+<div class="section" id="configure-error-traps">
+<h1>Configure Error Traps</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1197,8 +939,12 @@ which currently is only to verbose logfile</p>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="nv">$r</span> -ne 0 <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Error on exit&quot;</span>
-        ./tools/worlddump.py -d <span class="nv">$LOGDIR</span>
-    <span class="k">fi</span>
+        <span class="k">if</span> <span class="o">[[</span> -z <span class="nv">$LOGDIR</span> <span class="o">]]</span>; <span class="k">then</span>
+            <span class="nv">$TOP_DIR</span>/tools/worlddump.py
+        <span class="k">else</span>
+            <span class="nv">$TOP_DIR</span>/tools/worlddump.py -d <span class="nv">$LOGDIR</span>
+        <span class="k">fi</span>
+<span class="k">    fi</span>
 
 <span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
 <span class="o">}</span>
@@ -1218,7 +964,9 @@ which currently is only to verbose logfile</p>
 <span class="k">    </span><span class="nb">exit</span> <span class="nv">$r</span>
 <span class="o">}</span>
 
-
+</pre></div></td></tr><tr><td class=docs>
+<p>Begin trapping error exit codes</p>
+</td><td class=code><div class=highlight><pre>
 <span class="nb">set</span> -o errexit
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1230,9 +978,301 @@ an error.  It is also useful for following along as the install occurs.</p>
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
+<div class="section" id="common-configuration">
+<h1>Common Configuration</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set <tt class="docutils literal">OFFLINE</tt> to <tt class="docutils literal">True</tt> to configure <tt class="docutils literal">stack.sh</tt> to run cleanly without
+Internet access. <tt class="docutils literal">stack.sh</tt> must have been previously run with Internet
+access to install prerequisites and fetch repositories.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">OFFLINE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$OFFLINE</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set <tt class="docutils literal">ERROR_ON_CLONE</tt> to <tt class="docutils literal">True</tt> to configure <tt class="docutils literal">stack.sh</tt> to exit if
+the destination git repository does not exist during the <tt class="docutils literal">git_clone</tt>
+operation.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ERROR_ON_CLONE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$ERROR_ON_CLONE</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Whether to enable the debug log level in OpenStack services</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">ENABLE_DEBUG_LOG_LEVEL</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set fixed and floating range here so we can make sure not to use addresses
+from either range when attempting to guess the IP to use for the host.
+Note that setting FIXED_RANGE may be necessary when running DevStack
+in an OpenStack cloud that uses either of these address ranges internally.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">FLOATING_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FLOATING_RANGE</span><span class="k">:-</span><span class="nv">172</span><span class="p">.24.4.0/24</span><span class="k">}</span>
+<span class="nv">FIXED_RANGE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_RANGE</span><span class="k">:-</span><span class="nv">10</span><span class="p">.0.0.0/24</span><span class="k">}</span>
+<span class="nv">FIXED_NETWORK_SIZE</span><span class="o">=</span><span class="k">${</span><span class="nv">FIXED_NETWORK_SIZE</span><span class="k">:-</span><span class="nv">256</span><span class="k">}</span>
+
+<span class="nv">HOST_IP</span><span class="o">=</span><span class="k">$(</span>get_default_host_ip <span class="nv">$FIXED_RANGE</span> <span class="nv">$FLOATING_RANGE</span> <span class="s2">&quot;$HOST_IP_IFACE&quot;</span> <span class="s2">&quot;$HOST_IP&quot;</span><span class="k">)</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$HOST_IP&quot;</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Could not determine host ip address.  See local.conf for suggestions on setting HOST_IP.&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Allow the use of an alternate hostname (such as localhost/127.0.0.1) for service endpoints.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SERVICE_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Configure services to use syslog instead of writing to individual log files</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SYSLOG</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$SYSLOG</span><span class="sb">`</span>
+<span class="nv">SYSLOG_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSLOG_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
+<span class="nv">SYSLOG_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">SYSLOG_PORT</span><span class="k">:-</span><span class="nv">516</span><span class="k">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Use color for logging output (only available if syslog is not used)</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">LOG_COLOR</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$LOG_COLOR</span><span class="sb">`</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Reset the bundle of CA certificates</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SSL_BUNDLE_FILE</span><span class="o">=</span><span class="s2">&quot;$DATA_DIR/ca-bundle.pem&quot;</span>
+rm -f <span class="nv">$SSL_BUNDLE_FILE</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import common services (database, message queue) configuration</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/database
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/rpc_backend
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Make sure we only have one rpc backend enabled,
+and the specified rpc backend is available on your platform.</p>
+</td><td class=code><div class=highlight><pre>
+check_rpc_backend
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Use native SSL for servers in SSL_ENABLED_SERVICES</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">USE_SSL</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$USE_SSL</span><span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Service to enable with SSL if USE_SSL is True</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">SSL_ENABLED_SERVICES</span><span class="o">=</span><span class="s2">&quot;key,nova,cinder,glance,s-proxy,neutron&quot;</span>
+
+<span class="k">if </span>is_service_enabled tls-proxy <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$USE_SSL&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;tls-proxy and SSL are mutually exclusive&quot;</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<div class="section" id="configure-projects">
+<h2>Configure Projects</h2>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import apache functions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/apache
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Import TLS functions</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/tls
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Source project function libraries</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/infra
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/oslo
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/stackforge
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/horizon
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/keystone
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/glance
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/nova
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/cinder
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/swift
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ceilometer
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/heat
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/neutron
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/baremetal
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/ldap
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/lib/dstat
+
+</pre></div></td></tr><tr><td class=docs>
 </div>
+</div>
+<div class="section" id="extras-source">
+<h1>Extras Source</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Phase: source</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -d <span class="nv">$TOP_DIR</span>/extras.d <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    for </span>i in <span class="nv">$TOP_DIR</span>/extras.d/*.sh; <span class="k">do</span>
+        <span class="o">[[</span> -r <span class="nv">$i</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="nv">$i</span> <span class="nb">source</span>
+<span class="nb">    </span><span class="k">done</span>
+<span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Set the destination directories for other OpenStack projects</p>
+</td><td class=code><div class=highlight><pre>
+<span class="nv">OPENSTACKCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-openstackclient
+
+</pre></div></td></tr><tr><td class=docs>
+</div>
+<div class="section" id="interactive-configuration">
+<h1>Interactive Configuration</h1>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Do all interactive config up front before the logging spew begins</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Generic helper to configure passwords</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>read_password <span class="o">{</span>
+    <span class="nv">XTRACE</span><span class="o">=</span><span class="k">$(</span><span class="nb">set</span> +o | grep xtrace<span class="k">)</span>
+    <span class="nb">set</span> +o xtrace
+    <span class="nv">var</span><span class="o">=</span><span class="nv">$1</span>; <span class="nv">msg</span><span class="o">=</span><span class="nv">$2</span>
+    <span class="nv">pw</span><span class="o">=</span><span class="k">${</span><span class="p">!var</span><span class="k">}</span>
+
+    <span class="k">if</span> <span class="o">[[</span> -f <span class="nv">$RC_DIR</span>/localrc <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">localrc</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/localrc
+    <span class="k">else</span>
+<span class="k">        </span><span class="nv">localrc</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/.localrc.auto
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>If the password is not defined yet, proceed to prompt user for a password.</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> ! <span class="nv">$pw</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If there is no localrc file, create one</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[</span> ! -e <span class="nv">$localrc</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span>touch <span class="nv">$localrc</span>
+        <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Presumably if we got this far it can only be that our localrc is missing
+the required password.  Prompt user for a password and write to localrc.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="nb">echo</span> <span class="s1">&#39;&#39;</span>
+        <span class="nb">echo</span> <span class="s1">&#39;################################################################################&#39;</span>
+        <span class="nb">echo</span> <span class="nv">$msg</span>
+        <span class="nb">echo</span> <span class="s1">&#39;################################################################################&#39;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;This value will be written to your localrc file so you don&#39;t have to enter it &quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;again.  Use only alphanumeric characters.&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;If you leave this blank, a random default value will be used.&quot;</span>
+        <span class="nv">pw</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
+        <span class="k">while </span><span class="nb">true</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nb">echo</span> <span class="s2">&quot;Enter a password now:&quot;</span>
+            <span class="nb">read</span> -e <span class="nv">$var</span>
+            <span class="nv">pw</span><span class="o">=</span><span class="k">${</span><span class="p">!var</span><span class="k">}</span>
+            <span class="o">[[</span> <span class="s2">&quot;$pw&quot;</span> <span class="o">=</span> <span class="s2">&quot;`echo $pw | tr -cd [:alnum:]`&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">break</span>
+<span class="nb">            echo</span> <span class="s2">&quot;Invalid chars in password.  Try again:&quot;</span>
+        <span class="k">done</span>
+<span class="k">        if</span> <span class="o">[</span> ! <span class="nv">$pw</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">pw</span><span class="o">=</span><span class="k">$(</span>generate_hex_string 10<span class="k">)</span>
+        <span class="k">fi</span>
+<span class="k">        </span><span class="nb">eval</span> <span class="s2">&quot;$var=$pw&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;$var=$pw&quot;</span> &gt;&gt; <span class="nv">$localrc</span>
+    <span class="k">fi</span>
+    <span class="nv">$XTRACE</span>
+<span class="o">}</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Database Configuration</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>To select between database backends, add the following to <tt class="docutils literal">localrc</tt>:</p>
+<blockquote>
+disable_service mysql
+enable_service postgresql</blockquote>
+<p>The available database backends are listed in <tt class="docutils literal">DATABASE_BACKENDS</tt> after
+<tt class="docutils literal">lib/database</tt> is sourced. <tt class="docutils literal">mysql</tt> is the default.</p>
+</td><td class=code><div class=highlight><pre>
+
+initialize_database_backends <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;Using $DATABASE_TYPE database backend&quot;</span> <span class="o">||</span> <span class="nb">echo</span> <span class="s2">&quot;No database enabled&quot;</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Queue Configuration</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Rabbit connection info</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
+<span class="k">    </span><span class="nv">RABBIT_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">RABBIT_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+    read_password RABBIT_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR RABBIT.&quot;</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Keystone</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if </span>is_service_enabled key; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>The <tt class="docutils literal">SERVICE_TOKEN</tt> is used to bootstrap the Keystone database.  It is
+just a string and is not a 'real' Keystone token.</p>
+</td><td class=code><div class=highlight><pre>
+    read_password SERVICE_TOKEN <span class="s2">&quot;ENTER A SERVICE_TOKEN TO USE FOR THE SERVICE ADMIN TOKEN.&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Services authenticate to Identity with servicename/<tt class="docutils literal">SERVICE_PASSWORD</tt></p>
+</td><td class=code><div class=highlight><pre>
+    read_password SERVICE_PASSWORD <span class="s2">&quot;ENTER A SERVICE_PASSWORD TO USE FOR THE SERVICE AUTHENTICATION.&quot;</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Horizon currently truncates usernames and passwords at 20 characters</p>
+</td><td class=code><div class=highlight><pre>
+    read_password ADMIN_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR HORIZON AND KEYSTONE (20 CHARS OR LESS).&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Keystone can now optionally install OpenLDAP by enabling the <tt class="docutils literal">ldap</tt>
+service in <tt class="docutils literal">localrc</tt> (e.g. <tt class="docutils literal">enable_service ldap</tt>).
+To clean out the Keystone contents in OpenLDAP set <tt class="docutils literal">KEYSTONE_CLEAR_LDAP</tt>
+to <tt class="docutils literal">yes</tt> (e.g. <tt class="docutils literal">KEYSTONE_CLEAR_LDAP=yes</tt>) in <tt class="docutils literal">localrc</tt>.  To enable the
+Keystone Identity Driver (<tt class="docutils literal">keystone.identity.backends.ldap.Identity</tt>)
+set <tt class="docutils literal">KEYSTONE_IDENTITY_BACKEND</tt> to <tt class="docutils literal">ldap</tt> (e.g.
+<tt class="docutils literal">KEYSTONE_IDENTITY_BACKEND=ldap</tt>) in <tt class="docutils literal">localrc</tt>.</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>only request ldap password if the service is enabled</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled ldap; <span class="k">then</span>
+<span class="k">        </span>read_password LDAP_PASSWORD <span class="s2">&quot;ENTER A PASSWORD TO USE FOR LDAP&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Swift</p>
+</td><td class=code><div class=highlight><pre>
+
+<span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>We only ask for Swift Hash if we have enabled swift service.
+<tt class="docutils literal">SWIFT_HASH</tt> is a random unique string for a swift cluster that
+can never change.</p>
+</td><td class=code><div class=highlight><pre>
+    read_password SWIFT_HASH <span class="s2">&quot;ENTER A RANDOM SWIFT HASH.&quot;</span>
+
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$SWIFT_TEMPURL_KEY&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$SWIFT_ENABLE_TEMPURLS&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>read_password SWIFT_TEMPURL_KEY <span class="s2">&quot;ENTER A KEY FOR SWIFT TEMPURLS.&quot;</span>
+    <span class="k">fi</span>
+<span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
 <div class="section" id="install-packages">
-<h1>Install Packages</h1>
+<h2>Install Packages</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1256,12 +1296,14 @@ echo_summary <span class="s2">&quot;Installing package prerequisites&quot;</span
 </pre></div></td></tr><tr><td class=docs>
 <p>Do the ugly hacks for broken packages and distros</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">$TOP_DIR</span>/tools/fixup_stuff.sh
+<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/tools/fixup_stuff.sh
 
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
 <div class="section" id="extras-pre-install">
-<h2>Extras Pre-install</h2>
+<h1>Extras Pre-install</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1302,7 +1344,7 @@ install_rpc_backend
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="check-out-and-install-source">
-<h2>Check Out and Install Source</h2>
+<h1>Check Out and Install Source</h1>
 </td><td class=code><div class=highlight><pre>
 
 echo_summary <span class="s2">&quot;Installing OpenStack project source&quot;</span>
@@ -1421,11 +1463,12 @@ setup_develop <span class="nv">$OPENSTACKCLIENT_DIR</span>
 
 <span class="k">if </span>is_service_enabled heat; <span class="k">then</span>
 <span class="k">    </span>install_heat
+    install_heat_other
     cleanup_heat
     configure_heat
 <span class="k">fi</span>
 
-<span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">if </span>is_service_enabled tls-proxy <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$USE_SSL&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">    </span>configure_CA
     init_CA
     init_cert
@@ -1439,7 +1482,7 @@ don't be naive and add to existing line!</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="extras-install">
-<h2>Extras Install</h2>
+<h1>Extras Install</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1465,7 +1508,7 @@ don't be naive and add to existing line!</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="syslog">
-<h2>Syslog</h2>
+<h1>Syslog</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$SYSLOG</span> !<span class="o">=</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -1511,7 +1554,7 @@ don't be naive and add to existing line!</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="finalize-queue-installation">
-<h2>Finalize queue installation</h2>
+<h1>Finalize queue installation</h1>
 </td><td class=code><div class=highlight><pre>
 restart_rpc_backend
 
@@ -1519,7 +1562,7 @@ restart_rpc_backend
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="export-certicate-authority-bundle">
-<h2>Export Certicate Authority Bundle</h2>
+<h1>Export Certicate Authority Bundle</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1535,7 +1578,7 @@ should be exported so clients can validate their connections.</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="configure-database">
-<h2>Configure database</h2>
+<h1>Configure database</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled <span class="nv">$DATABASE_BACKENDS</span>; <span class="k">then</span>
@@ -1546,7 +1589,7 @@ should be exported so clients can validate their connections.</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="configure-screen">
-<h2>Configure screen</h2>
+<h1>Configure screen</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nv">USE_SCREEN</span><span class="o">=</span><span class="k">$(</span>trueorfalse True <span class="nv">$USE_SCREEN</span><span class="k">)</span>
@@ -1583,29 +1626,24 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="dstat">
-<h2>Dstat</h2>
+<h1>Dstat</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>A better kind of sysstat, with the top process per time slice</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">DSTAT_OPTS</span><span class="o">=</span><span class="s2">&quot;-tcmndrylp --top-cpu-adv&quot;</span>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="k">${</span><span class="nv">SCREEN_LOGDIR</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span>screen_it dstat <span class="s2">&quot;cd $TOP_DIR; dstat $DSTAT_OPTS | tee $SCREEN_LOGDIR/$DSTAT_FILE&quot;</span>
-<span class="k">else</span>
-<span class="k">    </span>screen_it dstat <span class="s2">&quot;dstat $DSTAT_OPTS&quot;</span>
-<span class="k">fi</span>
+start_dstat
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
 <div class="section" id="start-services">
-<h1>Start Services</h1>
+<h2>Start Services</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
 <div class="section" id="keystone">
-<h2>Keystone</h2>
+<h1>Keystone</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled key; <span class="k">then</span>
@@ -1649,7 +1687,7 @@ init_service_check
 <span class="k">        </span>create_swift_accounts
     <span class="k">fi</span>
 
-<span class="k">    if </span>is_service_enabled heat; <span class="k">then</span>
+<span class="k">    if </span>is_service_enabled heat <span class="o">&amp;&amp;</span> <span class="o">[[</span> <span class="s2">&quot;$HEAT_STANDALONE&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>create_heat_accounts
     <span class="k">fi</span>
 
@@ -1672,7 +1710,7 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="horizon">
-<h2>Horizon</h2>
+<h1>Horizon</h1>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1689,7 +1727,7 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="glance">
-<h2>Glance</h2>
+<h1>Glance</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled g-reg; <span class="k">then</span>
@@ -1701,7 +1739,7 @@ init_service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="neutron">
-<h2>Neutron</h2>
+<h1>Neutron</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
@@ -1730,7 +1768,7 @@ a part of the OpenStack project. Configure and start them.</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="nova">
-<h2>Nova</h2>
+<h1>Nova</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled n-net q-dhcp; <span class="k">then</span>
@@ -1763,7 +1801,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="storage-service">
-<h2>Storage Service</h2>
+<h1>Storage Service</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
@@ -1775,7 +1813,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="volume-service">
-<h2>Volume Service</h2>
+<h1>Volume Service</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
@@ -1787,7 +1825,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="compute-service">
-<h2>Compute Service</h2>
+<h1>Compute Service</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
@@ -1817,10 +1855,8 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
-</div>
 <div class="section" id="extras-configuration">
-<h1>Extras Configuration</h1>
+<h2>Extras Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1836,7 +1872,7 @@ Do not kill any dnsmasq instance spawned by NetworkManager</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="local-configuration">
-<h1>Local Configuration</h1>
+<h2>Local Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1849,7 +1885,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="launch-services">
-<h1>Launch Services</h1>
+<h2>Launch Services</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1875,7 +1911,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-config
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="install-images">
-<h1>Install Images</h1>
+<h2>Install Images</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -1941,16 +1977,12 @@ See <a class="reference external" href="https://help.ubuntu.com/community/CloudI
 <p>Create a randomized default value for the keymgr's fixed_key</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled nova; <span class="k">then</span>
-<span class="k">    </span><span class="nv">FIXED_KEY</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">for </span>i in <span class="k">$(</span>seq 1 64<span class="k">)</span>; <span class="k">do</span>
-<span class="k">        </span>FIXED_KEY+<span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;obase=16; $(($RANDOM % 16))&quot;</span> | bc<span class="k">)</span>;
-    <span class="k">done</span>;
-    iniset <span class="nv">$NOVA_CONF</span> keymgr fixed_key <span class="s2">&quot;$FIXED_KEY&quot;</span>
+<span class="k">    </span>iniset <span class="nv">$NOVA_CONF</span> keymgr fixed_key <span class="k">$(</span>generate_hex_string 32<span class="k">)</span>
 <span class="k">fi</span>
 
 <span class="k">if </span>is_service_enabled zeromq; <span class="k">then</span>
 <span class="k">    </span>echo_summary <span class="s2">&quot;Starting zermomq receiver&quot;</span>
-    screen_it zeromq <span class="s2">&quot;cd $NOVA_DIR &amp;&amp; $OSLO_BIN_DIR/oslo-messaging-zmq-receiver&quot;</span>
+    run_process zeromq <span class="s2">&quot;$OSLO_BIN_DIR/oslo-messaging-zmq-receiver&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2024,13 +2056,17 @@ See <a class="reference external" href="https://help.ubuntu.com/community/CloudI
     init_heat
     echo_summary <span class="s2">&quot;Starting Heat&quot;</span>
     start_heat
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$HEAT_CREATE_TEST_IMAGE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>echo_summary <span class="s2">&quot;Building Heat functional test image&quot;</span>
+        build_heat_functional_test_image
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="create-account-rc-files">
-<h1>Create account rc files</h1>
+<h2>Create account rc files</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2044,6 +2080,10 @@ which is helpful in image bundle steps.</p>
 
     <span class="k">if</span> <span class="o">[</span> -f <span class="nv">$SSL_BUNDLE_FILE</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nv">USERRC_PARAMS</span><span class="o">=</span><span class="s2">&quot;$USERRC_PARAMS --os-cacert $SSL_BUNDLE_FILE&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$HEAT_STANDALONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nv">USERRC_PARAMS</span><span class="o">=</span><span class="s2">&quot;$USERRC_PARAMS --heat-url http://$HEAT_API_HOST:$HEAT_API_PORT/v1&quot;</span>
     <span class="k">fi</span>
 
     <span class="nv">$TOP_DIR</span>/tools/create_userrc.sh <span class="nv">$USERRC_PARAMS</span>
@@ -2083,7 +2123,7 @@ are loaded into glance, though just knowing the IDs is sufficient here</p>
 <p>ensure callback daemon is running</p>
 </td><td class=code><div class=highlight><pre>
     sudo pkill nova-baremetal-deploy-helper <span class="o">||</span> <span class="nb">true</span>
-<span class="nb">    </span>screen_it baremetal <span class="s2">&quot;cd ; nova-baremetal-deploy-helper&quot;</span>
+<span class="nb">    </span>run_process baremetal <span class="s2">&quot;nova-baremetal-deploy-helper&quot;</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2100,7 +2140,7 @@ are loaded into glance, though just knowing the IDs is sufficient here</p>
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="id1">
-<h1>Local Configuration</h1>
+<h2>Local Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2113,7 +2153,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf extra
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="run-extras">
-<h1>Run extras</h1>
+<h2>Run extras</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2128,7 +2168,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf extra
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="id2">
-<h1>Local Configuration</h1>
+<h2>Local Configuration</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2141,7 +2181,7 @@ merge_config_group <span class="nv">$TOP_DIR</span>/local.conf post-extra
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="run-local-script">
-<h1>Run local script</h1>
+<h2>Run local script</h2>
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2161,7 +2201,7 @@ service_check
 </pre></div></td></tr><tr><td class=docs>
 </div>
 <div class="section" id="fin">
-<h1>Fin</h1>
+<h2>Fin</h2>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">set</span> +o xtrace
@@ -2181,8 +2221,10 @@ service_check
 
 
 </pre></div></td></tr><tr><td class=docs>
+</div>
+</div>
 <div class="section" id="using-the-cloud">
-<h2>Using the cloud</h2>
+<h1>Using the cloud</h1>
 </td><td class=code><div class=highlight><pre>
 
 <span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
@@ -2219,61 +2261,65 @@ to access the site using your browser.</p>
 <span class="k">    </span>echo_summary <span class="s2">&quot;WARNING: $DEPRECATED_TEXT&quot;</span>
 <span class="k">fi</span>
 
+<span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(dtroyer): Remove Q_AGENT_EXTRA_AGENT_OPTS after stable/juno branch is cut</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_AGENT_EXTRA_AGENT_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    echo_summary <span class="s2">&quot;WARNING: Q_AGENT_EXTRA_AGENT_OPTS is used&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_AGENT_EXTRA_AGENT_OPTS to pass configuration into $NEUTRON_CONF.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $NEUTRON_CONF section in local.conf:&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Q_AGENT_EXTRA_AGENT_OPTS will be removed early in the &#39;K&#39; development cycle&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_AGENT_EXTRA_AGENT_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+        echo_summary <span class="s2">&quot;WARNING: Q_AGENT_EXTRA_AGENT_OPTS is used&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;You are using Q_AGENT_EXTRA_AGENT_OPTS to pass configuration into $NEUTRON_CONF.&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $NEUTRON_CONF section in local.conf:&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;Q_AGENT_EXTRA_AGENT_OPTS will be removed early in the &#39;K&#39; development cycle&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;</span>
 <span class="s2">[[post-config|/\$Q_PLUGIN_CONF_FILE]]</span>
 <span class="s2">[DEFAULT]</span>
 <span class="s2">&quot;</span>
-    <span class="k">for </span>I in <span class="s2">&quot;${Q_AGENT_EXTRA_AGENT_OPTS[@]}&quot;</span>; <span class="k">do</span>
+        <span class="k">for </span>I in <span class="s2">&quot;${Q_AGENT_EXTRA_AGENT_OPTS[@]}&quot;</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Replace the first '=' with ' ' for iniset syntax</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
-    <span class="k">done</span>
-<span class="k">fi</span>
+            <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+        <span class="k">done</span>
+<span class="k">    fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(dtroyer): Remove Q_AGENT_EXTRA_SRV_OPTS after stable/juno branch is cut</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_AGENT_EXTRA_SRV_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    echo_summary <span class="s2">&quot;WARNING: Q_AGENT_EXTRA_SRV_OPTS is used&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You are using Q_AGENT_EXTRA_SRV_OPTS to pass configuration into $NEUTRON_CONF.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $NEUTRON_CONF section in local.conf:&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Q_AGENT_EXTRA_AGENT_OPTS will be removed early in the &#39;K&#39; development cycle&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$Q_AGENT_EXTRA_SRV_OPTS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+        echo_summary <span class="s2">&quot;WARNING: Q_AGENT_EXTRA_SRV_OPTS is used&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;You are using Q_AGENT_EXTRA_SRV_OPTS to pass configuration into $NEUTRON_CONF.&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in localrc to a $NEUTRON_CONF section in local.conf:&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;Q_AGENT_EXTRA_AGENT_OPTS will be removed early in the &#39;K&#39; development cycle&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;</span>
 <span class="s2">[[post-config|/\$Q_PLUGIN_CONF_FILE]]</span>
 <span class="s2">[DEFAULT]</span>
 <span class="s2">&quot;</span>
-    <span class="k">for </span>I in <span class="s2">&quot;${Q_AGENT_EXTRA_SRV_OPTS[@]}&quot;</span>; <span class="k">do</span>
+        <span class="k">for </span>I in <span class="s2">&quot;${Q_AGENT_EXTRA_SRV_OPTS[@]}&quot;</span>; <span class="k">do</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Replace the first '=' with ' ' for iniset syntax</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
-    <span class="k">done</span>
+            <span class="nb">echo</span> <span class="k">${</span><span class="nv">I</span><span class="k">}</span>
+        <span class="k">done</span>
+<span class="k">    fi</span>
 <span class="k">fi</span>
 
+<span class="k">if </span>is_service_enabled cinder; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>TODO(dtroyer): Remove CINDER_MULTI_LVM_BACKEND after stable/juno branch is cut</p>
 </td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
-    echo_summary <span class="s2">&quot;WARNING: CINDER_MULTI_LVM_BACKEND is used&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You are using CINDER_MULTI_LVM_BACKEND to configure Cinder&#39;s multiple LVM backends&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in local.conf to use CINDER_ENABLED_BACKENDS.&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;CINDER_ENABLED_BACKENDS will be removed early in the &#39;K&#39; development cycle&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CINDER_MULTI_LVM_BACKEND&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;&quot;</span>
+        echo_summary <span class="s2">&quot;WARNING: CINDER_MULTI_LVM_BACKEND is used&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;You are using CINDER_MULTI_LVM_BACKEND to configure Cinder&#39;s multiple LVM backends&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;Please convert that configuration in local.conf to use CINDER_ENABLED_BACKENDS.&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;CINDER_MULTI_LVM_BACKEND will be removed early in the &#39;K&#39; development cycle&quot;</span>
+        <span class="nb">echo</span> <span class="s2">&quot;</span>
 <span class="s2">[[local|localrc]]</span>
 <span class="s2">CINDER_ENABLED_BACKENDS=lvm:lvmdriver-1,lvm:lvmdriver-2</span>
 <span class="s2">&quot;</span>
+    <span class="k">fi</span>
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -2296,7 +2342,6 @@ echo_summary <span class="s2">&quot;stack.sh completed in $SECONDS seconds.&quot
 </td><td class=code><div class=highlight><pre>
 
 </pre></div></td></tr><tr><td class=docs>
-</div>
 </div>
 </div>
 </body>

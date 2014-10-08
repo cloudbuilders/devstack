@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -438,6 +438,37 @@ current user and his default group.</p>
     <span class="k">else</span>
 <span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;apache installation&quot;</span>
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>ensure mod_version enabled for &lt;IfVersion ...&gt;.  This is
+built-in statically on anything recent, but precise (2.2)
+doesn't have it enabled</p>
+</td><td class=code><div class=highlight><pre>
+    sudo a2enmod version <span class="o">||</span> <span class="nb">true</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>get_apache_version() - return the version of Apache installed
+This function is used to determine the Apache version installed. There are
+various differences between Apache 2.2 and 2.4 that warrant special handling.</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>get_apache_version <span class="o">{</span>
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">version_str</span><span class="o">=</span><span class="k">$(</span>sudo /usr/sbin/apache2ctl -v | awk <span class="s1">&#39;/Server version/ {print $3}&#39;</span> | cut -f2 -d/<span class="k">)</span>
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">version_str</span><span class="o">=</span><span class="k">$(</span>rpm -qa --queryformat <span class="s1">&#39;%{VERSION}&#39;</span> httpd<span class="k">)</span>
+    <span class="k">elif </span>is_suse; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">version_str</span><span class="o">=</span><span class="k">$(</span>rpm -qa --queryformat <span class="s1">&#39;%{VERSION}&#39;</span> apache2<span class="k">)</span>
+    <span class="k">else</span>
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;cannot determine apache version&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$version_str&quot;</span> <span class="o">=</span>~ ^2<span class="se">\.</span>2<span class="se">\.</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;2.2&quot;</span>
+    <span class="k">elif</span> <span class="o">[[</span> <span class="s2">&quot;$version_str&quot;</span> <span class="o">=</span>~ ^2<span class="se">\.</span>4<span class="se">\.</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;2.4&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;apache version not supported&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -463,8 +494,8 @@ sites' files are default and default-ssl.</p>
 <span class="k">function </span>apache_site_config_for <span class="o">{</span>
     <span class="nb">local </span><span class="nv">site</span><span class="o">=</span><span class="nv">$@</span>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span><span class="nb">local </span><span class="nv">apache_version</span><span class="o">=</span><span class="k">$(</span>sudo /usr/sbin/apache2ctl -v | awk <span class="s1">&#39;/Server version/ {print $3}&#39;</span> | cut -f2 -d/<span class="k">)</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$apache_version&quot;</span> <span class="o">=</span>~ ^2<span class="se">\.</span>2<span class="se">\.</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">apache_version</span><span class="o">=</span><span class="k">$(</span>get_apache_version<span class="k">)</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$apache_version&quot;</span> <span class="o">==</span> <span class="s2">&quot;2.2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Ubuntu 12.04 - Apache 2.2</p>
 </td><td class=code><div class=highlight><pre>

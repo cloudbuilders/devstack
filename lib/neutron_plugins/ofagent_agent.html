@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title>OpenFlow Agent plugin</title>
 <style type="text/css">
 
@@ -396,12 +396,20 @@ ul.auto-toc {
     iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT l3_agent_manager neutron.agent.l3_agent.L3NATAgentWithStateReport
 <span class="o">}</span>
 
+<span class="k">function </span>_neutron_ofagent_configure_firewall_driver <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$Q_USE_SECGROUP&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.linux.iptables_firewall.IptablesFirewallDriver
+    <span class="k">else</span>
+<span class="k">        </span>iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> securitygroup firewall_driver neutron.agent.firewall.NoopFirewallDriver
+    <span class="k">fi</span>
+<span class="o">}</span>
+
 <span class="k">function </span>neutron_plugin_configure_plugin_agent <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up integration bridge</p>
 </td><td class=code><div class=highlight><pre>
     _neutron_ovs_base_setup_bridge <span class="nv">$OVS_BRIDGE</span>
-    _neutron_ovs_base_configure_firewall_driver
+    _neutron_ofagent_configure_firewall_driver
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Check a supported openflow version</p>
@@ -445,6 +453,7 @@ complex physical network configurations.</p>
     <span class="k">fi</span>
 <span class="k">    </span><span class="nv">AGENT_BINARY</span><span class="o">=</span><span class="s2">&quot;$NEUTRON_BIN_DIR/neutron-ofagent-agent&quot;</span>
 
+    iniset /<span class="nv">$Q_PLUGIN_CONF_FILE</span> agent tunnel_types <span class="nv">$Q_TUNNEL_TYPES</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Define extra &quot;AGENT&quot; configuration options when q-agt is configured by defining
 defining the array <tt class="docutils literal">Q_AGENT_EXTRA_AGENT_OPTS</tt>.

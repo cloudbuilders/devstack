@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -369,6 +369,7 @@ Dependencies:
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">stack.sh</tt> calls the entry points in this order:</p>
 <p>install_sahara
+install_python_saharaclient
 configure_sahara
 start_sahara
 stop_sahara
@@ -393,10 +394,15 @@ cleanup_sahara</p>
 <span class="nv">SAHARA_REPO</span><span class="o">=</span><span class="k">${</span><span class="nv">SAHARA_REPO</span><span class="k">:-${</span><span class="nv">GIT_BASE</span><span class="k">}</span><span class="p">/openstack/sahara.git</span><span class="k">}</span>
 <span class="nv">SAHARA_BRANCH</span><span class="o">=</span><span class="k">${</span><span class="nv">SAHARA_BRANCH</span><span class="k">:-</span><span class="nv">master</span><span class="k">}</span>
 
+<span class="nv">SAHARA_PYTHONCLIENT_REPO</span><span class="o">=</span><span class="k">${</span><span class="nv">SAHARA_PYTHONCLIENT_REPO</span><span class="k">:-${</span><span class="nv">GIT_BASE</span><span class="k">}</span><span class="p">/openstack/python-saharaclient.git</span><span class="k">}</span>
+<span class="nv">SAHARA_PYTHONCLIENT_BRANCH</span><span class="o">=</span><span class="k">${</span><span class="nv">SAHARA_PYTHONCLIENT_BRANCH</span><span class="k">:-</span><span class="nv">master</span><span class="k">}</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up default directories</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">SAHARA_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/sahara
+<span class="nv">SAHARA_PYTHONCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-saharaclient
+
 <span class="nv">SAHARA_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">SAHARA_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/sahara</span><span class="k">}</span>
 <span class="nv">SAHARA_CONF_FILE</span><span class="o">=</span><span class="k">${</span><span class="nv">SAHARA_CONF_DIR</span><span class="k">}</span>/sahara.conf
 
@@ -437,18 +443,18 @@ TEMPEST_SERVICES+<span class="o">=</span>,sahara
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>create_sahara_accounts <span class="o">{</span>
 
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">service_tenant</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">admin_role</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
-    <span class="nv">SAHARA_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;sahara&quot;</span> <span class="se">\</span>
-        <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
-    get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$SAHARA_USER</span> <span class="nv">$SERVICE_TENANT</span>
+    <span class="nb">local </span><span class="nv">sahara_user</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;sahara&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$service_tenant</span><span class="k">)</span>
+    get_or_add_user_role <span class="nv">$admin_role</span> <span class="nv">$sahara_user</span> <span class="nv">$service_tenant</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 
-<span class="k">        </span><span class="nv">SAHARA_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;sahara&quot;</span> <span class="se">\</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">sahara_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;sahara&quot;</span> <span class="se">\</span>
             <span class="s2">&quot;data_processing&quot;</span> <span class="s2">&quot;Sahara Data Processing&quot;</span><span class="k">)</span>
-        get_or_create_endpoint <span class="nv">$SAHARA_SERVICE</span> <span class="se">\</span>
+        get_or_create_endpoint <span class="nv">$sahara_service</span> <span class="se">\</span>
             <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
             <span class="s2">&quot;$SAHARA_SERVICE_PROTOCOL://$SAHARA_SERVICE_HOST:$SAHARA_SERVICE_PORT/v1.1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
             <span class="s2">&quot;$SAHARA_SERVICE_PROTOCOL://$SAHARA_SERVICE_HOST:$SAHARA_SERVICE_PORT/v1.1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
@@ -490,20 +496,19 @@ previous runs that would need to clean up.</p>
     sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$SAHARA_AUTH_CACHE_DIR</span>
     rm -rf <span class="nv">$SAHARA_AUTH_CACHE_DIR</span>/*
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Set actual keystone auth configs</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> keystone_authtoken auth_uri <span class="nv">$KEYSTONE_SERVICE_PROTOCOL</span>://<span class="nv">$KEYSTONE_SERVICE_HOST</span>:<span class="nv">$KEYSTONE_SERVICE_PORT</span>/
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> keystone_authtoken auth_host <span class="nv">$KEYSTONE_AUTH_HOST</span>
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> keystone_authtoken auth_port <span class="nv">$KEYSTONE_AUTH_PORT</span>
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> keystone_authtoken auth_protocol <span class="nv">$KEYSTONE_AUTH_PROTOCOL</span>
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> keystone_authtoken admin_user sahara
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> keystone_authtoken signing_dir <span class="nv">$SAHARA_AUTH_CACHE_DIR</span>
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
+    configure_auth_token_middleware <span class="nv">$SAHARA_CONF_FILE</span> sahara <span class="nv">$SAHARA_AUTH_CACHE_DIR</span>
 
-    iniset <span class="nv">$SAHARA_CONF_FILE</span> DEFAULT verbose True
+</pre></div></td></tr><tr><td class=docs>
+<p>Set configuration to send notifications</p>
+</td><td class=code><div class=highlight><pre>
+
+    <span class="k">if </span>is_service_enabled ceilometer; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$SAHARA_CONF_FILE</span> DEFAULT enable_notifications <span class="s2">&quot;true&quot;</span>
+        iniset <span class="nv">$SAHARA_CONF_FILE</span> DEFAULT notification_driver <span class="s2">&quot;messaging&quot;</span>
+        iniset_rpc_backend sahara <span class="nv">$SAHARA_CONF_FILE</span> DEFAULT
+    <span class="k">fi</span>
+
+<span class="k">    </span>iniset <span class="nv">$SAHARA_CONF_FILE</span> DEFAULT verbose True
     iniset <span class="nv">$SAHARA_CONF_FILE</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
 
     iniset <span class="nv">$SAHARA_CONF_FILE</span> DEFAULT plugins <span class="nv">$SAHARA_ENABLED_PLUGINS</span>
@@ -543,10 +548,18 @@ previous runs that would need to clean up.</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>install_python_saharaclient() - Collect source and prepare</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_python_saharaclient <span class="o">{</span>
+    git_clone <span class="nv">$SAHARA_PYTHONCLIENT_REPO</span> <span class="nv">$SAHARA_PYTHONCLIENT_DIR</span> <span class="nv">$SAHARA_PYTHONCLIENT_BRANCH</span>
+    setup_develop <span class="nv">$SAHARA_PYTHONCLIENT_DIR</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>start_sahara() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_sahara <span class="o">{</span>
-    screen_it sahara <span class="s2">&quot;cd $SAHARA_DIR &amp;&amp; $SAHARA_BIN_DIR/sahara-all --config-file $SAHARA_CONF_FILE&quot;</span>
+    run_process sahara <span class="s2">&quot;$SAHARA_BIN_DIR/sahara-all --config-file $SAHARA_CONF_FILE&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

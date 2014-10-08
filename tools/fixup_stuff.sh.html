@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -383,26 +383,32 @@ pip 1.4 doesn't fix it (1.3 did)</li>
 </ul>
 </td><td class=code><div class=highlight><pre>
 
-<span class="nb">set</span> -o errexit
-<span class="nb">set</span> -o xtrace
+</pre></div></td></tr><tr><td class=docs>
+<p>If TOP_DIR is set we're being sourced rather than running stand-alone
+or in a sub-shell</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$TOP_DIR&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    </span><span class="nb">set</span> -o errexit
+    <span class="nb">set</span> -o xtrace
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Keep track of the current directory</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
-<span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="k">)</span>
+    <span class="nv">TOOLS_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="k">$(</span>dirname <span class="s2">&quot;$0&quot;</span><span class="k">)</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span>
+    <span class="nv">TOP_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span> <span class="nv">$TOOLS_DIR</span>/..; <span class="nb">pwd</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Change dir to top of devstack</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
+    <span class="nb">cd</span> <span class="nv">$TOP_DIR</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Import common functions</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
+    <span class="nb">source</span> <span class="nv">$TOP_DIR</span>/functions
 
-<span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+    <span class="nv">FILES</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files
+<span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <div class="section" id="keystone-port-reservation">
@@ -485,31 +491,6 @@ pip_install httplib2
 <span class="k">    </span>sudo chmod +r <span class="nv">$dir</span>/*
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-</div>
-<div class="section" id="ubuntu-12-04">
-<h1>Ubuntu 12.04</h1>
-</td><td class=code><div class=highlight><pre>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>We can regularly get kernel crashes on the 12.04 default kernel, so attempt
-to install a new kernel</p>
-</td><td class=code><div class=highlight><pre>
-<span class="k">if</span> <span class="o">[[</span> <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>precise<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>Finally, because we suspect the Precise kernel is problematic, install a new kernel</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">UPGRADE_KERNEL</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$UPGRADE_KERNEL</span><span class="k">)</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$UPGRADE_KERNEL</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        if</span> <span class="o">[[</span> ! <span class="sb">`</span>uname -r<span class="sb">`</span> <span class="o">=</span>~ <span class="o">(</span>^3<span class="se">\.</span>11<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>apt_get install linux-generic-lts-saucy
-            <span class="nb">echo</span> <span class="s2">&quot;Installing Saucy LTS kernel, please reboot before proceeding&quot;</span>
-            <span class="nb">exit </span>1
-        <span class="k">fi</span>
-<span class="k">    fi</span>
-<span class="k">fi</span>
-
-
 <span class="k">if </span>is_fedora; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Disable selinux to avoid configuring to allow Apache access
@@ -518,6 +499,25 @@ to Horizon files (LP#1175444)</p>
     <span class="k">if </span>selinuxenabled; <span class="k">then</span>
 <span class="k">        </span>sudo setenforce 0
     <span class="k">fi</span>
+
+<span class="k">    </span><span class="nv">FORCE_FIREWALLD</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$FORCE_FIREWALLD</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="k">${</span><span class="nv">DISTRO</span><span class="k">}</span> <span class="o">=</span>~ <span class="o">(</span>f19|f20<span class="o">)</span> <span class="o">&amp;&amp;</span> <span class="nv">$FORCE_FIREWALLD</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>On Fedora 19 and 20 firewalld interacts badly with libvirt and
+slows things down significantly.  However, for those cases
+where that combination is desired, allow this fix to be skipped.</p>
+</td><td class=code><div class=highlight><pre>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>There was also an additional issue with firewalld hanging
+after install of libvirt with polkit.  See
+<a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi?id=1099031">https://bugzilla.redhat.com/show_bug.cgi?id=1099031</a></p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if </span>is_package_installed firewalld; <span class="k">then</span>
+<span class="k">            </span>uninstall_package firewalld
+        <span class="k">fi</span>
+<span class="k">    fi</span>
+
 <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -527,6 +527,16 @@ to Horizon files (LP#1175444)</p>
 </td><td class=code><div class=highlight><pre>
 
 <span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>install_pip.sh installs the latest setuptools over the packaged
+version.  We can't really uninstall the packaged version if it
+is there, because it may remove other important things like
+cloud-init.  Things work, but there can be an old egg file left
+around from the package that causes some really strange
+setuptools errors.  Remove it, if it is there</p>
+</td><td class=code><div class=highlight><pre>
+    sudo rm -f /usr/lib/python2.6/site-packages/setuptools-0.6*.egg-info
 
 </pre></div></td></tr><tr><td class=docs>
 <p>If the <tt class="docutils literal">dbus</tt> package was installed by DevStack dependencies the

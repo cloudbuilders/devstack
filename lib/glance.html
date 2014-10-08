@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -400,12 +400,14 @@ Dependencies:</p>
 <p>Set up default directories</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">GLANCE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance
+<span class="nv">GLANCE_STORE_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/glance_store
 <span class="nv">GLANCECLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-glanceclient
 <span class="nv">GLANCE_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_CACHE_DIR</span><span class="p">:=</span><span class="nv">$DATA_DIR</span><span class="p">/glance/cache</span><span class="k">}</span>
 <span class="nv">GLANCE_IMAGE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_IMAGE_DIR</span><span class="p">:=</span><span class="nv">$DATA_DIR</span><span class="p">/glance/images</span><span class="k">}</span>
 <span class="nv">GLANCE_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/glance</span><span class="k">}</span>
 
 <span class="nv">GLANCE_CONF_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_CONF_DIR</span><span class="k">:-</span><span class="p">/etc/glance</span><span class="k">}</span>
+<span class="nv">GLANCE_METADEF_DIR</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/metadefs
 <span class="nv">GLANCE_REGISTRY_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry.conf
 <span class="nv">GLANCE_API_CONF</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-api.conf
 <span class="nv">GLANCE_REGISTRY_PASTE_INI</span><span class="o">=</span><span class="nv">$GLANCE_CONF_DIR</span>/glance-registry-paste.ini
@@ -423,10 +425,20 @@ Dependencies:</p>
 <span class="k">    </span><span class="nv">GLANCE_BIN_DIR</span><span class="o">=</span><span class="k">$(</span>get_python_exec_prefix<span class="k">)</span>
 <span class="k">fi</span>
 
+<span class="k">if </span>is_ssl_enabled_service <span class="s2">&quot;glance&quot;</span> <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">    </span><span class="nv">GLANCE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;https&quot;</span>
+<span class="k">fi</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Glance connection info.  Note the port must be specified.</p>
 </td><td class=code><div class=highlight><pre>
-<span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="p">:</span><span class="nv">9292</span><span class="k">}</span>
+<span class="nv">GLANCE_SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_SERVICE_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+<span class="nv">GLANCE_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_SERVICE_PORT</span><span class="k">:-</span><span class="nv">9292</span><span class="k">}</span>
+<span class="nv">GLANCE_SERVICE_PORT_INT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_SERVICE_PORT_INT</span><span class="k">:-</span><span class="nv">19292</span><span class="k">}</span>
+<span class="nv">GLANCE_HOSTPORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_HOSTPORT</span><span class="k">:-</span><span class="nv">$GLANCE_SERVICE_HOST</span><span class="p">:</span><span class="nv">$GLANCE_SERVICE_PORT</span><span class="k">}</span>
+<span class="nv">GLANCE_SERVICE_PROTOCOL</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_SERVICE_PROTOCOL</span><span class="k">:-</span><span class="nv">$SERVICE_PROTOCOL</span><span class="k">}</span>
+<span class="nv">GLANCE_REGISTRY_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_REGISTRY_PORT</span><span class="k">:-</span><span class="nv">9191</span><span class="k">}</span>
+<span class="nv">GLANCE_REGISTRY_PORT_INT</span><span class="o">=</span><span class="k">${</span><span class="nv">GLANCE_REGISTRY_PORT_INT</span><span class="k">:-</span><span class="nv">19191</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Tell Tempest this project is present</p>
@@ -470,6 +482,11 @@ delete image files (glance)</p>
     <span class="k">fi</span>
 <span class="k">    </span>sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$GLANCE_CONF_DIR</span>
 
+    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$GLANCE_METADEF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>sudo mkdir -p <span class="nv">$GLANCE_METADEF_DIR</span>
+    <span class="k">fi</span>
+<span class="k">    </span>sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$GLANCE_METADEF_DIR</span>
+
 </pre></div></td></tr><tr><td class=docs>
 <p>Copy over our glance configurations and update them</p>
 </td><td class=code><div class=highlight><pre>
@@ -480,37 +497,41 @@ delete image files (glance)</p>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
     iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> paste_deploy flavor keystone
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
-    configure_API_version <span class="nv">$GLANCE_REGISTRY_CONF</span> <span class="nv">$IDENTITY_API_VERSION</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_user glance
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> keystone_authtoken signing_dir <span class="nv">$GLANCE_AUTH_CACHE_DIR</span>/registry
+    configure_auth_token_middleware <span class="nv">$GLANCE_REGISTRY_CONF</span> glance <span class="nv">$GLANCE_AUTH_CACHE_DIR</span>/registry
+    <span class="k">if </span>is_service_enabled qpid <span class="o">||</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT notification_driver messaging
+    <span class="k">fi</span>
+<span class="k">    </span>iniset_rpc_backend glance <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT
 
     cp <span class="nv">$GLANCE_DIR</span>/etc/glance-api.conf <span class="nv">$GLANCE_API_CONF</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     inicomment <span class="nv">$GLANCE_API_CONF</span> DEFAULT log_file
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT sql_connection <span class="nv">$dburl</span>
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
     iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT image_cache_dir <span class="nv">$GLANCE_CACHE_DIR</span>/
     iniset <span class="nv">$GLANCE_API_CONF</span> paste_deploy flavor keystone+cachemanagement
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
-    configure_API_version <span class="nv">$GLANCE_API_CONF</span> <span class="nv">$IDENTITY_API_VERSION</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_user glance
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+    configure_auth_token_middleware <span class="nv">$GLANCE_API_CONF</span> glance <span class="nv">$GLANCE_AUTH_CACHE_DIR</span>/api
     <span class="k">if </span>is_service_enabled qpid <span class="o">||</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_HOST&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> -n <span class="s2">&quot;$RABBIT_PASSWORD&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT notification_driver messaging
     <span class="k">fi</span>
 <span class="k">    </span>iniset_rpc_backend glance <span class="nv">$GLANCE_API_CONF</span> DEFAULT
-    iniset <span class="nv">$GLANCE_API_CONF</span> keystone_authtoken signing_dir <span class="nv">$GLANCE_AUTH_CACHE_DIR</span>/api
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;xenserver&#39;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT container_formats <span class="s2">&quot;ami,ari,aki,bare,ovf,tgz&quot;</span>
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT disk_formats <span class="s2">&quot;ami,ari,aki,vhd,raw,iso&quot;</span>
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Store specific configs</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
+
+</pre></div></td></tr><tr><td class=docs>
+<p>NOTE(flaper87): Until Glance is fully migrated, set these configs in both
+sections.</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$GLANCE_API_CONF</span> glance_store filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
+
+    iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT workers <span class="s2">&quot;$API_WORKERS&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Store the images in swift if enabled.</p>
@@ -523,6 +544,39 @@ delete image files (glance)</p>
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT swift_store_create_container_on_put True
 
         iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT known_stores <span class="s2">&quot;glance.store.filesystem.Store, glance.store.http.Store, glance.store.swift.Store&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>NOTE(flaper87): Until Glance is fully migrated, set these configs in both
+sections.</p>
+</td><td class=code><div class=highlight><pre>
+        iniset <span class="nv">$GLANCE_API_CONF</span> glance_store default_store swift
+        iniset <span class="nv">$GLANCE_API_CONF</span> glance_store swift_store_auth_address <span class="nv">$KEYSTONE_SERVICE_URI</span>/v2.0/
+        iniset <span class="nv">$GLANCE_API_CONF</span> glance_store swift_store_user <span class="nv">$SERVICE_TENANT_NAME</span>:glance-swift
+        iniset <span class="nv">$GLANCE_API_CONF</span> glance_store swift_store_key <span class="nv">$SERVICE_PASSWORD</span>
+        iniset <span class="nv">$GLANCE_API_CONF</span> glance_store swift_store_create_container_on_put True
+        iniset <span class="nv">$GLANCE_API_CONF</span> glance_store stores <span class="s2">&quot;file, http, swift&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT bind_port <span class="nv">$GLANCE_SERVICE_PORT_INT</span>
+        iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT bind_port <span class="nv">$GLANCE_REGISTRY_PORT_INT</span>
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Register SSL certificates if provided</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_ssl_enabled_service glance; <span class="k">then</span>
+<span class="k">        </span>ensure_certificates GLANCE
+
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT cert_file <span class="s2">&quot;$GLANCE_SSL_CERT&quot;</span>
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT key_file <span class="s2">&quot;$GLANCE_SSL_KEY&quot;</span>
+
+        iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT cert_file <span class="s2">&quot;$GLANCE_SSL_CERT&quot;</span>
+        iniset <span class="nv">$GLANCE_REGISTRY_CONF</span> DEFAULT key_file <span class="s2">&quot;$GLANCE_SSL_KEY&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_ssl_enabled_service glance <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT registry_client_protocol https
     <span class="k">fi</span>
 
 <span class="k">    </span>cp -p <span class="nv">$GLANCE_DIR</span>/etc/glance-registry-paste.ini <span class="nv">$GLANCE_REGISTRY_PASTE_INI</span>
@@ -533,7 +587,6 @@ delete image files (glance)</p>
     iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
     inicomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT log_file
     iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT use_syslog <span class="nv">$SYSLOG</span>
-    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
     iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT image_cache_dir <span class="nv">$GLANCE_CACHE_DIR</span>/
     iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_url
     iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_url <span class="nv">$KEYSTONE_AUTH_URI</span>/v2.0
@@ -544,8 +597,26 @@ delete image files (glance)</p>
     iniuncomment <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT auth_password
     iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT admin_password <span class="nv">$SERVICE_PASSWORD</span>
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Store specific confs
+NOTE(flaper87): Until Glance is fully migrated, set these configs in both
+sections.</p>
+</td><td class=code><div class=highlight><pre>
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
+    iniset <span class="nv">$GLANCE_CACHE_CONF</span> glance_store filesystem_store_datadir <span class="nv">$GLANCE_IMAGE_DIR</span>/
+
     cp -p <span class="nv">$GLANCE_DIR</span>/etc/policy.json <span class="nv">$GLANCE_POLICY_JSON</span>
     cp -p <span class="nv">$GLANCE_DIR</span>/etc/schema-image.json <span class="nv">$GLANCE_SCHEMA_JSON</span>
+
+    cp -p <span class="nv">$GLANCE_DIR</span>/etc/metadefs/*.json <span class="nv">$GLANCE_METADEF_DIR</span>
+
+    <span class="k">if </span>is_ssl_enabled_service <span class="s2">&quot;cinder&quot;</span> <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span><span class="nv">CINDER_SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_SERVICE_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+        <span class="nv">CINDER_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8776</span><span class="k">}</span>
+
+        iniset <span class="nv">$GLANCE_API_CONF</span> DEFAULT cinder_endpoint_template <span class="s2">&quot;https://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/%(project_id)s&quot;</span>
+        iniset <span class="nv">$GLANCE_CACHE_CONF</span> DEFAULT cinder_endpoint_template <span class="s2">&quot;https://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/%(project_id)s&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -563,29 +634,29 @@ SERVICE_TENANT_NAME  glance-swift ResellerAdmin (if Swift is enabled)</p>
 <span class="k">function </span>create_glance_accounts <span class="o">{</span>
     <span class="k">if </span>is_service_enabled g-api; <span class="k">then</span>
 
-<span class="k">        </span><span class="nv">GLANCE_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;glance&quot;</span> <span class="se">\</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">glance_user</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;glance&quot;</span> <span class="se">\</span>
             <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT_NAME</span><span class="k">)</span>
-        get_or_add_user_role service <span class="nv">$GLANCE_USER</span> <span class="nv">$SERVICE_TENANT_NAME</span>
+        get_or_add_user_role service <span class="nv">$glance_user</span> <span class="nv">$SERVICE_TENANT_NAME</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>required for swift access</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">if </span>is_service_enabled s-proxy; <span class="k">then</span>
 
-<span class="k">            </span><span class="nv">GLANCE_SWIFT_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;glance-swift&quot;</span> <span class="se">\</span>
+<span class="k">            </span><span class="nb">local </span><span class="nv">glance_swift_user</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;glance-swift&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT_NAME</span> <span class="s2">&quot;glance-swift@example.com&quot;</span><span class="k">)</span>
-            get_or_add_user_role <span class="s2">&quot;ResellerAdmin&quot;</span> <span class="nv">$GLANCE_SWIFT_USER</span> <span class="nv">$SERVICE_TENANT_NAME</span>
+            get_or_add_user_role <span class="s2">&quot;ResellerAdmin&quot;</span> <span class="nv">$glance_swift_user</span> <span class="nv">$SERVICE_TENANT_NAME</span>
         <span class="k">fi</span>
 
 <span class="k">        if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 
-<span class="k">            </span><span class="nv">GLANCE_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;glance&quot;</span> <span class="se">\</span>
+<span class="k">            </span><span class="nb">local </span><span class="nv">glance_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;glance&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;image&quot;</span> <span class="s2">&quot;Glance Image Service&quot;</span><span class="k">)</span>
-            get_or_create_endpoint <span class="nv">$GLANCE_SERVICE</span> <span class="se">\</span>
+            get_or_create_endpoint <span class="nv">$glance_service</span> <span class="se">\</span>
                 <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;http://$GLANCE_HOSTPORT&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;http://$GLANCE_HOSTPORT&quot;</span> <span class="se">\</span>
-                <span class="s2">&quot;http://$GLANCE_HOSTPORT&quot;</span>
+                <span class="s2">&quot;$GLANCE_SERVICE_PROTOCOL://$GLANCE_HOSTPORT&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$GLANCE_SERVICE_PROTOCOL://$GLANCE_HOSTPORT&quot;</span> <span class="se">\</span>
+                <span class="s2">&quot;$GLANCE_SERVICE_PROTOCOL://$GLANCE_HOSTPORT&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
@@ -631,6 +702,11 @@ SERVICE_TENANT_NAME  glance-swift ResellerAdmin (if Swift is enabled)</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">$GLANCE_BIN_DIR</span>/glance-manage db_sync
 
+</pre></div></td></tr><tr><td class=docs>
+<p>Load metadata definitions</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nv">$GLANCE_BIN_DIR</span>/glance-manage db_load_metadefs
+
     create_glance_cache_dir
 <span class="o">}</span>
 
@@ -646,6 +722,13 @@ SERVICE_TENANT_NAME  glance-swift ResellerAdmin (if Swift is enabled)</p>
 <p>install_glance() - Collect source and prepare</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_glance <span class="o">{</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install glance_store from git so we make sure we're testing
+the latest code.</p>
+</td><td class=code><div class=highlight><pre>
+    git_clone <span class="nv">$GLANCE_STORE_REPO</span> <span class="nv">$GLANCE_STORE_DIR</span> <span class="nv">$GLANCE_STORE_BRANCH</span>
+    setup_develop <span class="nv">$GLANCE_STORE_DIR</span>
+
     git_clone <span class="nv">$GLANCE_REPO</span> <span class="nv">$GLANCE_DIR</span> <span class="nv">$GLANCE_BRANCH</span>
     setup_develop <span class="nv">$GLANCE_DIR</span>
 <span class="o">}</span>
@@ -654,10 +737,17 @@ SERVICE_TENANT_NAME  glance-swift ResellerAdmin (if Swift is enabled)</p>
 <p>start_glance() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_glance <span class="o">{</span>
-    screen_it g-reg <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf&quot;</span>
-    screen_it g-api <span class="s2">&quot;cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf&quot;</span>
+    <span class="nb">local </span><span class="nv">service_protocol</span><span class="o">=</span><span class="nv">$GLANCE_SERVICE_PROTOCOL</span>
+    <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>start_tls_proxy <span class="s1">&#39;*&#39;</span> <span class="nv">$GLANCE_SERVICE_PORT</span> <span class="nv">$GLANCE_SERVICE_HOST</span> <span class="nv">$GLANCE_SERVICE_PORT_INT</span> &amp;
+        start_tls_proxy <span class="s1">&#39;*&#39;</span> <span class="nv">$GLANCE_REGISTRY_PORT</span> <span class="nv">$GLANCE_SERVICE_HOST</span> <span class="nv">$GLANCE_REGISTRY_PORT_INT</span> &amp;
+    <span class="k">fi</span>
+
+<span class="k">    </span>run_process g-reg <span class="s2">&quot;$GLANCE_BIN_DIR/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf&quot;</span>
+    run_process g-api <span class="s2">&quot;$GLANCE_BIN_DIR/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf&quot;</span>
+
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for g-api ($GLANCE_HOSTPORT) to start...&quot;</span>
-    <span class="k">if</span> ! timeout <span class="nv">$SERVICE_TIMEOUT</span> sh -c <span class="s2">&quot;while ! wget --no-proxy -q -O- http://$GLANCE_HOSTPORT; do sleep 1; done&quot;</span>; <span class="k">then</span>
+    <span class="k">if</span> ! wait_for_service <span class="nv">$SERVICE_TIMEOUT</span> <span class="nv">$GLANCE_SERVICE_PROTOCOL</span>://<span class="nv">$GLANCE_HOSTPORT</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;g-api did not start&quot;</span>
     <span class="k">fi</span>
 <span class="o">}</span>
@@ -669,8 +759,8 @@ SERVICE_TENANT_NAME  glance-swift ResellerAdmin (if Swift is enabled)</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the Glance screen windows</p>
 </td><td class=code><div class=highlight><pre>
-    screen_stop g-api
-    screen_stop g-reg
+    stop_process g-api
+    stop_process g-reg
 <span class="o">}</span>
 
 

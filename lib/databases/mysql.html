@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -418,22 +418,22 @@ register_database mysql
 <span class="o">}</span>
 
 <span class="k">function </span>configure_database_mysql <span class="o">{</span>
-    <span class="nb">local </span>slow_log
+    <span class="nb">local </span>my_conf mysql slow_log
     echo_summary <span class="s2">&quot;Configuring and starting MySQL&quot;</span>
 
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
-<span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/mysql/my.cnf
-        <span class="nv">MYSQL</span><span class="o">=</span>mysql
+<span class="k">        </span><span class="nv">my_conf</span><span class="o">=</span>/etc/mysql/my.cnf
+        <span class="nv">mysql</span><span class="o">=</span>mysql
     <span class="k">elif </span>is_fedora; <span class="k">then</span>
 <span class="k">        if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel7<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">MYSQL</span><span class="o">=</span>mariadb
+<span class="k">            </span><span class="nv">mysql</span><span class="o">=</span>mariadb
         <span class="k">else</span>
-<span class="k">            </span><span class="nv">MYSQL</span><span class="o">=</span>mysqld
+<span class="k">            </span><span class="nv">mysql</span><span class="o">=</span>mysqld
         <span class="k">fi</span>
-<span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/my.cnf
+<span class="k">        </span><span class="nv">my_conf</span><span class="o">=</span>/etc/my.cnf
     <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span><span class="nv">MY_CONF</span><span class="o">=</span>/etc/my.cnf
-        <span class="nv">MYSQL</span><span class="o">=</span>mysql
+<span class="k">        </span><span class="nv">my_conf</span><span class="o">=</span>/etc/my.cnf
+        <span class="nv">mysql</span><span class="o">=</span>mysql
     <span class="k">else</span>
 <span class="k">        </span>exit_distro_not_supported <span class="s2">&quot;mysql configuration&quot;</span>
     <span class="k">fi</span>
@@ -445,7 +445,7 @@ register_database mysql
 </pre></div></td></tr><tr><td class=docs>
 <p>service is not started by default</p>
 </td><td class=code><div class=highlight><pre>
-        start_service <span class="nv">$MYSQL</span>
+        start_service <span class="nv">$mysql</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -470,9 +470,9 @@ did that with debconf before installing the package.</p>
 set default db type to InnoDB</p>
 </td><td class=code><div class=highlight><pre>
     sudo bash -c <span class="s2">&quot;source $TOP_DIR/functions &amp;&amp; \</span>
-<span class="s2">        iniset $MY_CONF mysqld bind-address 0.0.0.0 &amp;&amp; \</span>
-<span class="s2">        iniset $MY_CONF mysqld sql_mode STRICT_ALL_TABLES &amp;&amp; \</span>
-<span class="s2">        iniset $MY_CONF mysqld default-storage-engine InnoDB&quot;</span>
+<span class="s2">        iniset $my_conf mysqld bind-address 0.0.0.0 &amp;&amp; \</span>
+<span class="s2">        iniset $my_conf mysqld sql_mode STRICT_ALL_TABLES &amp;&amp; \</span>
+<span class="s2">        iniset $my_conf mysqld default-storage-engine InnoDB&quot;</span>
 
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$DATABASE_QUERY_LOGGING&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -485,21 +485,21 @@ set default db type to InnoDB</p>
 <span class="k">        </span>sudo sed -e <span class="s1">&#39;/log.slow.queries/d&#39;</span> <span class="se">\</span>
             -e <span class="s1">&#39;/long.query.time/d&#39;</span> <span class="se">\</span>
             -e <span class="s1">&#39;/log.queries.not.using.indexes/d&#39;</span> <span class="se">\</span>
-            -i <span class="nv">$MY_CONF</span>
+            -i <span class="nv">$my_conf</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Turn on slow query log, log all queries (any query taking longer than
 0 seconds) and log all non-indexed queries</p>
 </td><td class=code><div class=highlight><pre>
         sudo bash -c <span class="s2">&quot;source $TOP_DIR/functions &amp;&amp; \</span>
-<span class="s2">            iniset $MY_CONF mysqld slow-query-log 1 &amp;&amp; \</span>
-<span class="s2">            iniset $MY_CONF mysqld slow-query-log-file $slow_log &amp;&amp; \</span>
-<span class="s2">            iniset $MY_CONF mysqld long-query-time 0 &amp;&amp; \</span>
-<span class="s2">            iniset $MY_CONF mysqld log-queries-not-using-indexes 1&quot;</span>
+<span class="s2">            iniset $my_conf mysqld slow-query-log 1 &amp;&amp; \</span>
+<span class="s2">            iniset $my_conf mysqld slow-query-log-file $slow_log &amp;&amp; \</span>
+<span class="s2">            iniset $my_conf mysqld long-query-time 0 &amp;&amp; \</span>
+<span class="s2">            iniset $my_conf mysqld log-queries-not-using-indexes 1&quot;</span>
 
     <span class="k">fi</span>
 
-<span class="k">    </span>restart_service <span class="nv">$MYSQL</span>
+<span class="k">    </span>restart_service <span class="nv">$mysql</span>
 <span class="o">}</span>
 
 <span class="k">function </span>install_database_mysql <span class="o">{</span>

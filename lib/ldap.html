@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -460,7 +460,7 @@ init_ldap() - Initialize databases, etc.</p>
 <span class="k">function </span>init_ldap <span class="o">{</span>
     <span class="nb">local </span>keystone_ldif
 
-    <span class="nv">TMP_LDAP_DIR</span><span class="o">=</span><span class="k">$(</span>mktemp -d -t ldap.<span class="nv">$$</span>.XXXXXXXXXX<span class="k">)</span>
+    <span class="nb">local </span><span class="nv">tmp_ldap_dir</span><span class="o">=</span><span class="k">$(</span>mktemp -d -t ldap.<span class="nv">$$</span>.XXXXXXXXXX<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Remove data but not schemas</p>
@@ -478,17 +478,17 @@ init_ldap() - Initialize databases, etc.</p>
 <p>If BASE_DN is changed, the user may override the default file</p>
 </td><td class=code><div class=highlight><pre>
         <span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$FILES</span>/ldap/<span class="k">${</span><span class="nv">LDAP_BASE_DC</span><span class="k">}</span>.ldif.in <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">keystone_ldif</span><span class="o">=</span><span class="k">${</span><span class="nv">LDAP_BASE_DC</span><span class="k">}</span>.ldif
+<span class="k">            </span><span class="nb">local </span><span class="nv">keystone_ldif</span><span class="o">=</span><span class="k">${</span><span class="nv">LDAP_BASE_DC</span><span class="k">}</span>.ldif
         <span class="k">else</span>
-<span class="k">            </span><span class="nv">keystone_ldif</span><span class="o">=</span>keystone.ldif
+<span class="k">            </span><span class="nb">local </span><span class="nv">keystone_ldif</span><span class="o">=</span>keystone.ldif
         <span class="k">fi</span>
-<span class="k">        </span>_ldap_varsubst <span class="nv">$FILES</span>/ldap/<span class="k">${</span><span class="nv">keystone_ldif</span><span class="k">}</span>.in &gt;<span class="nv">$TMP_LDAP_DIR</span>/<span class="k">${</span><span class="nv">keystone_ldif</span><span class="k">}</span>
-        <span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$TMP_LDAP_DIR</span>/<span class="k">${</span><span class="nv">keystone_ldif</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span>ldapadd -x -w <span class="nv">$LDAP_PASSWORD</span> -D <span class="s2">&quot;$LDAP_MANAGER_DN&quot;</span> -H <span class="nv">$LDAP_URL</span> -c -f <span class="nv">$TMP_LDAP_DIR</span>/<span class="k">${</span><span class="nv">keystone_ldif</span><span class="k">}</span>
+<span class="k">        </span>_ldap_varsubst <span class="nv">$FILES</span>/ldap/<span class="k">${</span><span class="nv">keystone_ldif</span><span class="k">}</span>.in &gt;<span class="nv">$tmp_ldap_dir</span>/<span class="k">${</span><span class="nv">keystone_ldif</span><span class="k">}</span>
+        <span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$tmp_ldap_dir</span>/<span class="k">${</span><span class="nv">keystone_ldif</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span>ldapadd -x -w <span class="nv">$LDAP_PASSWORD</span> -D <span class="s2">&quot;$LDAP_MANAGER_DN&quot;</span> -H <span class="nv">$LDAP_URL</span> -c -f <span class="nv">$tmp_ldap_dir</span>/<span class="k">${</span><span class="nv">keystone_ldif</span><span class="k">}</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
-<span class="k">    </span>rm -rf TMP_LDAP_DIR
+<span class="k">    </span>rm -rf <span class="nv">$tmp_ldap_dir</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -499,7 +499,7 @@ install_ldap() - Collect source and prepare</p>
     <span class="nb">echo</span> <span class="s2">&quot;Installing LDAP inside function&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;os_VENDOR is $os_VENDOR&quot;</span>
 
-    <span class="nv">TMP_LDAP_DIR</span><span class="o">=</span><span class="k">$(</span>mktemp -d -t ldap.<span class="nv">$$</span>.XXXXXXXXXX<span class="k">)</span>
+    <span class="nb">local </span><span class="nv">tmp_ldap_dir</span><span class="o">=</span><span class="k">$(</span>mktemp -d -t ldap.<span class="nv">$$</span>.XXXXXXXXXX<span class="k">)</span>
 
     <span class="nb">printf</span> <span class="s2">&quot;installing OpenLDAP&quot;</span>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
@@ -510,21 +510,21 @@ install_ldap() - Collect source and prepare</p>
     <span class="k">elif </span>is_fedora; <span class="k">then</span>
 <span class="k">        </span>start_ldap
     <span class="k">elif </span>is_suse; <span class="k">then</span>
-<span class="k">        </span>_ldap_varsubst <span class="nv">$FILES</span>/ldap/suse-base-config.ldif.in &gt;<span class="nv">$TMP_LDAP_DIR</span>/suse-base-config.ldif
-        sudo slapadd -F /etc/openldap/slapd.d/ -bcn<span class="o">=</span>config -l <span class="nv">$TMP_LDAP_DIR</span>/suse-base-config.ldif
+<span class="k">        </span>_ldap_varsubst <span class="nv">$FILES</span>/ldap/suse-base-config.ldif.in &gt;<span class="nv">$tmp_ldap_dir</span>/suse-base-config.ldif
+        sudo slapadd -F /etc/openldap/slapd.d/ -bcn<span class="o">=</span>config -l <span class="nv">$tmp_ldap_dir</span>/suse-base-config.ldif
         sudo sed -i <span class="s1">&#39;/^OPENLDAP_START_LDAPI=/s/&quot;no&quot;/&quot;yes&quot;/g&#39;</span> /etc/sysconfig/openldap
         start_ldap
     <span class="k">fi</span>
 
 <span class="k">    </span><span class="nb">echo</span> <span class="s2">&quot;LDAP_PASSWORD is $LDAP_PASSWORD&quot;</span>
-    <span class="nv">SLAPPASS</span><span class="o">=</span><span class="k">$(</span>slappasswd -s <span class="nv">$LDAP_PASSWORD</span><span class="k">)</span>
-    <span class="nb">printf</span> <span class="s2">&quot;LDAP secret is $SLAPPASS\n&quot;</span>
+    <span class="nb">local </span><span class="nv">slappass</span><span class="o">=</span><span class="k">$(</span>slappasswd -s <span class="nv">$LDAP_PASSWORD</span><span class="k">)</span>
+    <span class="nb">printf</span> <span class="s2">&quot;LDAP secret is $slappass\n&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Create manager.ldif and add to olcdb</p>
 </td><td class=code><div class=highlight><pre>
-    _ldap_varsubst <span class="nv">$FILES</span>/ldap/manager.ldif.in &gt;<span class="nv">$TMP_LDAP_DIR</span>/manager.ldif
-    sudo ldapmodify -Y EXTERNAL -H ldapi:/// -f <span class="nv">$TMP_LDAP_DIR</span>/manager.ldif
+    _ldap_varsubst <span class="nv">$FILES</span>/ldap/manager.ldif.in &gt;<span class="nv">$tmp_ldap_dir</span>/manager.ldif
+    sudo ldapmodify -Y EXTERNAL -H ldapi:/// -f <span class="nv">$tmp_ldap_dir</span>/manager.ldif
 
 </pre></div></td></tr><tr><td class=docs>
 <p>On fedora we need to manually add cosine and inetorgperson schemas</p>
@@ -534,7 +534,7 @@ install_ldap() - Collect source and prepare</p>
         sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
     <span class="k">fi</span>
 
-<span class="k">    </span>rm -rf TMP_LDAP_DIR
+<span class="k">    </span>rm -rf <span class="nv">$tmp_ldap_dir</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

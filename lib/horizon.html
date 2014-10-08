@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -431,7 +431,7 @@ TEMPEST_SERVICES+<span class="o">=</span>,horizon
 <span class="k">        </span>sed -e <span class="s2">&quot;/^$option/d&quot;</span> -i <span class="nv">$local_settings</span>
         <span class="nb">echo</span> -e <span class="s2">&quot;\n$option=$value&quot;</span> &gt;&gt; <span class="nv">$file</span>
     <span class="k">elif </span>grep -q <span class="s2">&quot;^$section&quot;</span> <span class="nv">$file</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">line</span><span class="o">=</span><span class="k">$(</span>sed -ne <span class="s2">&quot;/^$section/,/^}/ { /^ *&#39;$option&#39;:/ p; }&quot;</span> <span class="nv">$file</span><span class="k">)</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">line</span><span class="o">=</span><span class="k">$(</span>sed -ne <span class="s2">&quot;/^$section/,/^}/ { /^ *&#39;$option&#39;:/ p; }&quot;</span> <span class="nv">$file</span><span class="k">)</span>
         <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$line&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">            </span>sed -i -e <span class="s2">&quot;/^$section/,/^}/ s/^\( *&#39;$option&#39;\) *:.*$/\1: $value,/&quot;</span> <span class="nv">$file</span>
         <span class="k">else</span>
@@ -483,37 +483,16 @@ we installed it via <tt class="docutils literal">install_nodejs</tt></p>
 </pre></div></td></tr><tr><td class=docs>
 <p><tt class="docutils literal">local_settings.py</tt> is used to override horizon default settings.</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/local_settings.py
+    <span class="nb">local </span><span class="nv">local_settings</span><span class="o">=</span><span class="nv">$HORIZON_DIR</span>/openstack_dashboard/local/local_settings.py
     cp <span class="nv">$HORIZON_SETTINGS</span> <span class="nv">$local_settings</span>
 
-    <span class="k">if </span>is_service_enabled neutron; <span class="k">then</span>
-<span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> OPENSTACK_NEUTRON_NETWORK enable_security_group <span class="nv">$Q_USE_SECGROUP</span>
-    <span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>enable loadbalancer dashboard in case service is enabled</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled q-lbaas; <span class="k">then</span>
-<span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> OPENSTACK_NEUTRON_NETWORK enable_lb True
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>enable firewall dashboard in case service is enabled</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled q-fwaas; <span class="k">then</span>
-<span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> OPENSTACK_NEUTRON_NETWORK enable_firewall True
-    <span class="k">fi</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>enable VPN dashboard in case service is enabled</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="k">if </span>is_service_enabled q-vpn; <span class="k">then</span>
-<span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> OPENSTACK_NEUTRON_NETWORK enable_vpn True
-    <span class="k">fi</span>
-
-<span class="k">    </span>_horizon_config_set <span class="nv">$local_settings</span> <span class="s2">&quot;&quot;</span> OPENSTACK_HOST <span class="se">\&quot;</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_HOST</span><span class="k">}</span><span class="se">\&quot;</span>
+    _horizon_config_set <span class="nv">$local_settings</span> <span class="s2">&quot;&quot;</span> OPENSTACK_HOST <span class="se">\&quot;</span><span class="k">${</span><span class="nv">KEYSTONE_SERVICE_HOST</span><span class="k">}</span><span class="se">\&quot;</span>
     _horizon_config_set <span class="nv">$local_settings</span> <span class="s2">&quot;&quot;</span> OPENSTACK_KEYSTONE_URL <span class="s2">&quot;\&quot;${KEYSTONE_SERVICE_PROTOCOL}://${KEYSTONE_SERVICE_HOST}:${KEYSTONE_SERVICE_PORT}/v2.0\&quot;&quot;</span>
+    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$KEYSTONE_TOKEN_HASH_ALGORITHM&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> <span class="s2">&quot;&quot;</span> OPENSTACK_TOKEN_HASH_ALGORITHM <span class="se">\&quot;</span><span class="s2">&quot;$KEYSTONE_TOKEN_HASH_ALGORITHM&quot;</span><span class="se">\&quot;</span>
+    <span class="k">fi</span>
 
-    <span class="k">if</span> <span class="o">[</span> -f <span class="nv">$SSL_BUNDLE_FILE</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[</span> -f <span class="nv">$SSL_BUNDLE_FILE</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>_horizon_config_set <span class="nv">$local_settings</span> <span class="s2">&quot;&quot;</span> OPENSTACK_SSL_CACERT <span class="se">\&quot;</span><span class="k">${</span><span class="nv">SSL_BUNDLE_FILE</span><span class="k">}</span><span class="se">\&quot;</span>
     <span class="k">fi</span>
 
@@ -522,15 +501,7 @@ we installed it via <tt class="docutils literal">install_nodejs</tt></p>
 </td><td class=code><div class=highlight><pre>
     sudo mkdir -p <span class="nv">$HORIZON_DIR</span>/.blackhole
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Apache 2.4 uses mod_authz_host for access control now (instead of &quot;Allow&quot;)</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">HORIZON_REQUIRE</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
-    <span class="k">if </span>check_apache_version <span class="s2">&quot;2.4&quot;</span> ; <span class="k">then</span>
-<span class="k">        </span><span class="nv">HORIZON_REQUIRE</span><span class="o">=</span><span class="s1">&#39;Require all granted&#39;</span>
-    <span class="k">fi</span>
-
-<span class="k">    </span><span class="nb">local </span><span class="nv">horizon_conf</span><span class="o">=</span><span class="k">$(</span>apache_site_config_for horizon<span class="k">)</span>
+    <span class="nb">local </span><span class="nv">horizon_conf</span><span class="o">=</span><span class="k">$(</span>apache_site_config_for horizon<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Configure apache to run horizon</p>
@@ -541,7 +512,6 @@ we installed it via <tt class="docutils literal">install_nodejs</tt></p>
 <span class="s2">        s,%HORIZON_DIR%,$HORIZON_DIR,g;</span>
 <span class="s2">        s,%APACHE_NAME%,$APACHE_NAME,g;</span>
 <span class="s2">        s,%DEST%,$DEST,g;</span>
-<span class="s2">        s,%HORIZON_REQUIRE%,$HORIZON_REQUIRE,g;</span>
 <span class="s2">    \&quot; $FILES/apache-horizon.template &gt;$horizon_conf&quot;</span>
 
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
@@ -558,7 +528,8 @@ we installed it via <tt class="docutils literal">install_nodejs</tt></p>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Remove old log files that could mess with how devstack detects whether Horizon
-has been successfully started (see start_horizon() and functions::screen_it())</p>
+has been successfully started (see start_horizon() and functions::screen_it())
+and run_process</p>
 </td><td class=code><div class=highlight><pre>
     sudo rm -f /var/log/<span class="nv">$APACHE_NAME</span>/horizon_*
 
@@ -589,7 +560,7 @@ has been successfully started (see start_horizon() and functions::screen_it())</
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_horizon <span class="o">{</span>
     restart_apache_server
-    screen_it horizon <span class="s2">&quot;cd $HORIZON_DIR &amp;&amp; sudo tail -f /var/log/$APACHE_NAME/horizon_error.log&quot;</span>
+    tail_log horizon /var/log/<span class="nv">$APACHE_NAME</span>/horizon_error.log
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

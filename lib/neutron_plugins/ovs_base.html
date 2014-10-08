@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title>common functions for ovs based plugin</title>
 <style type="text/css">
 
@@ -423,6 +423,7 @@ ul.auto-toc {
     install_package <span class="k">$(</span>get_packages <span class="s2">&quot;openvswitch&quot;</span><span class="k">)</span>
     <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">        </span>_neutron_ovs_base_install_ubuntu_dkms
+        restart_service openvswitch-switch
     <span class="k">elif </span>is_fedora; <span class="k">then</span>
 <span class="k">        </span>restart_service openvswitch
     <span class="k">elif </span>is_suse; <span class="k">then</span>
@@ -443,9 +444,13 @@ ul.auto-toc {
 <span class="o">}</span>
 
 <span class="k">function </span>_neutron_ovs_base_configure_l3_agent <span class="o">{</span>
-    iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$Q_USE_PROVIDERNET_FOR_PUBLIC&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="s2">&quot;&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>iniset <span class="nv">$Q_L3_CONF_FILE</span> DEFAULT external_network_bridge <span class="nv">$PUBLIC_BRIDGE</span>
+    <span class="k">fi</span>
 
-    neutron-ovs-cleanup
+<span class="k">    </span>neutron-ovs-cleanup
 </pre></div></td></tr><tr><td class=docs>
 <p>--no-wait causes a race condition if $PUBLIC_BRIDGE is not up when ip addr flush is called</p>
 </td><td class=code><div class=highlight><pre>

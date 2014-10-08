@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -520,12 +520,6 @@ BaremetalHostManager with multiple nodes and different flavors.</p>
 
 
 </pre></div></td></tr><tr><td class=docs>
-<p>Below this, we set some path and filenames.
-Defaults are probably sufficient.</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">DIB_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">DIB_DIR</span><span class="k">:-</span><span class="nv">$DEST</span><span class="p">/diskimage-builder</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
 <p>Use DIB to create deploy ramdisk and kernel.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">BM_BUILD_DEPLOY_RAMDISK</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$BM_BUILD_DEPLOY_RAMDISK</span><span class="sb">`</span>
@@ -575,9 +569,10 @@ does not contain &quot;baremetal&quot;</p>
 so that we can build the deployment kernel &amp; ramdisk</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>prepare_baremetal_toolchain <span class="o">{</span>
-    git_clone <span class="nv">$DIB_REPO</span> <span class="nv">$DIB_DIR</span> <span class="nv">$DIB_BUILD_BRANCH</span>
-
-    <span class="nb">local </span><span class="nv">shellinabox_basename</span><span class="o">=</span><span class="k">$(</span>basename <span class="nv">$BM_SHELL_IN_A_BOX</span><span class="k">)</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="k">$(</span><span class="nb">type</span> -P ramdisk-image-create<span class="k">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>pip_install diskimage_builder
+    <span class="k">fi</span>
+<span class="k">    </span><span class="nb">local </span><span class="nv">shellinabox_basename</span><span class="o">=</span><span class="k">$(</span>basename <span class="nv">$BM_SHELL_IN_A_BOX</span><span class="k">)</span>
     <span class="k">if</span> <span class="o">[[</span> ! -e <span class="nv">$DEST</span>/<span class="nv">$shellinabox_basename</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">cd</span> <span class="nv">$DEST</span>
         wget <span class="nv">$BM_SHELL_IN_A_BOX</span>
@@ -643,7 +638,7 @@ this function sets BM_DEPLOY_KERNEL_ID and BM_DEPLOY_RAMDISK_ID</p>
 <span class="k">        </span><span class="nv">BM_DEPLOY_KERNEL</span><span class="o">=</span>bm-deploy.kernel
         <span class="nv">BM_DEPLOY_RAMDISK</span><span class="o">=</span>bm-deploy.initramfs
         <span class="k">if</span> <span class="o">[</span> ! -e <span class="s2">&quot;$TOP_DIR/files/$BM_DEPLOY_KERNEL&quot;</span> -o ! -e <span class="s2">&quot;$TOP_DIR/files/$BM_DEPLOY_RAMDISK&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-            <span class="nv">$DIB_DIR</span>/bin/ramdisk-image-create <span class="nv">$BM_DEPLOY_FLAVOR</span> <span class="se">\</span>
+<span class="k">            </span>ramdisk-image-create <span class="nv">$BM_DEPLOY_FLAVOR</span> <span class="se">\</span>
                 -o <span class="nv">$TOP_DIR</span>/files/bm-deploy
         <span class="k">fi</span>
 <span class="k">    fi</span>
@@ -651,19 +646,21 @@ this function sets BM_DEPLOY_KERNEL_ID and BM_DEPLOY_RAMDISK_ID</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>load them into glance</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">BM_DEPLOY_KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-        image-create <span class="se">\</span>
-        --name <span class="nv">$BM_DEPLOY_KERNEL</span> <span class="se">\</span>
-        --is-public True --disk-format<span class="o">=</span>aki <span class="se">\</span>
+    <span class="nv">BM_DEPLOY_KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>openstack <span class="se">\</span>
+        --os-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image create <span class="se">\</span>
+        <span class="nv">$BM_DEPLOY_KERNEL</span> <span class="se">\</span>
+        --public --disk-format<span class="o">=</span>aki <span class="se">\</span>
+        --container-format<span class="o">=</span>aki <span class="se">\</span>
         &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$BM_DEPLOY_KERNEL</span>  | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">BM_DEPLOY_RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-        image-create <span class="se">\</span>
-        --name <span class="nv">$BM_DEPLOY_RAMDISK</span> <span class="se">\</span>
-        --is-public True --disk-format<span class="o">=</span>ari <span class="se">\</span>
+    <span class="nv">BM_DEPLOY_RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>openstack <span class="se">\</span>
+        --os-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image create <span class="se">\</span>
+        <span class="nv">$BM_DEPLOY_RAMDISK</span> <span class="se">\</span>
+        --public --disk-format<span class="o">=</span>ari <span class="se">\</span>
+        --container-format<span class="o">=</span>ari <span class="se">\</span>
         &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$BM_DEPLOY_RAMDISK</span>  | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 <span class="o">}</span>
 
@@ -697,7 +694,7 @@ Sets KERNEL_ID and RAMDISK_ID</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>this call returns the file names as &quot;$kernel,$ramdisk&quot;</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">out</span><span class="o">=</span><span class="k">$(</span><span class="nv">$DIB_DIR</span>/bin/disk-image-get-kernel <span class="se">\</span>
+    <span class="nv">out</span><span class="o">=</span><span class="k">$(</span>disk-image-get-kernel <span class="se">\</span>
             -x -d <span class="nv">$TOP_DIR</span>/files -o bm-deploy -i <span class="nv">$file</span><span class="k">)</span>
     <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Failed to get kernel and ramdisk from $file&quot;</span>
@@ -712,19 +709,21 @@ Sets KERNEL_ID and RAMDISK_ID</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>load them into glance</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-        image-create <span class="se">\</span>
-        --name <span class="nv">$image_name</span>-kernel <span class="se">\</span>
-        --is-public True --disk-format<span class="o">=</span>aki <span class="se">\</span>
+    <span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>openstack <span class="se">\</span>
+        --os-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image create <span class="se">\</span>
+        <span class="nv">$image_name</span>-kernel <span class="se">\</span>
+        --public --disk-format<span class="o">=</span>aki <span class="se">\</span>
+        --container-format<span class="o">=</span>aki <span class="se">\</span>
         &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$OUT_KERNEL</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-    <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-        image-create <span class="se">\</span>
-        --name <span class="nv">$image_name</span>-initrd <span class="se">\</span>
-        --is-public True --disk-format<span class="o">=</span>ari <span class="se">\</span>
+    <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>openstack <span class="se">\</span>
+        --os-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image create <span class="se">\</span>
+        <span class="nv">$image_name</span>-initrd <span class="se">\</span>
+        --public --disk-format<span class="o">=</span>ari <span class="se">\</span>
+        --container-format<span class="o">=</span>ari <span class="se">\</span>
         &lt; <span class="nv">$TOP_DIR</span>/files/<span class="nv">$OUT_RAMDISK</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
 <span class="o">}</span>
 
@@ -797,18 +796,18 @@ of the existing function.</p>
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CONTAINER_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;bare&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span>extract_and_upload_k_and_r_from_image <span class="nv">$token</span> <span class="nv">$IMAGE</span>
     <span class="k">elif</span> <span class="o">[</span> <span class="s2">&quot;$CONTAINER_FORMAT&quot;</span> <span class="o">=</span> <span class="s2">&quot;ami&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-            --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-            --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-            image-create <span class="se">\</span>
-            --name <span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> --is-public True <span class="se">\</span>
+<span class="k">        </span><span class="nv">KERNEL_ID</span><span class="o">=</span><span class="k">$(</span>openstack <span class="se">\</span>
+            --os-token <span class="nv">$token</span> <span class="se">\</span>
+            --os-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+            image create <span class="se">\</span>
+            <span class="s2">&quot;$IMAGE_NAME-kernel&quot;</span> --public <span class="se">\</span>
             --container-format aki <span class="se">\</span>
             --disk-format aki &lt; <span class="s2">&quot;$KERNEL&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
-        <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>glance <span class="se">\</span>
-            --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-            --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-            image-create <span class="se">\</span>
-            --name <span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> --is-public True <span class="se">\</span>
+        <span class="nv">RAMDISK_ID</span><span class="o">=</span><span class="k">$(</span>openstack <span class="se">\</span>
+            --os-token <span class="nv">$token</span> <span class="se">\</span>
+            --os-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+            image create <span class="se">\</span>
+            <span class="s2">&quot;$IMAGE_NAME-ramdisk&quot;</span> --public <span class="se">\</span>
             --container-format ari <span class="se">\</span>
             --disk-format ari &lt; <span class="s2">&quot;$RAMDISK&quot;</span> | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
     <span class="k">else</span>
@@ -818,11 +817,11 @@ of the existing function.</p>
         <span class="k">return</span>
 <span class="k">    fi</span>
 
-<span class="k">    </span>glance <span class="se">\</span>
-        --os-auth-token <span class="nv">$token</span> <span class="se">\</span>
-        --os-image-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
-        image-create <span class="se">\</span>
-        --name <span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> --is-public True <span class="se">\</span>
+<span class="k">    </span>openstack <span class="se">\</span>
+        --os-token <span class="nv">$token</span> <span class="se">\</span>
+        --os-url http://<span class="nv">$GLANCE_HOSTPORT</span> <span class="se">\</span>
+        image create <span class="se">\</span>
+        <span class="s2">&quot;${IMAGE_NAME%.img}&quot;</span> --public <span class="se">\</span>
         --container-format <span class="nv">$CONTAINER_FORMAT</span> <span class="se">\</span>
         --disk-format <span class="nv">$DISK_FORMAT</span> <span class="se">\</span>
         <span class="k">${</span><span class="nv">KERNEL_ID</span><span class="p">:+--property kernel_id=</span><span class="nv">$KERNEL_ID</span><span class="k">}</span> <span class="se">\</span>

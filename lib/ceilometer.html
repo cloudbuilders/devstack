@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -416,6 +416,7 @@ enable_service ceilometer-alarm-notifier ceilometer-alarm-evaluator</blockquote>
 <span class="nv">CEILOMETER_CONF</span><span class="o">=</span><span class="nv">$CEILOMETER_CONF_DIR</span>/ceilometer.conf
 <span class="nv">CEILOMETER_API_LOG_DIR</span><span class="o">=</span>/var/log/ceilometer-api
 <span class="nv">CEILOMETER_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">CEILOMETER_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/ceilometer</span><span class="k">}</span>
+<span class="nv">CEILOMETER_WSGI_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">CEILOMETER_WSGI_DIR</span><span class="k">:-</span><span class="p">/var/www/ceilometer</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Support potential entry-points console scripts</p>
@@ -433,6 +434,7 @@ enable_service ceilometer-alarm-notifier ceilometer-alarm-evaluator</blockquote>
 <span class="nv">CEILOMETER_SERVICE_PROTOCOL</span><span class="o">=</span>http
 <span class="nv">CEILOMETER_SERVICE_HOST</span><span class="o">=</span><span class="nv">$SERVICE_HOST</span>
 <span class="nv">CEILOMETER_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">CEILOMETER_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8777</span><span class="k">}</span>
+<span class="nv">CEILOMETER_USE_MOD_WSGI</span><span class="o">=</span><span class="k">$(</span>trueorfalse False <span class="nv">$CEILOMETER_USE_MOD_WSGI</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>To enable OSprofiler change value of this variable to &quot;notifications,profiler&quot;</p>
@@ -474,21 +476,21 @@ SERVICE_TENANT_NAME  ceilometer   ResellerAdmin (if Swift is enabled)</p>
 
 create_ceilometer_accounts<span class="o">()</span> <span class="o">{</span>
 
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">service_tenant</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">admin_role</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Ceilometer</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;ceilometer-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">CEILOMETER_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;ceilometer&quot;</span> <span class="se">\</span>
-            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
-        get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$CEILOMETER_USER</span> <span class="nv">$SERVICE_TENANT</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">ceilometer_user</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;ceilometer&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$service_tenant</span><span class="k">)</span>
+        get_or_add_user_role <span class="nv">$admin_role</span> <span class="nv">$ceilometer_user</span> <span class="nv">$service_tenant</span>
 
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">CEILOMETER_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;ceilometer&quot;</span> <span class="se">\</span>
+<span class="k">            </span><span class="nb">local </span><span class="nv">ceilometer_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;ceilometer&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;metering&quot;</span> <span class="s2">&quot;OpenStack Telemetry Service&quot;</span><span class="k">)</span>
-            get_or_create_endpoint <span class="nv">$CEILOMETER_SERVICE</span> <span class="se">\</span>
+            get_or_create_endpoint <span class="nv">$ceilometer_service</span> <span class="se">\</span>
                 <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$CEILOMETER_SERVICE_PROTOCOL://$CEILOMETER_SERVICE_HOST:$CEILOMETER_SERVICE_PORT/&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$CEILOMETER_SERVICE_PROTOCOL://$CEILOMETER_SERVICE_HOST:$CEILOMETER_SERVICE_PORT/&quot;</span> <span class="se">\</span>
@@ -505,6 +507,14 @@ create_ceilometer_accounts<span class="o">()</span> <span class="o">{</span>
 
 
 </pre></div></td></tr><tr><td class=docs>
+<p>_cleanup_keystone_apache_wsgi() - Remove wsgi files, disable and remove apache vhost file</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>_cleanup_ceilometer_apache_wsgi <span class="o">{</span>
+    sudo rm -f <span class="nv">$CEILOMETER_WSGI_DIR</span>/*
+    sudo rm -f <span class="k">$(</span>apache_site_config_for ceilometer<span class="k">)</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>cleanup_ceilometer() - Remove residual data files, anything left over from previous
 runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
@@ -512,6 +522,29 @@ runs that a clean run would need to clean up</p>
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> !<span class="o">=</span> <span class="s1">&#39;mysql&#39;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> !<span class="o">=</span> <span class="s1">&#39;postgresql&#39;</span> <span class="o">]</span> ; <span class="k">then</span>
 <span class="k">        </span>mongo ceilometer --eval <span class="s2">&quot;db.dropDatabase();&quot;</span>
     <span class="k">fi</span>
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>_cleanup_ceilometer_apache_wsgi
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">function </span>_config_ceilometer_apache_wsgi <span class="o">{</span>
+    sudo mkdir -p <span class="nv">$CEILOMETER_WSGI_DIR</span>
+
+    <span class="nb">local </span><span class="nv">ceilometer_apache_conf</span><span class="o">=</span><span class="k">$(</span>apache_site_config_for ceilometer<span class="k">)</span>
+    <span class="nb">local </span><span class="nv">apache_version</span><span class="o">=</span><span class="k">$(</span>get_apache_version<span class="k">)</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>copy proxy vhost and wsgi file</p>
+</td><td class=code><div class=highlight><pre>
+    sudo cp <span class="nv">$CEILOMETER_DIR</span>/ceilometer/api/app.wsgi <span class="nv">$CEILOMETER_WSGI_DIR</span>/app
+
+    sudo cp <span class="nv">$FILES</span>/apache-ceilometer.template <span class="nv">$ceilometer_apache_conf</span>
+    sudo sed -e <span class="s2">&quot;</span>
+<span class="s2">        s|%PORT%|$CEILOMETER_SERVICE_PORT|g;</span>
+<span class="s2">        s|%APACHE_NAME%|$APACHE_NAME|g;</span>
+<span class="s2">        s|%WSGIAPP%|$CEILOMETER_WSGI_DIR/app|g;</span>
+<span class="s2">        s|%USER%|$STACK_USER|g</span>
+<span class="s2">    &quot;</span> -i <span class="nv">$ceilometer_apache_conf</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -553,14 +586,11 @@ the alarm evaluator needs these options to call ceilometer APIs</p>
     iniset <span class="nv">$CEILOMETER_CONF</span> service_credentials os_password <span class="nv">$SERVICE_PASSWORD</span>
     iniset <span class="nv">$CEILOMETER_CONF</span> service_credentials os_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
 
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_user ceilometer
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$CEILOMETER_CONF</span> keystone_authtoken signing_dir <span class="nv">$CEILOMETER_AUTH_CACHE_DIR</span>
+    configure_auth_token_middleware <span class="nv">$CEILOMETER_CONF</span> ceilometer <span class="nv">$CEILOMETER_AUTH_CACHE_DIR</span>
 
     <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;mysql&#39;</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;postgresql&#39;</span> <span class="o">]</span> ; <span class="k">then</span>
 <span class="k">        </span>iniset <span class="nv">$CEILOMETER_CONF</span> database connection <span class="sb">`</span>database_connection_url ceilometer<span class="sb">`</span>
+        iniset <span class="nv">$CEILOMETER_CONF</span> DEFAULT collector_workers <span class="nv">$API_WORKERS</span>
     <span class="k">else</span>
 <span class="k">        </span>iniset <span class="nv">$CEILOMETER_CONF</span> database connection mongodb://localhost:27017/ceilometer
         configure_mongodb
@@ -572,6 +602,11 @@ the alarm evaluator needs these options to call ceilometer APIs</p>
         iniset <span class="nv">$CEILOMETER_CONF</span> vmware host_ip <span class="s2">&quot;$VMWAREAPI_IP&quot;</span>
         iniset <span class="nv">$CEILOMETER_CONF</span> vmware host_username <span class="s2">&quot;$VMWAREAPI_USER&quot;</span>
         iniset <span class="nv">$CEILOMETER_CONF</span> vmware host_password <span class="s2">&quot;$VMWAREAPI_PASSWORD&quot;</span>
+    <span class="k">fi</span>
+
+<span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$CEILOMETER_CONF</span> api pecan_debug <span class="s2">&quot;False&quot;</span>
+        _config_ceilometer_apache_wsgi
     <span class="k">fi</span>
 <span class="o">}</span>
 
@@ -648,16 +683,30 @@ the alarm evaluator needs these options to call ceilometer APIs</p>
 <p>start_ceilometer() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_ceilometer <span class="o">{</span>
+    run_process ceilometer-acentral <span class="s2">&quot;ceilometer-agent-central --config-file $CEILOMETER_CONF&quot;</span>
+    run_process ceilometer-anotification <span class="s2">&quot;ceilometer-agent-notification --config-file $CEILOMETER_CONF&quot;</span>
+    run_process ceilometer-collector <span class="s2">&quot;ceilometer-collector --config-file $CEILOMETER_CONF&quot;</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$CEILOMETER_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>run_process ceilometer-api <span class="s2">&quot;ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR --config-file $CEILOMETER_CONF&quot;</span>
+    <span class="k">else</span>
+<span class="k">        </span>enable_apache_site ceilometer
+        restart_apache_server
+        tail_log ceilometer /var/log/<span class="nv">$APACHE_NAME</span>/ceilometer.log
+        tail_log ceilometer-api /var/log/<span class="nv">$APACHE_NAME</span>/ceilometer_access.log
+    <span class="k">fi</span>
+
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Start the compute agent last to allow time for the collector to
+fully wake up and connect to the message bus. See bug #1355809</p>
+</td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;libvirt&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen_it ceilometer-acompute <span class="s2">&quot;cd ; sg $LIBVIRT_GROUP &#39;ceilometer-agent-compute --config-file $CEILOMETER_CONF&#39;&quot;</span>
+<span class="k">        </span>run_process ceilometer-acompute <span class="s2">&quot;ceilometer-agent-compute --config-file $CEILOMETER_CONF&quot;</span> <span class="nv">$LIBVIRT_GROUP</span>
     <span class="k">fi</span>
 <span class="k">    if</span> <span class="o">[[</span> <span class="s2">&quot;$VIRT_DRIVER&quot;</span> <span class="o">=</span> <span class="s1">&#39;vsphere&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span>screen_it ceilometer-acompute <span class="s2">&quot;cd ; ceilometer-agent-compute --config-file $CEILOMETER_CONF&quot;</span>
+<span class="k">        </span>run_process ceilometer-acompute <span class="s2">&quot;ceilometer-agent-compute --config-file $CEILOMETER_CONF&quot;</span>
     <span class="k">fi</span>
-<span class="k">    </span>screen_it ceilometer-acentral <span class="s2">&quot;cd ; ceilometer-agent-central --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-anotification <span class="s2">&quot;cd ; ceilometer-agent-notification --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-collector <span class="s2">&quot;cd ; ceilometer-collector --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-api <span class="s2">&quot;cd ; ceilometer-api -d -v --log-dir=$CEILOMETER_API_LOG_DIR --config-file $CEILOMETER_CONF&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>only die on API if it was actually intended to be turned on</p>
@@ -669,19 +718,23 @@ the alarm evaluator needs these options to call ceilometer APIs</p>
         <span class="k">fi</span>
 <span class="k">    fi</span>
 
-<span class="k">    </span>screen_it ceilometer-alarm-notifier <span class="s2">&quot;cd ; ceilometer-alarm-notifier --config-file $CEILOMETER_CONF&quot;</span>
-    screen_it ceilometer-alarm-evaluator <span class="s2">&quot;cd ; ceilometer-alarm-evaluator --config-file $CEILOMETER_CONF&quot;</span>
+<span class="k">    </span>run_process ceilometer-alarm-notifier <span class="s2">&quot;ceilometer-alarm-notifier --config-file $CEILOMETER_CONF&quot;</span>
+    run_process ceilometer-alarm-evaluator <span class="s2">&quot;ceilometer-alarm-evaluator --config-file $CEILOMETER_CONF&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>stop_ceilometer() - Stop running processes</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>stop_ceilometer <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$CEILOMETER_USE_MOD_WSGI&quot;</span> <span class="o">==</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>disable_apache_site ceilometer
+        restart_apache_server
+    <span class="k">fi</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the ceilometer screen windows</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">for </span>serv in ceilometer-acompute ceilometer-acentral ceilometer-anotification ceilometer-collector ceilometer-api ceilometer-alarm-notifier ceilometer-alarm-evaluator; <span class="k">do</span>
-<span class="k">        </span>screen_stop <span class="nv">$serv</span>
+<span class="k">        </span>stop_process <span class="nv">$serv</span>
     <span class="k">done</span>
 <span class="o">}</span>
 

@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -426,6 +426,9 @@ Dependencies:</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Public facing bits</p>
 </td><td class=code><div class=highlight><pre>
+<span class="k">if </span>is_ssl_enabled_service <span class="s2">&quot;cinder&quot;</span> <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">    </span><span class="nv">CINDER_SERVICE_PROTOCOL</span><span class="o">=</span><span class="s2">&quot;https&quot;</span>
+<span class="k">fi</span>
 <span class="nv">CINDER_SERVICE_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_SERVICE_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
 <span class="nv">CINDER_SERVICE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_SERVICE_PORT</span><span class="k">:-</span><span class="nv">8776</span><span class="k">}</span>
 <span class="nv">CINDER_SERVICE_PORT_INT</span><span class="o">=</span><span class="k">${</span><span class="nv">CINDER_SERVICE_PORT_INT</span><span class="k">:-</span><span class="nv">18776</span><span class="k">}</span>
@@ -490,10 +493,10 @@ TEMPEST_SERVICES+<span class="o">=</span>,cinder
 </td><td class=code><div class=highlight><pre>
 <span class="k">if </span>is_service_enabled c-vol <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">    for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">        </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
-        <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
-        <span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$CINDER_BACKENDS</span>/<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nb">source</span> <span class="nv">$CINDER_BACKENDS</span>/<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span>
+<span class="k">        </span><span class="nv">be_type</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+        <span class="nv">be_name</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
+        <span class="k">if</span> <span class="o">[[</span> -r <span class="nv">$CINDER_BACKENDS</span>/<span class="k">${</span><span class="nv">be_type</span><span class="k">}</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nb">source</span> <span class="nv">$CINDER_BACKENDS</span>/<span class="k">${</span><span class="nv">be_type</span><span class="k">}</span>
         <span class="k">fi</span>
 <span class="k">    done</span>
 <span class="k">fi</span>
@@ -523,7 +526,7 @@ runs that a clean run would need to clean up</p>
 <p>ensure the volume group is cleared up because fails might
 leave dead volumes in the group</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">TARGETS</span><span class="o">=</span><span class="k">$(</span>sudo tgtadm --op show --mode target<span class="k">)</span>
+    <span class="nb">local </span><span class="nv">targets</span><span class="o">=</span><span class="k">$(</span>sudo tgtadm --op show --mode target<span class="k">)</span>
     <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> -ne 0 <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>If tgt driver isn't running this won't work obviously
@@ -535,11 +538,11 @@ So check the response and restart if need be</p>
         <span class="k">else</span>
 <span class="k">            </span>restart_service tgtd
         <span class="k">fi</span>
-<span class="k">        </span><span class="nv">TARGETS</span><span class="o">=</span><span class="k">$(</span>sudo tgtadm --op show --mode target<span class="k">)</span>
+<span class="k">        </span><span class="nv">targets</span><span class="o">=</span><span class="k">$(</span>sudo tgtadm --op show --mode target<span class="k">)</span>
     <span class="k">fi</span>
 
-<span class="k">    if</span> <span class="o">[[</span> -n <span class="s2">&quot;$TARGETS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">iqn_list</span><span class="o">=(</span> <span class="k">$(</span>grep --no-filename -r iqn <span class="nv">$SCSI_PERSIST_DIR</span> | sed <span class="s1">&#39;s/&lt;target //&#39;</span> | sed <span class="s1">&#39;s/&gt;//&#39;</span><span class="k">)</span> <span class="o">)</span>
+<span class="k">    if</span> <span class="o">[[</span> -n <span class="s2">&quot;$targets&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">iqn_list</span><span class="o">=(</span> <span class="k">$(</span>grep --no-filename -r iqn <span class="nv">$SCSI_PERSIST_DIR</span> | sed <span class="s1">&#39;s/&lt;target //&#39;</span> | sed <span class="s1">&#39;s/&gt;//&#39;</span><span class="k">)</span> <span class="o">)</span>
         <span class="k">for </span>i in <span class="s2">&quot;${iqn_list[@]}&quot;</span>; <span class="k">do</span>
 <span class="k">            </span><span class="nb">echo </span>removing iSCSI target: <span class="nv">$i</span>
             sudo tgt-admin --delete <span class="nv">$i</span>
@@ -553,11 +556,12 @@ So check the response and restart if need be</p>
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled c-vol <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">            </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
-            <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
-            <span class="k">if </span><span class="nb">type </span>cleanup_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
-<span class="k">                </span>cleanup_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span>
+<span class="k">        </span><span class="nb">local </span>be be_name be_type
+        <span class="k">for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">be_type</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+            <span class="nv">be_name</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
+            <span class="k">if </span><span class="nb">type </span>cleanup_cinder_backend_<span class="k">${</span><span class="nv">be_type</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
+<span class="k">                </span>cleanup_cinder_backend_<span class="k">${</span><span class="nv">be_type</span><span class="k">}</span> <span class="k">${</span><span class="nv">be_name</span><span class="k">}</span>
             <span class="k">fi</span>
 <span class="k">        done</span>
 <span class="k">    fi</span>
@@ -570,7 +574,7 @@ So check the response and restart if need be</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Set the paths of certain binaries</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">CINDER_ROOTWRAP</span><span class="o">=</span><span class="k">$(</span>get_rootwrap_location cinder<span class="k">)</span>
+    <span class="nb">local </span><span class="nv">cinder_rootwrap</span><span class="o">=</span><span class="k">$(</span>get_rootwrap_location cinder<span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Deploy new rootwrap filters files (owned by root).
@@ -596,16 +600,16 @@ Wipe any existing rootwrap.d files first</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Specify rootwrap.conf as first parameter to rootwrap</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">ROOTWRAP_CSUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$CINDER_ROOTWRAP $CINDER_CONF_DIR/rootwrap.conf *&quot;</span>
+    <span class="nv">ROOTWRAP_CSUDOER_CMD</span><span class="o">=</span><span class="s2">&quot;$cinder_rootwrap $CINDER_CONF_DIR/rootwrap.conf *&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Set up the rootwrap sudoers for cinder</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">TEMPFILE</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
-    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD: $ROOTWRAP_CSUDOER_CMD&quot;</span> &gt;<span class="nv">$TEMPFILE</span>
-    chmod 0440 <span class="nv">$TEMPFILE</span>
-    sudo chown root:root <span class="nv">$TEMPFILE</span>
-    sudo mv <span class="nv">$TEMPFILE</span> /etc/sudoers.d/cinder-rootwrap
+    <span class="nb">local </span><span class="nv">tempfile</span><span class="o">=</span><span class="sb">`</span>mktemp<span class="sb">`</span>
+    <span class="nb">echo</span> <span class="s2">&quot;$STACK_USER ALL=(root) NOPASSWD: $ROOTWRAP_CSUDOER_CMD&quot;</span> &gt;<span class="nv">$tempfile</span>
+    chmod 0440 <span class="nv">$tempfile</span>
+    sudo chown root:root <span class="nv">$tempfile</span>
+    sudo mv <span class="nv">$tempfile</span> /etc/sudoers.d/cinder-rootwrap
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -632,12 +636,7 @@ Wipe any existing rootwrap.d files first</p>
     inicomment <span class="nv">$CINDER_API_PASTE_INI</span> filter:authtoken admin_password
     inicomment <span class="nv">$CINDER_API_PASTE_INI</span> filter:authtoken signing_dir
 
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken admin_user cinder
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken signing_dir <span class="nv">$CINDER_AUTH_CACHE_DIR</span>
+    configure_auth_token_middleware <span class="nv">$CINDER_CONF</span> cinder <span class="nv">$CINDER_AUTH_CACHE_DIR</span>
 
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT auth_strategy keystone
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT debug <span class="nv">$ENABLE_DEBUG_LOG_LEVEL</span>
@@ -660,18 +659,19 @@ supported.</p>
     iniset <span class="nv">$CINDER_CONF</span> DEFAULT enable_v1_api <span class="nb">true</span>
 
 <span class="nb">    </span><span class="k">if </span>is_service_enabled c-vol <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">enabled_backends</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-        <span class="nv">default_name</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">enabled_backends</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="nb">local </span><span class="nv">default_name</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="nb">local </span>be be_name be_type
         <span class="k">for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">            </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
-            <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
-            <span class="k">if </span><span class="nb">type </span>configure_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
-<span class="k">                </span>configure_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span>
+<span class="k">            </span><span class="nv">be_type</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+            <span class="nv">be_name</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
+            <span class="k">if </span><span class="nb">type </span>configure_cinder_backend_<span class="k">${</span><span class="nv">be_type</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
+<span class="k">                </span>configure_cinder_backend_<span class="k">${</span><span class="nv">be_type</span><span class="k">}</span> <span class="k">${</span><span class="nv">be_name</span><span class="k">}</span>
             <span class="k">fi</span>
 <span class="k">            if</span> <span class="o">[[</span> -z <span class="s2">&quot;$default_name&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">                </span><span class="nv">default_name</span><span class="o">=</span><span class="nv">$BE_NAME</span>
+<span class="k">                </span><span class="nv">default_name</span><span class="o">=</span><span class="nv">$be_name</span>
             <span class="k">fi</span>
-<span class="k">            </span>enabled_backends+<span class="o">=</span><span class="nv">$BE_NAME</span>,
+<span class="k">            </span>enabled_backends+<span class="o">=</span><span class="nv">$be_name</span>,
         <span class="k">done</span>
 <span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT enabled_backends <span class="k">${</span><span class="nv">enabled_backends</span><span class="p">%,*</span><span class="k">}</span>
         <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$default_name&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
@@ -729,10 +729,23 @@ see <a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi
             -e <span class="s1">&#39;s/snapshot_autoextend_percent =.*/snapshot_autoextend_percent = 20/&#39;</span> <span class="se">\</span>
             /etc/lvm/lvm.conf
     <span class="k">fi</span>
-<span class="k">    </span>configure_API_version <span class="nv">$CINDER_CONF</span> <span class="nv">$IDENTITY_API_VERSION</span>
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken admin_user cinder
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$CINDER_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
+
+<span class="k">    </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT osapi_volume_workers <span class="s2">&quot;$API_WORKERS&quot;</span>
+
+    iniset <span class="nv">$CINDER_CONF</span> DEFAULT glance_api_servers <span class="s2">&quot;${GLANCE_SERVICE_PROTOCOL}://${GLANCE_HOSTPORT}&quot;</span>
+    <span class="k">if </span>is_ssl_enabled_service glance <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$CINDER_CONF</span> DEFAULT glance_protocol https
+    <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Register SSL certificates if provided</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_ssl_enabled_service cinder; <span class="k">then</span>
+<span class="k">        </span>ensure_certificates CINDER
+
+        iniset <span class="nv">$CINDER_CONF</span> DEFAULT ssl_cert_file <span class="s2">&quot;$CINDER_SSL_CERT&quot;</span>
+        iniset <span class="nv">$CINDER_CONF</span> DEFAULT ssl_key_file <span class="s2">&quot;$CINDER_SSL_KEY&quot;</span>
+    <span class="k">fi</span>
 
 <span class="o">}</span>
 
@@ -752,30 +765,30 @@ see <a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>create_cinder_accounts <span class="o">{</span>
 
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">service_tenant</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">admin_role</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Cinder</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$ENABLED_SERVICES&quot;</span> <span class="o">=</span>~ <span class="s2">&quot;c-api&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 
-<span class="k">        </span><span class="nv">CINDER_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;cinder&quot;</span> <span class="se">\</span>
-            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
-        get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$CINDER_USER</span> <span class="nv">$SERVICE_TENANT</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">cinder_user</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;cinder&quot;</span> <span class="se">\</span>
+            <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$service_tenant</span><span class="k">)</span>
+        get_or_add_user_role <span class="nv">$admin_role</span> <span class="nv">$cinder_user</span> <span class="nv">$service_tenant</span>
 
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 
-<span class="k">            </span><span class="nv">CINDER_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;cinder&quot;</span> <span class="se">\</span>
+<span class="k">            </span><span class="nb">local </span><span class="nv">cinder_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;cinder&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;volume&quot;</span> <span class="s2">&quot;Cinder Volume Service&quot;</span><span class="k">)</span>
-            get_or_create_endpoint <span class="nv">$CINDER_SERVICE</span> <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+            get_or_create_endpoint <span class="nv">$cinder_service</span> <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v1/\$(tenant_id)s&quot;</span>
 
-            <span class="nv">CINDER_V2_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;cinderv2&quot;</span> <span class="se">\</span>
+            <span class="nb">local </span><span class="nv">cinder_v2_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;cinderv2&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;volumev2&quot;</span> <span class="s2">&quot;Cinder Volume Service V2&quot;</span><span class="k">)</span>
-            get_or_create_endpoint <span class="nv">$CINDER_V2_SERVICE</span> <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
+            get_or_create_endpoint <span class="nv">$cinder_v2_service</span> <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;$CINDER_SERVICE_PROTOCOL://$CINDER_SERVICE_HOST:$CINDER_SERVICE_PORT/v2/\$(tenant_id)s&quot;</span>
@@ -796,7 +809,8 @@ see <a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
-<p>init_cinder() - Initialize database and volume group</p>
+<p>init_cinder() - Initialize database and volume group
+Uses global <tt class="docutils literal">NOVA_ENABLED_APIS</tt></p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>init_cinder <span class="o">{</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -817,11 +831,12 @@ see <a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi
     <span class="k">fi</span>
 
 <span class="k">    if </span>is_service_enabled c-vol <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">            </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
-            <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
-            <span class="k">if </span><span class="nb">type </span>init_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
-<span class="k">                </span>init_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span>
+<span class="k">        </span><span class="nb">local </span>be be_name be_type
+        <span class="k">for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">be_type</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+            <span class="nv">be_name</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
+            <span class="k">if </span><span class="nb">type </span>init_cinder_backend_<span class="k">${</span><span class="nv">be_type</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
+<span class="k">                </span>init_cinder_backend_<span class="k">${</span><span class="nv">be_type</span><span class="k">}</span> <span class="k">${</span><span class="nv">be_name</span><span class="k">}</span>
             <span class="k">fi</span>
 <span class="k">        done</span>
 <span class="k">    fi</span>
@@ -861,7 +876,13 @@ see <a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi
 <p>start_cinder() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_cinder <span class="o">{</span>
-    <span class="k">if </span>is_service_enabled c-vol; <span class="k">then</span>
+    <span class="nb">local </span><span class="nv">service_port</span><span class="o">=</span><span class="nv">$CINDER_SERVICE_PORT</span>
+    <span class="nb">local </span><span class="nv">service_protocol</span><span class="o">=</span><span class="nv">$CINDER_SERVICE_PROTOCOL</span>
+    <span class="k">if </span>is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span><span class="nv">service_port</span><span class="o">=</span><span class="nv">$CINDER_SERVICE_PORT_INT</span>
+        <span class="nv">service_protocol</span><span class="o">=</span><span class="s2">&quot;http&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    if </span>is_service_enabled c-vol; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Delete any old stack.conf</p>
 </td><td class=code><div class=highlight><pre>
@@ -893,15 +914,15 @@ name, and would need to be adjusted too</p>
         sudo tgtadm --mode system --op update --name debug --value on
     <span class="k">fi</span>
 
-<span class="k">    </span>screen_it c-api <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-api --config-file $CINDER_CONF&quot;</span>
+<span class="k">    </span>run_process c-api <span class="s2">&quot;$CINDER_BIN_DIR/cinder-api --config-file $CINDER_CONF&quot;</span>
     <span class="nb">echo</span> <span class="s2">&quot;Waiting for Cinder API to start...&quot;</span>
-    <span class="k">if</span> ! wait_for_service <span class="nv">$SERVICE_TIMEOUT</span> <span class="nv">$CINDER_SERVICE_PROTOCOL</span>://<span class="nv">$CINDER_SERVICE_HOST</span>:<span class="nv">$CINDER_SERVICE_PORT</span>; <span class="k">then</span>
+    <span class="k">if</span> ! wait_for_service <span class="nv">$SERVICE_TIMEOUT</span> <span class="nv">$service_protocol</span>://<span class="nv">$CINDER_SERVICE_HOST</span>:<span class="nv">$service_port</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;c-api did not start&quot;</span>
     <span class="k">fi</span>
 
-<span class="k">    </span>screen_it c-sch <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-scheduler --config-file $CINDER_CONF&quot;</span>
-    screen_it c-bak <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-backup --config-file $CINDER_CONF&quot;</span>
-    screen_it c-vol <span class="s2">&quot;cd $CINDER_DIR &amp;&amp; $CINDER_BIN_DIR/cinder-volume --config-file $CINDER_CONF&quot;</span>
+<span class="k">    </span>run_process c-sch <span class="s2">&quot;$CINDER_BIN_DIR/cinder-scheduler --config-file $CINDER_CONF&quot;</span>
+    run_process c-bak <span class="s2">&quot;$CINDER_BIN_DIR/cinder-backup --config-file $CINDER_CONF&quot;</span>
+    run_process c-vol <span class="s2">&quot;$CINDER_BIN_DIR/cinder-volume --config-file $CINDER_CONF&quot;</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>NOTE(jdg): For cinder, startup order matters.  To ensure that repor_capabilities is received
@@ -924,8 +945,9 @@ has started.  This is a quick fix for lp bug/1189595</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the cinder screen windows</p>
 </td><td class=code><div class=highlight><pre>
+    <span class="nb">local </span>serv
     <span class="k">for </span>serv in c-api c-bak c-sch c-vol; <span class="k">do</span>
-<span class="k">        </span>screen_stop <span class="nv">$serv</span>
+<span class="k">        </span>stop_process <span class="nv">$serv</span>
     <span class="k">done</span>
 
 <span class="k">    if </span>is_service_enabled c-vol; <span class="k">then</span>
@@ -945,17 +967,16 @@ has started.  This is a quick fix for lp bug/1189595</p>
 <p>Create volume types</p>
 </td><td class=code><div class=highlight><pre>
     <span class="k">if </span>is_service_enabled c-api <span class="o">&amp;&amp;</span> <span class="o">[[</span> -n <span class="s2">&quot;$CINDER_ENABLED_BACKENDS&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
-<span class="k">            </span><span class="nv">BE_TYPE</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
-            <span class="nv">BE_NAME</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
-            <span class="k">if </span><span class="nb">type </span>configure_cinder_backend_<span class="k">${</span><span class="nv">BE_TYPE</span><span class="k">}</span> &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span>be be_name be_type
+        <span class="k">for </span>be in <span class="k">${</span><span class="nv">CINDER_ENABLED_BACKENDS</span><span class="p">//,/ </span><span class="k">}</span>; <span class="k">do</span>
+<span class="k">            </span><span class="nv">be_type</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">%%:*</span><span class="k">}</span>
+            <span class="nv">be_name</span><span class="o">=</span><span class="k">${</span><span class="nv">be</span><span class="p">##*:</span><span class="k">}</span>
 </pre></div></td></tr><tr><td class=docs>
-<p>openstack volume type create --property volume_backend_name=&quot;${BE_TYPE}&quot; ${BE_NAME}</p>
+<p>openstack volume type create --property volume_backend_name=&quot;${be_type}&quot; ${be_name}</p>
 </td><td class=code><div class=highlight><pre>
-                cinder <span class="nb">type</span>-create <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span> <span class="o">&amp;&amp;</span> <span class="se">\</span>
-                    cinder <span class="nb">type</span>-key <span class="k">${</span><span class="nv">BE_NAME</span><span class="k">}</span> <span class="nb">set </span><span class="nv">volume_backend_name</span><span class="o">=</span><span class="s2">&quot;${BE_NAME}&quot;</span>
-            <span class="k">fi</span>
-<span class="k">        done</span>
+            cinder <span class="nb">type</span>-create <span class="k">${</span><span class="nv">be_name</span><span class="k">}</span> <span class="o">&amp;&amp;</span> <span class="se">\</span>
+                cinder <span class="nb">type</span>-key <span class="k">${</span><span class="nv">be_name</span><span class="k">}</span> <span class="nb">set </span><span class="nv">volume_backend_name</span><span class="o">=</span><span class="s2">&quot;${be_name}&quot;</span>
+        <span class="k">done</span>
 <span class="k">    fi</span>
 <span class="o">}</span>
 

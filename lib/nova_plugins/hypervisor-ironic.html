@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -416,14 +416,9 @@ cleanup_nova_hypervisor - remove transient data and cache</p>
     configure_libvirt
     <span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="o">=</span><span class="k">${</span><span class="nv">LIBVIRT_FIREWALL_DRIVER</span><span class="k">:-</span><span class="s2">&quot;nova.virt.firewall.NoopFirewallDriver&quot;</span><span class="k">}</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>NOTE(adam_g): The ironic compute driver currently lives in the ironic
-tree.  We purposely configure Nova to load it from there until it moves
-back into Nova proper.</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver ironic.nova.virt.ironic.IronicDriver
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT compute_driver nova.virt.ironic.IronicDriver
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT firewall_driver <span class="nv">$LIBVIRT_FIREWALL_DRIVER</span>
-    iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_host_manager ironic.nova.scheduler.ironic_host_manager.IronicHostManager
+    iniset <span class="nv">$NOVA_CONF</span> DEFAULT scheduler_host_manager nova.scheduler.ironic_host_manager.IronicHostManager
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT ram_allocation_ratio 1.0
     iniset <span class="nv">$NOVA_CONF</span> DEFAULT reserved_host_memory_mb 0
 </pre></div></td></tr><tr><td class=docs>
@@ -434,14 +429,16 @@ back into Nova proper.</p>
     iniset <span class="nv">$NOVA_CONF</span> ironic admin_url <span class="nv">$KEYSTONE_AUTH_URI</span>/v2.0
     iniset <span class="nv">$NOVA_CONF</span> ironic admin_tenant_name demo
     iniset <span class="nv">$NOVA_CONF</span> ironic api_endpoint http://<span class="nv">$SERVICE_HOST</span>:6385/v1
-    iniset <span class="nv">$NOVA_CONF</span> ironic sql_connection <span class="sb">`</span>database_connection_url nova_bm<span class="sb">`</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install_nova_hypervisor() - Install external components</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_nova_hypervisor <span class="o">{</span>
-    install_libvirt
+    <span class="k">if</span> ! is_service_enabled neutron; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Neutron should be enabled for usage of the Ironic Nova driver.&quot;</span>
+    <span class="k">fi</span>
+<span class="k">    </span>install_libvirt
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

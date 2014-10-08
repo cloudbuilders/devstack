@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -366,6 +366,7 @@ Dependencies:</p>
 <ul class="simple">
 <li><tt class="docutils literal">functions</tt> file</li>
 <li><tt class="docutils literal">RABBIT_{HOST|PASSWORD}</tt> must be defined when RabbitMQ is used</li>
+<li><tt class="docutils literal">RPC_MESSAGING_PROTOCOL</tt> option for configuring the messaging protocol</li>
 </ul>
 </td><td class=code><div class=highlight><pre>
 
@@ -398,6 +399,8 @@ Dependencies:</p>
 Also check the specified rpc backend is available on your platform.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>check_rpc_backend <span class="o">{</span>
+    <span class="nb">local </span>c svc
+
     <span class="nb">local </span><span class="nv">rpc_needed</span><span class="o">=</span>1
 </pre></div></td></tr><tr><td class=docs>
 <p>We rely on the fact that filenames in lib/* match the service names
@@ -415,8 +418,8 @@ the service needs a backend.</p>
 <span class="k">    </span><span class="nb">local </span><span class="nv">rpc_backend_cnt</span><span class="o">=</span>0
     <span class="k">for </span>svc in qpid zeromq rabbit; <span class="k">do</span>
 <span class="k">        </span>is_service_enabled <span class="nv">$svc</span> <span class="o">&amp;&amp;</span>
-        <span class="o">((</span>rpc_backend_cnt++<span class="o">))</span>
-    <span class="k">done</span>
+        <span class="o">((</span> rpc_backend_cnt++ <span class="o">))</span> <span class="o">||</span> <span class="nb">true</span>
+<span class="nb">    </span><span class="k">done</span>
 <span class="k">    if</span> <span class="o">[</span> <span class="s2">&quot;$rpc_backend_cnt&quot;</span> -gt 1 <span class="o">]</span>; <span class="k">then</span>
 <span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;ERROR: only one rpc backend may be enabled,&quot;</span>
         <span class="nb">echo</span> <span class="s2">&quot;       set only one of &#39;rabbit&#39;, &#39;qpid&#39;, &#39;zeromq&#39;&quot;</span>
@@ -468,27 +471,74 @@ produces a clean switch</p>
 <span class="k">            </span>exit_distro_not_supported <span class="s2">&quot;zeromq installation&quot;</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Remove the AMQP 1.0 messaging libraries</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$RPC_MESSAGING_PROTOCOL&quot;</span> <span class="o">==</span> <span class="s2">&quot;AMQP1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        if </span>is_fedora; <span class="k">then</span>
+<span class="k">            </span>uninstall_package qpid-proton-c-devel
+            uninstall_package python-qpid-proton
+        <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(kgiusti) ubuntu cleanup</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>install rpc backend</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>install_rpc_backend <span class="o">{</span>
-    <span class="k">if </span>is_service_enabled rabbit; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Regardless of the broker used, if AMQP 1.0 is configured load
+the necessary messaging client libraries for oslo.messaging</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$RPC_MESSAGING_PROTOCOL&quot;</span> <span class="o">==</span> <span class="s2">&quot;AMQP1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        if </span>is_fedora; <span class="k">then</span>
+<span class="k">            </span>install_package qpid-proton-c-devel
+            install_package python-qpid-proton
+        <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>TODO(kgiusti) The QPID AMQP 1.0 protocol libraries
+are not yet in the ubuntu repos. Enable these installs
+once they are present:</p>
+</td><td class=code><div class=highlight><pre>
+            <span class="c">#install_package libqpid-proton2-dev</span>
+            <span class="c">#install_package python-qpid-proton</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Also add 'uninstall' directives in cleanup_rpc_backend()!</p>
+</td><td class=code><div class=highlight><pre>
+            exit_distro_not_supported <span class="s2">&quot;QPID AMQP 1.0 Proton libraries&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span>exit_distro_not_supported <span class="s2">&quot;QPID AMQP 1.0 Proton libraries&quot;</span>
+        <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Install pyngus client API
+TODO(kgiusti) can remove once python qpid bindings are
+available on all supported platforms _and_ pyngus is added
+to the requirements.txt file in oslo.messaging</p>
+</td><td class=code><div class=highlight><pre>
+        pip_install pyngus
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_service_enabled rabbit; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Install rabbitmq-server</p>
 </td><td class=code><div class=highlight><pre>
         install_package rabbitmq-server
     <span class="k">elif </span>is_service_enabled qpid; <span class="k">then</span>
-<span class="k">        if </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">qpid_conf_file</span><span class="o">=</span>/etc/qpid/qpidd.conf
+        <span class="k">if </span>is_fedora; <span class="k">then</span>
 <span class="k">            </span>install_package qpid-cpp-server
             <span class="k">if</span> <span class="o">[[</span> <span class="nv">$DISTRO</span> <span class="o">=</span>~ <span class="o">(</span>rhel6<span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">                </span><span class="nv">qpid_conf_file</span><span class="o">=</span>/etc/qpidd.conf
 </pre></div></td></tr><tr><td class=docs>
 <p>RHEL6 leaves &quot;auth=yes&quot; in /etc/qpidd.conf, it needs to
 be no or you get GSS authentication errors as it
 attempts to default to this.</p>
 </td><td class=code><div class=highlight><pre>
-                sudo sed -i.bak <span class="s1">&#39;s/^auth=yes$/auth=no/&#39;</span> /etc/qpidd.conf
+                sudo sed -i.bak <span class="s1">&#39;s/^auth=yes$/auth=no/&#39;</span> <span class="nv">$qpid_conf_file</span>
             <span class="k">fi</span>
 <span class="k">        elif </span>is_ubuntu; <span class="k">then</span>
 <span class="k">            </span>install_package qpidd
@@ -497,6 +547,24 @@ attempts to default to this.</p>
         <span class="k">else</span>
 <span class="k">            </span>exit_distro_not_supported <span class="s2">&quot;qpid installation&quot;</span>
         <span class="k">fi</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>If AMQP 1.0 is specified, ensure that the version of the
+broker can support AMQP 1.0 and configure the queue and
+topic address patterns used by oslo.messaging.</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$RPC_MESSAGING_PROTOCOL&quot;</span> <span class="o">==</span> <span class="s2">&quot;AMQP1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">QPIDD</span><span class="o">=</span><span class="k">$(</span><span class="nb">type</span> -p qpidd<span class="k">)</span>
+            <span class="k">if</span> ! <span class="nv">$QPIDD</span> --help | grep -q <span class="s2">&quot;queue-patterns&quot;</span>; <span class="k">then</span>
+<span class="k">                </span>exit_distro_not_supported <span class="s2">&quot;qpidd with AMQP 1.0 support&quot;</span>
+            <span class="k">fi</span>
+<span class="k">            if</span> ! grep -q <span class="s2">&quot;queue-patterns=exclusive&quot;</span> <span class="nv">$qpid_conf_file</span>; <span class="k">then</span>
+<span class="k">                </span>cat <span class="s">&lt;&lt;EOF | sudo tee --append $qpid_conf_file</span>
+<span class="s">queue-patterns=exclusive</span>
+<span class="s">queue-patterns=unicast</span>
+<span class="s">topic-patterns=broadcast</span>
+<span class="s">EOF</span>
+            <span class="k">fi</span>
+<span class="k">        fi</span>
 <span class="k">    elif </span>is_service_enabled zeromq; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>NOTE(ewindisch): Redis is not strictly necessary
@@ -518,6 +586,13 @@ really well &amp; out of the box for multi-node.</p>
         sudo mkdir -p /var/run/openstack
         sudo chown <span class="nv">$STACK_USER</span> /var/run/openstack
     <span class="k">fi</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>If using the QPID broker, install the QPID python client API</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if </span>is_service_enabled qpid <span class="o">||</span> <span class="o">[</span> -n <span class="s2">&quot;$QPID_HOST&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        </span>install_package python-qpid
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -534,6 +609,7 @@ really well &amp; out of the box for multi-node.</p>
 the fact that sometimes it fails to start properly.
 Reference: <a class="reference external" href="https://bugzilla.redhat.com/show_bug.cgi?id=1059028">https://bugzilla.redhat.com/show_bug.cgi?id=1059028</a></p>
 </td><td class=code><div class=highlight><pre>
+        <span class="nb">local </span>i
         <span class="k">for </span>i in <span class="sb">`</span>seq 10<span class="sb">`</span>; <span class="k">do</span>
 <span class="k">            if </span>is_fedora <span class="o">||</span> is_suse; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
@@ -579,8 +655,15 @@ Reference: <a class="reference external" href="https://bugzilla.redhat.com/show_
         <span class="nv">MATCHMAKER_REDIS_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">MATCHMAKER_REDIS_HOST</span><span class="k">:-</span><span class="nv">127</span><span class="p">.0.0.1</span><span class="k">}</span>
         iniset <span class="nv">$file</span> matchmaker_redis host <span class="nv">$MATCHMAKER_REDIS_HOST</span>
     <span class="k">elif </span>is_service_enabled qpid <span class="o">||</span> <span class="o">[</span> -n <span class="s2">&quot;$QPID_HOST&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$file</span> <span class="nv">$section</span> rpc_backend <span class="k">${</span><span class="nv">package</span><span class="k">}</span>.openstack.common.rpc.impl_qpid
-        iniset <span class="nv">$file</span> <span class="nv">$section</span> qpid_hostname <span class="k">${</span><span class="nv">QPID_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>For Qpid use the 'amqp' oslo.messaging transport when AMQP 1.0 is used</p>
+</td><td class=code><div class=highlight><pre>
+        <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$RPC_MESSAGING_PROTOCOL&quot;</span> <span class="o">==</span> <span class="s2">&quot;AMQP1&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">            </span>iniset <span class="nv">$file</span> <span class="nv">$section</span> rpc_backend <span class="s2">&quot;amqp&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span>iniset <span class="nv">$file</span> <span class="nv">$section</span> rpc_backend <span class="k">${</span><span class="nv">package</span><span class="k">}</span>.openstack.common.rpc.impl_qpid
+        <span class="k">fi</span>
+<span class="k">        </span>iniset <span class="nv">$file</span> <span class="nv">$section</span> qpid_hostname <span class="k">${</span><span class="nv">QPID_HOST</span><span class="k">:-</span><span class="nv">$SERVICE_HOST</span><span class="k">}</span>
         <span class="k">if </span>is_ubuntu; <span class="k">then</span>
 <span class="k">            </span><span class="nv">QPID_PASSWORD</span><span class="o">=</span><span class="sb">`</span>sudo strings /etc/qpid/qpidd.sasldb | grep -B1 admin | head -1<span class="sb">`</span>
             iniset <span class="nv">$file</span> <span class="nv">$section</span> qpid_password <span class="nv">$QPID_PASSWORD</span>

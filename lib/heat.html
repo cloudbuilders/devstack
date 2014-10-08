@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -407,6 +407,8 @@ ENABLED_SERVICES+=,heat,h-api,h-api-cfn,h-api-cw,h-eng</blockquote>
 </td><td class=code><div class=highlight><pre>
 <span class="nv">HEAT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/heat
 <span class="nv">HEATCLIENT_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/python-heatclient
+<span class="nv">HEAT_CFNTOOLS_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/heat-cfntools
+<span class="nv">HEAT_TEMPLATES_REPO_DIR</span><span class="o">=</span><span class="nv">$DEST</span>/heat-templates
 <span class="nv">HEAT_AUTH_CACHE_DIR</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_AUTH_CACHE_DIR</span><span class="k">:-</span><span class="p">/var/cache/heat</span><span class="k">}</span>
 <span class="nv">HEAT_STANDALONE</span><span class="o">=</span><span class="sb">`</span>trueorfalse False <span class="nv">$HEAT_STANDALONE</span><span class="sb">`</span>
 <span class="nv">HEAT_CONF_DIR</span><span class="o">=</span>/etc/heat
@@ -414,6 +416,8 @@ ENABLED_SERVICES+=,heat,h-api,h-api-cfn,h-api-cw,h-eng</blockquote>
 <span class="nv">HEAT_ENV_DIR</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/environment.d
 <span class="nv">HEAT_TEMPLATES_DIR</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/templates
 <span class="nv">HEAT_STACK_DOMAIN</span><span class="o">=</span><span class="sb">`</span>trueorfalse True <span class="nv">$HEAT_STACK_DOMAIN</span><span class="sb">`</span>
+<span class="nv">HEAT_API_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
+<span class="nv">HEAT_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_PORT</span><span class="k">:-</span><span class="nv">8004</span><span class="k">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>other default options</p>
@@ -456,8 +460,11 @@ runs that a clean run would need to clean up</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>configure_heat <span class="o">{</span>
     setup_develop <span class="nv">$HEAT_DIR</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$HEAT_STANDALONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>setup_develop <span class="nv">$HEAT_DIR</span>/contrib/heat_keystoneclient_v2
+    <span class="k">fi</span>
 
-    <span class="k">if</span> <span class="o">[[</span> ! -d <span class="nv">$HEAT_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">    if</span> <span class="o">[[</span> ! -d <span class="nv">$HEAT_CONF_DIR</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>sudo mkdir -p <span class="nv">$HEAT_CONF_DIR</span>
     <span class="k">fi</span>
 <span class="k">    </span>sudo chown <span class="nv">$STACK_USER</span> <span class="nv">$HEAT_CONF_DIR</span>
@@ -472,8 +479,6 @@ runs that a clean run would need to clean up</p>
     <span class="nv">HEAT_ENGINE_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_ENGINE_PORT</span><span class="k">:-</span><span class="nv">8001</span><span class="k">}</span>
     <span class="nv">HEAT_API_CW_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
     <span class="nv">HEAT_API_CW_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_CW_PORT</span><span class="k">:-</span><span class="nv">8003</span><span class="k">}</span>
-    <span class="nv">HEAT_API_HOST</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_HOST</span><span class="k">:-</span><span class="nv">$HOST_IP</span><span class="k">}</span>
-    <span class="nv">HEAT_API_PORT</span><span class="o">=</span><span class="k">${</span><span class="nv">HEAT_API_PORT</span><span class="k">:-</span><span class="nv">8004</span><span class="k">}</span>
     <span class="nv">HEAT_API_PASTE_FILE</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/api-paste.ini
     <span class="nv">HEAT_POLICY_FILE</span><span class="o">=</span><span class="nv">$HEAT_CONF_DIR</span>/policy.json
 
@@ -489,7 +494,7 @@ runs that a clean run would need to clean up</p>
     iniset <span class="nv">$HEAT_CONF</span> DEFAULT heat_waitcondition_server_url http://<span class="nv">$HEAT_API_CFN_HOST</span>:<span class="nv">$HEAT_API_CFN_PORT</span>/v1/waitcondition
     iniset <span class="nv">$HEAT_CONF</span> DEFAULT heat_watch_server_url http://<span class="nv">$HEAT_API_CW_HOST</span>:<span class="nv">$HEAT_API_CW_PORT</span>
     iniset <span class="nv">$HEAT_CONF</span> database connection <span class="sb">`</span>database_connection_url heat<span class="sb">`</span>
-    iniset <span class="nv">$HEAT_CONF</span> DEFAULT auth_encryption_key <span class="sb">`</span>hexdump -n 16 -v -e <span class="s1">&#39;/1 &quot;%02x&quot;&#39;</span> /dev/urandom<span class="sb">`</span>
+    iniset <span class="nv">$HEAT_CONF</span> DEFAULT auth_encryption_key <span class="k">$(</span>generate_hex_string 16<span class="k">)</span>
 
     iniset <span class="nv">$HEAT_CONF</span> DEFAULT region_name_for_services <span class="s2">&quot;$REGION_NAME&quot;</span>
 
@@ -505,19 +510,10 @@ runs that a clean run would need to clean up</p>
         setup_colorized_logging <span class="nv">$HEAT_CONF</span> DEFAULT tenant user
     <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>keystone authtoken</p>
-</td><td class=code><div class=highlight><pre>
-    iniset <span class="nv">$HEAT_CONF</span> keystone_authtoken identity_uri <span class="nv">$KEYSTONE_AUTH_URI</span>
-    configure_API_version <span class="nv">$HEAT_CONF</span> <span class="nv">$IDENTITY_API_VERSION</span>
-    iniset <span class="nv">$HEAT_CONF</span> keystone_authtoken cafile <span class="nv">$KEYSTONE_SSL_CA</span>
-    iniset <span class="nv">$HEAT_CONF</span> keystone_authtoken admin_tenant_name <span class="nv">$SERVICE_TENANT_NAME</span>
-    iniset <span class="nv">$HEAT_CONF</span> keystone_authtoken admin_user heat
-    iniset <span class="nv">$HEAT_CONF</span> keystone_authtoken admin_password <span class="nv">$SERVICE_PASSWORD</span>
-    iniset <span class="nv">$HEAT_CONF</span> keystone_authtoken signing_dir <span class="nv">$HEAT_AUTH_CACHE_DIR</span>
+<span class="k">    </span>configure_auth_token_middleware <span class="nv">$HEAT_CONF</span> heat <span class="nv">$HEAT_AUTH_CACHE_DIR</span>
 
     <span class="k">if </span>is_ssl_enabled_service <span class="s2">&quot;key&quot;</span>; <span class="k">then</span>
-<span class="k">        </span>iniset <span class="nv">$HEAT_CONF</span> clients_keystone ca_file <span class="nv">$KEYSTONE_SSL_CA</span>
+<span class="k">        </span>iniset <span class="nv">$HEAT_CONF</span> clients_keystone ca_file <span class="nv">$SSL_BUNDLE_FILE</span>
     <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -528,7 +524,11 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>paste_deploy</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="o">[[</span> <span class="s2">&quot;$HEAT_STANDALONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> iniset <span class="nv">$HEAT_CONF</span> paste_deploy flavor standalone
+    <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$HEAT_STANDALONE&quot;</span> <span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$HEAT_CONF</span> paste_deploy flavor standalone
+        iniset <span class="nv">$HEAT_CONF</span> DEFAULT keystone_backend heat_keystoneclient_v2.client.KeystoneClientV2
+        iniset <span class="nv">$HEAT_CONF</span> clients_heat url <span class="s2">&quot;http://$HEAT_API_HOST:$HEAT_API_PORT/v1/%(tenant_id)s&quot;</span>
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>OpenStack API</p>
@@ -544,6 +544,18 @@ runs that a clean run would need to clean up</p>
 <p>Cloudwatch API</p>
 </td><td class=code><div class=highlight><pre>
     iniset <span class="nv">$HEAT_CONF</span> heat_api_cloudwatch bind_port <span class="nv">$HEAT_API_CW_PORT</span>
+
+    <span class="k">if </span>is_ssl_enabled_service <span class="s2">&quot;key&quot;</span> <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$HEAT_CONF</span> clients_keystone ca_file <span class="nv">$SSL_BUNDLE_FILE</span>
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_ssl_enabled_service <span class="s2">&quot;nova&quot;</span> <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$HEAT_CONF</span> clients_nova ca_file <span class="nv">$SSL_BUNDLE_FILE</span>
+    <span class="k">fi</span>
+
+<span class="k">    if </span>is_ssl_enabled_service <span class="s2">&quot;cinder&quot;</span> <span class="o">||</span> is_service_enabled tls-proxy; <span class="k">then</span>
+<span class="k">        </span>iniset <span class="nv">$HEAT_CONF</span> clients_cinder ca_file <span class="nv">$SSL_BUNDLE_FILE</span>
+    <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>heat environment</p>
@@ -609,13 +621,21 @@ runs that a clean run would need to clean up</p>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>install_heat_other() - Collect source and prepare</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>install_heat_other <span class="o">{</span>
+    git_clone <span class="nv">$HEAT_CFNTOOLS_REPO</span> <span class="nv">$HEAT_CFNTOOLS_DIR</span> <span class="nv">$HEAT_CFNTOOLS_BRANCH</span>
+    git_clone <span class="nv">$HEAT_TEMPLATES_REPO</span> <span class="nv">$HEAT_TEMPLATES_REPO_DIR</span> <span class="nv">$HEAT_TEMPLATES_BRANCH</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
 <p>start_heat() - Start running processes, including screen</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>start_heat <span class="o">{</span>
-    screen_it h-eng <span class="s2">&quot;cd $HEAT_DIR; bin/heat-engine --config-file=$HEAT_CONF&quot;</span>
-    screen_it h-api <span class="s2">&quot;cd $HEAT_DIR; bin/heat-api --config-file=$HEAT_CONF&quot;</span>
-    screen_it h-api-cfn <span class="s2">&quot;cd $HEAT_DIR; bin/heat-api-cfn --config-file=$HEAT_CONF&quot;</span>
-    screen_it h-api-cw <span class="s2">&quot;cd $HEAT_DIR; bin/heat-api-cloudwatch --config-file=$HEAT_CONF&quot;</span>
+    run_process h-eng <span class="s2">&quot;$HEAT_DIR/bin/heat-engine --config-file=$HEAT_CONF&quot;</span>
+    run_process h-api <span class="s2">&quot;$HEAT_DIR/bin/heat-api --config-file=$HEAT_CONF&quot;</span>
+    run_process h-api-cfn <span class="s2">&quot;$HEAT_DIR/bin/heat-api-cfn --config-file=$HEAT_CONF&quot;</span>
+    run_process h-api-cw <span class="s2">&quot;$HEAT_DIR/bin/heat-api-cloudwatch --config-file=$HEAT_CONF&quot;</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -625,26 +645,10 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>Kill the screen windows</p>
 </td><td class=code><div class=highlight><pre>
+    <span class="nb">local </span>serv
     <span class="k">for </span>serv in h-eng h-api h-api-cfn h-api-cw; <span class="k">do</span>
-<span class="k">        </span>screen_stop <span class="nv">$serv</span>
+<span class="k">        </span>stop_process <span class="nv">$serv</span>
     <span class="k">done</span>
-<span class="o">}</span>
-
-<span class="k">function </span>disk_image_create <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">elements_path</span><span class="o">=</span><span class="nv">$1</span>
-    <span class="nb">local </span><span class="nv">elements</span><span class="o">=</span><span class="nv">$2</span>
-    <span class="nb">local </span><span class="nv">arch</span><span class="o">=</span><span class="nv">$3</span>
-    <span class="nb">local </span><span class="nv">output</span><span class="o">=</span><span class="nv">$TOP_DIR</span>/files/<span class="nv">$4</span>
-    <span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;$output.qcow2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nb">echo</span> <span class="s2">&quot;Image file already exists: $output_file&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nv">ELEMENTS_PATH</span><span class="o">=</span><span class="nv">$elements_path</span> disk-image-create <span class="se">\</span>
-            <span class="nv">$elements</span> -a <span class="nv">$arch</span> -o <span class="nv">$output</span>
-    <span class="k">fi</span>
-</pre></div></td></tr><tr><td class=docs>
-<p>upload with fake URL so that image in $TOP_DIR/files is used</p>
-</td><td class=code><div class=highlight><pre>
-    upload_image <span class="s2">&quot;http://localhost/$output.qcow2&quot;</span> <span class="nv">$TOKEN</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -654,26 +658,26 @@ runs that a clean run would need to clean up</p>
 </pre></div></td></tr><tr><td class=docs>
 <p>migrated from files/keystone_data.sh</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">SERVICE_TENANT</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
-    <span class="nv">ADMIN_ROLE</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">service_tenant</span><span class="o">=</span><span class="k">$(</span>openstack project list | awk <span class="s2">&quot;/ $SERVICE_TENANT_NAME / { print \$2 }&quot;</span><span class="k">)</span>
+    <span class="nb">local </span><span class="nv">admin_role</span><span class="o">=</span><span class="k">$(</span>openstack role list | awk <span class="s2">&quot;/ admin / { print \$2 }&quot;</span><span class="k">)</span>
 
-    <span class="nv">HEAT_USER</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;heat&quot;</span> <span class="se">\</span>
-        <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$SERVICE_TENANT</span><span class="k">)</span>
-    get_or_add_user_role <span class="nv">$ADMIN_ROLE</span> <span class="nv">$HEAT_USER</span> <span class="nv">$SERVICE_TENANT</span>
+    <span class="nb">local </span><span class="nv">heat_user</span><span class="o">=</span><span class="k">$(</span>get_or_create_user <span class="s2">&quot;heat&quot;</span> <span class="se">\</span>
+        <span class="s2">&quot;$SERVICE_PASSWORD&quot;</span> <span class="nv">$service_tenant</span><span class="k">)</span>
+    get_or_add_user_role <span class="nv">$admin_role</span> <span class="nv">$heat_user</span> <span class="nv">$service_tenant</span>
 
     <span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;$KEYSTONE_CATALOG_BACKEND&quot;</span> <span class="o">=</span> <span class="s1">&#39;sql&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 
-<span class="k">        </span><span class="nv">HEAT_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;heat&quot;</span> <span class="se">\</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">heat_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;heat&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;orchestration&quot;</span> <span class="s2">&quot;Heat Orchestration Service&quot;</span><span class="k">)</span>
-        get_or_create_endpoint <span class="nv">$HEAT_SERVICE</span> <span class="se">\</span>
+        get_or_create_endpoint <span class="nv">$heat_service</span> <span class="se">\</span>
             <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
             <span class="s2">&quot;$SERVICE_PROTOCOL://$HEAT_API_HOST:$HEAT_API_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
             <span class="s2">&quot;$SERVICE_PROTOCOL://$HEAT_API_HOST:$HEAT_API_PORT/v1/\$(tenant_id)s&quot;</span> <span class="se">\</span>
             <span class="s2">&quot;$SERVICE_PROTOCOL://$HEAT_API_HOST:$HEAT_API_PORT/v1/\$(tenant_id)s&quot;</span>
 
-        <span class="nv">HEAT_CFN_SERVICE</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;heat-cfn&quot;</span> <span class="se">\</span>
+        <span class="nb">local </span><span class="nv">heat_cfn_service</span><span class="o">=</span><span class="k">$(</span>get_or_create_service <span class="s2">&quot;heat-cfn&quot;</span> <span class="se">\</span>
                 <span class="s2">&quot;cloudformation&quot;</span> <span class="s2">&quot;Heat CloudFormation Service&quot;</span><span class="k">)</span>
-        get_or_create_endpoint <span class="nv">$HEAT_CFN_SERVICE</span> <span class="se">\</span>
+        get_or_create_endpoint <span class="nv">$heat_cfn_service</span> <span class="se">\</span>
             <span class="s2">&quot;$REGION_NAME&quot;</span> <span class="se">\</span>
             <span class="s2">&quot;$SERVICE_PROTOCOL://$HEAT_API_CFN_HOST:$HEAT_API_CFN_PORT/v1&quot;</span> <span class="se">\</span>
             <span class="s2">&quot;$SERVICE_PROTOCOL://$HEAT_API_CFN_HOST:$HEAT_API_CFN_PORT/v1&quot;</span> <span class="se">\</span>
@@ -692,15 +696,15 @@ runs that a clean run would need to clean up</p>
 it's the default role used by heat to delegate to the heat service
 user (for performing deferred operations via trusts), see heat.conf</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">HEAT_OWNER_ROLE</span><span class="o">=</span><span class="k">$(</span>get_or_create_role <span class="s2">&quot;heat_stack_owner&quot;</span><span class="k">)</span>
+        <span class="nb">local </span><span class="nv">heat_owner_role</span><span class="o">=</span><span class="k">$(</span>get_or_create_role <span class="s2">&quot;heat_stack_owner&quot;</span><span class="k">)</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Give the role to the demo and admin users so they can create stacks
 in either of the projects created by devstack</p>
 </td><td class=code><div class=highlight><pre>
-        get_or_add_user_role <span class="nv">$HEAT_OWNER_ROLE</span> demo demo
-        get_or_add_user_role <span class="nv">$HEAT_OWNER_ROLE</span> admin demo
-        get_or_add_user_role <span class="nv">$HEAT_OWNER_ROLE</span> admin admin
+        get_or_add_user_role <span class="nv">$heat_owner_role</span> demo demo
+        get_or_add_user_role <span class="nv">$heat_owner_role</span> admin demo
+        get_or_add_user_role <span class="nv">$heat_owner_role</span> admin admin
         iniset <span class="nv">$HEAT_CONF</span> DEFAULT deferred_auth_method trusts
     <span class="k">fi</span>
 
@@ -709,29 +713,52 @@ in either of the projects created by devstack</p>
 <p>Note we have to pass token/endpoint here because the current endpoint and
 version negotiation in OSC means just --os-identity-api-version=3 won't work</p>
 </td><td class=code><div class=highlight><pre>
-        <span class="nv">KS_ENDPOINT_V3</span><span class="o">=</span><span class="s2">&quot;$KEYSTONE_SERVICE_URI/v3&quot;</span>
+        <span class="nb">local </span><span class="nv">ks_endpoint_v3</span><span class="o">=</span><span class="s2">&quot;$KEYSTONE_SERVICE_URI/v3&quot;</span>
 
-        <span class="nv">D_ID</span><span class="o">=</span><span class="k">$(</span>openstack --os-token <span class="nv">$OS_TOKEN</span> --os-url<span class="o">=</span><span class="nv">$KS_ENDPOINT_V3</span> <span class="se">\</span>
+        <span class="nv">D_ID</span><span class="o">=</span><span class="k">$(</span>openstack --os-token <span class="nv">$OS_TOKEN</span> --os-url<span class="o">=</span><span class="nv">$ks_endpoint_v3</span> <span class="se">\</span>
             --os-identity-api-version<span class="o">=</span>3 domain list | grep <span class="s1">&#39; heat &#39;</span> | get_field 1<span class="k">)</span>
 
         <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$D_ID&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">            </span><span class="nv">D_ID</span><span class="o">=</span><span class="k">$(</span>openstack --os-token <span class="nv">$OS_TOKEN</span> --os-url<span class="o">=</span><span class="nv">$KS_ENDPOINT_V3</span> <span class="se">\</span>
+<span class="k">            </span><span class="nv">D_ID</span><span class="o">=</span><span class="k">$(</span>openstack --os-token <span class="nv">$OS_TOKEN</span> --os-url<span class="o">=</span><span class="nv">$ks_endpoint_v3</span> <span class="se">\</span>
                 --os-identity-api-version<span class="o">=</span>3 domain create heat <span class="se">\</span>
                 --description <span class="s2">&quot;Owns users and projects created by heat&quot;</span> <span class="se">\</span>
                 | grep <span class="s1">&#39; id &#39;</span> | get_field 2<span class="k">)</span>
             iniset <span class="nv">$HEAT_CONF</span> DEFAULT stack_user_domain <span class="k">${</span><span class="nv">D_ID</span><span class="k">}</span>
 
-            openstack --os-token <span class="nv">$OS_TOKEN</span> --os-url<span class="o">=</span><span class="nv">$KS_ENDPOINT_V3</span> <span class="se">\</span>
+            openstack --os-token <span class="nv">$OS_TOKEN</span> --os-url<span class="o">=</span><span class="nv">$ks_endpoint_v3</span> <span class="se">\</span>
                 --os-identity-api-version<span class="o">=</span>3 user create --password <span class="nv">$SERVICE_PASSWORD</span> <span class="se">\</span>
                 --domain <span class="nv">$D_ID</span> heat_domain_admin <span class="se">\</span>
                 --description <span class="s2">&quot;Manages users and projects created by heat&quot;</span>
-            openstack --os-token <span class="nv">$OS_TOKEN</span> --os-url<span class="o">=</span><span class="nv">$KS_ENDPOINT_V3</span> <span class="se">\</span>
+            openstack --os-token <span class="nv">$OS_TOKEN</span> --os-url<span class="o">=</span><span class="nv">$ks_endpoint_v3</span> <span class="se">\</span>
                 --os-identity-api-version<span class="o">=</span>3 role add <span class="se">\</span>
                 --user heat_domain_admin --domain <span class="k">${</span><span class="nv">D_ID</span><span class="k">}</span> admin
             iniset <span class="nv">$HEAT_CONF</span> DEFAULT stack_domain_admin heat_domain_admin
             iniset <span class="nv">$HEAT_CONF</span> DEFAULT stack_domain_admin_password <span class="nv">$SERVICE_PASSWORD</span>
         <span class="k">fi</span>
 <span class="k">    fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>build_heat_functional_test_image() - Build and upload functional test image</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>build_heat_functional_test_image <span class="o">{</span>
+    build_dib_pip_repo <span class="s2">&quot;$OCC_DIR $OAC_DIR $ORC_DIR $HEAT_CFNTOOLS_DIR&quot;</span>
+    <span class="nb">local </span><span class="nv">image_name</span><span class="o">=</span>heat-functional-tests-image
+
+</pre></div></td></tr><tr><td class=docs>
+<p>The elements to invoke disk-image-create with</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">local </span><span class="nv">image_elements</span><span class="o">=</span><span class="s2">&quot;vm fedora selinux-permissive pypi \</span>
+<span class="s2">        os-collect-config os-refresh-config os-apply-config heat-cfntools \</span>
+<span class="s2">        heat-config heat-config-cfn-init heat-config-puppet heat-config-script&quot;</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Elements path for tripleo-image-elements and heat-templates software-config</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="nb">local </span><span class="nv">elements_path</span><span class="o">=</span><span class="nv">$TIE_DIR</span>/elements:<span class="nv">$HEAT_TEMPLATES_REPO_DIR</span>/hot/software-config/elements
+
+    disk_image_create_upload <span class="s2">&quot;$image_name&quot;</span> <span class="s2">&quot;$image_elements&quot;</span> <span class="s2">&quot;$elements_path&quot;</span>
+    iniset <span class="nv">$TEMPEST_CONFIG</span> orchestration image_ref <span class="nv">$image_name</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>

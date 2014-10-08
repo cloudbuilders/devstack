@@ -21,7 +21,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.11: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
 <title></title>
 <style type="text/css">
 
@@ -377,6 +377,7 @@ Functions to control the configuration and operation of the TLS proxy service
 <ul class="simple">
 <li>configure_CA</li>
 <li>init_CA</li>
+<li>cleanup_CA</li>
 </ul>
 </td><td class=code><div class=highlight><pre>
 
@@ -402,6 +403,7 @@ Functions to control the configuration and operation of the TLS proxy service
 <li>start_tls_proxy HOST_IP 5000 localhost 5000</li>
 <li>ensure_certificates</li>
 <li>is_ssl_enabled_service</li>
+<li>enable_mod_ssl</li>
 </ul>
 </td><td class=code><div class=highlight><pre>
 
@@ -415,18 +417,9 @@ Functions to control the configuration and operation of the TLS proxy service
 <p>TODO(dtroyer): revisit this below after the search for HOST_IP has been done</p>
 </td><td class=code><div class=highlight><pre>
     <span class="nv">TLS_IP</span><span class="o">=</span><span class="k">${</span><span class="nv">TLS_IP</span><span class="k">:-</span><span class="nv">$SERVICE_IP</span><span class="k">}</span>
-
-</pre></div></td></tr><tr><td class=docs>
-<p>Set the default <tt class="docutils literal">SERVICE_PROTOCOL</tt> for TLS</p>
-</td><td class=code><div class=highlight><pre>
-    <span class="nv">SERVICE_PROTOCOL</span><span class="o">=</span>https
 <span class="k">fi</span>
 
-</pre></div></td></tr><tr><td class=docs>
-<p>Make up a hostname for cert purposes
-will be added to /etc/hosts?</p>
-</td><td class=code><div class=highlight><pre>
-<span class="nv">DEVSTACK_HOSTNAME</span><span class="o">=</span>secure.devstack.org
+<span class="nv">DEVSTACK_HOSTNAME</span><span class="o">=</span><span class="k">$(</span>hostname -f<span class="k">)</span>
 <span class="nv">DEVSTACK_CERT_NAME</span><span class="o">=</span>devstack-cert
 <span class="nv">DEVSTACK_CERT</span><span class="o">=</span><span class="nv">$DATA_DIR</span>/<span class="nv">$DEVSTACK_CERT_NAME</span>.pem
 
@@ -489,7 +482,8 @@ create_CA_base ca-dir</p>
         <span class="k">return </span>0
     <span class="k">fi</span>
 
-<span class="k">    for </span>i in certs crl newcerts private; <span class="k">do</span>
+<span class="k">    </span><span class="nb">local </span>i
+    <span class="k">for </span>i in certs crl newcerts private; <span class="k">do</span>
 <span class="k">        </span>mkdir -p <span class="nv">$ca_dir</span>/<span class="nv">$i</span>
     <span class="k">done</span>
 <span class="k">    </span>chmod 710 <span class="nv">$ca_dir</span>/private
@@ -623,6 +617,31 @@ init_CA</p>
 <p>Create the CA bundle</p>
 </td><td class=code><div class=highlight><pre>
     cat <span class="nv">$ROOT_CA_DIR</span>/cacert.pem <span class="nv">$INT_CA_DIR</span>/cacert.pem &gt;&gt;<span class="nv">$INT_CA_DIR</span>/ca-chain.pem
+    cat <span class="nv">$INT_CA_DIR</span>/ca-chain.pem &gt;&gt; <span class="nv">$SSL_BUNDLE_FILE</span>
+
+    <span class="k">if </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span>sudo cp <span class="nv">$INT_CA_DIR</span>/ca-chain.pem /usr/share/pki/ca-trust-source/anchors/devstack-chain.pem
+        sudo update-ca-trust
+    <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>sudo cp <span class="nv">$INT_CA_DIR</span>/ca-chain.pem /usr/local/share/ca-certificates/devstack-int.crt
+        sudo cp <span class="nv">$ROOT_CA_DIR</span>/cacert.pem /usr/local/share/ca-certificates/devstack-root.crt
+        sudo update-ca-certificates
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Clean up the CA files
+cleanup_CA</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>cleanup_CA <span class="o">{</span>
+    <span class="k">if </span>is_fedora; <span class="k">then</span>
+<span class="k">        </span>sudo rm -f /usr/share/pki/ca-trust-source/anchors/devstack-chain.pem
+        sudo update-ca-trust
+    <span class="k">elif </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>sudo rm -f /usr/local/share/ca-certificates/devstack-int.crt
+        sudo rm -f /usr/local/share/ca-certificates/devstack-root.crt
+        sudo update-ca-certificates
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -658,34 +677,39 @@ make_cert ca-dir cert-name &quot;common-name&quot; [&quot;alt-name&quot; ...]</p
     <span class="nb">local </span><span class="nv">alt_names</span><span class="o">=</span><span class="nv">$4</span>
 
 </pre></div></td></tr><tr><td class=docs>
+<p>Only generate the certificate if it doesn't exist yet on the disk</p>
+</td><td class=code><div class=highlight><pre>
+    <span class="k">if</span> <span class="o">[</span> ! -r <span class="s2">&quot;$ca_dir/$cert_name.crt&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
 <p>Generate a signing request</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$OPENSSL</span> req <span class="se">\</span>
-        -sha1 <span class="se">\</span>
-        -newkey rsa <span class="se">\</span>
-        -nodes <span class="se">\</span>
-        -keyout <span class="nv">$ca_dir</span>/private/<span class="nv">$cert_name</span>.key <span class="se">\</span>
-        -out <span class="nv">$ca_dir</span>/<span class="nv">$cert_name</span>.csr <span class="se">\</span>
-        -subj <span class="s2">&quot;/O=${ORG_NAME}/OU=${ORG_UNIT_NAME} Servers/CN=${common_name}&quot;</span>
+        <span class="nv">$OPENSSL</span> req <span class="se">\</span>
+            -sha1 <span class="se">\</span>
+            -newkey rsa <span class="se">\</span>
+            -nodes <span class="se">\</span>
+            -keyout <span class="nv">$ca_dir</span>/private/<span class="nv">$cert_name</span>.key <span class="se">\</span>
+            -out <span class="nv">$ca_dir</span>/<span class="nv">$cert_name</span>.csr <span class="se">\</span>
+            -subj <span class="s2">&quot;/O=${ORG_NAME}/OU=${ORG_UNIT_NAME} Servers/CN=${common_name}&quot;</span>
 
-    <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$alt_names&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
-<span class="k">        </span><span class="nv">alt_names</span><span class="o">=</span><span class="s2">&quot;DNS:${common_name}&quot;</span>
-    <span class="k">else</span>
-<span class="k">        </span><span class="nv">alt_names</span><span class="o">=</span><span class="s2">&quot;DNS:${common_name},${alt_names}&quot;</span>
-    <span class="k">fi</span>
+        <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$alt_names&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">            </span><span class="nv">alt_names</span><span class="o">=</span><span class="s2">&quot;DNS:${common_name}&quot;</span>
+        <span class="k">else</span>
+<span class="k">            </span><span class="nv">alt_names</span><span class="o">=</span><span class="s2">&quot;DNS:${common_name},${alt_names}&quot;</span>
+        <span class="k">fi</span>
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Sign the request valid for 1 year</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">SUBJECT_ALT_NAME</span><span class="o">=</span><span class="s2">&quot;$alt_names&quot;</span> <span class="se">\</span>
-    <span class="nv">$OPENSSL</span> ca -config <span class="nv">$ca_dir</span>/signing.conf <span class="se">\</span>
-        -extensions req_extensions <span class="se">\</span>
-        -days 365 <span class="se">\</span>
-        -notext <span class="se">\</span>
-        -in <span class="nv">$ca_dir</span>/<span class="nv">$cert_name</span>.csr <span class="se">\</span>
-        -out <span class="nv">$ca_dir</span>/<span class="nv">$cert_name</span>.crt <span class="se">\</span>
-        -subj <span class="s2">&quot;/O=${ORG_NAME}/OU=${ORG_UNIT_NAME} Servers/CN=${common_name}&quot;</span> <span class="se">\</span>
-        -batch
+        <span class="nv">SUBJECT_ALT_NAME</span><span class="o">=</span><span class="s2">&quot;$alt_names&quot;</span> <span class="se">\</span>
+        <span class="nv">$OPENSSL</span> ca -config <span class="nv">$ca_dir</span>/signing.conf <span class="se">\</span>
+            -extensions req_extensions <span class="se">\</span>
+            -days 365 <span class="se">\</span>
+            -notext <span class="se">\</span>
+            -in <span class="nv">$ca_dir</span>/<span class="nv">$cert_name</span>.csr <span class="se">\</span>
+            -out <span class="nv">$ca_dir</span>/<span class="nv">$cert_name</span>.crt <span class="se">\</span>
+            -subj <span class="s2">&quot;/O=${ORG_NAME}/OU=${ORG_UNIT_NAME} Servers/CN=${common_name}&quot;</span> <span class="se">\</span>
+            -batch
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 
@@ -704,27 +728,29 @@ make_int_CA ca-dir signing-ca-dir</p>
     create_CA_config <span class="nv">$ca_dir</span> <span class="s1">&#39;Intermediate CA&#39;</span>
     create_signing_config <span class="nv">$ca_dir</span>
 
+    <span class="k">if</span> <span class="o">[</span> ! -r <span class="s2">&quot;$ca_dir/cacert.pem&quot;</span> <span class="o">]</span>; <span class="k">then</span>
 </pre></div></td></tr><tr><td class=docs>
 <p>Create a signing certificate request</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$OPENSSL</span> req -config <span class="nv">$ca_dir</span>/ca.conf <span class="se">\</span>
-        -sha1 <span class="se">\</span>
-        -newkey rsa <span class="se">\</span>
-        -nodes <span class="se">\</span>
-        -keyout <span class="nv">$ca_dir</span>/private/cacert.key <span class="se">\</span>
-        -out <span class="nv">$ca_dir</span>/cacert.csr <span class="se">\</span>
-        -outform PEM
+        <span class="nv">$OPENSSL</span> req -config <span class="nv">$ca_dir</span>/ca.conf <span class="se">\</span>
+            -sha1 <span class="se">\</span>
+            -newkey rsa <span class="se">\</span>
+            -nodes <span class="se">\</span>
+            -keyout <span class="nv">$ca_dir</span>/private/cacert.key <span class="se">\</span>
+            -out <span class="nv">$ca_dir</span>/cacert.csr <span class="se">\</span>
+            -outform PEM
 
 </pre></div></td></tr><tr><td class=docs>
 <p>Sign the intermediate request valid for 1 year</p>
 </td><td class=code><div class=highlight><pre>
-    <span class="nv">$OPENSSL</span> ca -config <span class="nv">$signing_ca_dir</span>/ca.conf <span class="se">\</span>
-        -extensions ca_extensions <span class="se">\</span>
-        -days 365 <span class="se">\</span>
-        -notext <span class="se">\</span>
-        -in <span class="nv">$ca_dir</span>/cacert.csr <span class="se">\</span>
-        -out <span class="nv">$ca_dir</span>/cacert.pem <span class="se">\</span>
-        -batch
+        <span class="nv">$OPENSSL</span> ca -config <span class="nv">$signing_ca_dir</span>/ca.conf <span class="se">\</span>
+            -extensions ca_extensions <span class="se">\</span>
+            -days 365 <span class="se">\</span>
+            -notext <span class="se">\</span>
+            -in <span class="nv">$ca_dir</span>/cacert.csr <span class="se">\</span>
+            -out <span class="nv">$ca_dir</span>/cacert.pem <span class="se">\</span>
+            -batch
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 </pre></div></td></tr><tr><td class=docs>
@@ -769,7 +795,10 @@ is a short-circuit boolean, i.e it returns on the first match.</p>
 <span class="k">function </span>is_ssl_enabled_service <span class="o">{</span>
     <span class="nb">local </span><span class="nv">services</span><span class="o">=</span><span class="nv">$@</span>
     <span class="nb">local </span><span class="nv">service</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
-    <span class="k">for </span>service in <span class="k">${</span><span class="nv">services</span><span class="k">}</span>; <span class="k">do</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$USE_SSL&quot;</span> <span class="o">==</span> <span class="s2">&quot;False&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+<span class="k">        return </span>1
+    <span class="k">fi</span>
+<span class="k">    for </span>service in <span class="k">${</span><span class="nv">services</span><span class="k">}</span>; <span class="k">do</span>
         <span class="o">[[</span> ,<span class="k">${</span><span class="nv">SSL_ENABLED_SERVICES</span><span class="k">}</span>, <span class="o">=</span>~ ,<span class="k">${</span><span class="nv">service</span><span class="k">}</span>, <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="k">return </span>0
     <span class="k">done</span>
 <span class="k">    return </span>1
@@ -783,8 +812,10 @@ completed.</p>
 <p>The function expects to find a certificate, key and CA certificate in the
 variables {service}_SSL_CERT, {service}_SSL_KEY and {service}_SSL_CA. For
 example for keystone this would be KEYSTONE_SSL_CERT, KEYSTONE_SSL_KEY and
-KEYSTONE_SSL_CA. If it does not find these certificates the program will
-quit.</p>
+KEYSTONE_SSL_CA.</p>
+<p>If it does not find these certificates then the devstack-issued server
+certificate, key and CA certificate will be associated with the service.</p>
+<p>If only some of the variables are provided then the function will quit.</p>
 </td><td class=code><div class=highlight><pre>
 <span class="k">function </span>ensure_certificates <span class="o">{</span>
     <span class="nb">local </span><span class="nv">service</span><span class="o">=</span><span class="nv">$1</span>
@@ -797,12 +828,39 @@ quit.</p>
     <span class="nb">local </span><span class="nv">key</span><span class="o">=</span><span class="k">${</span><span class="p">!key_var</span><span class="k">}</span>
     <span class="nb">local </span><span class="nv">ca</span><span class="o">=</span><span class="k">${</span><span class="p">!ca_var</span><span class="k">}</span>
 
-    <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$cert&quot;</span> <span class="o">||</span> -z <span class="s2">&quot;$key&quot;</span> <span class="o">||</span> -z <span class="s2">&quot;$ca&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+    <span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$cert&quot;</span> <span class="o">&amp;&amp;</span> -z <span class="s2">&quot;$key&quot;</span> <span class="o">&amp;&amp;</span> -z <span class="s2">&quot;$ca&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+<span class="k">        </span><span class="nb">local </span><span class="nv">cert</span><span class="o">=</span><span class="s2">&quot;$INT_CA_DIR/$DEVSTACK_CERT_NAME.crt&quot;</span>
+        <span class="nb">local </span><span class="nv">key</span><span class="o">=</span><span class="s2">&quot;$INT_CA_DIR/private/$DEVSTACK_CERT_NAME.key&quot;</span>
+        <span class="nb">local </span><span class="nv">ca</span><span class="o">=</span><span class="s2">&quot;$INT_CA_DIR/ca-chain.pem&quot;</span>
+        <span class="nb">eval</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span><span class="nv">_SSL_CERT</span><span class="o">=</span><span class="se">\$</span>cert
+        <span class="nb">eval</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span><span class="nv">_SSL_KEY</span><span class="o">=</span><span class="se">\$</span>key
+        <span class="nb">eval</span> <span class="k">${</span><span class="nv">service</span><span class="k">}</span><span class="nv">_SSL_CA</span><span class="o">=</span><span class="se">\$</span>ca
+        <span class="k">return</span> <span class="c"># the CA certificate is already in the bundle</span>
+    <span class="k">elif</span> <span class="o">[[</span> -z <span class="s2">&quot;$cert&quot;</span> <span class="o">||</span> -z <span class="s2">&quot;$key&quot;</span> <span class="o">||</span> -z <span class="s2">&quot;$ca&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
 <span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;Missing either the ${cert_var} ${key_var} or ${ca_var}&quot;</span> <span class="se">\</span>
                     <span class="s2">&quot;variable to enable SSL for ${service}&quot;</span>
     <span class="k">fi</span>
 
 <span class="k">    </span>cat <span class="nv">$ca</span> &gt;&gt; <span class="nv">$SSL_BUNDLE_FILE</span>
+<span class="o">}</span>
+
+</pre></div></td></tr><tr><td class=docs>
+<p>Enable the mod_ssl plugin in Apache</p>
+</td><td class=code><div class=highlight><pre>
+<span class="k">function </span>enable_mod_ssl <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;Enabling mod_ssl&quot;</span>
+
+    <span class="k">if </span>is_ubuntu; <span class="k">then</span>
+<span class="k">        </span>sudo a2enmod ssl
+    <span class="k">elif </span>is_fedora; <span class="k">then</span>
+</pre></div></td></tr><tr><td class=docs>
+<p>Fedora enables mod_ssl by default</p>
+</td><td class=code><div class=highlight><pre>
+        :
+    <span class="k">fi</span>
+<span class="k">    if</span> ! sudo <span class="sb">`</span>which httpd <span class="o">||</span> which apache2ctl<span class="sb">`</span> -M | grep -w -q ssl_module; <span class="k">then</span>
+<span class="k">        </span>die <span class="nv">$LINENO</span> <span class="s2">&quot;mod_ssl is not enabled in apache2/httpd, please check for it manually and run stack.sh again&quot;</span>
+    <span class="k">fi</span>
 <span class="o">}</span>
 
 
@@ -831,7 +889,7 @@ start_tls_proxy front-host front-port back-host back-port</p>
 <div class="section" id="cleanup-functions">
 <h2>Cleanup Functions</h2>
 <div class="system-message">
-<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 216)</p>
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">&lt;stdin&gt;</tt>, line 230)</p>
 <p>Title underline too short.</p>
 <pre class="literal-block">
 Cleanup Functions
